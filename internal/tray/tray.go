@@ -11,7 +11,7 @@ import (
 	"github.com/pozitronik/steelclock/internal/config"
 )
 
-//go:embed icon.png
+//go:embed icon.ico
 var iconData []byte
 
 // Manager handles system tray icon and menu

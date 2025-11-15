@@ -9,7 +9,7 @@ where go-winres.exe >nul 2>&1
 if %errorlevel% equ 0 (
     if exist "winres\winres.json" (
         echo Generating Windows resources with go-winres...
-        go-winres.exe make
+        go-winres.exe make --out cmd\steelclock\rsrc
         if %errorlevel% equ 0 (
             echo [OK] Windows resources generated
             echo.
@@ -26,7 +26,7 @@ if %errorlevel% equ 0 (
     if exist "%USERPROFILE%\go\bin\go-winres.exe" (
         if exist "winres\winres.json" (
             echo Generating Windows resources with go-winres...
-            "%USERPROFILE%\go\bin\go-winres.exe" make
+            "%USERPROFILE%\go\bin\go-winres.exe" make --out cmd\steelclock\rsrc
             if %errorlevel% equ 0 (
                 echo [OK] Windows resources generated
                 echo.

@@ -10,7 +10,7 @@ echo ""
 if command -v go-winres &> /dev/null; then
     if [ -f "winres/winres.json" ]; then
         echo "Generating Windows resources with go-winres..."
-        if go-winres make 2>&1; then
+        if go-winres make --out cmd/steelclock/rsrc 2>&1; then
             echo "✓ Windows resources generated"
             echo ""
         else
@@ -26,7 +26,7 @@ else
     if [ -f "$HOME/go/bin/go-winres" ]; then
         if [ -f "winres/winres.json" ]; then
             echo "Generating Windows resources with go-winres..."
-            if "$HOME/go/bin/go-winres" make 2>&1; then
+            if "$HOME/go/bin/go-winres" make --out cmd/steelclock/rsrc 2>&1; then
                 echo "✓ Windows resources generated"
                 echo ""
             else
