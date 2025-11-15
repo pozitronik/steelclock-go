@@ -1,0 +1,576 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://steelclock.local/config.schema.json",
+  "title": "SteelClock Configuration",
+  "description": "Configuration schema for SteelClock - OLED display manager for SteelSeries APEX 7",
+  "type": "object",
+  "required": ["game_name", "display", "widgets"],
+  "properties": {
+    "game_name": {
+      "type": "string",
+      "description": "Game identifier for SteelSeries Engine (A-Z, 0-9, hyphen, underscore only)",
+      "pattern": "^[A-Z0-9_-]+$",
+      "default": "STEELCLOCK"
+    },
+    "game_display_name": {
+      "type": "string",
+      "description": "Human-readable game name shown in SteelSeries Engine",
+      "default": "SteelClock"
+    },
+    "refresh_rate_ms": {
+      "type": "integer",
+      "description": "Display refresh rate in milliseconds (minimum 100ms = 10Hz)",
+      "minimum": 100,
+      "default": 100
+    },
+    "display": {
+      "type": "object",
+      "description": "Physical display configuration",
+      "required": ["width", "height"],
+      "properties": {
+        "width": {
+          "type": "integer",
+          "description": "Display width in pixels",
+          "default": 128
+        },
+        "height": {
+          "type": "integer",
+          "description": "Display height in pixels",
+          "default": 40
+        },
+        "background_color": {
+          "type": "integer",
+          "description": "Display background color (0=black, 255=white)",
+          "minimum": 0,
+          "maximum": 255,
+          "default": 0
+        }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "description": "Layout configuration (basic or viewport)",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Layout type",
+          "enum": ["basic", "viewport"],
+          "default": "basic"
+        },
+        "virtual_width": {
+          "type": "integer",
+          "description": "Virtual canvas width (for viewport mode)",
+          "minimum": 128
+        },
+        "virtual_height": {
+          "type": "integer",
+          "description": "Virtual canvas height (for viewport mode)",
+          "minimum": 40
+        }
+      }
+    },
+    "widgets": {
+      "type": "array",
+      "description": "Array of widget configurations",
+      "items": {
+        "oneOf": [
+          {"$ref": "#/definitions/clockWidget"},
+          {"$ref": "#/definitions/cpuWidget"},
+          {"$ref": "#/definitions/memoryWidget"},
+          {"$ref": "#/definitions/networkWidget"},
+          {"$ref": "#/definitions/diskWidget"},
+          {"$ref": "#/definitions/keyboardWidget"}
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "widgetBase": {
+      "type": "object",
+      "required": ["type", "id", "position"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Widget type"
+        },
+        "id": {
+          "type": "string",
+          "description": "Unique widget identifier"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable or disable this widget",
+          "default": true
+        },
+        "position": {
+          "$ref": "#/definitions/position"
+        },
+        "style": {
+          "$ref": "#/definitions/style"
+        }
+      }
+    },
+    "position": {
+      "type": "object",
+      "description": "Widget position and size",
+      "required": ["x", "y", "w", "h"],
+      "properties": {
+        "x": {
+          "type": "integer",
+          "description": "X coordinate on canvas",
+          "minimum": 0
+        },
+        "y": {
+          "type": "integer",
+          "description": "Y coordinate on canvas",
+          "minimum": 0
+        },
+        "w": {
+          "type": "integer",
+          "description": "Widget width in pixels",
+          "minimum": 1
+        },
+        "h": {
+          "type": "integer",
+          "description": "Widget height in pixels",
+          "minimum": 1
+        },
+        "z_order": {
+          "type": "integer",
+          "description": "Stacking order (higher = on top)",
+          "default": 0
+        }
+      }
+    },
+    "style": {
+      "type": "object",
+      "description": "Widget visual styling",
+      "properties": {
+        "background_color": {
+          "type": "integer",
+          "description": "Background color (0=black, 255=white)",
+          "minimum": 0,
+          "maximum": 255,
+          "default": 0
+        },
+        "background_opacity": {
+          "type": "integer",
+          "description": "Background opacity (0=transparent, 255=opaque)",
+          "minimum": 0,
+          "maximum": 255,
+          "default": 255
+        },
+        "border": {
+          "type": "boolean",
+          "description": "Draw widget border",
+          "default": false
+        },
+        "border_color": {
+          "type": "integer",
+          "description": "Border color (0-255)",
+          "minimum": 0,
+          "maximum": 255,
+          "default": 255
+        }
+      }
+    },
+    "textProperties": {
+      "type": "object",
+      "description": "Text rendering properties",
+      "properties": {
+        "font": {
+          "type": "string",
+          "description": "Font name or path to TTF file (e.g., 'Arial', 'Consolas', 'Segoe UI Emoji')"
+        },
+        "font_size": {
+          "type": "integer",
+          "description": "Font size in pixels",
+          "minimum": 1,
+          "default": 10
+        },
+        "horizontal_align": {
+          "type": "string",
+          "description": "Horizontal text alignment",
+          "enum": ["left", "center", "right"],
+          "default": "center"
+        },
+        "vertical_align": {
+          "type": "string",
+          "description": "Vertical text alignment",
+          "enum": ["top", "center", "bottom"],
+          "default": "center"
+        },
+        "padding": {
+          "type": "integer",
+          "description": "Padding from edges in pixels",
+          "minimum": 0,
+          "default": 0
+        }
+      }
+    },
+    "clockWidget": {
+      "allOf": [
+        {"$ref": "#/definitions/widgetBase"},
+        {
+          "properties": {
+            "type": {"const": "clock"},
+            "properties": {
+              "type": "object",
+              "properties": {
+                "format": {
+                  "type": "string",
+                  "description": "Time format (strftime syntax: %H:%M:%S, %I:%M %p, etc.)",
+                  "default": "%H:%M:%S"
+                },
+                "update_interval": {
+                  "type": "number",
+                  "description": "Update interval in seconds",
+                  "minimum": 0.1,
+                  "default": 1.0
+                },
+                "font": {"$ref": "#/definitions/textProperties/properties/font"},
+                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
+                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
+                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "cpuWidget": {
+      "allOf": [
+        {"$ref": "#/definitions/widgetBase"},
+        {
+          "properties": {
+            "type": {"const": "cpu"},
+            "properties": {
+              "type": "object",
+              "properties": {
+                "display_mode": {
+                  "type": "string",
+                  "description": "Display mode",
+                  "enum": ["text", "bar_horizontal", "bar_vertical", "graph"],
+                  "default": "bar_horizontal"
+                },
+                "per_core": {
+                  "type": "boolean",
+                  "description": "Show per-core usage (multiple bars/values)",
+                  "default": false
+                },
+                "update_interval": {
+                  "type": "number",
+                  "description": "Update interval in seconds",
+                  "minimum": 0.1,
+                  "default": 1.0
+                },
+                "history_length": {
+                  "type": "integer",
+                  "description": "Number of samples for graph mode",
+                  "minimum": 2,
+                  "default": 30
+                },
+                "bar_border": {
+                  "type": "boolean",
+                  "description": "Draw border around bars",
+                  "default": false
+                },
+                "bar_margin": {
+                  "type": "integer",
+                  "description": "Margin between bars (for per-core mode)",
+                  "minimum": 0,
+                  "default": 0
+                },
+                "fill_color": {
+                  "type": "integer",
+                  "description": "Bar/graph fill color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "font": {"$ref": "#/definitions/textProperties/properties/font"},
+                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
+                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
+                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "memoryWidget": {
+      "allOf": [
+        {"$ref": "#/definitions/widgetBase"},
+        {
+          "properties": {
+            "type": {"const": "memory"},
+            "properties": {
+              "type": "object",
+              "properties": {
+                "display_mode": {
+                  "type": "string",
+                  "description": "Display mode",
+                  "enum": ["text", "bar_horizontal", "bar_vertical", "graph"],
+                  "default": "bar_horizontal"
+                },
+                "update_interval": {
+                  "type": "number",
+                  "description": "Update interval in seconds",
+                  "minimum": 0.1,
+                  "default": 1.0
+                },
+                "history_length": {
+                  "type": "integer",
+                  "description": "Number of samples for graph mode",
+                  "minimum": 2,
+                  "default": 30
+                },
+                "bar_border": {
+                  "type": "boolean",
+                  "description": "Draw border around bar",
+                  "default": false
+                },
+                "fill_color": {
+                  "type": "integer",
+                  "description": "Bar/graph fill color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "font": {"$ref": "#/definitions/textProperties/properties/font"},
+                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
+                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
+                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "networkWidget": {
+      "allOf": [
+        {"$ref": "#/definitions/widgetBase"},
+        {
+          "properties": {
+            "type": {"const": "network"},
+            "properties": {
+              "type": "object",
+              "properties": {
+                "interface": {
+                  "type": "string",
+                  "description": "Network interface name (e.g., 'eth0', 'Ethernet', null=auto)",
+                  "default": "eth0"
+                },
+                "display_mode": {
+                  "type": "string",
+                  "description": "Display mode",
+                  "enum": ["text", "bar_horizontal", "bar_vertical", "graph"],
+                  "default": "bar_horizontal"
+                },
+                "update_interval": {
+                  "type": "number",
+                  "description": "Update interval in seconds",
+                  "minimum": 0.1,
+                  "default": 1.0
+                },
+                "history_length": {
+                  "type": "integer",
+                  "description": "Number of samples for graph mode",
+                  "minimum": 2,
+                  "default": 30
+                },
+                "max_speed_mbps": {
+                  "type": "number",
+                  "description": "Max speed for scaling in Mbps (-1=auto)",
+                  "default": 100.0
+                },
+                "speed_unit": {
+                  "type": "string",
+                  "description": "Speed display unit (for text mode)",
+                  "enum": ["bps", "kbps", "mbps"],
+                  "default": "kbps"
+                },
+                "bar_border": {
+                  "type": "boolean",
+                  "description": "Draw border around bars",
+                  "default": false
+                },
+                "bar_margin": {
+                  "type": "integer",
+                  "description": "Margin between RX/TX bars",
+                  "minimum": 0,
+                  "default": 1
+                },
+                "rx_color": {
+                  "type": "integer",
+                  "description": "RX (download) color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "tx_color": {
+                  "type": "integer",
+                  "description": "TX (upload) color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 128
+                },
+                "font": {"$ref": "#/definitions/textProperties/properties/font"},
+                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
+                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
+                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "diskWidget": {
+      "allOf": [
+        {"$ref": "#/definitions/widgetBase"},
+        {
+          "properties": {
+            "type": {"const": "disk"},
+            "properties": {
+              "type": "object",
+              "properties": {
+                "disk_name": {
+                  "type": ["string", "null"],
+                  "description": "Disk name (Windows: 'PhysicalDrive0', Linux: 'sda', null=auto)",
+                  "default": null
+                },
+                "display_mode": {
+                  "type": "string",
+                  "description": "Display mode",
+                  "enum": ["text", "bar_horizontal", "bar_vertical", "graph"],
+                  "default": "bar_horizontal"
+                },
+                "update_interval": {
+                  "type": "number",
+                  "description": "Update interval in seconds",
+                  "minimum": 0.1,
+                  "default": 1.0
+                },
+                "history_length": {
+                  "type": "integer",
+                  "description": "Number of samples for graph mode",
+                  "minimum": 2,
+                  "default": 30
+                },
+                "max_speed_mbps": {
+                  "type": "number",
+                  "description": "Max speed for scaling in MB/s (-1=auto)",
+                  "default": -1
+                },
+                "bar_border": {
+                  "type": "boolean",
+                  "description": "Draw border around bars",
+                  "default": false
+                },
+                "read_color": {
+                  "type": "integer",
+                  "description": "Read color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "write_color": {
+                  "type": "integer",
+                  "description": "Write color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 200
+                },
+                "font": {"$ref": "#/definitions/textProperties/properties/font"},
+                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
+                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
+                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "keyboardWidget": {
+      "allOf": [
+        {"$ref": "#/definitions/widgetBase"},
+        {
+          "properties": {
+            "type": {"const": "keyboard"},
+            "properties": {
+              "type": "object",
+              "properties": {
+                "update_interval": {
+                  "type": "number",
+                  "description": "Update interval in seconds",
+                  "minimum": 0.1,
+                  "default": 0.2
+                },
+                "spacing": {
+                  "type": "integer",
+                  "description": "Spacing between indicators in pixels",
+                  "minimum": 0,
+                  "default": 3
+                },
+                "caps_lock_on": {
+                  "type": "string",
+                  "description": "Symbol for Caps Lock ON state",
+                  "default": "⬆"
+                },
+                "caps_lock_off": {
+                  "type": "string",
+                  "description": "Symbol for Caps Lock OFF state (empty=hide)",
+                  "default": ""
+                },
+                "num_lock_on": {
+                  "type": "string",
+                  "description": "Symbol for Num Lock ON state",
+                  "default": "🔒"
+                },
+                "num_lock_off": {
+                  "type": "string",
+                  "description": "Symbol for Num Lock OFF state (empty=hide)",
+                  "default": ""
+                },
+                "scroll_lock_on": {
+                  "type": "string",
+                  "description": "Symbol for Scroll Lock ON state",
+                  "default": "⬇"
+                },
+                "scroll_lock_off": {
+                  "type": "string",
+                  "description": "Symbol for Scroll Lock OFF state (empty=hide)",
+                  "default": ""
+                },
+                "indicator_color_on": {
+                  "type": "integer",
+                  "description": "Color for ON state (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "indicator_color_off": {
+                  "type": "integer",
+                  "description": "Color for OFF state (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 100
+                },
+                "font": {"$ref": "#/definitions/textProperties/properties/font"},
+                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
+                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
+                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
