@@ -7,9 +7,15 @@ import (
 )
 
 // Load reads and parses a configuration file
+// If the file doesn't exist, returns a default configuration
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			// Config file doesn't exist, use defaults
+			cfg := CreateDefault()
+			return cfg, nil
+		}
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
@@ -27,6 +33,46 @@ func Load(path string) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+// CreateDefault creates a configuration with sensible defaults
+func CreateDefault() *Config {
+	cfg := &Config{
+		GameName:        "STEELCLOCK",
+		GameDisplayName: "SteelClock",
+		RefreshRateMs:   100,
+		Display: DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
+		Widgets: []WidgetConfig{
+			{
+				ID:      "clock",
+				Type:    "clock",
+				Enabled: true,
+				Position: PositionConfig{
+					X: 0,
+					Y: 0,
+					W: 128,
+					H: 40,
+				},
+				Properties: WidgetProperties{
+					Format:          "%H:%M:%S",
+					FontSize:        10,
+					HorizontalAlign: "center",
+					VerticalAlign:   "center",
+					UpdateInterval:  1.0,
+				},
+				Style: StyleConfig{
+					BackgroundColor:   0,
+					BackgroundOpacity: 255,
+					Border:            false,
+				},
+			},
+		},
+	}
+
+	return cfg
 }
 
 // validateConfig checks that required fields are present and valid

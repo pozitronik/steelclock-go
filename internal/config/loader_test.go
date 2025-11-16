@@ -97,10 +97,28 @@ func TestLoad(t *testing.T) {
 	}
 }
 
-func TestLoadInvalidPath(t *testing.T) {
-	_, err := Load("/nonexistent/config.json")
-	if err == nil {
-		t.Error("Load() with invalid path should return error")
+func TestLoadNonexistentFile(t *testing.T) {
+	// When config file doesn't exist, should return default config
+	cfg, err := Load("/nonexistent/config.json")
+	if err != nil {
+		t.Errorf("Load() with nonexistent file should return default config, got error: %v", err)
+	}
+
+	// Verify we got a valid default config
+	if cfg == nil {
+		t.Fatal("Load() returned nil config")
+	}
+
+	if cfg.GameName != "STEELCLOCK" {
+		t.Errorf("Default GameName = %s, want STEELCLOCK", cfg.GameName)
+	}
+
+	if cfg.GameDisplayName != "SteelClock" {
+		t.Errorf("Default GameDisplayName = %s, want SteelClock", cfg.GameDisplayName)
+	}
+
+	if len(cfg.Widgets) == 0 {
+		t.Error("Default config should have at least one widget")
 	}
 }
 
