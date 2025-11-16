@@ -362,6 +362,123 @@ func TestCPUWidget_RenderGraph_InsufficientHistory(t *testing.T) {
 	}
 }
 
+// TestCPUWidget_RenderGauge tests gauge mode rendering
+func TestCPUWidget_RenderGauge(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "cpu",
+		ID:      "test_cpu_gauge",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 64, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode:      "gauge",
+			GaugeColor:       200,
+			GaugeNeedleColor: 255,
+		},
+	}
+
+	widget, err := NewCPUWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewCPUWidget() error = %v", err)
+	}
+
+	err = widget.Update()
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+}
+
+// TestCPUWidget_RenderGauge_PerCore tests gauge mode with per-core
+func TestCPUWidget_RenderGauge_PerCore(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "cpu",
+		ID:      "test_cpu_gauge_percore",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 64, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode:      "gauge",
+			PerCore:          true, // Should show average
+			GaugeColor:       200,
+			GaugeNeedleColor: 255,
+		},
+	}
+
+	widget, err := NewCPUWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewCPUWidget() error = %v", err)
+	}
+
+	err = widget.Update()
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+}
+
+// TestCPUWidget_GaugeDefaults tests gauge mode with default colors
+func TestCPUWidget_GaugeDefaults(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "cpu",
+		ID:      "test_cpu_gauge_defaults",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 64, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "gauge",
+			// Don't specify colors to test defaults
+		},
+	}
+
+	widget, err := NewCPUWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewCPUWidget() error = %v", err)
+	}
+
+	// Verify defaults
+	if widget.gaugeColor != 200 {
+		t.Errorf("default gaugeColor = %d, want 200", widget.gaugeColor)
+	}
+
+	if widget.gaugeNeedleColor != 255 {
+		t.Errorf("default gaugeNeedleColor = %d, want 255", widget.gaugeNeedleColor)
+	}
+
+	err = widget.Update()
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+}
+
 // TestCPUWidget_ConcurrentAccess tests thread safety
 func TestCPUWidget_ConcurrentAccess(t *testing.T) {
 	cfg := config.WidgetConfig{
