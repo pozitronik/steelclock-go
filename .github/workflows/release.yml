@@ -48,24 +48,27 @@ jobs:
       shell: bash
       run: |
         VERSION="${{ steps.version.outputs.version }}"
-
-        # Parse version (e.g., 1.0.0 -> FileVersion: 1,0,0,0)
-        IFS='.' read -ra VERSION_PARTS <<< "$VERSION"
-        MAJOR=${VERSION_PARTS[0]:-0}
-        MINOR=${VERSION_PARTS[1]:-0}
-        PATCH=${VERSION_PARTS[2]:-0}
+        VERSION_FULL="${VERSION}.0"  # e.g., 1.0.0.0
 
         # Update winres.json with version info
         if [ -f winres/winres.json ]; then
-          # Use jq to update version fields
+          # Use jq to update all version fields
           cat winres/winres.json | \
-          jq ".RT_VERSION.FileVersion = \"$MAJOR,$MINOR,$PATCH,0\" | \
-              .RT_VERSION.ProductVersion = \"$MAJOR,$MINOR,$PATCH,0\"" \
+          jq ".RT_MANIFEST[\"#1\"][\"0409\"].identity.version = \"$VERSION_FULL\" | \
+              .RT_VERSION[\"#1\"][\"0000\"].fixed.file_version = \"$VERSION_FULL\" | \
+              .RT_VERSION[\"#1\"][\"0000\"].fixed.product_version = \"$VERSION_FULL\" | \
+              .RT_VERSION[\"#1\"][\"0000\"].info[\"0409\"].FileVersion = \"$VERSION\" | \
+              .RT_VERSION[\"#1\"][\"0000\"].info[\"0409\"].ProductVersion = \"$VERSION\"" \
           > winres/winres.json.tmp
           mv winres/winres.json.tmp winres/winres.json
 
           echo "Updated winres.json with version $VERSION"
-          cat winres/winres.json
+          echo "Version fields updated:"
+          echo "  - Manifest version: $VERSION_FULL"
+          echo "  - File version: $VERSION_FULL"
+          echo "  - Product version: $VERSION_FULL"
+          echo "  - Info FileVersion: $VERSION"
+          echo "  - Info ProductVersion: $VERSION"
         else
           echo "Warning: winres/winres.json not found"
         fi
