@@ -327,14 +327,14 @@ func TestDrawBorder_TinyImage(t *testing.T) {
 
 // TestDrawBorder_NilImage tests border drawing with nil image
 func TestDrawBorder_NilImage(t *testing.T) {
+	// Should handle nil gracefully without panicking
 	defer func() {
-		if r := recover(); r == nil {
-			// It's okay if it doesn't panic, but log it
-			t.Log("DrawBorder() with nil image did not panic")
+		if r := recover(); r != nil {
+			t.Errorf("DrawBorder() with nil image panicked: %v", r)
 		}
 	}()
 
-	// This might panic, which is acceptable behavior
+	// Should not panic, just return early
 	DrawBorder(nil, 255)
 }
 

@@ -159,7 +159,7 @@ This option allows you to specify a custom URL for downloading the bundled TrueT
 
 ## Widget Types
 
-SteelClock supports 6 widget types:
+SteelClock supports 7 widget types:
 
 1. **clock** - Time display
 2. **cpu** - CPU usage monitor
@@ -167,6 +167,7 @@ SteelClock supports 6 widget types:
 4. **network** - Network I/O monitor
 5. **disk** - Disk I/O monitor
 6. **keyboard** - Keyboard lock indicators
+7. **volume** - System volume indicator
 
 ## Common Properties
 
@@ -281,7 +282,7 @@ See [Python strftime](https://docs.python.org/3/library/datetime.html#strftime-a
 
 ### CPU Widget
 
-**Display Modes**: text, bar_horizontal, bar_vertical, graph
+**Display Modes**: text, bar_horizontal, bar_vertical, graph, gauge
 
 ```json
 {
@@ -294,6 +295,8 @@ See [Python strftime](https://docs.python.org/3/library/datetime.html#strftime-a
     "bar_border": false,
     "bar_margin": 0,
     "fill_color": 255,
+    "gauge_color": 200,
+    "gauge_needle_color": 255,
     "font": null,
     "font_size": 10,
     "horizontal_align": "center",
@@ -303,19 +306,31 @@ See [Python strftime](https://docs.python.org/3/library/datetime.html#strftime-a
 }
 ```
 
-| Property          | Type    | Range                                     | Default          | Description                         |
-|-------------------|---------|-------------------------------------------|------------------|-------------------------------------|
-| `display_mode`    | string  | text, bar_horizontal, bar_vertical, graph | "bar_horizontal" | Display mode                        |
-| `per_core`        | boolean | -                                         | false            | Show per-core usage                 |
-| `update_interval` | number  | ≥0.1                                      | 1.0              | Update interval (seconds)           |
-| `history_length`  | integer | ≥2                                        | 30               | Samples for graph mode              |
-| `bar_border`      | boolean | -                                         | false            | Draw border around bars             |
-| `bar_margin`      | integer | ≥0                                        | 0                | Margin between bars (per-core mode) |
-| `fill_color`      | integer | 0-255                                     | 255              | Bar/graph fill color                |
+| Property             | Type    | Range                                              | Default          | Description                         |
+|----------------------|---------|----------------------------------------------------|------------------|-------------------------------------|
+| `display_mode`       | string  | text, bar_horizontal, bar_vertical, graph, gauge   | "bar_horizontal" | Display mode                        |
+| `per_core`           | boolean | -                                                  | false            | Show per-core usage                 |
+| `update_interval`    | number  | ≥0.1                                               | 1.0              | Update interval (seconds)           |
+| `history_length`     | integer | ≥2                                                 | 30               | Samples for graph mode              |
+| `bar_border`         | boolean | -                                                  | false            | Draw border around bars             |
+| `bar_margin`         | integer | ≥0                                                 | 0                | Margin between bars (per-core mode) |
+| `fill_color`         | integer | 0-255                                              | 255              | Bar/graph fill color                |
+| `gauge_color`        | integer | 0-255                                              | 200              | Gauge arc and tick marks color      |
+| `gauge_needle_color` | integer | 0-255                                              | 255              | Gauge needle color                  |
+
+**Gauge Mode**:
+
+The CPU widget can display usage as an old-fashioned semicircular gauge:
+- Semicircular arc from 0% (left) to 100% (right)
+- Tick marks at 10% intervals (longer marks at 0%, 50%, 100%)
+- Needle points to current CPU usage percentage
+- Arc and tick marks drawn using `gauge_color`
+- Needle drawn using `gauge_needle_color`
+- If `per_core` is enabled, shows average of all cores
 
 ### Memory Widget
 
-**Display Modes**: text, bar_horizontal, bar_vertical, graph
+**Display Modes**: text, bar_horizontal, bar_vertical, graph, gauge
 
 ```json
 {
@@ -326,6 +341,8 @@ See [Python strftime](https://docs.python.org/3/library/datetime.html#strftime-a
     "history_length": 30,
     "bar_border": false,
     "fill_color": 255,
+    "gauge_color": 200,
+    "gauge_needle_color": 255,
     "font": null,
     "font_size": 10,
     "horizontal_align": "center",
@@ -335,17 +352,28 @@ See [Python strftime](https://docs.python.org/3/library/datetime.html#strftime-a
 }
 ```
 
-| Property          | Type    | Range                                     | Default          | Description               |
-|-------------------|---------|-------------------------------------------|------------------|---------------------------|
-| `display_mode`    | string  | text, bar_horizontal, bar_vertical, graph | "bar_horizontal" | Display mode              |
-| `update_interval` | number  | ≥0.1                                      | 1.0              | Update interval (seconds) |
-| `history_length`  | integer | ≥2                                        | 30               | Samples for graph mode    |
-| `bar_border`      | boolean | -                                         | false            | Draw border around bar    |
-| `fill_color`      | integer | 0-255                                     | 255              | Bar/graph fill color      |
+| Property             | Type    | Range                                              | Default          | Description                    |
+|----------------------|---------|----------------------------------------------------|------------------|--------------------------------|
+| `display_mode`       | string  | text, bar_horizontal, bar_vertical, graph, gauge   | "bar_horizontal" | Display mode                   |
+| `update_interval`    | number  | ≥0.1                                               | 1.0              | Update interval (seconds)      |
+| `history_length`     | integer | ≥2                                                 | 30               | Samples for graph mode         |
+| `bar_border`         | boolean | -                                                  | false            | Draw border around bar         |
+| `fill_color`         | integer | 0-255                                              | 255              | Bar/graph fill color           |
+| `gauge_color`        | integer | 0-255                                              | 200              | Gauge arc and tick marks color |
+| `gauge_needle_color` | integer | 0-255                                              | 255              | Gauge needle color             |
+
+**Gauge Mode**:
+
+The Memory widget displays RAM usage as a semicircular gauge:
+- Semicircular arc from 0% (left) to 100% (right)
+- Tick marks at 10% intervals (longer marks at 0%, 50%, 100%)
+- Needle points to current memory usage percentage
+- Arc and tick marks drawn using `gauge_color`
+- Needle drawn using `gauge_needle_color`
 
 ### Network Widget
 
-**Display Modes**: text, bar_horizontal, bar_vertical, graph
+**Display Modes**: text, bar_horizontal, bar_vertical, graph, gauge
 
 ```json
 {
@@ -361,6 +389,8 @@ See [Python strftime](https://docs.python.org/3/library/datetime.html#strftime-a
     "bar_margin": 1,
     "rx_color": 255,
     "tx_color": 128,
+    "rx_needle_color": 255,
+    "tx_needle_color": 200,
     "font": null,
     "font_size": 10,
     "horizontal_align": "center",
@@ -370,23 +400,41 @@ See [Python strftime](https://docs.python.org/3/library/datetime.html#strftime-a
 }
 ```
 
-| Property          | Type           | Range                                     | Default          | Description                        |
-|-------------------|----------------|-------------------------------------------|------------------|------------------------------------|
-| `interface`       | string or null | -                                         | "eth0"           | Network interface name (null=auto) |
-| `display_mode`    | string         | text, bar_horizontal, bar_vertical, graph | "bar_horizontal" | Display mode                       |
-| `update_interval` | number         | ≥0.1                                      | 1.0              | Update interval (seconds)          |
-| `history_length`  | integer        | ≥2                                        | 30               | Samples for graph mode             |
-| `max_speed_mbps`  | number         | -                                         | 100.0            | Max speed for scaling (-1=auto)    |
-| `speed_unit`      | string         | bps, kbps, mbps                           | "kbps"           | Speed unit (text mode)             |
-| `bar_border`      | boolean        | -                                         | false            | Draw border around bars            |
-| `bar_margin`      | integer        | ≥0                                        | 1                | Margin between RX/TX bars          |
-| `rx_color`        | integer        | 0-255                                     | 255              | RX (download) color                |
-| `tx_color`        | integer        | 0-255                                     | 128              | TX (upload) color                  |
+| Property           | Type           | Range                                              | Default          | Description                            |
+|--------------------|----------------|----------------------------------------------------|------------------|----------------------------------------|
+| `interface`        | string or null | -                                                  | "eth0"           | Network interface name (null=auto)     |
+| `display_mode`     | string         | text, bar_horizontal, bar_vertical, graph, gauge   | "bar_horizontal" | Display mode                           |
+| `update_interval`  | number         | ≥0.1                                               | 1.0              | Update interval (seconds)              |
+| `history_length`   | integer        | ≥2                                                 | 30               | Samples for graph mode                 |
+| `max_speed_mbps`   | number         | -                                                  | 100.0            | Max speed for scaling (-1=auto)        |
+| `speed_unit`       | string         | bps, kbps, mbps                                    | "kbps"           | Speed unit (text mode)                 |
+| `bar_border`       | boolean        | -                                                  | false            | Draw border around bars                |
+| `bar_margin`       | integer        | ≥0                                                 | 1                | Margin between RX/TX bars              |
+| `rx_color`         | integer        | 0-255                                              | 255              | RX (download) arc color (gauge mode)   |
+| `tx_color`         | integer        | 0-255                                              | 128              | TX (upload) arc color (gauge mode)     |
+| `rx_needle_color`  | integer        | 0-255                                              | 255              | RX needle color (gauge mode)           |
+| `tx_needle_color`  | integer        | 0-255                                              | 200              | TX needle color (gauge mode)           |
 
 **Interface Names**:
 - Windows: `"Ethernet"`, `"Wi-Fi"`, etc. (from Network Connections)
 - Linux: `"eth0"`, `"wlan0"`, `"enp0s3"`, etc. (from `ip addr`)
 - Use `null` for auto-detection
+
+**Gauge Mode**:
+
+The Network widget features a unique **dual/concentric gauge** display that shows both RX and TX speeds simultaneously:
+- **Outer gauge** (larger radius): RX (download) speed
+  - Arc drawn using `rx_color`
+  - Needle drawn using `rx_needle_color`
+  - Needle spans from inner gauge edge to outer edge (doesn't overlap inner gauge)
+- **Inner gauge** (60% of outer radius): TX (upload) speed
+  - Arc drawn using `tx_color`
+  - Needle drawn using `tx_needle_color`
+  - Needle spans from center to inner gauge edge
+- Both gauges show 0-100% of `max_speed_mbps`
+- Semicircular arc (180° span)
+- Tick marks at regular intervals
+- Independent needles for RX and TX
 
 ### Disk Widget
 
@@ -480,6 +528,84 @@ Available disks: PhysicalDrive0, PhysicalDrive1
 - Unicode arrows: ↑ ↓ ▲ ▼
 - Text: "CAPS", "NUM", "SCR"
 - Letters: "C", "N", "S"
+
+### Volume Widget
+
+**Display Modes**: text, bar_horizontal, bar_vertical, gauge, triangle
+
+```json
+{
+  "type": "volume",
+  "properties": {
+    "display_mode": "bar_horizontal",
+    "update_interval": 0.1,
+    "fill_color": 255,
+    "bar_border": false,
+    "auto_hide": false,
+    "auto_hide_timeout": 2.0,
+    "gauge_color": 200,
+    "gauge_needle_color": 255,
+    "triangle_fill_color": 255,
+    "triangle_border": false,
+    "font": null,
+    "font_size": 10,
+    "horizontal_align": "center",
+    "vertical_align": "center",
+    "padding": 0
+  }
+}
+```
+
+| Property              | Type    | Range                                                  | Default          | Description                                  |
+|-----------------------|---------|--------------------------------------------------------|------------------|----------------------------------------------|
+| `display_mode`        | string  | text, bar_horizontal, bar_vertical, gauge, triangle    | "bar_horizontal" | Display mode                                 |
+| `update_interval`     | number  | ≥0.1                                                   | 0.1              | Update interval (seconds)                    |
+| `fill_color`          | integer | 0-255                                                  | 255              | Bar/triangle fill color                      |
+| `bar_border`          | boolean | -                                                      | false            | Draw border around bars                      |
+| `auto_hide`           | boolean | -                                                      | false            | Only show when volume changes                |
+| `auto_hide_timeout`   | number  | ≥0.1                                                   | 2.0              | Seconds before hiding after volume change    |
+| `gauge_color`         | integer | 0-255                                                  | 200              | Gauge arc and tick marks color               |
+| `gauge_needle_color`  | integer | 0-255                                                  | 255              | Gauge needle color                           |
+| `triangle_fill_color` | integer | 0-255                                                  | 255              | Triangle fill color                          |
+| `triangle_border`     | boolean | -                                                      | false            | Draw border around triangle                  |
+
+**Display Mode Details**:
+
+**text**: Shows volume as percentage ("75%"). When muted, shows "MUTE".
+
+**bar_horizontal**: Horizontal bar filling left to right based on volume level.
+
+**bar_vertical**: Vertical bar filling bottom to top based on volume level.
+
+**gauge**: Old-fashioned semicircular gauge with needle pointing to current volume level. Features:
+- Semicircular arc (180° span from 0% to 100%)
+- Tick marks at 10% intervals
+- Longer ticks at 0%, 50%, and 100%
+- Needle pointing to current volume
+- Center pivot point
+
+**triangle**: Pyramid-style volume indicator filling from bottom to top. Features:
+- Triangle shape (wider at bottom, narrower at top)
+- Fills based on volume level
+- Vertical bar pattern (|||) for filled sections
+- Optional border
+
+**Auto-Hide Feature**:
+
+When `auto_hide` is enabled, the widget only appears when:
+1. Volume level changes (user adjusts volume)
+2. For `auto_hide_timeout` seconds after the last change
+3. After the timeout, the widget becomes invisible
+
+This is useful for temporary volume indicators that don't take permanent screen space.
+
+**Mute Indicator**:
+
+When system audio is muted, all display modes show an X pattern (diagonal lines) over the volume indicator.
+
+**Platform Support**:
+- **Windows**: Full support (currently using mock data, Windows Core Audio API integration planned)
+- **Linux**: Mock data (ALSA/PulseAudio integration planned)
 
 ## Examples
 
@@ -728,6 +854,73 @@ Available disks: PhysicalDrive0, PhysicalDrive1
       "properties": {
         "disk_name": "PhysicalDrive1",
         "display_mode": "bar_horizontal",
+        "padding": 2
+      }
+    }
+  ]
+}
+```
+
+### Example 8: Gauge Mode Dashboard
+
+```json
+{
+  "$schema": "./config.schema.json",
+  "game_name": "STEELCLOCK",
+  "game_display_name": "System Gauges",
+  "refresh_rate_ms": 100,
+  "display": {"width": 128, "height": 40, "background_color": 0},
+  "layout": {"type": "basic"},
+  "widgets": [
+    {
+      "type": "cpu",
+      "id": "cpu_gauge",
+      "position": {"x": 0, "y": 0, "w": 64, "h": 40, "z_order": 0},
+      "style": {"background_color": 0, "border": true, "border_color": 255},
+      "properties": {
+        "display_mode": "gauge",
+        "gauge_color": 200,
+        "gauge_needle_color": 255,
+        "padding": 2
+      }
+    },
+    {
+      "type": "memory",
+      "id": "memory_gauge",
+      "position": {"x": 64, "y": 0, "w": 64, "h": 40, "z_order": 0},
+      "style": {"background_color": 0, "border": true, "border_color": 255},
+      "properties": {
+        "display_mode": "gauge",
+        "gauge_color": 180,
+        "gauge_needle_color": 255,
+        "padding": 2
+      }
+    }
+  ]
+}
+```
+
+### Example 9: Network Dual Gauge
+
+```json
+{
+  "$schema": "./config.schema.json",
+  "game_name": "STEELCLOCK",
+  "display": {"width": 128, "height": 40, "background_color": 0},
+  "layout": {"type": "basic"},
+  "widgets": [
+    {
+      "type": "network",
+      "id": "net_gauge",
+      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z_order": 0},
+      "style": {"background_color": 0, "border": true, "border_color": 255},
+      "properties": {
+        "display_mode": "gauge",
+        "max_speed_mbps": 100.0,
+        "rx_color": 255,
+        "tx_color": 180,
+        "rx_needle_color": 255,
+        "tx_needle_color": 200,
         "padding": 2
       }
     }

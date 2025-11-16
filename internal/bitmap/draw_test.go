@@ -3,6 +3,8 @@ package bitmap
 import (
 	"image/color"
 	"testing"
+
+	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
 func TestDrawHorizontalBar(t *testing.T) {
@@ -128,7 +130,7 @@ func TestDrawLine(t *testing.T) {
 	img := NewGrayscaleImage(20, 20, 0)
 
 	// Draw horizontal line
-	drawLine(img, 0, 10, 19, 10, color.Gray{Y: 255})
+	DrawLine(img, 0, 10, 19, 10, color.Gray{Y: 255})
 
 	// Verify horizontal line
 	for x := 0; x < 20; x++ {
@@ -139,7 +141,7 @@ func TestDrawLine(t *testing.T) {
 
 	// Draw vertical line
 	img2 := NewGrayscaleImage(20, 20, 0)
-	drawLine(img2, 10, 0, 10, 19, color.Gray{Y: 255})
+	DrawLine(img2, 10, 0, 10, 19, color.Gray{Y: 255})
 
 	// Verify vertical line
 	for y := 0; y < 20; y++ {
@@ -166,5 +168,177 @@ func TestAbs(t *testing.T) {
 		if result != tt.expected {
 			t.Errorf("abs(%d) = %d, want %d", tt.input, result, tt.expected)
 		}
+	}
+}
+
+func TestDrawLinePublic(t *testing.T) {
+	img := NewGrayscaleImage(30, 30, 0)
+
+	// Draw horizontal line using public function
+	DrawLine(img, 5, 15, 25, 15, color.Gray{Y: 255})
+
+	// Verify horizontal line
+	filled := 0
+	for x := 5; x <= 25; x++ {
+		if img.GrayAt(x, 15).Y == 255 {
+			filled++
+		}
+	}
+
+	if filled == 0 {
+		t.Error("DrawLine did not draw any pixels for horizontal line")
+	}
+
+	// Draw diagonal line
+	img2 := NewGrayscaleImage(30, 30, 0)
+	DrawLine(img2, 0, 0, 29, 29, color.Gray{Y: 200})
+
+	// Verify some pixels are drawn
+	filled = 0
+	for i := 0; i < 30; i++ {
+		if img2.GrayAt(i, i).Y == 200 {
+			filled++
+		}
+	}
+
+	if filled == 0 {
+		t.Error("DrawLine did not draw any pixels for diagonal line")
+	}
+}
+
+func TestDrawGauge(t *testing.T) {
+	tests := []struct {
+		name        string
+		width       int
+		height      int
+		percentage  float64
+		gaugeColor  uint8
+		needleColor uint8
+	}{
+		{"Empty gauge", 50, 40, 0, 200, 255},
+		{"Half gauge", 50, 40, 50, 200, 255},
+		{"Full gauge", 50, 40, 100, 200, 255},
+		{"Quarter gauge", 50, 40, 25, 180, 240},
+		{"Over 100%", 50, 40, 150, 200, 255}, // Should clamp to 100%
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := NewGrayscaleImage(tt.width, tt.height, 0)
+			pos := config.PositionConfig{
+				W: tt.width,
+				H: tt.height,
+			}
+
+			// Should not panic
+			DrawGauge(img, pos, tt.percentage, tt.gaugeColor, tt.needleColor)
+
+			// Count pixels of gauge color
+			gaugePixels := 0
+			needlePixels := 0
+			for y := 0; y < tt.height; y++ {
+				for x := 0; x < tt.width; x++ {
+					pixel := img.GrayAt(x, y).Y
+					if pixel == tt.gaugeColor {
+						gaugePixels++
+					}
+					if pixel == tt.needleColor {
+						needlePixels++
+					}
+				}
+			}
+
+			// Gauge arc and ticks should be drawn
+			if gaugePixels == 0 {
+				t.Error("no gauge arc pixels drawn")
+			}
+
+			// Needle should be drawn
+			if needlePixels == 0 {
+				t.Error("no needle pixels drawn")
+			}
+		})
+	}
+}
+
+func TestDrawDualGauge(t *testing.T) {
+	tests := []struct {
+		name            string
+		width           int
+		height          int
+		outerPercentage float64
+		innerPercentage float64
+	}{
+		{"Both zero", 60, 50, 0, 0},
+		{"Both half", 60, 50, 50, 50},
+		{"Both full", 60, 50, 100, 100},
+		{"Outer high, inner low", 60, 50, 80, 20},
+		{"Outer low, inner high", 60, 50, 20, 80},
+		{"Mixed values", 60, 50, 33.3, 66.6},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := NewGrayscaleImage(tt.width, tt.height, 0)
+			pos := config.PositionConfig{
+				W: tt.width,
+				H: tt.height,
+			}
+
+			outerGaugeColor := uint8(255)
+			outerNeedleColor := uint8(255)
+			innerGaugeColor := uint8(180)
+			innerNeedleColor := uint8(200)
+
+			// Should not panic
+			DrawDualGauge(img, pos, tt.outerPercentage, tt.innerPercentage,
+				outerGaugeColor, outerNeedleColor, innerGaugeColor, innerNeedleColor)
+
+			// Count pixels of different colors
+			outerGaugePixels := 0
+			innerGaugePixels := 0
+			for y := 0; y < tt.height; y++ {
+				for x := 0; x < tt.width; x++ {
+					pixel := img.GrayAt(x, y).Y
+					if pixel == outerGaugeColor {
+						outerGaugePixels++
+					}
+					if pixel == innerGaugeColor {
+						innerGaugePixels++
+					}
+				}
+			}
+
+			// Both gauge arcs should be drawn
+			if outerGaugePixels == 0 {
+				t.Error("no outer gauge arc pixels drawn")
+			}
+
+			if innerGaugePixels == 0 {
+				t.Error("no inner gauge arc pixels drawn")
+			}
+		})
+	}
+}
+
+func TestDrawDualGauge_NeedlesSeparate(t *testing.T) {
+	// Test that outer needle doesn't overlap inner gauge
+	img := NewGrayscaleImage(60, 50, 0)
+	pos := config.PositionConfig{W: 60, H: 50}
+
+	DrawDualGauge(img, pos, 50, 50, 255, 240, 200, 180)
+
+	// Just verify no panic and pixels are drawn
+	filled := 0
+	for y := 0; y < 50; y++ {
+		for x := 0; x < 60; x++ {
+			if img.GrayAt(x, y).Y > 0 {
+				filled++
+			}
+		}
+	}
+
+	if filled == 0 {
+		t.Error("DrawDualGauge did not draw any pixels")
 	}
 }

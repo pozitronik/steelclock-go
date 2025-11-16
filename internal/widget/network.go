@@ -25,6 +25,8 @@ type NetworkWidget struct {
 	barBorder     bool
 	rxColor       uint8
 	txColor       uint8
+	rxNeedleColor uint8
+	txNeedleColor uint8
 	historyLen    int
 	lastRx        uint64
 	lastTx        uint64
@@ -71,6 +73,16 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		txColor = 255
 	}
 
+	rxNeedleColor := cfg.Properties.RxNeedleColor
+	if rxNeedleColor == 0 {
+		rxNeedleColor = 255
+	}
+
+	txNeedleColor := cfg.Properties.TxNeedleColor
+	if txNeedleColor == 0 {
+		txNeedleColor = 200
+	}
+
 	maxSpeed := cfg.Properties.MaxSpeedMbps
 	if maxSpeed == 0 {
 		maxSpeed = -1 // Auto-scale
@@ -103,6 +115,8 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		barBorder:     cfg.Properties.BarBorder,
 		rxColor:       uint8(rxColor),
 		txColor:       uint8(txColor),
+		rxNeedleColor: uint8(rxNeedleColor),
+		txNeedleColor: uint8(txNeedleColor),
 		historyLen:    historyLen,
 		rxHistory:     make([]float64, 0, historyLen),
 		txHistory:     make([]float64, 0, historyLen),
@@ -197,6 +211,8 @@ func (w *NetworkWidget) Render() (image.Image, error) {
 		w.renderBarVertical(img, contentX, contentY, contentW, contentH)
 	case "graph":
 		w.renderGraph(img, contentX, contentY, contentW, contentH)
+	case "gauge":
+		w.renderGauge(img, pos)
 	}
 
 	return img, nil
@@ -291,4 +307,40 @@ func (w *NetworkWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 	// Draw both graphs (RX and TX overlaid)
 	bitmap.DrawGraph(img, x, y, width, height, rxPercent, w.historyLen, w.rxColor)
 	bitmap.DrawGraph(img, x, y, width, height, txPercent, w.historyLen, w.txColor)
+}
+
+func (w *NetworkWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	// Calculate max speed for percentage
+	maxSpeed := w.maxSpeedMbps
+	if maxSpeed < 0 {
+		// Auto-scale
+		maxSpeed = max(w.currentRxMbps, w.currentTxMbps)
+		if maxSpeed < 1 {
+			maxSpeed = 1
+		}
+	}
+
+	// Calculate percentages
+	rxPercent := (w.currentRxMbps / maxSpeed) * 100
+	txPercent := (w.currentTxMbps / maxSpeed) * 100
+
+	// Clamp to 0-100
+	if rxPercent < 0 {
+		rxPercent = 0
+	}
+	if rxPercent > 100 {
+		rxPercent = 100
+	}
+	if txPercent < 0 {
+		txPercent = 0
+	}
+	if txPercent > 100 {
+		txPercent = 100
+	}
+
+	// Draw dual gauge: outer (RX) and inner (TX)
+	bitmap.DrawDualGauge(img, pos, rxPercent, txPercent, w.rxColor, w.rxNeedleColor, w.txColor, w.txNeedleColor)
 }

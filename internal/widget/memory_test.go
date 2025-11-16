@@ -99,7 +99,7 @@ func TestMemoryWidgetUpdate(t *testing.T) {
 }
 
 func TestMemoryWidgetRenderAllModes(t *testing.T) {
-	modes := []string{"text", "bar_horizontal", "bar_vertical", "graph"}
+	modes := []string{"text", "bar_horizontal", "bar_vertical", "graph", "gauge"}
 
 	for _, mode := range modes {
 		t.Run(mode, func(t *testing.T) {
@@ -119,12 +119,14 @@ func TestMemoryWidgetRenderAllModes(t *testing.T) {
 					BorderColor:     255,
 				},
 				Properties: config.WidgetProperties{
-					DisplayMode:     mode,
-					FontSize:        10,
-					HorizontalAlign: "center",
-					VerticalAlign:   "center",
-					FillColor:       255,
-					HistoryLength:   30,
+					DisplayMode:      mode,
+					FontSize:         10,
+					HorizontalAlign:  "center",
+					VerticalAlign:    "center",
+					FillColor:        255,
+					HistoryLength:    30,
+					GaugeColor:       200,
+					GaugeNeedleColor: 255,
 				},
 			}
 
@@ -158,5 +160,56 @@ func TestMemoryWidgetRenderAllModes(t *testing.T) {
 				t.Fatal("Render() returned nil image")
 			}
 		})
+	}
+}
+
+func TestMemoryWidget_GaugeDefaults(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "memory",
+		ID:      "test_memory_gauge_defaults",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 64,
+			H: 40,
+		},
+		Style: config.StyleConfig{
+			BackgroundColor: 0,
+			Border:          false,
+			BorderColor:     255,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "gauge",
+			// Don't specify colors to test defaults
+		},
+	}
+
+	widget, err := NewMemoryWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewMemoryWidget() error = %v", err)
+	}
+
+	// Verify defaults
+	if widget.gaugeColor != 200 {
+		t.Errorf("default gaugeColor = %d, want 200", widget.gaugeColor)
+	}
+
+	if widget.gaugeNeedleColor != 255 {
+		t.Errorf("default gaugeNeedleColor = %d, want 255", widget.gaugeNeedleColor)
+	}
+
+	err = widget.Update()
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
 	}
 }

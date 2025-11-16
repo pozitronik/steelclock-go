@@ -85,6 +85,8 @@ type WidgetProperties struct {
 	SpeedUnit      string  `json:"speed_unit,omitempty"`
 	RxColor        int     `json:"rx_color,omitempty"`
 	TxColor        int     `json:"tx_color,omitempty"`
+	RxNeedleColor  int     `json:"rx_needle_color,omitempty"`
+	TxNeedleColor  int     `json:"tx_needle_color,omitempty"`
 
 	// Disk widget
 	DiskName   *string `json:"disk_name"`
@@ -101,4 +103,12 @@ type WidgetProperties struct {
 	ScrollLockOff     string `json:"scroll_lock_off,omitempty"`
 	IndicatorColorOn  int    `json:"indicator_color_on,omitempty"`
 	IndicatorColorOff int    `json:"indicator_color_off,omitempty"`
+
+	// Volume widget
+	AutoHide          bool    `json:"auto_hide,omitempty"`
+	AutoHideTimeout   float64 `json:"auto_hide_timeout,omitempty"`
+	GaugeColor        int     `json:"gauge_color,omitempty"`
+	GaugeNeedleColor  int     `json:"gauge_needle_color,omitempty"`
+	TriangleFillColor int     `json:"triangle_fill_color,omitempty"`
+	TriangleBorder    bool    `json:"triangle_border,omitempty"`
 }

@@ -318,6 +318,119 @@ func TestNetworkWidget_SpecificInterface(t *testing.T) {
 	}
 }
 
+// TestNetworkWidget_RenderGauge tests dual gauge mode rendering
+func TestNetworkWidget_RenderGauge(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "network",
+		ID:      "test_network_gauge",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode:   "gauge",
+			MaxSpeedMbps:  100,
+			RxColor:       255,
+			TxColor:       200,
+			RxNeedleColor: 255,
+			TxNeedleColor: 180,
+		},
+	}
+
+	widget, err := NewNetworkWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewNetworkWidget() error = %v", err)
+	}
+
+	_ = widget.Update()
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+}
+
+// TestNetworkWidget_GaugeDefaults tests gauge mode with default needle colors
+func TestNetworkWidget_GaugeDefaults(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "network",
+		ID:      "test_network_gauge_defaults",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 64, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode:  "gauge",
+			MaxSpeedMbps: 100,
+			// Don't specify needle colors to test defaults
+		},
+	}
+
+	widget, err := NewNetworkWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewNetworkWidget() error = %v", err)
+	}
+
+	// Verify defaults
+	if widget.rxNeedleColor != 255 {
+		t.Errorf("default rxNeedleColor = %d, want 255", widget.rxNeedleColor)
+	}
+
+	if widget.txNeedleColor != 200 {
+		t.Errorf("default txNeedleColor = %d, want 200", widget.txNeedleColor)
+	}
+
+	_ = widget.Update()
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+}
+
+// TestNetworkWidget_GaugeAutoScale tests gauge mode with auto-scaling
+func TestNetworkWidget_GaugeAutoScale(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "network",
+		ID:      "test_network_gauge_autoscale",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 64, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode:  "gauge",
+			MaxSpeedMbps: -1, // Auto-scale
+			RxColor:      255,
+			TxColor:      200,
+		},
+	}
+
+	widget, err := NewNetworkWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewNetworkWidget() error = %v", err)
+	}
+
+	_ = widget.Update()
+
+	// Should render without error even with auto-scale
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() with auto-scale error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+}
+
 // TestNetworkWidget_ConcurrentAccess tests thread safety
 func TestNetworkWidget_ConcurrentAccess(t *testing.T) {
 	cfg := config.WidgetConfig{

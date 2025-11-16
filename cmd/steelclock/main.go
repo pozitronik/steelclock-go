@@ -132,23 +132,29 @@ func startAppWithConfig(cfg *config.Config) error {
 		log.Printf("Using custom bundled font URL: %s", cfg.BundledFontURL)
 	}
 
-	// Create GameSense client
+	// Create or reuse GameSense client
 	var err error
-	client, err = gamesense.NewClient(cfg.GameName, cfg.GameDisplayName)
-	if err != nil {
-		return fmt.Errorf("failed to create GameSense client: %w", err)
-	}
+	if client == nil {
+		// First time startup - create new client and register
+		client, err = gamesense.NewClient(cfg.GameName, cfg.GameDisplayName)
+		if err != nil {
+			return fmt.Errorf("failed to create GameSense client: %w", err)
+		}
 
-	log.Println("GameSense client created")
+		log.Println("GameSense client created")
 
-	// Register game
-	if err := client.RegisterGame("Custom"); err != nil {
-		return fmt.Errorf("failed to register game: %w", err)
-	}
+		// Register game
+		if err := client.RegisterGame("Custom"); err != nil {
+			return fmt.Errorf("failed to register game: %w", err)
+		}
 
-	// Bind screen event
-	if err := client.BindScreenEvent("STEELCLOCK_DISPLAY", "screened-128x40"); err != nil {
-		return fmt.Errorf("failed to bind screen event: %w", err)
+		// Bind screen event
+		if err := client.BindScreenEvent("STEELCLOCK_DISPLAY", "screened-128x40"); err != nil {
+			return fmt.Errorf("failed to bind screen event: %w", err)
+		}
+	} else {
+		// Reload - client already exists and game is registered
+		log.Println("Reusing existing GameSense client (already registered)")
 	}
 
 	// Create widgets
@@ -158,6 +164,9 @@ func startAppWithConfig(cfg *config.Config) error {
 	}
 
 	log.Printf("Created %d widgets", len(widgets))
+	for i := range widgets {
+		log.Printf("  Widget %d: %s (type: %s)", i+1, cfg.Widgets[i].ID, cfg.Widgets[i].Type)
+	}
 
 	// Create layout manager
 	layoutMgr := layout.NewManager(cfg.Display, widgets)
@@ -202,26 +211,26 @@ func stopAppInternal(isFinalShutdown bool) {
 
 	// Clean up GameSense registration
 	if client != nil {
-		oldClient := client
-		client = nil // Clear immediately so new registration can proceed
-
 		// Check if we should unregister
 		shouldUnregister := lastGoodConfig != nil && lastGoodConfig.UnregisterOnExit
 
 		if shouldUnregister && isFinalShutdown {
 			// Final shutdown - try to unregister if configured
 			log.Println("Unregistering from GameSense (unregister_on_exit=true)...")
-			if err := oldClient.RemoveGame(); err != nil {
+			if err := client.RemoveGame(); err != nil {
 				log.Printf("Warning: Failed to unregister game: %v", err)
 			} else {
 				log.Println("Successfully unregistered from GameSense")
 			}
+			client = nil // Clear client after unregistering
 		} else if !isFinalShutdown {
-			// During reload - never unregister, just stop sending data
-			log.Println("Stopping compositor (keeping GameSense registration)")
+			// During reload - keep client and registration alive
+			log.Println("Stopping compositor (keeping GameSense client and registration)")
+			// DON'T set client = nil here - we'll reuse it
 		} else {
 			// Final shutdown with unregister_on_exit=false
 			log.Println("Shutting down (keeping GameSense registration, unregister_on_exit=false)")
+			client = nil // Clear client reference but don't unregister
 		}
 	}
 }
@@ -232,6 +241,19 @@ func reloadConfig() error {
 	log.Println("Reloading configuration...")
 	log.Printf("Config file: %s", configPath)
 
+	// Get absolute path for clarity
+	absPath, _ := filepath.Abs(configPath)
+	log.Printf("Absolute path: %s", absPath)
+
+	// Check if file exists and get modification time
+	fileInfo, err := os.Stat(configPath)
+	if err != nil {
+		log.Printf("ERROR: Cannot access config file: %v", err)
+		log.Println("Keeping current configuration running")
+		return fmt.Errorf("cannot access config file: %w", err)
+	}
+	log.Printf("Config file last modified: %s", fileInfo.ModTime().Format("2006-01-02 15:04:05"))
+
 	// Validate new config first (before stopping anything)
 	newCfg, err := config.Load(configPath)
 	if err != nil {
@@ -241,6 +263,7 @@ func reloadConfig() error {
 	}
 
 	log.Println("New config validated successfully")
+	log.Printf("Loaded config: %s (%s) with %d widgets", newCfg.GameName, newCfg.GameDisplayName, len(newCfg.Widgets))
 
 	// Stop current app
 	log.Println("Stopping current instance...")
