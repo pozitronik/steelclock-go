@@ -191,13 +191,13 @@ func (w *VolumeWidget) Render() (image.Image, error) {
 	// Render based on display mode
 	switch w.displayMode {
 	case "text":
-		w.renderText(img, pos, style)
+		w.renderText(img)
 	case "bar_horizontal":
 		w.renderBarHorizontal(img, pos, style)
 	case "bar_vertical":
 		w.renderBarVertical(img, pos, style)
 	case "gauge":
-		w.renderGauge(img, pos, style)
+		w.renderGauge(img, pos)
 	case "triangle":
 		w.renderTriangle(img, pos, style)
 	default:
@@ -208,7 +208,7 @@ func (w *VolumeWidget) Render() (image.Image, error) {
 }
 
 // renderText renders volume as text
-func (w *VolumeWidget) renderText(img *image.Gray, pos config.PositionConfig, style config.StyleConfig) {
+func (w *VolumeWidget) renderText(img *image.Gray) {
 	if w.face == nil {
 		return
 	}
@@ -321,7 +321,7 @@ func (w *VolumeWidget) renderBarVertical(img *image.Gray, pos config.PositionCon
 }
 
 // renderGauge renders volume as an old-fashioned gauge with needle
-func (w *VolumeWidget) renderGauge(img *image.Gray, pos config.PositionConfig, style config.StyleConfig) {
+func (w *VolumeWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
 	// Use shared gauge drawing function
 	bitmap.DrawGauge(img, pos, w.volume, w.gaugeColor, w.gaugeNeedleColor)
 
