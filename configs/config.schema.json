@@ -134,19 +134,19 @@
         },
         "y": {
           "type": "integer",
-          "description": "Y coordinate on canvas",
+          "description": "Y coordinate on canvas"
         },
         "w": {
           "type": "integer",
-          "description": "Widget width in pixels",
+          "description": "Widget width in pixels"
         },
         "h": {
           "type": "integer",
-          "description": "Widget height in pixels",
+          "description": "Widget height in pixels"
         },
         "z_order": {
           "type": "integer",
-          "description": "Stacking order (higher = on top)",
+          "description": "Stacking order (higher = on top)"
         }
       }
     },
@@ -259,7 +259,7 @@
                 "display_mode": {
                   "type": "string",
                   "description": "Display mode",
-                  "enum": ["text", "bar_horizontal", "bar_vertical", "graph"],
+                  "enum": ["text", "bar_horizontal", "bar_vertical", "graph", "gauge"],
                   "default": "bar_horizontal"
                 },
                 "per_core": {
@@ -297,6 +297,20 @@
                   "maximum": 255,
                   "default": 255
                 },
+                "gauge_color": {
+                  "type": "integer",
+                  "description": "Gauge arc and tick marks color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 200
+                },
+                "gauge_needle_color": {
+                  "type": "integer",
+                  "description": "Gauge needle color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
                 "font": {"$ref": "#/definitions/textProperties/properties/font"},
                 "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
                 "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
@@ -320,7 +334,7 @@
                 "display_mode": {
                   "type": "string",
                   "description": "Display mode",
-                  "enum": ["text", "bar_horizontal", "bar_vertical", "graph"],
+                  "enum": ["text", "bar_horizontal", "bar_vertical", "graph", "gauge"],
                   "default": "bar_horizontal"
                 },
                 "update_interval": {
@@ -343,6 +357,20 @@
                 "fill_color": {
                   "type": "integer",
                   "description": "Bar/graph fill color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "gauge_color": {
+                  "type": "integer",
+                  "description": "Gauge arc and tick marks color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 200
+                },
+                "gauge_needle_color": {
+                  "type": "integer",
+                  "description": "Gauge needle color (0-255)",
                   "minimum": 0,
                   "maximum": 255,
                   "default": 255
@@ -375,7 +403,7 @@
                 "display_mode": {
                   "type": "string",
                   "description": "Display mode",
-                  "enum": ["text", "bar_horizontal", "bar_vertical", "graph"],
+                  "enum": ["text", "bar_horizontal", "bar_vertical", "graph", "gauge"],
                   "default": "bar_horizontal"
                 },
                 "update_interval": {
@@ -425,6 +453,20 @@
                   "minimum": 0,
                   "maximum": 255,
                   "default": 128
+                },
+                "rx_needle_color": {
+                  "type": "integer",
+                  "description": "RX needle color for gauge mode (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "tx_needle_color": {
+                  "type": "integer",
+                  "description": "TX needle color for gauge mode (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 200
                 },
                 "font": {"$ref": "#/definitions/textProperties/properties/font"},
                 "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
