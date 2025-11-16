@@ -414,11 +414,25 @@ func (w *VolumeWidget) renderTriangle(img *image.Gray, pos config.PositionConfig
 
 // drawMuteIndicator draws a mute indicator (X or slash)
 func (w *VolumeWidget) drawMuteIndicator(img *image.Gray, pos config.PositionConfig) {
-	// Draw diagonal lines to indicate mute
-	black := color.Gray{Y: 0}
+	// Draw a visible mute overlay - semi-transparent effect with pattern
+	// Use alternating pattern instead of solid X for better visibility
+	muteColor := color.Gray{Y: 128} // Mid-gray for visibility on any background
+
+	// Draw thicker diagonal stripes
+	thickness := 2
 	for i := 0; i < pos.W && i < pos.H; i++ {
-		img.Set(i, i, black)         // Diagonal \
-		img.Set(i, pos.H-i-1, black) // Diagonal /
+		for t := -thickness; t <= thickness; t++ {
+			// Diagonal \
+			y1 := i + t
+			if y1 >= 0 && y1 < pos.H && i >= 0 && i < pos.W {
+				img.Set(i, y1, muteColor)
+			}
+			// Diagonal /
+			y2 := pos.H - i - 1 + t
+			if y2 >= 0 && y2 < pos.H && i >= 0 && i < pos.W {
+				img.Set(i, y2, muteColor)
+			}
+		}
 	}
 }
 
