@@ -49,7 +49,22 @@ jobs:
       shell: bash
       run: |
         VERSION="${{ steps.version.outputs.version }}"
-        VERSION_FULL="${VERSION}.0"  # e.g., 1.0.0.0
+
+        # Convert version to 4-component format required by Windows resources
+        # If version is 1.2.3, convert to 1.2.3.0
+        # If version is 1.2.3.4, use as-is
+        DOT_COUNT=$(echo "$VERSION" | tr -cd '.' | wc -c)
+        if [ "$DOT_COUNT" -eq 2 ]; then
+          VERSION_FULL="${VERSION}.0"
+        elif [ "$DOT_COUNT" -eq 3 ]; then
+          VERSION_FULL="${VERSION}"
+        else
+          echo "Error: Invalid version format '$VERSION'. Expected format: X.Y.Z or X.Y.Z.W"
+          exit 1
+        fi
+
+        echo "Version: $VERSION"
+        echo "Version (4-component): $VERSION_FULL"
 
         # Update winres.json with version info
         if [ -f winres/winres.json ]; then
