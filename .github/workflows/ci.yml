@@ -24,6 +24,16 @@ jobs:
       with:
         go-version: ${{ matrix.go-version }}
 
+    - name: Prepare icon resources
+      shell: bash
+      run: |
+        mkdir -p internal/tray
+        if [ -f winres/icon.ico ]; then
+          cp winres/icon.ico internal/tray/icon.ico
+        else
+          echo "Warning: winres/icon.ico not found, tests may fail"
+        fi
+
     - name: Install dependencies
       run: go mod download
 
@@ -51,10 +61,20 @@ jobs:
       with:
         go-version: '1.23'
 
+    - name: Prepare icon resources
+      run: |
+        mkdir -p internal/tray
+        if [ -f winres/icon.ico ]; then
+          cp winres/icon.ico internal/tray/icon.ico
+        else
+          echo "Warning: winres/icon.ico not found"
+        fi
+
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v6
       with:
-        version: latest
+        version: v1.62
+        args: --timeout=5m
 
   build:
     name: Build
@@ -80,6 +100,36 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.23'
+
+    - name: Prepare icon resources
+      shell: bash
+      run: |
+        mkdir -p internal/tray
+        if [ -f winres/icon.ico ]; then
+          cp winres/icon.ico internal/tray/icon.ico
+          echo "Icon copied to internal/tray/"
+        else
+          echo "Warning: winres/icon.ico not found"
+        fi
+
+    - name: Install go-winres (Windows only)
+      if: matrix.os == 'windows-latest'
+      shell: bash
+      run: |
+        go install github.com/tc-hib/go-winres@latest
+        echo "$HOME/go/bin" >> $GITHUB_PATH
+
+    - name: Generate Windows resources (Windows only)
+      if: matrix.os == 'windows-latest'
+      shell: bash
+      run: |
+        if [ -f winres/winres.json ]; then
+          cd winres
+          go-winres make --out ../cmd/steelclock/rsrc
+          echo "Windows resources generated"
+        else
+          echo "Warning: winres/winres.json not found, skipping resource generation"
+        fi
 
     - name: Build
       env:
