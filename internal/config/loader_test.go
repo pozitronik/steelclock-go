@@ -185,8 +185,19 @@ func TestSaveDefault_CreatesParentDir(t *testing.T) {
 
 // TestSaveDefault_InvalidPath tests error handling for invalid paths
 func TestSaveDefault_InvalidPath(t *testing.T) {
-	// Try to save to a path that cannot be created (on most systems)
-	configPath := "/proc/invalid/path/config.json"
+	// Create a regular file, then try to create a config "inside" it
+	// This should fail on all platforms since you can't create a file inside a file
+	tmpDir := t.TempDir()
+	blockingFile := filepath.Join(tmpDir, "blockingfile")
+
+	// Create a regular file
+	if err := os.WriteFile(blockingFile, []byte("test"), 0644); err != nil {
+		t.Fatalf("Failed to create blocking file: %v", err)
+	}
+
+	// Try to save to a path that treats the file as a directory
+	// This should fail because blockingFile is a file, not a directory
+	configPath := filepath.Join(blockingFile, "config.json")
 
 	err := SaveDefault(configPath)
 	if err == nil {
