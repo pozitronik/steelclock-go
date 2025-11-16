@@ -120,5 +120,7 @@ echo.
 echo [OK] Build complete!
 echo.
 echo Usage:
-echo   steelclock.exe          # Headless mode (tray icon)
-echo   steelclock.exe -console # Console mode (debugging)
+echo   steelclock.exe          # Run with system tray
+echo   steelclock.exe -config path\to\config.json
+echo.
+echo Logs: steelclock.log in the same directory as the executable

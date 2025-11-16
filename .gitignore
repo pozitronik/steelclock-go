@@ -19,6 +19,7 @@ cmd/**/*.syso
 
 # Logs
 panic.log
+steelclock.log
 
 # Fonts directory (auto-downloaded)
 /fonts/

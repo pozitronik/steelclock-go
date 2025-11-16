@@ -2,11 +2,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"io"
 	"log"
 	"os"
-	"os/signal"
+	"path/filepath"
 	"sync"
-	"syscall"
 
 	"github.com/pozitronik/steelclock/internal/compositor"
 	"github.com/pozitronik/steelclock/internal/config"
@@ -20,49 +21,26 @@ var (
 	comp       *compositor.Compositor
 	client     *gamesense.Client
 	configPath string
+	logFile    *os.File
 	mu         sync.Mutex
 )
 
 func main() {
 	// Parse command line flags
 	configPathFlag := flag.String("config", "config.json", "Path to configuration file")
-	consoleMode := flag.Bool("console", false, "Run in console mode (no system tray)")
 	flag.Parse()
 
 	configPath = *configPathFlag
 
-	if *consoleMode {
-		runConsoleMode()
-	} else {
-		runHeadlessMode()
-	}
-}
+	// Setup logging to file
+	setupLogging()
+	defer closeLogging()
 
-// runConsoleMode runs the application in console mode
-func runConsoleMode() {
-	log.Println("SteelClock starting (console mode)...")
-
-	if err := startApp(); err != nil {
-		log.Fatalf("Failed to start: %v", err)
-	}
-
-	// Setup signal handling for graceful shutdown
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-
-	log.Println("SteelClock running. Press Ctrl+C to stop...")
-
-	// Wait for shutdown signal
-	<-sigChan
-
-	log.Println("Shutting down...")
-	stopApp()
-	log.Println("SteelClock stopped")
-}
-
-// runHeadlessMode runs the application with system tray
-func runHeadlessMode() {
-	log.Println("SteelClock starting (headless mode)...")
+	log.Println("========================================")
+	log.Println("SteelClock starting...")
+	log.Printf("Version: 1.0.0")
+	log.Printf("Config: %s", configPath)
+	log.Println("========================================")
 
 	// Start the application
 	if err := startApp(); err != nil {
@@ -76,6 +54,43 @@ func runHeadlessMode() {
 
 	// Run system tray (blocks until Quit)
 	trayMgr.Run()
+
+	log.Println("SteelClock shutting down...")
+	stopApp()
+	log.Println("SteelClock stopped")
+}
+
+// setupLogging configures logging to file
+func setupLogging() {
+	// Get executable directory
+	exePath, err := os.Executable()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to get executable path: %v\n", err)
+		return
+	}
+	exeDir := filepath.Dir(exePath)
+
+	// Create log file with timestamp
+	logFileName := filepath.Join(exeDir, "steelclock.log")
+
+	// Open log file (append mode)
+	logFile, err = os.OpenFile(logFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to open log file: %v\n", err)
+		return
+	}
+
+	// Write to both file and stderr (for debugging)
+	multiWriter := io.MultiWriter(logFile, os.Stderr)
+	log.SetOutput(multiWriter)
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+}
+
+// closeLogging closes the log file
+func closeLogging() {
+	if logFile != nil {
+		logFile.Close()
+	}
 }
 
 // startApp initializes and starts all components
