@@ -44,6 +44,7 @@ jobs:
       run: go mod download
 
     - name: Run tests
+      shell: bash
       run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
     - name: Upload coverage to Codecov
