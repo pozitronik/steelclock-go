@@ -28,6 +28,12 @@
       "description": "Whether to unregister from GameSense API on exit. Set to false to avoid timeout issues. Default: false",
       "default": false
     },
+    "bundled_font_url": {
+      "type": "string",
+      "description": "URL to download the bundled font if no system font is available. Default: https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf",
+      "format": "uri",
+      "default": "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf"
+    },
     "display": {
       "type": "object",
       "description": "Physical display configuration",

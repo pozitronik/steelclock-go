@@ -54,6 +54,7 @@ Supported IDEs: VS Code, JetBrains IDEs (IntelliJ, PyCharm, WebStorm), Visual St
   "game_display_name": "SteelClock",
   "refresh_rate_ms": 100,
   "unregister_on_exit": false,
+  "bundled_font_url": "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf",
   "display": { ... },
   "layout": { ... },
   "widgets": [ ... ]
@@ -62,12 +63,13 @@ Supported IDEs: VS Code, JetBrains IDEs (IntelliJ, PyCharm, WebStorm), Visual St
 
 ### Global Settings
 
-| Property             | Type    | Default      | Description                                                 |
-|----------------------|---------|--------------|-------------------------------------------------------------|
-| `game_name`          | string  | "STEELCLOCK" | Game identifier (A-Z, 0-9, -, _ only)                       |
-| `game_display_name`  | string  | "SteelClock" | Human-readable name                                         |
-| `refresh_rate_ms`    | integer | 100          | Display refresh rate (min 100ms = 10Hz)                     |
-| `unregister_on_exit` | boolean | false        | Unregister from GameSense API on exit (see notes below)     |
+| Property             | Type    | Default                                                                             | Description                                             |
+|----------------------|---------|-------------------------------------------------------------------------------------|---------------------------------------------------------|
+| `game_name`          | string  | "STEELCLOCK"                                                                        | Game identifier (A-Z, 0-9, -, _ only)                   |
+| `game_display_name`  | string  | "SteelClock"                                                                        | Human-readable name                                     |
+| `refresh_rate_ms`    | integer | 100                                                                                 | Display refresh rate (min 100ms = 10Hz)                 |
+| `unregister_on_exit` | boolean | false                                                                               | Unregister from GameSense API on exit (see notes below) |
+| `bundled_font_url`   | string  | "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf" (optional) | URL for downloading bundled font (see notes below)      |
 
 **About `unregister_on_exit`**:
 
@@ -84,6 +86,34 @@ This option controls whether SteelClock calls the GameSense API `/remove_game` e
 - During configuration reload, the game is never unregistered regardless of this setting (to avoid disruption)
 - Only affects final application shutdown (via tray menu "Quit")
 - The `/remove_game` endpoint can be slow or timeout, which is why the default is false
+
+**About `bundled_font_url`**:
+
+This option allows you to specify a custom URL for downloading the bundled TrueType font when no system font is available.
+
+- **Default**: `https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf`
+- **Optional**: This field can be omitted to use the default URL
+- **When to use**: If you want to use a different bundled font or host the font on your own server
+
+**Font Loading Behavior**:
+1. If a `font` property is specified in widget configuration, SteelClock attempts to load it as:
+   - An absolute path to a TTF file
+   - A system font name (e.g., "Arial", "Consolas")
+   - A mapped Windows font name
+2. If the font is not found, SteelClock downloads the bundled font from `bundled_font_url`
+3. If the download fails, SteelClock falls back to the built-in basic font (7x13 bitmap font)
+
+**Example**:
+```json
+{
+  "bundled_font_url": "https://example.com/fonts/custom-font.ttf"
+}
+```
+
+**Notes**:
+- The bundled font is downloaded once and cached in the `./fonts/` directory
+- The font file must be a valid TrueType font (`.ttf`)
+- The URL must be accessible from the machine running SteelClock
 
 ### Display Configuration
 
