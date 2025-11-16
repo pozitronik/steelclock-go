@@ -154,10 +154,16 @@ jobs:
         fi
 
     - name: Build
+      shell: bash
       env:
         GOOS: ${{ matrix.goos }}
         GOARCH: ${{ matrix.goarch }}
-      run: go build -ldflags="-s -w" -o ${{ matrix.artifact }} ./cmd/steelclock
+      run: |
+        if [ "${{ matrix.goos }}" == "windows" ]; then
+          go build -ldflags="-s -w -H windowsgui" -o ${{ matrix.artifact }} ./cmd/steelclock
+        else
+          go build -ldflags="-s -w" -o ${{ matrix.artifact }} ./cmd/steelclock
+        fi
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
