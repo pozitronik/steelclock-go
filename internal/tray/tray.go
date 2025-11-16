@@ -146,7 +146,3 @@ func getIcon() []byte {
 }
 
 // ValidateConfig checks if config file exists and is valid
-func ValidateConfig(configPath string) error {
-	_, err := config.Load(configPath)
-	return err
-}
