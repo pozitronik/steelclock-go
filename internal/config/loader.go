@@ -118,6 +118,15 @@ func validateWidgetProperties(index int, w *WidgetConfig) error {
 
 // applyDefaults fills in default values for optional fields
 func applyDefaults(cfg *Config) {
+	applyDisplayDefaults(cfg)
+
+	for i := range cfg.Widgets {
+		applyWidgetDefaults(&cfg.Widgets[i])
+	}
+}
+
+// applyDisplayDefaults sets default values for display configuration
+func applyDisplayDefaults(cfg *Config) {
 	if cfg.RefreshRateMs == 0 {
 		cfg.RefreshRateMs = 100
 	}
@@ -129,99 +138,122 @@ func applyDefaults(cfg *Config) {
 	if cfg.Display.Height == 0 {
 		cfg.Display.Height = 40
 	}
+}
 
-	// Apply widget defaults
-	for i := range cfg.Widgets {
-		w := &cfg.Widgets[i]
+// applyWidgetDefaults sets default values for a widget
+func applyWidgetDefaults(w *WidgetConfig) {
+	// Default enabled to true if not specified
+	if !w.Enabled && w.Type != "" {
+		w.Enabled = true
+	}
 
-		// Default enabled to true if not specified
-		if !w.Enabled && w.Type != "" {
-			w.Enabled = true
-		}
+	applyCommonWidgetDefaults(w)
+	applyTypeSpecificDefaults(w)
+}
 
-		// Default update interval
-		if w.Properties.UpdateInterval == 0 {
-			w.Properties.UpdateInterval = 1.0
-		}
+// applyCommonWidgetDefaults sets default values common to all widgets
+func applyCommonWidgetDefaults(w *WidgetConfig) {
+	if w.Properties.UpdateInterval == 0 {
+		w.Properties.UpdateInterval = 1.0
+	}
 
-		// Default font size
-		if w.Properties.FontSize == 0 {
-			w.Properties.FontSize = 10
-		}
+	if w.Properties.FontSize == 0 {
+		w.Properties.FontSize = 10
+	}
 
-		// Default alignments
-		if w.Properties.HorizontalAlign == "" {
-			w.Properties.HorizontalAlign = "center"
-		}
+	if w.Properties.HorizontalAlign == "" {
+		w.Properties.HorizontalAlign = "center"
+	}
 
-		if w.Properties.VerticalAlign == "" {
-			w.Properties.VerticalAlign = "center"
-		}
+	if w.Properties.VerticalAlign == "" {
+		w.Properties.VerticalAlign = "center"
+	}
 
-		// Default background opacity
-		if w.Style.BackgroundOpacity == 0 {
-			w.Style.BackgroundOpacity = 255
-		}
+	if w.Style.BackgroundOpacity == 0 {
+		w.Style.BackgroundOpacity = 255
+	}
+}
 
-		// Widget-specific defaults
-		switch w.Type {
-		case "clock":
-			if w.Properties.Format == "" {
-				w.Properties.Format = "%H:%M:%S"
-			}
+// applyTypeSpecificDefaults sets default values specific to widget types
+func applyTypeSpecificDefaults(w *WidgetConfig) {
+	switch w.Type {
+	case "clock":
+		applyClockDefaults(w)
+	case "cpu", "memory":
+		applyMetricWidgetDefaults(w)
+	case "network":
+		applyNetworkDefaults(w)
+	case "disk":
+		applyDiskDefaults(w)
+	case "keyboard":
+		applyKeyboardDefaults(w)
+	}
+}
 
-		case "cpu", "memory":
-			if w.Properties.DisplayMode == "" {
-				w.Properties.DisplayMode = "text"
-			}
-			if w.Properties.FillColor == 0 {
-				w.Properties.FillColor = 255
-			}
-			if w.Properties.HistoryLength == 0 {
-				w.Properties.HistoryLength = 30
-			}
+// applyClockDefaults sets default values for clock widgets
+func applyClockDefaults(w *WidgetConfig) {
+	if w.Properties.Format == "" {
+		w.Properties.Format = "%H:%M:%S"
+	}
+}
 
-		case "network":
-			if w.Properties.DisplayMode == "" {
-				w.Properties.DisplayMode = "text"
-			}
-			if w.Properties.RxColor == 0 {
-				w.Properties.RxColor = 255
-			}
-			if w.Properties.TxColor == 0 {
-				w.Properties.TxColor = 255
-			}
-			if w.Properties.MaxSpeedMbps == 0 {
-				w.Properties.MaxSpeedMbps = -1
-			}
-			if w.Properties.HistoryLength == 0 {
-				w.Properties.HistoryLength = 30
-			}
+// applyMetricWidgetDefaults sets default values for CPU and Memory widgets
+func applyMetricWidgetDefaults(w *WidgetConfig) {
+	if w.Properties.DisplayMode == "" {
+		w.Properties.DisplayMode = "text"
+	}
+	if w.Properties.FillColor == 0 {
+		w.Properties.FillColor = 255
+	}
+	if w.Properties.HistoryLength == 0 {
+		w.Properties.HistoryLength = 30
+	}
+}
 
-		case "disk":
-			if w.Properties.DisplayMode == "" {
-				w.Properties.DisplayMode = "text"
-			}
-			if w.Properties.ReadColor == 0 {
-				w.Properties.ReadColor = 255
-			}
-			if w.Properties.WriteColor == 0 {
-				w.Properties.WriteColor = 255
-			}
-			if w.Properties.MaxSpeedMbps == 0 {
-				w.Properties.MaxSpeedMbps = -1
-			}
-			if w.Properties.HistoryLength == 0 {
-				w.Properties.HistoryLength = 30
-			}
+// applyNetworkDefaults sets default values for network widgets
+func applyNetworkDefaults(w *WidgetConfig) {
+	if w.Properties.DisplayMode == "" {
+		w.Properties.DisplayMode = "text"
+	}
+	if w.Properties.RxColor == 0 {
+		w.Properties.RxColor = 255
+	}
+	if w.Properties.TxColor == 0 {
+		w.Properties.TxColor = 255
+	}
+	if w.Properties.MaxSpeedMbps == 0 {
+		w.Properties.MaxSpeedMbps = -1
+	}
+	if w.Properties.HistoryLength == 0 {
+		w.Properties.HistoryLength = 30
+	}
+}
 
-		case "keyboard":
-			if w.Properties.IndicatorColorOn == 0 {
-				w.Properties.IndicatorColorOn = 255
-			}
-			if w.Properties.IndicatorColorOff == 0 {
-				w.Properties.IndicatorColorOff = 100
-			}
-		}
+// applyDiskDefaults sets default values for disk widgets
+func applyDiskDefaults(w *WidgetConfig) {
+	if w.Properties.DisplayMode == "" {
+		w.Properties.DisplayMode = "text"
+	}
+	if w.Properties.ReadColor == 0 {
+		w.Properties.ReadColor = 255
+	}
+	if w.Properties.WriteColor == 0 {
+		w.Properties.WriteColor = 255
+	}
+	if w.Properties.MaxSpeedMbps == 0 {
+		w.Properties.MaxSpeedMbps = -1
+	}
+	if w.Properties.HistoryLength == 0 {
+		w.Properties.HistoryLength = 30
+	}
+}
+
+// applyKeyboardDefaults sets default values for keyboard widgets
+func applyKeyboardDefaults(w *WidgetConfig) {
+	if w.Properties.IndicatorColorOn == 0 {
+		w.Properties.IndicatorColorOn = 255
+	}
+	if w.Properties.IndicatorColorOff == 0 {
+		w.Properties.IndicatorColorOff = 100
 	}
 }
