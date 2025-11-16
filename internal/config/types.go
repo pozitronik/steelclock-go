@@ -85,6 +85,8 @@ type WidgetProperties struct {
 	SpeedUnit      string  `json:"speed_unit,omitempty"`
 	RxColor        int     `json:"rx_color,omitempty"`
 	TxColor        int     `json:"tx_color,omitempty"`
+	RxNeedleColor  int     `json:"rx_needle_color,omitempty"`
+	TxNeedleColor  int     `json:"tx_needle_color,omitempty"`
 
 	// Disk widget
 	DiskName   *string `json:"disk_name"`

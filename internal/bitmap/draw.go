@@ -130,6 +130,123 @@ func DrawGraph(img *image.Gray, x, y, w, h int, history []float64, maxHistory in
 	}
 }
 
+// DrawDualGauge draws a nested/concentric double gauge with two needles
+// Outer gauge (larger radius) for primary value, inner gauge (smaller radius) for secondary value
+func DrawDualGauge(img *image.Gray, pos config.PositionConfig, outerPercentage, innerPercentage float64, outerGaugeColor, outerNeedleColor, innerGaugeColor, innerNeedleColor uint8) {
+	centerX := pos.W / 2
+	centerY := pos.H - 3 // Near bottom
+
+	// Calculate radii - outer is larger, inner is ~60% of outer
+	outerRadius := pos.H - 6
+	if pos.W/2 < outerRadius {
+		outerRadius = pos.W/2 - 3
+	}
+
+	innerRadius := int(float64(outerRadius) * 0.6)
+
+	if outerRadius <= 0 || innerRadius <= 0 {
+		return
+	}
+
+	outerGColor := color.Gray{Y: outerGaugeColor}
+	outerNColor := color.Gray{Y: outerNeedleColor}
+	innerGColor := color.Gray{Y: innerGaugeColor}
+	innerNColor := color.Gray{Y: innerNeedleColor}
+
+	// Draw outer gauge arc (semicircle from 180° to 0°)
+	for angle := 180.0; angle >= 0; angle -= 2.0 {
+		rad := angle * math.Pi / 180.0
+		x := centerX + int(float64(outerRadius)*math.Cos(rad))
+		y := centerY - int(float64(outerRadius)*math.Sin(rad))
+
+		if x >= 0 && x < pos.W && y >= 0 && y < pos.H {
+			img.Set(x, y, outerGColor)
+		}
+	}
+
+	// Draw inner gauge arc (semicircle from 180° to 0°)
+	for angle := 180.0; angle >= 0; angle -= 2.0 {
+		rad := angle * math.Pi / 180.0
+		x := centerX + int(float64(innerRadius)*math.Cos(rad))
+		y := centerY - int(float64(innerRadius)*math.Sin(rad))
+
+		if x >= 0 && x < pos.W && y >= 0 && y < pos.H {
+			img.Set(x, y, innerGColor)
+		}
+	}
+
+	// Draw outer gauge tick marks
+	for tick := 0; tick <= 10; tick++ {
+		angle := 180.0 - float64(tick)*18.0 // 0-180 degrees in 10 steps
+		rad := angle * math.Pi / 180.0
+
+		// Outer point
+		x1 := centerX + int(float64(outerRadius)*math.Cos(rad))
+		y1 := centerY - int(float64(outerRadius)*math.Sin(rad))
+
+		// Inner point
+		tickLen := 3
+		if tick%5 == 0 {
+			tickLen = 5 // Longer ticks at 0%, 50%, 100%
+		}
+		x2 := centerX + int(float64(outerRadius-tickLen)*math.Cos(rad))
+		y2 := centerY - int(float64(outerRadius-tickLen)*math.Sin(rad))
+
+		DrawLine(img, x1, y1, x2, y2, outerGColor)
+	}
+
+	// Draw inner gauge tick marks (smaller, fewer)
+	for tick := 0; tick <= 10; tick += 2 { // Every other tick
+		angle := 180.0 - float64(tick)*18.0
+		rad := angle * math.Pi / 180.0
+
+		// Outer point
+		x1 := centerX + int(float64(innerRadius)*math.Cos(rad))
+		y1 := centerY - int(float64(innerRadius)*math.Sin(rad))
+
+		// Inner point
+		tickLen := 2
+		x2 := centerX + int(float64(innerRadius-tickLen)*math.Cos(rad))
+		y2 := centerY - int(float64(innerRadius-tickLen)*math.Sin(rad))
+
+		DrawLine(img, x1, y1, x2, y2, innerGColor)
+	}
+
+	// Draw outer needle (from inner radius to outer radius, doesn't overlap inner gauge)
+	outerNeedleAngle := 180.0 - (outerPercentage / 100.0 * 180.0)
+	outerNeedleRad := outerNeedleAngle * math.Pi / 180.0
+	outerNeedleLen := outerRadius - 2
+
+	// Start from inner radius edge (doesn't go through inner gauge)
+	outerNeedleStartX := centerX + int(float64(innerRadius)*math.Cos(outerNeedleRad))
+	outerNeedleStartY := centerY - int(float64(innerRadius)*math.Sin(outerNeedleRad))
+
+	// End at outer radius
+	outerNeedleEndX := centerX + int(float64(outerNeedleLen)*math.Cos(outerNeedleRad))
+	outerNeedleEndY := centerY - int(float64(outerNeedleLen)*math.Sin(outerNeedleRad))
+
+	DrawLine(img, outerNeedleStartX, outerNeedleStartY, outerNeedleEndX, outerNeedleEndY, outerNColor)
+
+	// Draw inner needle (shorter, thinner)
+	innerNeedleAngle := 180.0 - (innerPercentage / 100.0 * 180.0)
+	innerNeedleRad := innerNeedleAngle * math.Pi / 180.0
+	innerNeedleLen := innerRadius - 2
+
+	innerNeedleX := centerX + int(float64(innerNeedleLen)*math.Cos(innerNeedleRad))
+	innerNeedleY := centerY - int(float64(innerNeedleLen)*math.Sin(innerNeedleRad))
+
+	DrawLine(img, centerX, centerY, innerNeedleX, innerNeedleY, innerNColor)
+
+	// Draw center point (use inner needle color since only inner needle touches center)
+	for dy := -1; dy <= 1; dy++ {
+		for dx := -1; dx <= 1; dx++ {
+			if centerX+dx >= 0 && centerX+dx < pos.W && centerY+dy >= 0 && centerY+dy < pos.H {
+				img.Set(centerX+dx, centerY+dy, innerNColor)
+			}
+		}
+	}
+}
+
 // DrawGauge draws a semicircular gauge with needle
 func DrawGauge(img *image.Gray, pos config.PositionConfig, percentage float64, gaugeColor, needleColor uint8) {
 	centerX := pos.W / 2
