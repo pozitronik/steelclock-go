@@ -8,8 +8,6 @@
 
 High-performance display manager for SteelSeries devices written in Go.
 
-Standalone executable with system tray support - no Python runtime required.
-
 ## Features
 
 - **System Tray Integration**: Runs in background with system tray icon
