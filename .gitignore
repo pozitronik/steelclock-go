@@ -18,8 +18,7 @@ rsrc_*.syso
 cmd/**/*.syso
 
 # Logs
-panic.log
-steelclock.log
+*.log
 
 # Fonts directory (auto-downloaded)
 /fonts/
