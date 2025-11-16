@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/pozitronik/steelclock/internal/compositor"
 	"github.com/pozitronik/steelclock/internal/config"
@@ -18,11 +19,12 @@ import (
 )
 
 var (
-	comp       *compositor.Compositor
-	client     *gamesense.Client
-	configPath string
-	logFile    *os.File
-	mu         sync.Mutex
+	comp           *compositor.Compositor
+	client         *gamesense.Client
+	configPath     string
+	logFile        *os.File
+	mu             sync.Mutex
+	lastGoodConfig *config.Config // Backup of last working config
 )
 
 func main() {
@@ -56,7 +58,7 @@ func main() {
 	trayMgr.Run()
 
 	log.Println("SteelClock shutting down...")
-	stopApp()
+	stopAppAndWait()
 	log.Println("SteelClock stopped")
 }
 
@@ -95,39 +97,45 @@ func closeLogging() {
 
 // startApp initializes and starts all components
 func startApp() error {
-	mu.Lock()
-	defer mu.Unlock()
-
 	// Load configuration
 	cfg, err := config.Load(configPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load config: %w", err)
 	}
+
+	return startAppWithConfig(cfg)
+}
+
+// startAppWithConfig initializes and starts all components with a provided config
+func startAppWithConfig(cfg *config.Config) error {
+	mu.Lock()
+	defer mu.Unlock()
 
 	log.Printf("Config loaded: %s (%s)", cfg.GameName, cfg.GameDisplayName)
 
 	// Create GameSense client
+	var err error
 	client, err = gamesense.NewClient(cfg.GameName, cfg.GameDisplayName)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create GameSense client: %w", err)
 	}
 
 	log.Println("GameSense client created")
 
 	// Register game
 	if err := client.RegisterGame("Custom"); err != nil {
-		return err
+		return fmt.Errorf("failed to register game: %w", err)
 	}
 
 	// Bind screen event
 	if err := client.BindScreenEvent("STEELCLOCK_DISPLAY", "screened-128x40"); err != nil {
-		return err
+		return fmt.Errorf("failed to bind screen event: %w", err)
 	}
 
 	// Create widgets
 	widgets, err := widget.CreateWidgets(cfg.Widgets)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create widgets: %w", err)
 	}
 
 	log.Printf("Created %d widgets", len(widgets))
@@ -140,50 +148,116 @@ func startApp() error {
 
 	// Start compositor
 	if err := comp.Start(); err != nil {
-		return err
+		return fmt.Errorf("failed to start compositor: %w", err)
 	}
+
+	// Save as last good config
+	lastGoodConfig = cfg
 
 	log.Println("SteelClock started successfully")
 	return nil
 }
 
 // stopApp stops all components gracefully
+// During reload, we don't wait for RemoveGame to avoid blocking
 func stopApp() {
+	stopAppInternal(false)
+}
+
+// stopAppAndWait stops all components and waits for cleanup
+// Used during final shutdown
+func stopAppAndWait() {
+	stopAppInternal(true)
+}
+
+// stopAppInternal stops all components
+func stopAppInternal(waitForCleanup bool) {
 	mu.Lock()
 	defer mu.Unlock()
 
+	// Stop compositor first
 	if comp != nil {
 		comp.Stop()
 		comp = nil
 	}
 
+	// Clean up GameSense registration
 	if client != nil {
-		if err := client.RemoveGame(); err != nil {
-			log.Printf("Failed to remove game: %v", err)
+		oldClient := client
+		client = nil // Clear immediately so new registration can proceed
+
+		if waitForCleanup {
+			// Final shutdown - try to clean up, but don't block forever
+			log.Println("Cleaning up GameSense registration...")
+			if err := oldClient.RemoveGame(); err != nil {
+				log.Printf("Warning: Failed to remove game: %v", err)
+			}
+		} else {
+			// During reload - do cleanup in background, don't block restart
+			go func() {
+				if err := oldClient.RemoveGame(); err != nil {
+					log.Printf("Background cleanup: Failed to remove game: %v", err)
+				}
+			}()
 		}
-		client = nil
 	}
 }
 
 // reloadConfig reloads configuration and restarts components
 func reloadConfig() error {
+	log.Println("========================================")
 	log.Println("Reloading configuration...")
+	log.Printf("Config file: %s", configPath)
 
-	// Validate config first
-	if err := tray.ValidateConfig(configPath); err != nil {
-		log.Printf("Config validation failed: %v", err)
-		return err
+	// Validate new config first (before stopping anything)
+	newCfg, err := config.Load(configPath)
+	if err != nil {
+		log.Printf("ERROR: Config validation failed: %v", err)
+		log.Println("Keeping current configuration running")
+		return fmt.Errorf("config validation failed: %w", err)
 	}
+
+	log.Println("New config validated successfully")
 
 	// Stop current app
+	log.Println("Stopping current instance...")
 	stopApp()
 
-	// Start with new config
-	if err := startApp(); err != nil {
-		log.Printf("Failed to restart with new config: %v", err)
-		return err
+	// Wait for GameSense API to settle
+	// The API needs a moment to process cleanup before accepting new registrations
+	log.Println("Waiting for GameSense API to settle...")
+	time.Sleep(2 * time.Second)
+
+	// Try to start with new config
+	log.Println("Starting with new config...")
+	if err := startAppWithConfig(newCfg); err != nil {
+		log.Printf("ERROR: Failed to start with new config: %v", err)
+
+		// Try to recover with last good config
+		if lastGoodConfig != nil {
+			log.Println("Attempting recovery with last good config...")
+			log.Println("Waiting before recovery attempt...")
+			time.Sleep(2 * time.Second)
+
+			// Try to restart with old config (without loading from file)
+			if recoverErr := startAppWithConfig(lastGoodConfig); recoverErr != nil {
+				log.Printf("CRITICAL: Recovery failed: %v", recoverErr)
+				log.Println("Application is stopped. Please check config and restart manually.")
+				return fmt.Errorf("reload failed and recovery failed: %w", recoverErr)
+			}
+
+			log.Println("Successfully recovered with previous config")
+			log.Println("Please fix config.json and try reload again")
+			return fmt.Errorf("new config failed, reverted to previous: %w", err)
+		}
+
+		log.Println("CRITICAL: No backup config available for recovery")
+		log.Println("Application is stopped. Please check config and restart manually.")
+		return fmt.Errorf("reload failed and no backup available: %w", err)
 	}
 
-	log.Println("Configuration reloaded successfully")
+	log.Println("Configuration reloaded successfully!")
+	log.Printf("Running with: %s (%s)", newCfg.GameName, newCfg.GameDisplayName)
+	log.Println("========================================")
 	return nil
 }
