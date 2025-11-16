@@ -166,3 +166,404 @@ func TestSaveDefault(t *testing.T) {
 		t.Error("SavedDefault config should have at least one widget")
 	}
 }
+
+// TestSaveDefault_CreatesParentDir tests that SaveDefault creates parent directories
+func TestSaveDefault_CreatesParentDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "subdir1", "subdir2", "config.json")
+
+	err := SaveDefault(configPath)
+	if err != nil {
+		t.Fatalf("SaveDefault() should create parent directories, got error: %v", err)
+	}
+
+	// Verify file was created
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		t.Fatal("SaveDefault() did not create config file in nested directories")
+	}
+}
+
+// TestSaveDefault_InvalidPath tests error handling for invalid paths
+func TestSaveDefault_InvalidPath(t *testing.T) {
+	// Try to save to a path that cannot be created (on most systems)
+	configPath := "/proc/invalid/path/config.json"
+
+	err := SaveDefault(configPath)
+	if err == nil {
+		t.Error("SaveDefault() should return error for invalid path")
+	}
+}
+
+// TestValidateConfig_MissingGameName tests validation of missing game_name
+func TestValidateConfig_MissingGameName(t *testing.T) {
+	cfg := &Config{
+		GameDisplayName: "Test",
+		Display: DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
+		RefreshRateMs: 100,
+		Widgets: []WidgetConfig{
+			{
+				Type:     "clock",
+				ID:       "test",
+				Enabled:  true,
+				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+			},
+		},
+	}
+
+	err := validateConfig(cfg)
+	if err == nil {
+		t.Error("validateConfig() should return error for missing game_name")
+	}
+}
+
+// TestValidateConfig_MissingGameDisplayName tests validation of missing game_display_name
+func TestValidateConfig_MissingGameDisplayName(t *testing.T) {
+	cfg := &Config{
+		GameName: "TEST",
+		Display: DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
+		RefreshRateMs: 100,
+		Widgets: []WidgetConfig{
+			{
+				Type:     "clock",
+				ID:       "test",
+				Enabled:  true,
+				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+			},
+		},
+	}
+
+	err := validateConfig(cfg)
+	if err == nil {
+		t.Error("validateConfig() should return error for missing game_display_name")
+	}
+}
+
+// TestValidateConfig_InvalidDisplayDimensions tests validation of display dimensions
+func TestValidateConfig_InvalidDisplayDimensions(t *testing.T) {
+	tests := []struct {
+		name   string
+		width  int
+		height int
+	}{
+		{"zero width", 0, 40},
+		{"zero height", 128, 0},
+		{"negative width", -128, 40},
+		{"negative height", 128, -40},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{
+				GameName:        "TEST",
+				GameDisplayName: "Test",
+				Display: DisplayConfig{
+					Width:  tt.width,
+					Height: tt.height,
+				},
+				RefreshRateMs: 100,
+				Widgets: []WidgetConfig{
+					{
+						Type:     "clock",
+						ID:       "test",
+						Enabled:  true,
+						Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+					},
+				},
+			}
+
+			err := validateConfig(cfg)
+			if err == nil {
+				t.Errorf("validateConfig() should return error for %s", tt.name)
+			}
+		})
+	}
+}
+
+// TestValidateConfig_InvalidRefreshRate tests validation of refresh rate
+func TestValidateConfig_InvalidRefreshRate(t *testing.T) {
+	cfg := &Config{
+		GameName:        "TEST",
+		GameDisplayName: "Test",
+		Display: DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
+		RefreshRateMs: 0,
+		Widgets: []WidgetConfig{
+			{
+				Type:     "clock",
+				ID:       "test",
+				Enabled:  true,
+				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+			},
+		},
+	}
+
+	err := validateConfig(cfg)
+	if err == nil {
+		t.Error("validateConfig() should return error for zero refresh_rate_ms")
+	}
+}
+
+// TestValidateConfig_NoWidgets tests validation when no widgets are configured
+func TestValidateConfig_NoWidgets(t *testing.T) {
+	cfg := &Config{
+		GameName:        "TEST",
+		GameDisplayName: "Test",
+		Display: DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
+		RefreshRateMs: 100,
+		Widgets:       []WidgetConfig{},
+	}
+
+	err := validateConfig(cfg)
+	if err == nil {
+		t.Error("validateConfig() should return error for no widgets")
+	}
+}
+
+// TestValidateConfig_NoEnabledWidgets tests validation when all widgets are disabled
+func TestValidateConfig_NoEnabledWidgets(t *testing.T) {
+	cfg := &Config{
+		GameName:        "TEST",
+		GameDisplayName: "Test",
+		Display: DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
+		RefreshRateMs: 100,
+		Widgets: []WidgetConfig{
+			{
+				Type:     "clock",
+				ID:       "test",
+				Enabled:  false,
+				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+			},
+		},
+	}
+
+	err := validateConfig(cfg)
+	if err == nil {
+		t.Error("validateConfig() should return error when all widgets are disabled")
+	}
+}
+
+// TestValidateConfig_MissingWidgetID tests validation of missing widget ID
+func TestValidateConfig_MissingWidgetID(t *testing.T) {
+	cfg := &Config{
+		GameName:        "TEST",
+		GameDisplayName: "Test",
+		Display: DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
+		RefreshRateMs: 100,
+		Widgets: []WidgetConfig{
+			{
+				Type:     "clock",
+				ID:       "", // Missing ID
+				Enabled:  true,
+				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+			},
+		},
+	}
+
+	err := validateConfig(cfg)
+	if err == nil {
+		t.Error("validateConfig() should return error for missing widget ID")
+	}
+}
+
+// TestValidateConfig_MissingWidgetType tests validation of missing widget type
+func TestValidateConfig_MissingWidgetType(t *testing.T) {
+	cfg := &Config{
+		GameName:        "TEST",
+		GameDisplayName: "Test",
+		Display: DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
+		RefreshRateMs: 100,
+		Widgets: []WidgetConfig{
+			{
+				Type:     "", // Missing type
+				ID:       "test",
+				Enabled:  true,
+				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+			},
+		},
+	}
+
+	err := validateConfig(cfg)
+	if err == nil {
+		t.Error("validateConfig() should return error for missing widget type")
+	}
+}
+
+// TestValidateConfig_InvalidWidgetType tests validation of invalid widget type
+func TestValidateConfig_InvalidWidgetType(t *testing.T) {
+	cfg := &Config{
+		GameName:        "TEST",
+		GameDisplayName: "Test",
+		Display: DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
+		RefreshRateMs: 100,
+		Widgets: []WidgetConfig{
+			{
+				Type:     "invalid_type",
+				ID:       "test",
+				Enabled:  true,
+				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+			},
+		},
+	}
+
+	err := validateConfig(cfg)
+	if err == nil {
+		t.Error("validateConfig() should return error for invalid widget type")
+	}
+}
+
+// TestValidateWidgetProperties_ClockMissingFormat tests clock widget without format
+func TestValidateWidgetProperties_ClockMissingFormat(t *testing.T) {
+	w := &WidgetConfig{
+		Type:     "clock",
+		ID:       "test",
+		Enabled:  true,
+		Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+		Properties: WidgetProperties{
+			Format: "", // Missing format
+		},
+	}
+
+	err := validateWidgetProperties(0, w)
+	if err == nil {
+		t.Error("validateWidgetProperties() should return error for clock without format")
+	}
+}
+
+// TestValidateWidgetProperties_NetworkMissingInterface tests network widget validation
+func TestValidateWidgetProperties_NetworkMissingInterface(t *testing.T) {
+	emptyInterface := ""
+	w := &WidgetConfig{
+		Type:     "network",
+		ID:       "test",
+		Enabled:  true,
+		Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+		Properties: WidgetProperties{
+			Interface: &emptyInterface, // Empty interface
+		},
+	}
+
+	err := validateWidgetProperties(0, w)
+	if err == nil {
+		t.Error("validateWidgetProperties() should return error for network with empty interface")
+	}
+}
+
+// TestValidateWidgetProperties_DiskMissingName tests disk widget validation
+func TestValidateWidgetProperties_DiskMissingName(t *testing.T) {
+	emptyDisk := ""
+	w := &WidgetConfig{
+		Type:     "disk",
+		ID:       "test",
+		Enabled:  true,
+		Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+		Properties: WidgetProperties{
+			DiskName: &emptyDisk, // Empty disk name
+		},
+	}
+
+	err := validateWidgetProperties(0, w)
+	if err == nil {
+		t.Error("validateWidgetProperties() should return error for disk with empty disk_name")
+	}
+}
+
+// TestApplyDefaults_AllWidgetTypes tests that defaults are applied for all widget types
+func TestApplyDefaults_AllWidgetTypes(t *testing.T) {
+	cfg := &Config{
+		Widgets: []WidgetConfig{
+			{Type: "clock", ID: "clock1"},
+			{Type: "cpu", ID: "cpu1"},
+			{Type: "memory", ID: "mem1"},
+			{Type: "network", ID: "net1"},
+			{Type: "disk", ID: "disk1"},
+			{Type: "keyboard", ID: "kbd1"},
+		},
+	}
+
+	applyDefaults(cfg)
+
+	// Verify each widget got its defaults
+	for i, w := range cfg.Widgets {
+		if w.Properties.UpdateInterval == 0 {
+			t.Errorf("Widget %d (%s) missing default UpdateInterval", i, w.Type)
+		}
+
+		if w.Properties.FontSize == 0 {
+			t.Errorf("Widget %d (%s) missing default FontSize", i, w.Type)
+		}
+	}
+
+	// Verify type-specific defaults
+	if cfg.Widgets[0].Properties.Format == "" {
+		t.Error("Clock widget missing default format")
+	}
+
+	if cfg.Widgets[1].Properties.DisplayMode == "" {
+		t.Error("CPU widget missing default display mode")
+	}
+}
+
+// TestLoad_PartialConfig tests that defaults are applied to partial configs
+func TestLoad_PartialConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "partial_config.json")
+
+	// Minimal config with many fields missing
+	configJSON := `{
+		"game_name": "TEST",
+		"game_display_name": "Test Game",
+		"widgets": [
+			{
+				"type": "clock",
+				"id": "clock1",
+				"position": {"x": 0, "y": 0, "w": 128, "h": 40}
+			}
+		]
+	}`
+
+	err := os.WriteFile(configPath, []byte(configJSON), 0644)
+	if err != nil {
+		t.Fatalf("failed to write test config: %v", err)
+	}
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	// Verify defaults were applied
+	if cfg.RefreshRateMs == 0 {
+		t.Error("RefreshRateMs default was not applied")
+	}
+
+	if cfg.Display.Width == 0 {
+		t.Error("Display.Width default was not applied")
+	}
+
+	if cfg.Widgets[0].Properties.UpdateInterval == 0 {
+		t.Error("Widget UpdateInterval default was not applied")
+	}
+}

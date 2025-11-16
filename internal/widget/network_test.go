@@ -1,0 +1,361 @@
+package widget
+
+import (
+	"testing"
+
+	"github.com/pozitronik/steelclock-go/internal/config"
+)
+
+// TestNewNetworkWidget tests successful network widget creation
+func TestNewNetworkWidget(t *testing.T) {
+	iface := "eth0"
+	cfg := config.WidgetConfig{
+		Type:    "network",
+		ID:      "test_network",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			Interface:     &iface,
+			DisplayMode:   "text",
+			FontSize:      10,
+			RxColor:       255,
+			TxColor:       200,
+			MaxSpeedMbps:  1000,
+			HistoryLength: 30,
+		},
+	}
+
+	widget, err := NewNetworkWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewNetworkWidget() error = %v", err)
+	}
+
+	if widget == nil {
+		t.Fatal("NewNetworkWidget() returned nil")
+	}
+
+	if widget.Name() != "test_network" {
+		t.Errorf("Name() = %s, want test_network", widget.Name())
+	}
+}
+
+// TestNewNetworkWidget_Defaults tests default values
+func TestNewNetworkWidget_Defaults(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "network",
+		ID:      "test_network_defaults",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			// Interface intentionally nil to test all interfaces mode
+		},
+	}
+
+	widget, err := NewNetworkWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewNetworkWidget() error = %v", err)
+	}
+
+	// Check defaults
+	if widget.displayMode != "text" {
+		t.Errorf("default displayMode = %s, want text", widget.displayMode)
+	}
+
+	if widget.rxColor != 255 {
+		t.Errorf("default rxColor = %d, want 255", widget.rxColor)
+	}
+
+	if widget.txColor != 255 {
+		t.Errorf("default txColor = %d, want 255", widget.txColor)
+	}
+
+	if widget.maxSpeedMbps != -1 {
+		t.Errorf("default maxSpeedMbps = %f, want -1 (auto)", widget.maxSpeedMbps)
+	}
+}
+
+// TestNetworkWidget_Update tests network stat collection
+func TestNetworkWidget_Update(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "network",
+		ID:      "test_network_update",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "text",
+		},
+	}
+
+	widget, err := NewNetworkWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewNetworkWidget() error = %v", err)
+	}
+
+	// First update initializes baseline
+	err = widget.Update()
+	if err != nil {
+		t.Errorf("Update() error = %v", err)
+	}
+
+	// Second update calculates deltas
+	err = widget.Update()
+	if err != nil {
+		t.Errorf("Update() error = %v", err)
+	}
+
+	// Verify stats were collected (values may be 0 in test environment)
+	widget.mu.RLock()
+	hasStats := widget.currentRxMbps >= 0 && widget.currentTxMbps >= 0
+	widget.mu.RUnlock()
+
+	if !hasStats {
+		t.Error("Update() did not collect network stats")
+	}
+}
+
+// TestNetworkWidget_RenderText tests text mode rendering
+func TestNetworkWidget_RenderText(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "network",
+		ID:      "test_network_text",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "text",
+			FontSize:    10,
+		},
+	}
+
+	widget, err := NewNetworkWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewNetworkWidget() error = %v", err)
+	}
+
+	// Update to collect stats
+	_ = widget.Update()
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+}
+
+// TestNetworkWidget_RenderBarHorizontal tests horizontal bar rendering
+func TestNetworkWidget_RenderBarHorizontal(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "network",
+		ID:      "test_network_bar_h",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode:  "bar_horizontal",
+			RxColor:      255,
+			TxColor:      200,
+			MaxSpeedMbps: 100,
+		},
+	}
+
+	widget, err := NewNetworkWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewNetworkWidget() error = %v", err)
+	}
+
+	_ = widget.Update()
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+}
+
+// TestNetworkWidget_RenderBarVertical tests vertical bar rendering
+func TestNetworkWidget_RenderBarVertical(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "network",
+		ID:      "test_network_bar_v",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "bar_vertical",
+			RxColor:     255,
+			TxColor:     200,
+		},
+	}
+
+	widget, err := NewNetworkWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewNetworkWidget() error = %v", err)
+	}
+
+	_ = widget.Update()
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+}
+
+// TestNetworkWidget_RenderGraph tests graph mode rendering
+func TestNetworkWidget_RenderGraph(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "network",
+		ID:      "test_network_graph",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode:   "graph",
+			RxColor:       255,
+			TxColor:       200,
+			HistoryLength: 30,
+		},
+	}
+
+	widget, err := NewNetworkWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewNetworkWidget() error = %v", err)
+	}
+
+	// Build history
+	for i := 0; i < 5; i++ {
+		_ = widget.Update()
+	}
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+}
+
+// TestNetworkWidget_AutoScale tests auto-scaling when maxSpeedMbps is -1
+func TestNetworkWidget_AutoScale(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "network",
+		ID:      "test_network_autoscale",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode:  "bar_horizontal",
+			MaxSpeedMbps: -1, // Auto-scale
+		},
+	}
+
+	widget, err := NewNetworkWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewNetworkWidget() error = %v", err)
+	}
+
+	_ = widget.Update()
+
+	// Should render without error even with auto-scale
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() with auto-scale error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+}
+
+// TestNetworkWidget_SpecificInterface tests monitoring specific interface
+func TestNetworkWidget_SpecificInterface(t *testing.T) {
+	// Use a likely non-existent interface to test error handling
+	iface := "nonexistent_interface_xyz123"
+	cfg := config.WidgetConfig{
+		Type:    "network",
+		ID:      "test_network_specific",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			Interface:   &iface,
+			DisplayMode: "text",
+		},
+	}
+
+	widget, err := NewNetworkWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewNetworkWidget() error = %v", err)
+	}
+
+	// Update should work even if interface doesn't exist (returns 0 stats)
+	err = widget.Update()
+	if err != nil {
+		t.Errorf("Update() with nonexistent interface should not error, got %v", err)
+	}
+}
+
+// TestNetworkWidget_ConcurrentAccess tests thread safety
+func TestNetworkWidget_ConcurrentAccess(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "network",
+		ID:      "test_network_concurrent",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "text",
+		},
+	}
+
+	widget, err := NewNetworkWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewNetworkWidget() error = %v", err)
+	}
+
+	done := make(chan bool)
+
+	// Concurrent updates
+	go func() {
+		for i := 0; i < 10; i++ {
+			_ = widget.Update()
+		}
+		done <- true
+	}()
+
+	// Concurrent renders
+	go func() {
+		for i := 0; i < 10; i++ {
+			_, _ = widget.Render()
+		}
+		done <- true
+	}()
+
+	<-done
+	<-done
+	// Should not panic or race
+}
