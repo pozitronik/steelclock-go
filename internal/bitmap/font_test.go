@@ -2,7 +2,6 @@ package bitmap
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -236,9 +235,4 @@ func TestLoadFont_MultipleLoads(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		<-done
 	}
-}
-
-// Helper function to check if path is relative
-func isRelativePath(path string) bool {
-	return !filepath.IsAbs(path)
 }
