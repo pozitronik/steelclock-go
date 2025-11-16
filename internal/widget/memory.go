@@ -14,19 +14,21 @@ import (
 // MemoryWidget displays RAM usage
 type MemoryWidget struct {
 	*BaseWidget
-	displayMode  string
-	fontSize     int
-	fontName     string
-	horizAlign   string
-	vertAlign    string
-	padding      int
-	barBorder    bool
-	fillColor    uint8
-	historyLen   int
-	currentUsage float64
-	history      []float64
-	fontFace     font.Face
-	mu           sync.RWMutex // Protects currentUsage and history
+	displayMode      string
+	fontSize         int
+	fontName         string
+	horizAlign       string
+	vertAlign        string
+	padding          int
+	barBorder        bool
+	fillColor        uint8
+	gaugeColor       uint8
+	gaugeNeedleColor uint8
+	historyLen       int
+	currentUsage     float64
+	history          []float64
+	fontFace         font.Face
+	mu               sync.RWMutex // Protects currentUsage and history
 }
 
 // NewMemoryWidget creates a new memory widget
@@ -58,6 +60,16 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 		fillColor = 255
 	}
 
+	gaugeColor := cfg.Properties.GaugeColor
+	if gaugeColor == 0 {
+		gaugeColor = 200
+	}
+
+	gaugeNeedleColor := cfg.Properties.GaugeNeedleColor
+	if gaugeNeedleColor == 0 {
+		gaugeNeedleColor = 255
+	}
+
 	historyLen := cfg.Properties.HistoryLength
 	if historyLen == 0 {
 		historyLen = 30
@@ -74,18 +86,20 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 	}
 
 	return &MemoryWidget{
-		BaseWidget:  base,
-		displayMode: displayMode,
-		fontSize:    fontSize,
-		fontName:    cfg.Properties.Font,
-		horizAlign:  horizAlign,
-		vertAlign:   vertAlign,
-		padding:     cfg.Properties.Padding,
-		barBorder:   cfg.Properties.BarBorder,
-		fillColor:   uint8(fillColor),
-		historyLen:  historyLen,
-		history:     make([]float64, 0, historyLen),
-		fontFace:    fontFace,
+		BaseWidget:       base,
+		displayMode:      displayMode,
+		fontSize:         fontSize,
+		fontName:         cfg.Properties.Font,
+		horizAlign:       horizAlign,
+		vertAlign:        vertAlign,
+		padding:          cfg.Properties.Padding,
+		barBorder:        cfg.Properties.BarBorder,
+		fillColor:        uint8(fillColor),
+		gaugeColor:       uint8(gaugeColor),
+		gaugeNeedleColor: uint8(gaugeNeedleColor),
+		historyLen:       historyLen,
+		history:          make([]float64, 0, historyLen),
+		fontFace:         fontFace,
 	}, nil
 }
 
@@ -149,6 +163,8 @@ func (w *MemoryWidget) Render() (image.Image, error) {
 		bitmap.DrawVerticalBar(img, contentX, contentY, contentW, contentH, w.currentUsage, w.fillColor, w.barBorder)
 	case "graph":
 		bitmap.DrawGraph(img, contentX, contentY, contentW, contentH, w.history, w.historyLen, w.fillColor)
+	case "gauge":
+		w.renderGauge(img, pos)
 	}
 	w.mu.RUnlock()
 
@@ -159,4 +175,10 @@ func (w *MemoryWidget) renderText(img *image.Gray) {
 	// Note: caller must hold read lock
 	text := fmt.Sprintf("%.0f", w.currentUsage)
 	bitmap.DrawAlignedText(img, text, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+}
+
+func (w *MemoryWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
+	// Note: caller must hold read lock
+	// Use shared gauge drawing function
+	bitmap.DrawGauge(img, pos, w.currentUsage, w.gaugeColor, w.gaugeNeedleColor)
 }

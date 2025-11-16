@@ -15,22 +15,24 @@ import (
 // CPUWidget displays CPU usage
 type CPUWidget struct {
 	*BaseWidget
-	displayMode  string
-	perCore      bool
-	fontSize     int
-	fontName     string
-	horizAlign   string
-	vertAlign    string
-	padding      int
-	barBorder    bool
-	barMargin    int
-	fillColor    uint8
-	historyLen   int
-	currentUsage interface{} // float64 or []float64
-	history      []interface{}
-	coreCount    int
-	fontFace     font.Face
-	mu           sync.RWMutex // Protects currentUsage and history
+	displayMode      string
+	perCore          bool
+	fontSize         int
+	fontName         string
+	horizAlign       string
+	vertAlign        string
+	padding          int
+	barBorder        bool
+	barMargin        int
+	fillColor        uint8
+	gaugeColor       uint8
+	gaugeNeedleColor uint8
+	historyLen       int
+	currentUsage     interface{} // float64 or []float64
+	history          []interface{}
+	coreCount        int
+	fontFace         font.Face
+	mu               sync.RWMutex // Protects currentUsage and history
 }
 
 // NewCPUWidget creates a new CPU widget
@@ -62,6 +64,16 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 		fillColor = 255
 	}
 
+	gaugeColor := cfg.Properties.GaugeColor
+	if gaugeColor == 0 {
+		gaugeColor = 200
+	}
+
+	gaugeNeedleColor := cfg.Properties.GaugeNeedleColor
+	if gaugeNeedleColor == 0 {
+		gaugeNeedleColor = 255
+	}
+
 	historyLen := cfg.Properties.HistoryLength
 	if historyLen == 0 {
 		historyLen = 30
@@ -83,21 +95,23 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 	}
 
 	return &CPUWidget{
-		BaseWidget:  base,
-		displayMode: displayMode,
-		perCore:     cfg.Properties.PerCore,
-		fontSize:    fontSize,
-		fontName:    cfg.Properties.Font,
-		horizAlign:  horizAlign,
-		vertAlign:   vertAlign,
-		padding:     cfg.Properties.Padding,
-		barBorder:   cfg.Properties.BarBorder,
-		barMargin:   cfg.Properties.BarMargin,
-		fillColor:   uint8(fillColor),
-		historyLen:  historyLen,
-		history:     make([]interface{}, 0, historyLen),
-		coreCount:   cores,
-		fontFace:    fontFace,
+		BaseWidget:       base,
+		displayMode:      displayMode,
+		perCore:          cfg.Properties.PerCore,
+		fontSize:         fontSize,
+		fontName:         cfg.Properties.Font,
+		horizAlign:       horizAlign,
+		vertAlign:        vertAlign,
+		padding:          cfg.Properties.Padding,
+		barBorder:        cfg.Properties.BarBorder,
+		barMargin:        cfg.Properties.BarMargin,
+		fillColor:        uint8(fillColor),
+		gaugeColor:       uint8(gaugeColor),
+		gaugeNeedleColor: uint8(gaugeNeedleColor),
+		historyLen:       historyLen,
+		history:          make([]interface{}, 0, historyLen),
+		coreCount:        cores,
+		fontFace:         fontFace,
 	}, nil
 }
 
@@ -196,6 +210,8 @@ func (w *CPUWidget) Render() (image.Image, error) {
 		w.renderBarVertical(img, contentX, contentY, contentW, contentH)
 	case "graph":
 		w.renderGraph(img, contentX, contentY, contentW, contentH)
+	case "gauge":
+		w.renderGauge(img, pos)
 	}
 
 	return img, nil
@@ -297,4 +313,28 @@ func (w *CPUWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 		}
 		bitmap.DrawGraph(img, x, y, width, height, history, w.historyLen, w.fillColor)
 	}
+}
+
+func (w *CPUWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	if w.currentUsage == nil {
+		return
+	}
+
+	// Calculate usage value (average if per-core)
+	var usage float64
+	if w.perCore {
+		cores := w.currentUsage.([]float64)
+		for _, c := range cores {
+			usage += c
+		}
+		usage /= float64(len(cores))
+	} else {
+		usage = w.currentUsage.(float64)
+	}
+
+	// Use shared gauge drawing function
+	bitmap.DrawGauge(img, pos, usage, w.gaugeColor, w.gaugeNeedleColor)
 }
