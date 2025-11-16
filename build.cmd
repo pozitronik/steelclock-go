@@ -1,62 +1,124 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 
-echo Building SteelClock for Windows...
+echo ======================================
+echo Building SteelClock for Windows
+echo ======================================
 echo.
 
-REM Check if go-winres is available and generate Windows resources if configured
+REM Step 1: Cleanup old resources
+echo [1/6] Cleaning old resources...
+if exist "cmd\steelclock\*.syso" del /q "cmd\steelclock\*.syso" 2>nul
+if exist "internal\tray\icon.ico" del /q "internal\tray\icon.ico" 2>nul
+if exist "steelclock.exe" del /q "steelclock.exe" 2>nul
+if exist "winres\*.syso" del /q "winres\*.syso" 2>nul
+echo [OK] Cleanup complete
+echo.
+
+REM Step 2: Check for go-winres
+echo [2/6] Checking for go-winres...
+set WINRES_CMD=
+set WINRES_FOUND=0
+
 where go-winres.exe >nul 2>&1
 if %errorlevel% equ 0 (
-    if exist "winres\winres.json" (
-        echo Generating Windows resources with go-winres...
-        go-winres.exe make --out cmd\steelclock\rsrc
-        if %errorlevel% equ 0 (
-            echo [OK] Windows resources generated
-            echo.
-        ) else (
-            echo Warning: go-winres failed, continuing without resources
-            echo.
-        )
-    ) else (
-        echo Note: winres\winres.json not found, skipping resource generation
-        echo.
-    )
+    set WINRES_CMD=go-winres.exe
+    set WINRES_FOUND=1
+    echo [OK] go-winres found in PATH
 ) else (
-    REM Try to find go-winres in user's Go bin directory
     if exist "%USERPROFILE%\go\bin\go-winres.exe" (
-        if exist "winres\winres.json" (
-            echo Generating Windows resources with go-winres...
-            "%USERPROFILE%\go\bin\go-winres.exe" make --out cmd\steelclock\rsrc
-            if %errorlevel% equ 0 (
-                echo [OK] Windows resources generated
-                echo.
-            ) else (
-                echo Warning: go-winres failed, continuing without resources
-                echo.
-            )
-        )
+        set WINRES_CMD=%USERPROFILE%\go\bin\go-winres.exe
+        set WINRES_FOUND=1
+        echo [OK] go-winres found in %%USERPROFILE%%\go\bin
     ) else (
-        echo Note: go-winres not found, skipping resource generation
-        echo       Install with: go install github.com/tc-hib/go-winres@latest
+        echo [!] go-winres not found
         echo.
+        echo Installing go-winres...
+        go install github.com/tc-hib/go-winres@latest
+        if %errorlevel% equ 0 (
+            set WINRES_CMD=%USERPROFILE%\go\bin\go-winres.exe
+            set WINRES_FOUND=1
+            echo [OK] go-winres installed successfully
+        ) else (
+            echo [X] Failed to install go-winres
+            echo.
+            echo Please install manually:
+            echo   go install github.com/tc-hib/go-winres@latest
+            echo.
+            exit /b 1
+        )
     )
 )
+echo.
 
+REM Step 3: Generate Windows resources (.syso files)
+echo [3/6] Generating Windows resources...
+if not exist "winres\winres.json" (
+    echo [!] winres\winres.json not found
+    echo     Skipping resource generation
+    echo.
+) else (
+    REM Generate .syso files in winres folder first
+    !WINRES_CMD! make --out winres\rsrc >nul 2>&1
+    if %errorlevel% equ 0 (
+        echo [OK] Resource files generated in winres\
+
+        REM Copy .syso files to cmd\steelclock\ for compilation
+        if exist "winres\*.syso" (
+            copy /y "winres\*.syso" "cmd\steelclock\" >nul
+            echo [OK] Copied .syso files to cmd\steelclock\
+        ) else (
+            echo [!] Warning: No .syso files found in winres\
+        )
+    ) else (
+        echo [!] Warning: go-winres failed (missing icon files?)
+        echo     Continuing without embedded resources
+    )
+)
+echo.
+
+REM Step 4: Copy tray icon
+echo [4/6] Preparing tray icon...
+if exist "winres\icon.ico" (
+    copy /y "winres\icon.ico" "internal\tray\icon.ico" >nul
+    echo [OK] Copied icon.ico to internal\tray\
+) else (
+    echo [!] Warning: winres\icon.ico not found
+    echo     Tray icon will use default
+)
+echo.
+
+REM Step 5: Build executable
+echo [5/6] Compiling executable...
 set GOOS=windows
 set GOARCH=amd64
-
-REM Build GUI version (default, no console window)
-echo Compiling executable...
 go build -ldflags="-s -w -H windowsgui" -o steelclock.exe ./cmd/steelclock
-
 if %errorlevel% neq 0 (
     echo.
-    echo Build failed!
+    echo [X] Compilation failed!
     exit /b %errorlevel%
 )
+echo [OK] Compilation successful
+echo.
+
+REM Step 6: Cleanup intermediate files
+echo [6/6] Cleanup intermediate files...
+if exist "winres\*.syso" del /q "winres\*.syso" 2>nul
+echo [OK] Removed intermediate .syso files from winres\
+echo.
+
+REM Summary
+echo ======================================
+echo Build Summary
+echo ======================================
+dir steelclock.exe | find "steelclock.exe"
+
+REM Check if resources are embedded (using PowerShell as objdump may not be available)
+powershell -Command "if ((Get-Content -Path 'steelclock.exe' -Encoding Byte -ReadCount 0 | ForEach-Object { [System.Text.Encoding]::ASCII.GetString($_) }) -match '\.rsrc') { Write-Host '[OK] Windows resources (.rsrc) embedded' -ForegroundColor Green } else { Write-Host '[!] No .rsrc section found (no icon embedded)' -ForegroundColor Yellow }" 2>nul
 
 echo.
-echo [OK] Build successful: steelclock.exe (GUI mode)
+echo [OK] Build complete!
 echo.
-echo Run with -console flag to enable console mode
-echo Example: steelclock.exe -console
+echo Usage:
+echo   steelclock.exe          # Headless mode (tray icon)
+echo   steelclock.exe -console # Console mode (debugging)
