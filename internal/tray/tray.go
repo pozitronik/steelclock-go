@@ -3,6 +3,7 @@ package tray
 import (
 	_ "embed"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -84,6 +85,16 @@ func (m *Manager) handleEditConfig() {
 	if err != nil {
 		log.Printf("Failed to get absolute path: %v", err)
 		return
+	}
+
+	// Check if config file exists, create if it doesn't
+	if _, err := os.Stat(absPath); os.IsNotExist(err) {
+		log.Printf("Config file doesn't exist, creating default: %s", absPath)
+		if err := config.SaveDefault(absPath); err != nil {
+			log.Printf("Failed to create default config: %v", err)
+			return
+		}
+		log.Printf("Created default config: %s", absPath)
 	}
 
 	// Open with default editor

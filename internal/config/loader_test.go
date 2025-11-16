@@ -136,3 +136,33 @@ func TestLoadInvalidJSON(t *testing.T) {
 		t.Error("Load() with invalid JSON should return error")
 	}
 }
+
+func TestSaveDefault(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "default_config.json")
+
+	// Save default config
+	err := SaveDefault(configPath)
+	if err != nil {
+		t.Fatalf("SaveDefault() error = %v", err)
+	}
+
+	// Verify file was created
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		t.Fatal("SaveDefault() did not create config file")
+	}
+
+	// Load the saved config and verify it's valid
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Failed to load saved default config: %v", err)
+	}
+
+	if cfg.GameName != "STEELCLOCK" {
+		t.Errorf("SavedDefault GameName = %s, want STEELCLOCK", cfg.GameName)
+	}
+
+	if len(cfg.Widgets) == 0 {
+		t.Error("SavedDefault config should have at least one widget")
+	}
+}

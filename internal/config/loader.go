@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 // Load reads and parses a configuration file
@@ -73,6 +74,31 @@ func CreateDefault() *Config {
 	}
 
 	return cfg
+}
+
+// SaveDefault creates and saves a default configuration file
+func SaveDefault(path string) error {
+	// Create parent directory if needed
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	// Create default config
+	cfg := CreateDefault()
+
+	// Marshal to JSON with indentation
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	// Write to file
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
 }
 
 // validateConfig checks that required fields are present and valid
