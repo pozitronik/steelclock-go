@@ -5,7 +5,6 @@ import (
 	"image"
 	"image/color"
 	"log"
-	"math"
 	"sync"
 	"time"
 
@@ -323,71 +322,8 @@ func (w *VolumeWidget) renderBarVertical(img *image.Gray, pos config.PositionCon
 
 // renderGauge renders volume as an old-fashioned gauge with needle
 func (w *VolumeWidget) renderGauge(img *image.Gray, pos config.PositionConfig, style config.StyleConfig) {
-	centerX := pos.W / 2
-	centerY := pos.H - 3 // Near bottom
-
-	// Radius of the gauge arc
-	radius := pos.H - 6
-	if pos.W/2 < radius {
-		radius = pos.W/2 - 3
-	}
-
-	if radius <= 0 {
-		return
-	}
-
-	gaugeColor := color.Gray{Y: w.gaugeColor}
-	needleColor := color.Gray{Y: w.gaugeNeedleColor}
-
-	// Draw gauge arc (semicircle from 180° to 0°)
-	for angle := 180.0; angle >= 0; angle -= 2.0 {
-		rad := angle * math.Pi / 180.0
-		x := centerX + int(float64(radius)*math.Cos(rad))
-		y := centerY - int(float64(radius)*math.Sin(rad))
-
-		if x >= 0 && x < pos.W && y >= 0 && y < pos.H {
-			img.Set(x, y, gaugeColor)
-		}
-	}
-
-	// Draw tick marks
-	for tick := 0; tick <= 10; tick++ {
-		angle := 180.0 - float64(tick)*18.0 // 0-180 degrees in 10 steps
-		rad := angle * math.Pi / 180.0
-
-		// Outer point
-		x1 := centerX + int(float64(radius)*math.Cos(rad))
-		y1 := centerY - int(float64(radius)*math.Sin(rad))
-
-		// Inner point
-		tickLen := 3
-		if tick%5 == 0 {
-			tickLen = 5 // Longer ticks at 0%, 50%, 100%
-		}
-		x2 := centerX + int(float64(radius-tickLen)*math.Cos(rad))
-		y2 := centerY - int(float64(radius-tickLen)*math.Sin(rad))
-
-		drawLine(img, x1, y1, x2, y2, gaugeColor)
-	}
-
-	// Draw needle based on volume
-	needleAngle := 180.0 - (w.volume / 100.0 * 180.0)
-	needleRad := needleAngle * math.Pi / 180.0
-	needleLen := radius - 2
-
-	needleX := centerX + int(float64(needleLen)*math.Cos(needleRad))
-	needleY := centerY - int(float64(needleLen)*math.Sin(needleRad))
-
-	drawLine(img, centerX, centerY, needleX, needleY, needleColor)
-
-	// Draw center point
-	for dy := -1; dy <= 1; dy++ {
-		for dx := -1; dx <= 1; dx++ {
-			if centerX+dx >= 0 && centerX+dx < pos.W && centerY+dy >= 0 && centerY+dy < pos.H {
-				img.Set(centerX+dx, centerY+dy, needleColor)
-			}
-		}
-	}
+	// Use shared gauge drawing function
+	bitmap.DrawGauge(img, pos, w.volume, w.gaugeColor, w.gaugeNeedleColor)
 
 	// Draw mute indicator
 	if w.isMuted {
@@ -484,44 +420,4 @@ func (w *VolumeWidget) drawMuteIndicator(img *image.Gray, pos config.PositionCon
 func getSystemVolume() (volume float64, muted bool, err error) {
 	// Get actual system volume from platform-specific implementation
 	return getSystemVolumeImpl()
-}
-
-// drawLine draws a line between two points using Bresenham's algorithm
-func drawLine(img *image.Gray, x0, y0, x1, y1 int, c color.Gray) {
-	dx := abs(x1 - x0)
-	dy := abs(y1 - y0)
-	sx := -1
-	if x0 < x1 {
-		sx = 1
-	}
-	sy := -1
-	if y0 < y1 {
-		sy = 1
-	}
-	err := dx - dy
-
-	for {
-		img.Set(x0, y0, c)
-
-		if x0 == x1 && y0 == y1 {
-			break
-		}
-
-		e2 := 2 * err
-		if e2 > -dy {
-			err -= dy
-			x0 += sx
-		}
-		if e2 < dx {
-			err += dx
-			y0 += sy
-		}
-	}
-}
-
-func abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
 }
