@@ -134,22 +134,18 @@
         "y": {
           "type": "integer",
           "description": "Y coordinate on canvas",
-          "minimum": 0
         },
         "w": {
           "type": "integer",
           "description": "Widget width in pixels",
-          "minimum": 1
         },
         "h": {
           "type": "integer",
           "description": "Widget height in pixels",
-          "minimum": 1
         },
         "z_order": {
           "type": "integer",
           "description": "Stacking order (higher = on top)",
-          "default": 0
         }
       }
     },
