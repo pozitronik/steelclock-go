@@ -66,6 +66,10 @@ func DrawAlignedText(img *image.Gray, text string, face font.Face, horizAlign, v
 
 // DrawBorder draws a border around the image
 func DrawBorder(img *image.Gray, borderColor uint8) {
+	if img == nil {
+		return
+	}
+
 	bounds := img.Bounds()
 	width := bounds.Dx()
 	height := bounds.Dy()
