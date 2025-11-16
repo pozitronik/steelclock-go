@@ -43,7 +43,7 @@ func (m *Manager) onReady() {
 	// Set icon and tooltip
 	systray.SetIcon(getIcon())
 	systray.SetTitle("SteelClock")
-	systray.SetTooltip("SteelClock - SteelSeries OLED Display")
+	systray.SetTooltip("SteelClock - SteelSeries Display")
 
 	// Create menu items
 	m.menuEdit = systray.AddMenuItem("Edit Config", "Open config.json in default editor")

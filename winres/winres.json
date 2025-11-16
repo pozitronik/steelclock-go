@@ -16,7 +16,7 @@
           "name": "SteelClock",
           "version": "1.0.0.0"
         },
-        "description": "SteelClock - SteelSeries OLED Display Manager",
+        "description": "SteelClock - SteelSeries Display Manager",
         "minimum-os": "win7",
         "execution-level": "asInvoker",
         "ui-access": false,
@@ -43,9 +43,9 @@
         },
         "info": {
           "0409": {
-            "Comments": "GitHub: https://github.com/pozitronik/steelclock | High-performance OLED display manager for SteelSeries devices",
+            "Comments": "GitHub: https://github.com/pozitronik/steelclock | High-performance display manager for SteelSeries devices",
             "CompanyName": "Pavel Dubrovsky",
-            "FileDescription": "SteelClock - SteelSeries OLED Display Manager",
+            "FileDescription": "SteelClock - SteelSeries Display Manager",
             "FileVersion": "1.0.0",
             "InternalName": "steelclock",
             "LegalCopyright": "GNU General Public License v3.0",
