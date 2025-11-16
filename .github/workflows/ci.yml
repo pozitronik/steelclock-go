@@ -145,7 +145,7 @@ jobs:
       run: |
         if [ -f winres/winres.json ]; then
           mkdir -p cmd/steelclock
-          (cd winres && $HOME/go/bin/go-winres make --out rsrc)
+          $HOME/go/bin/go-winres make --out winres/rsrc
           cp winres/*.syso cmd/steelclock/
           echo "Windows resources generated"
         else
