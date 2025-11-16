@@ -232,6 +232,19 @@ func reloadConfig() error {
 	log.Println("Reloading configuration...")
 	log.Printf("Config file: %s", configPath)
 
+	// Get absolute path for clarity
+	absPath, _ := filepath.Abs(configPath)
+	log.Printf("Absolute path: %s", absPath)
+
+	// Check if file exists and get modification time
+	fileInfo, err := os.Stat(configPath)
+	if err != nil {
+		log.Printf("ERROR: Cannot access config file: %v", err)
+		log.Println("Keeping current configuration running")
+		return fmt.Errorf("cannot access config file: %w", err)
+	}
+	log.Printf("Config file last modified: %s", fileInfo.ModTime().Format("2006-01-02 15:04:05"))
+
 	// Validate new config first (before stopping anything)
 	newCfg, err := config.Load(configPath)
 	if err != nil {
@@ -241,6 +254,7 @@ func reloadConfig() error {
 	}
 
 	log.Println("New config validated successfully")
+	log.Printf("Loaded config: %s (%s) with %d widgets", newCfg.GameName, newCfg.GameDisplayName, len(newCfg.Widgets))
 
 	// Stop current app
 	log.Println("Stopping current instance...")

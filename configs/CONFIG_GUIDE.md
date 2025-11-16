@@ -159,7 +159,7 @@ This option allows you to specify a custom URL for downloading the bundled TrueT
 
 ## Widget Types
 
-SteelClock supports 6 widget types:
+SteelClock supports 7 widget types:
 
 1. **clock** - Time display
 2. **cpu** - CPU usage monitor
@@ -167,6 +167,7 @@ SteelClock supports 6 widget types:
 4. **network** - Network I/O monitor
 5. **disk** - Disk I/O monitor
 6. **keyboard** - Keyboard lock indicators
+7. **volume** - System volume indicator
 
 ## Common Properties
 
@@ -480,6 +481,84 @@ Available disks: PhysicalDrive0, PhysicalDrive1
 - Unicode arrows: ↑ ↓ ▲ ▼
 - Text: "CAPS", "NUM", "SCR"
 - Letters: "C", "N", "S"
+
+### Volume Widget
+
+**Display Modes**: text, bar_horizontal, bar_vertical, gauge, triangle
+
+```json
+{
+  "type": "volume",
+  "properties": {
+    "display_mode": "bar_horizontal",
+    "update_interval": 0.1,
+    "fill_color": 255,
+    "bar_border": false,
+    "auto_hide": false,
+    "auto_hide_timeout": 2.0,
+    "gauge_color": 200,
+    "gauge_needle_color": 255,
+    "triangle_fill_color": 255,
+    "triangle_border": false,
+    "font": null,
+    "font_size": 10,
+    "horizontal_align": "center",
+    "vertical_align": "center",
+    "padding": 0
+  }
+}
+```
+
+| Property              | Type    | Range                                                  | Default          | Description                                  |
+|-----------------------|---------|--------------------------------------------------------|------------------|----------------------------------------------|
+| `display_mode`        | string  | text, bar_horizontal, bar_vertical, gauge, triangle    | "bar_horizontal" | Display mode                                 |
+| `update_interval`     | number  | ≥0.1                                                   | 0.1              | Update interval (seconds)                    |
+| `fill_color`          | integer | 0-255                                                  | 255              | Bar/triangle fill color                      |
+| `bar_border`          | boolean | -                                                      | false            | Draw border around bars                      |
+| `auto_hide`           | boolean | -                                                      | false            | Only show when volume changes                |
+| `auto_hide_timeout`   | number  | ≥0.1                                                   | 2.0              | Seconds before hiding after volume change    |
+| `gauge_color`         | integer | 0-255                                                  | 200              | Gauge arc and tick marks color               |
+| `gauge_needle_color`  | integer | 0-255                                                  | 255              | Gauge needle color                           |
+| `triangle_fill_color` | integer | 0-255                                                  | 255              | Triangle fill color                          |
+| `triangle_border`     | boolean | -                                                      | false            | Draw border around triangle                  |
+
+**Display Mode Details**:
+
+**text**: Shows volume as percentage ("75%"). When muted, shows "MUTE".
+
+**bar_horizontal**: Horizontal bar filling left to right based on volume level.
+
+**bar_vertical**: Vertical bar filling bottom to top based on volume level.
+
+**gauge**: Old-fashioned semicircular gauge with needle pointing to current volume level. Features:
+- Semicircular arc (180° span from 0% to 100%)
+- Tick marks at 10% intervals
+- Longer ticks at 0%, 50%, and 100%
+- Needle pointing to current volume
+- Center pivot point
+
+**triangle**: Pyramid-style volume indicator filling from bottom to top. Features:
+- Triangle shape (wider at bottom, narrower at top)
+- Fills based on volume level
+- Vertical bar pattern (|||) for filled sections
+- Optional border
+
+**Auto-Hide Feature**:
+
+When `auto_hide` is enabled, the widget only appears when:
+1. Volume level changes (user adjusts volume)
+2. For `auto_hide_timeout` seconds after the last change
+3. After the timeout, the widget becomes invisible
+
+This is useful for temporary volume indicators that don't take permanent screen space.
+
+**Mute Indicator**:
+
+When system audio is muted, all display modes show an X pattern (diagonal lines) over the volume indicator.
+
+**Platform Support**:
+- **Windows**: Full support (currently using mock data, Windows Core Audio API integration planned)
+- **Linux**: Mock data (ALSA/PulseAudio integration planned)
 
 ## Examples
 

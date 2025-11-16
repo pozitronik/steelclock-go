@@ -25,6 +25,8 @@ func CreateWidget(cfg config.WidgetConfig) (Widget, error) {
 		return NewDiskWidget(cfg)
 	case "keyboard":
 		return NewKeyboardWidget(cfg)
+	case "volume":
+		return NewVolumeWidget(cfg)
 	default:
 		return nil, fmt.Errorf("unknown widget type: %s", cfg.Type)
 	}

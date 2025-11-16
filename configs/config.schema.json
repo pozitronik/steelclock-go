@@ -90,7 +90,8 @@
           {"$ref": "#/definitions/memoryWidget"},
           {"$ref": "#/definitions/networkWidget"},
           {"$ref": "#/definitions/diskWidget"},
-          {"$ref": "#/definitions/keyboardWidget"}
+          {"$ref": "#/definitions/keyboardWidget"},
+          {"$ref": "#/definitions/volumeWidget"}
         ]
       }
     }
@@ -567,6 +568,87 @@
                   "minimum": 0,
                   "maximum": 255,
                   "default": 100
+                },
+                "font": {"$ref": "#/definitions/textProperties/properties/font"},
+                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
+                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
+                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "volumeWidget": {
+      "allOf": [
+        {"$ref": "#/definitions/widgetBase"},
+        {
+          "properties": {
+            "type": {"const": "volume"},
+            "properties": {
+              "type": "object",
+              "properties": {
+                "display_mode": {
+                  "type": "string",
+                  "description": "Display mode: text, bar_horizontal, bar_vertical, gauge, triangle",
+                  "enum": ["text", "bar_horizontal", "bar_vertical", "gauge", "triangle"],
+                  "default": "bar_horizontal"
+                },
+                "update_interval": {
+                  "type": "number",
+                  "description": "Update interval in seconds",
+                  "minimum": 0.1,
+                  "default": 0.1
+                },
+                "fill_color": {
+                  "type": "integer",
+                  "description": "Fill color for bars and triangle (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "bar_border": {
+                  "type": "boolean",
+                  "description": "Draw border around bars",
+                  "default": false
+                },
+                "auto_hide": {
+                  "type": "boolean",
+                  "description": "Only show widget when volume is changing",
+                  "default": false
+                },
+                "auto_hide_timeout": {
+                  "type": "number",
+                  "description": "Seconds to wait before hiding widget after volume change",
+                  "minimum": 0.1,
+                  "default": 2.0
+                },
+                "gauge_color": {
+                  "type": "integer",
+                  "description": "Gauge arc and tick color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 200
+                },
+                "gauge_needle_color": {
+                  "type": "integer",
+                  "description": "Gauge needle color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "triangle_fill_color": {
+                  "type": "integer",
+                  "description": "Triangle fill color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "triangle_border": {
+                  "type": "boolean",
+                  "description": "Draw border around triangle",
+                  "default": false
                 },
                 "font": {"$ref": "#/definitions/textProperties/properties/font"},
                 "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
