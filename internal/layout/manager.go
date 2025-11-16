@@ -6,9 +6,9 @@ import (
 	"image/draw"
 	"sort"
 
-	"github.com/pozitronik/steelclock/internal/bitmap"
-	"github.com/pozitronik/steelclock/internal/config"
-	"github.com/pozitronik/steelclock/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/bitmap"
+	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 )
 
 // Manager handles widget positioning and compositing

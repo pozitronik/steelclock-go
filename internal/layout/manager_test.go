@@ -3,8 +3,8 @@ package layout
 import (
 	"testing"
 
-	"github.com/pozitronik/steelclock/internal/config"
-	"github.com/pozitronik/steelclock/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 )
 
 func TestNewManager(t *testing.T) {

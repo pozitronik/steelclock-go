@@ -8,7 +8,7 @@ import (
 	"runtime"
 
 	"github.com/getlantern/systray"
-	"github.com/pozitronik/steelclock/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
 //go:embed icon.ico

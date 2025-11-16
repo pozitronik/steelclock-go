@@ -4,7 +4,7 @@ import (
 	"image"
 	"time"
 
-	"github.com/pozitronik/steelclock/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
 // Widget is the interface that all widgets must implement

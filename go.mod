@@ -1,4 +1,4 @@
-module github.com/pozitronik/steelclock
+module github.com/pozitronik/steelclock-go
 
 go 1.25.4
 

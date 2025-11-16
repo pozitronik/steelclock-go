@@ -3,7 +3,7 @@ package widget
 import (
 	"fmt"
 
-	"github.com/pozitronik/steelclock/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
 // CreateWidget creates a widget from configuration

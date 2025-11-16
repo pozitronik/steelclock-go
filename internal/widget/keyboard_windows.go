@@ -7,8 +7,8 @@ import (
 	"image"
 	"syscall"
 
-	"github.com/pozitronik/steelclock/internal/bitmap"
-	"github.com/pozitronik/steelclock/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/bitmap"
+	"github.com/pozitronik/steelclock-go/internal/config"
 	"golang.org/x/image/font"
 )
 

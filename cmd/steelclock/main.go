@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pozitronik/steelclock/internal/compositor"
-	"github.com/pozitronik/steelclock/internal/config"
-	"github.com/pozitronik/steelclock/internal/gamesense"
-	"github.com/pozitronik/steelclock/internal/layout"
-	"github.com/pozitronik/steelclock/internal/tray"
-	"github.com/pozitronik/steelclock/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/compositor"
+	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/gamesense"
+	"github.com/pozitronik/steelclock-go/internal/layout"
+	"github.com/pozitronik/steelclock-go/internal/tray"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 )
 
 var (

@@ -3,7 +3,7 @@ package widget
 import (
 	"testing"
 
-	"github.com/pozitronik/steelclock/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
 func TestNewClockWidget(t *testing.T) {
