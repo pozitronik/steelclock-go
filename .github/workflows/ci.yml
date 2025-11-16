@@ -144,8 +144,8 @@ jobs:
       shell: bash
       run: |
         if [ -f winres/winres.json ]; then
-          cd winres
-          go-winres make --out ../cmd/steelclock/rsrc
+          mkdir -p cmd/steelclock
+          $HOME/go/bin/go-winres make --in winres --out cmd/steelclock/rsrc
           echo "Windows resources generated"
         else
           echo "Warning: winres/winres.json not found, skipping resource generation"
