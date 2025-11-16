@@ -53,6 +53,7 @@ Supported IDEs: VS Code, JetBrains IDEs (IntelliJ, PyCharm, WebStorm), Visual St
   "game_name": "STEELCLOCK",
   "game_display_name": "SteelClock",
   "refresh_rate_ms": 100,
+  "unregister_on_exit": false,
   "display": { ... },
   "layout": { ... },
   "widgets": [ ... ]
@@ -61,11 +62,28 @@ Supported IDEs: VS Code, JetBrains IDEs (IntelliJ, PyCharm, WebStorm), Visual St
 
 ### Global Settings
 
-| Property            | Type    | Default      | Description                             |
-|---------------------|---------|--------------|-----------------------------------------|
-| `game_name`         | string  | "STEELCLOCK" | Game identifier (A-Z, 0-9, -, _ only)   |
-| `game_display_name` | string  | "SteelClock" | Human-readable name                     |
-| `refresh_rate_ms`   | integer | 100          | Display refresh rate (min 100ms = 10Hz) |
+| Property             | Type    | Default      | Description                                                 |
+|----------------------|---------|--------------|-------------------------------------------------------------|
+| `game_name`          | string  | "STEELCLOCK" | Game identifier (A-Z, 0-9, -, _ only)                       |
+| `game_display_name`  | string  | "SteelClock" | Human-readable name                                         |
+| `refresh_rate_ms`    | integer | 100          | Display refresh rate (min 100ms = 10Hz)                     |
+| `unregister_on_exit` | boolean | false        | Unregister from GameSense API on exit (see notes below)     |
+
+**About `unregister_on_exit`**:
+
+This option controls whether SteelClock calls the GameSense API `/remove_game` endpoint when shutting down.
+
+- **Default (false)**: Do not unregister on exit. The GameSense registration persists after the application closes.
+- **Set to true**: Call `/remove_game` to clean up the registration on exit.
+
+**When to use**:
+- **Keep default (false)** in most cases. The GameSense `RegisterGame()` API is idempotent and will overwrite existing registrations on restart. This avoids potential timeout issues with the `/remove_game` endpoint.
+- **Set to true** if you want a complete cleanup on exit and are willing to accept potential delays (2-5 seconds) during shutdown due to API timeouts.
+
+**Technical notes**:
+- During configuration reload, the game is never unregistered regardless of this setting (to avoid disruption)
+- Only affects final application shutdown (via tray menu "Quit")
+- The `/remove_game` endpoint can be slow or timeout, which is why the default is false
 
 ### Display Configuration
 

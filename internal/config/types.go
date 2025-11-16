@@ -2,12 +2,13 @@ package config
 
 // Config represents the complete SteelClock configuration
 type Config struct {
-	GameName        string         `json:"game_name"`
-	GameDisplayName string         `json:"game_display_name"`
-	RefreshRateMs   int            `json:"refresh_rate_ms"`
-	Display         DisplayConfig  `json:"display"`
-	Layout          *LayoutConfig  `json:"layout,omitempty"`
-	Widgets         []WidgetConfig `json:"widgets"`
+	GameName         string         `json:"game_name"`
+	GameDisplayName  string         `json:"game_display_name"`
+	RefreshRateMs    int            `json:"refresh_rate_ms"`
+	UnregisterOnExit bool           `json:"unregister_on_exit,omitempty"`
+	Display          DisplayConfig  `json:"display"`
+	Layout           *LayoutConfig  `json:"layout,omitempty"`
+	Widgets          []WidgetConfig `json:"widgets"`
 }
 
 // DisplayConfig represents display settings

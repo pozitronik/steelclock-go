@@ -172,19 +172,19 @@ func startAppWithConfig(cfg *config.Config) error {
 }
 
 // stopApp stops all components gracefully
-// During reload, we don't wait for RemoveGame to avoid blocking
+// During reload, we don't unregister to avoid blocking
 func stopApp() {
 	stopAppInternal(false)
 }
 
-// stopAppAndWait stops all components and waits for cleanup
+// stopAppAndWait stops all components and optionally unregisters based on config
 // Used during final shutdown
 func stopAppAndWait() {
 	stopAppInternal(true)
 }
 
 // stopAppInternal stops all components
-func stopAppInternal(waitForCleanup bool) {
+func stopAppInternal(isFinalShutdown bool) {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -199,19 +199,23 @@ func stopAppInternal(waitForCleanup bool) {
 		oldClient := client
 		client = nil // Clear immediately so new registration can proceed
 
-		if waitForCleanup {
-			// Final shutdown - try to clean up, but don't block forever
-			log.Println("Cleaning up GameSense registration...")
+		// Check if we should unregister
+		shouldUnregister := lastGoodConfig != nil && lastGoodConfig.UnregisterOnExit
+
+		if shouldUnregister && isFinalShutdown {
+			// Final shutdown - try to unregister if configured
+			log.Println("Unregistering from GameSense (unregister_on_exit=true)...")
 			if err := oldClient.RemoveGame(); err != nil {
-				log.Printf("Warning: Failed to remove game: %v", err)
+				log.Printf("Warning: Failed to unregister game: %v", err)
+			} else {
+				log.Println("Successfully unregistered from GameSense")
 			}
+		} else if !isFinalShutdown {
+			// During reload - never unregister, just stop sending data
+			log.Println("Stopping compositor (keeping GameSense registration)")
 		} else {
-			// During reload - do cleanup in background, don't block restart
-			go func() {
-				if err := oldClient.RemoveGame(); err != nil {
-					log.Printf("Background cleanup: Failed to remove game: %v", err)
-				}
-			}()
+			// Final shutdown with unregister_on_exit=false
+			log.Println("Shutting down (keeping GameSense registration, unregister_on_exit=false)")
 		}
 	}
 }
