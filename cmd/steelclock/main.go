@@ -56,7 +56,7 @@ func main() {
 
 		// Ensure log is flushed before exit
 		if logFile != nil {
-			logFile.Sync()
+			_ = logFile.Sync() // Ignore error - we're exiting anyway
 		}
 
 		os.Exit(1)
