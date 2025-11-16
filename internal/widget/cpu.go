@@ -3,6 +3,7 @@ package widget
 import (
 	"fmt"
 	"image"
+	"sync"
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
@@ -29,6 +30,7 @@ type CPUWidget struct {
 	history      []interface{}
 	coreCount    int
 	fontFace     font.Face
+	mu           sync.RWMutex // Protects currentUsage and history
 }
 
 // NewCPUWidget creates a new CPU widget
@@ -118,6 +120,7 @@ func (w *CPUWidget) Update() error {
 			}
 		}
 
+		w.mu.Lock()
 		w.currentUsage = percentages
 
 		// Add to history
@@ -127,6 +130,7 @@ func (w *CPUWidget) Update() error {
 				w.history = w.history[1:]
 			}
 		}
+		w.mu.Unlock()
 	} else {
 		// Aggregate usage
 		percentages, err := cpu.Percent(100*time.Millisecond, false)
@@ -147,6 +151,7 @@ func (w *CPUWidget) Update() error {
 			usage = 100
 		}
 
+		w.mu.Lock()
 		w.currentUsage = usage
 
 		// Add to history
@@ -156,6 +161,7 @@ func (w *CPUWidget) Update() error {
 				w.history = w.history[1:]
 			}
 		}
+		w.mu.Unlock()
 	}
 
 	return nil
@@ -196,6 +202,9 @@ func (w *CPUWidget) Render() (image.Image, error) {
 }
 
 func (w *CPUWidget) renderText(img *image.Gray) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	if w.currentUsage == nil {
 		return
 	}
@@ -217,6 +226,9 @@ func (w *CPUWidget) renderText(img *image.Gray) {
 }
 
 func (w *CPUWidget) renderBarHorizontal(img *image.Gray, x, y, width, height int) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	if w.currentUsage == nil {
 		return
 	}
@@ -236,6 +248,9 @@ func (w *CPUWidget) renderBarHorizontal(img *image.Gray, x, y, width, height int
 }
 
 func (w *CPUWidget) renderBarVertical(img *image.Gray, x, y, width, height int) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	if w.currentUsage == nil {
 		return
 	}
@@ -255,6 +270,9 @@ func (w *CPUWidget) renderBarVertical(img *image.Gray, x, y, width, height int) 
 }
 
 func (w *CPUWidget) renderGraph(img *image.Gray, x, y, width, height int) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	if len(w.history) < 2 {
 		return
 	}

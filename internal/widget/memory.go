@@ -3,6 +3,7 @@ package widget
 import (
 	"fmt"
 	"image"
+	"sync"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -25,6 +26,7 @@ type MemoryWidget struct {
 	currentUsage float64
 	history      []float64
 	fontFace     font.Face
+	mu           sync.RWMutex // Protects currentUsage and history
 }
 
 // NewMemoryWidget creates a new memory widget
@@ -94,6 +96,7 @@ func (w *MemoryWidget) Update() error {
 		return err
 	}
 
+	w.mu.Lock()
 	w.currentUsage = vmem.UsedPercent
 
 	// Clamp to 0-100
@@ -111,6 +114,7 @@ func (w *MemoryWidget) Update() error {
 			w.history = w.history[1:]
 		}
 	}
+	w.mu.Unlock()
 
 	return nil
 }
@@ -135,6 +139,7 @@ func (w *MemoryWidget) Render() (image.Image, error) {
 	contentH := pos.H - w.padding*2
 
 	// Render based on display mode
+	w.mu.RLock()
 	switch w.displayMode {
 	case "text":
 		w.renderText(img)
@@ -145,11 +150,13 @@ func (w *MemoryWidget) Render() (image.Image, error) {
 	case "graph":
 		bitmap.DrawGraph(img, contentX, contentY, contentW, contentH, w.history, w.historyLen, w.fillColor)
 	}
+	w.mu.RUnlock()
 
 	return img, nil
 }
 
 func (w *MemoryWidget) renderText(img *image.Gray) {
+	// Note: caller must hold read lock
 	text := fmt.Sprintf("%.0f", w.currentUsage)
 	bitmap.DrawAlignedText(img, text, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
 }

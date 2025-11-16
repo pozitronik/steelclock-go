@@ -3,6 +3,7 @@ package widget
 import (
 	"fmt"
 	"image"
+	"sync"
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
@@ -33,6 +34,7 @@ type DiskWidget struct {
 	readHistory      []float64
 	writeHistory     []float64
 	fontFace         font.Face
+	mu               sync.RWMutex // Protects currentReadMbps, currentWriteMbps, readHistory, writeHistory
 }
 
 // NewDiskWidget creates a new disk widget
@@ -140,6 +142,7 @@ func (w *DiskWidget) Update() error {
 			readDelta := float64(readBytes-w.lastRead) / 1000000 / elapsed
 			writeDelta := float64(writeBytes-w.lastWrite) / 1000000 / elapsed
 
+			w.mu.Lock()
 			w.currentReadMbps = readDelta
 			w.currentWriteMbps = writeDelta
 
@@ -155,6 +158,7 @@ func (w *DiskWidget) Update() error {
 					w.writeHistory = w.writeHistory[1:]
 				}
 			}
+			w.mu.Unlock()
 		}
 	}
 
@@ -196,11 +200,17 @@ func (w *DiskWidget) Render() (image.Image, error) {
 }
 
 func (w *DiskWidget) renderText(img *image.Gray) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	text := fmt.Sprintf("R%.1f W%.1f", w.currentReadMbps, w.currentWriteMbps)
 	bitmap.DrawAlignedText(img, text, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
 }
 
 func (w *DiskWidget) renderBarHorizontal(img *image.Gray, x, y, width, height int) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	// Split into two halves: Read top, Write bottom
 	halfH := height / 2
 
@@ -221,6 +231,9 @@ func (w *DiskWidget) renderBarHorizontal(img *image.Gray, x, y, width, height in
 }
 
 func (w *DiskWidget) renderBarVertical(img *image.Gray, x, y, width, height int) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	// Split into two halves: Read left, Write right
 	halfW := width / 2
 
@@ -240,6 +253,9 @@ func (w *DiskWidget) renderBarVertical(img *image.Gray, x, y, width, height int)
 }
 
 func (w *DiskWidget) renderGraph(img *image.Gray, x, y, width, height int) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	if len(w.readHistory) < 2 {
 		return
 	}

@@ -3,6 +3,7 @@ package widget
 import (
 	"fmt"
 	"image"
+	"sync"
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
@@ -33,6 +34,7 @@ type NetworkWidget struct {
 	rxHistory     []float64
 	txHistory     []float64
 	fontFace      font.Face
+	mu            sync.RWMutex // Protects currentRxMbps, currentTxMbps, rxHistory, txHistory
 }
 
 // NewNetworkWidget creates a new network widget
@@ -143,6 +145,7 @@ func (w *NetworkWidget) Update() error {
 			rxDelta := float64(rx-w.lastRx) * 8 / 1000000 / elapsed // bits to Mbps
 			txDelta := float64(tx-w.lastTx) * 8 / 1000000 / elapsed
 
+			w.mu.Lock()
 			w.currentRxMbps = rxDelta
 			w.currentTxMbps = txDelta
 
@@ -158,6 +161,7 @@ func (w *NetworkWidget) Update() error {
 					w.txHistory = w.txHistory[1:]
 				}
 			}
+			w.mu.Unlock()
 		}
 	}
 
@@ -199,11 +203,17 @@ func (w *NetworkWidget) Render() (image.Image, error) {
 }
 
 func (w *NetworkWidget) renderText(img *image.Gray) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	text := fmt.Sprintf("↓%.1f ↑%.1f", w.currentRxMbps, w.currentTxMbps)
 	bitmap.DrawAlignedText(img, text, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
 }
 
 func (w *NetworkWidget) renderBarHorizontal(img *image.Gray, x, y, width, height int) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	// Split into two halves: RX top, TX bottom
 	halfH := height / 2
 
@@ -224,6 +234,9 @@ func (w *NetworkWidget) renderBarHorizontal(img *image.Gray, x, y, width, height
 }
 
 func (w *NetworkWidget) renderBarVertical(img *image.Gray, x, y, width, height int) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	// Split into two halves: RX left, TX right
 	halfW := width / 2
 
@@ -243,6 +256,9 @@ func (w *NetworkWidget) renderBarVertical(img *image.Gray, x, y, width, height i
 }
 
 func (w *NetworkWidget) renderGraph(img *image.Gray, x, y, width, height int) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	if len(w.rxHistory) < 2 {
 		return
 	}
