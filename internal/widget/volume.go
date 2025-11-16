@@ -31,6 +31,8 @@ type VolumeWidget struct {
 	isMuted          bool
 	lastVolumeChange time.Time
 	lastVolume       float64
+	lastGoodVolume   float64 // Last successfully read volume (fallback for errors)
+	lastGoodMuted    bool    // Last successfully read mute status
 	face             font.Face
 }
 
@@ -105,7 +107,14 @@ func (w *VolumeWidget) Update() error {
 	// Get current volume
 	volume, muted, err := getSystemVolume()
 	if err != nil {
-		return err
+		// If error reading volume, use last good values
+		// This prevents flickering when volume API has temporary issues
+		volume = w.lastGoodVolume
+		muted = w.lastGoodMuted
+	} else {
+		// Successful read - save as last good values
+		w.lastGoodVolume = volume
+		w.lastGoodMuted = muted
 	}
 
 	// Check if volume changed
@@ -439,14 +448,8 @@ func (w *VolumeWidget) drawMuteIndicator(img *image.Gray, pos config.PositionCon
 // getSystemVolume returns the current system volume (0-100) and mute status
 // This is a platform-specific function
 func getSystemVolume() (volume float64, muted bool, err error) {
-	// Try to get actual system volume
-	vol, mut, err := getSystemVolumeImpl()
-	if err != nil {
-		// If failed, return a mock value for testing
-		// In production, this would return the error
-		return 50.0, false, nil
-	}
-	return vol, mut, nil
+	// Get actual system volume from platform-specific implementation
+	return getSystemVolumeImpl()
 }
 
 // drawLine draws a line between two points using Bresenham's algorithm
