@@ -115,6 +115,12 @@ jobs:
       with:
         go-version: '1.25.4'
 
+    - name: Install system dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libayatana-appindicator3-dev libgtk-3-dev
+
     - name: Prepare icon resources
       shell: bash
       run: |
