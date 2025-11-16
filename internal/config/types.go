@@ -6,6 +6,7 @@ type Config struct {
 	GameDisplayName  string         `json:"game_display_name"`
 	RefreshRateMs    int            `json:"refresh_rate_ms"`
 	UnregisterOnExit bool           `json:"unregister_on_exit,omitempty"`
+	BundledFontURL   string         `json:"bundled_font_url,omitempty"`
 	Display          DisplayConfig  `json:"display"`
 	Layout           *LayoutConfig  `json:"layout,omitempty"`
 	Widgets          []WidgetConfig `json:"widgets"`

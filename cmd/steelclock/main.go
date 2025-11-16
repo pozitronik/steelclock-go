@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/compositor"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/gamesense"
@@ -124,6 +125,12 @@ func startAppWithConfig(cfg *config.Config) error {
 	defer mu.Unlock()
 
 	log.Printf("Config loaded: %s (%s)", cfg.GameName, cfg.GameDisplayName)
+
+	// Set bundled font URL if configured
+	if cfg.BundledFontURL != "" {
+		bitmap.SetBundledFontURL(cfg.BundledFontURL)
+		log.Printf("Using custom bundled font URL: %s", cfg.BundledFontURL)
+	}
 
 	// Create GameSense client
 	var err error

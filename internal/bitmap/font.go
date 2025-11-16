@@ -12,7 +12,23 @@ import (
 	"golang.org/x/image/font/opentype"
 )
 
-var fontCache = make(map[string]*opentype.Font)
+const (
+	// DefaultBundledFontURL is the default URL for downloading the bundled font
+	DefaultBundledFontURL = "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf"
+)
+
+var (
+	fontCache      = make(map[string]*opentype.Font)
+	bundledFontURL = DefaultBundledFontURL // Can be overridden via SetBundledFontURL
+)
+
+// SetBundledFontURL sets the URL for downloading the bundled font
+// This should be called at application startup if a custom URL is configured
+func SetBundledFontURL(url string) {
+	if url != "" {
+		bundledFontURL = url
+	}
+}
 
 // LoadFont loads a TrueType font
 func LoadFont(fontName string, size int) (font.Face, error) {
@@ -126,9 +142,8 @@ func downloadBundledFont() (string, error) {
 		return "", err
 	}
 
-	// Download font
-	url := "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf"
-	resp, err := http.Get(url)
+	// Download font from configured URL
+	resp, err := http.Get(bundledFontURL)
 	if err != nil {
 		return "", err
 	}
