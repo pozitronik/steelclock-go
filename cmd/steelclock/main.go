@@ -40,7 +40,6 @@ func main() {
 
 	log.Println("========================================")
 	log.Println("SteelClock starting...")
-	log.Printf("Version: 1.0.0")
 	log.Printf("Config: %s", configPath)
 	log.Println("========================================")
 
