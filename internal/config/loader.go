@@ -15,13 +15,105 @@ func Load(path string) (*Config, error) {
 
 	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse config file: %w", err)
+		return nil, fmt.Errorf("failed to parse config file (invalid JSON): %w", err)
 	}
 
 	// Apply defaults for missing fields
 	applyDefaults(&cfg)
 
+	// Validate configuration
+	if err := validateConfig(&cfg); err != nil {
+		return nil, fmt.Errorf("config validation failed: %w", err)
+	}
+
 	return &cfg, nil
+}
+
+// validateConfig checks that required fields are present and valid
+func validateConfig(cfg *Config) error {
+	// Check required game info
+	if cfg.GameName == "" {
+		return fmt.Errorf("game_name is required")
+	}
+	if cfg.GameDisplayName == "" {
+		return fmt.Errorf("game_display_name is required")
+	}
+
+	// Check display dimensions are positive
+	if cfg.Display.Width <= 0 {
+		return fmt.Errorf("display width must be positive (got %d)", cfg.Display.Width)
+	}
+	if cfg.Display.Height <= 0 {
+		return fmt.Errorf("display height must be positive (got %d)", cfg.Display.Height)
+	}
+
+	// Check refresh rate is positive
+	if cfg.RefreshRateMs <= 0 {
+		return fmt.Errorf("refresh_rate_ms must be positive (got %d)", cfg.RefreshRateMs)
+	}
+
+	// Check widgets
+	if len(cfg.Widgets) == 0 {
+		return fmt.Errorf("at least one widget must be configured")
+	}
+
+	enabledCount := 0
+	validTypes := map[string]bool{
+		"clock": true, "cpu": true, "memory": true,
+		"network": true, "disk": true, "keyboard": true,
+	}
+
+	for i, w := range cfg.Widgets {
+		// Check widget ID
+		if w.ID == "" {
+			return fmt.Errorf("widget[%d]: id is required", i)
+		}
+
+		// Check widget type
+		if w.Type == "" {
+			return fmt.Errorf("widget[%d] (%s): type is required", i, w.ID)
+		}
+		if !validTypes[w.Type] {
+			return fmt.Errorf("widget[%d] (%s): invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard)", i, w.ID, w.Type)
+		}
+
+		if w.Enabled {
+			enabledCount++
+
+			// Type-specific validation (only required properties)
+			if err := validateWidgetProperties(i, &w); err != nil {
+				return err
+			}
+		}
+	}
+
+	if enabledCount == 0 {
+		return fmt.Errorf("at least one widget must be enabled")
+	}
+
+	return nil
+}
+
+// validateWidgetProperties validates type-specific widget properties
+func validateWidgetProperties(index int, w *WidgetConfig) error {
+	switch w.Type {
+	case "clock":
+		if w.Properties.Format == "" {
+			return fmt.Errorf("widget[%d] (%s): clock format is required", index, w.ID)
+		}
+
+	case "network":
+		if w.Properties.Interface == nil || *w.Properties.Interface == "" {
+			return fmt.Errorf("widget[%d] (%s): network interface is required", index, w.ID)
+		}
+
+	case "disk":
+		if w.Properties.DiskName == nil || *w.Properties.DiskName == "" {
+			return fmt.Errorf("widget[%d] (%s): disk_name is required", index, w.ID)
+		}
+	}
+
+	return nil
 }
 
 // applyDefaults fills in default values for optional fields

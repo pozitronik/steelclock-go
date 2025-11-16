@@ -46,7 +46,20 @@ func main() {
 
 	// Start the application
 	if err := startApp(); err != nil {
-		log.Fatalf("Failed to start: %v", err)
+		log.Println("========================================")
+		log.Println("FATAL ERROR DURING STARTUP")
+		log.Printf("Error: %v", err)
+		log.Println("========================================")
+		log.Println("")
+		log.Println("Application failed to start. Please check the error above and fix config.json")
+		log.Println("")
+
+		// Ensure log is flushed before exit
+		if logFile != nil {
+			logFile.Sync()
+		}
+
+		os.Exit(1)
 	}
 
 	// Create tray manager
