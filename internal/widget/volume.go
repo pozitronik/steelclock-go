@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"log"
 	"math"
 	"sync"
 	"time"
@@ -31,9 +32,11 @@ type VolumeWidget struct {
 	isMuted          bool
 	lastVolumeChange time.Time
 	lastVolume       float64
-	lastGoodVolume   float64 // Last successfully read volume (fallback for errors)
-	lastGoodMuted    bool    // Last successfully read mute status
 	face             font.Face
+
+	// Background polling
+	stopChan chan struct{}
+	wg       sync.WaitGroup
 }
 
 // NewVolumeWidget creates a new volume widget
@@ -83,7 +86,7 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		}
 	}
 
-	return &VolumeWidget{
+	w := &VolumeWidget{
 		BaseWidget:        base,
 		displayMode:       displayMode,
 		fillColor:         uint8(fillColor),
@@ -96,37 +99,68 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		triangleBorder:    cfg.Properties.TriangleBorder,
 		lastVolumeChange:  time.Now(),
 		face:              fontFace,
-	}, nil
+		stopChan:          make(chan struct{}),
+	}
+
+	// Start single background goroutine for polling volume
+	w.wg.Add(1)
+	go w.pollVolumeBackground()
+
+	return w, nil
 }
 
-// Update updates the volume information
+// pollVolumeBackground continuously polls system volume in a single background goroutine
+// This prevents goroutine accumulation - only ONE goroutine ever exists for polling
+func (w *VolumeWidget) pollVolumeBackground() {
+	defer w.wg.Done()
+
+	log.Printf("Volume widget: background polling started")
+
+	// Poll every 100ms for responsive display
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-w.stopChan:
+			log.Printf("Volume widget: background polling stopped")
+			return
+
+		case <-ticker.C:
+			// Directly call Windows API (synchronous)
+			// If it hangs, only THIS goroutine hangs - nothing else is affected
+			volume, muted, err := getSystemVolume()
+
+			if err != nil {
+				// Ignore errors, keep displaying last known volume
+				continue
+			}
+
+			// Update cached volume under lock
+			w.mu.Lock()
+			changed := volume != w.lastVolume || muted != w.isMuted
+			if changed {
+				w.lastVolumeChange = time.Now()
+				w.lastVolume = volume
+			}
+			w.volume = volume
+			w.isMuted = muted
+			w.mu.Unlock()
+		}
+	}
+}
+
+// Update is called periodically but just returns immediately
+// All volume polling happens in the background goroutine
 func (w *VolumeWidget) Update() error {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	// Get current volume
-	volume, muted, err := getSystemVolume()
-	if err != nil {
-		// If error reading volume, use last good values
-		// This prevents flickering when volume API has temporary issues
-		volume = w.lastGoodVolume
-		muted = w.lastGoodMuted
-	} else {
-		// Successful read - save as last good values
-		w.lastGoodVolume = volume
-		w.lastGoodMuted = muted
-	}
-
-	// Check if volume changed
-	if volume != w.lastVolume || muted != w.isMuted {
-		w.lastVolumeChange = time.Now()
-		w.lastVolume = volume
-	}
-
-	w.volume = volume
-	w.isMuted = muted
-
+	// No-op: background goroutine handles all polling
 	return nil
+}
+
+// Stop stops the background polling goroutine
+func (w *VolumeWidget) Stop() {
+	close(w.stopChan)
+	w.wg.Wait()
 }
 
 // Render renders the volume widget
