@@ -1,0 +1,211 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.25.4'
+
+    - name: Extract version from tag
+      id: version
+      shell: bash
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+
+    - name: Prepare icon resources
+      shell: bash
+      run: |
+        mkdir -p internal/tray
+        if [ -f winres/icon.ico ]; then
+          cp winres/icon.ico internal/tray/icon.ico
+          echo "Icon copied to internal/tray/"
+        else
+          echo "Warning: winres/icon.ico not found"
+        fi
+
+    - name: Update winres.json with version
+      shell: bash
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+
+        # Parse version (e.g., 1.0.0 -> FileVersion: 1,0,0,0)
+        IFS='.' read -ra VERSION_PARTS <<< "$VERSION"
+        MAJOR=${VERSION_PARTS[0]:-0}
+        MINOR=${VERSION_PARTS[1]:-0}
+        PATCH=${VERSION_PARTS[2]:-0}
+
+        # Update winres.json with version info
+        if [ -f winres/winres.json ]; then
+          # Use jq to update version fields
+          cat winres/winres.json | \
+          jq ".RT_VERSION.FileVersion = \"$MAJOR,$MINOR,$PATCH,0\" | \
+              .RT_VERSION.ProductVersion = \"$MAJOR,$MINOR,$PATCH,0\"" \
+          > winres/winres.json.tmp
+          mv winres/winres.json.tmp winres/winres.json
+
+          echo "Updated winres.json with version $VERSION"
+          cat winres/winres.json
+        else
+          echo "Warning: winres/winres.json not found"
+        fi
+
+    - name: Install go-winres
+      shell: bash
+      run: |
+        go install github.com/tc-hib/go-winres@latest
+        echo "$HOME/go/bin" >> $GITHUB_PATH
+
+    - name: Generate Windows resources
+      shell: bash
+      run: |
+        if [ -f winres/winres.json ]; then
+          mkdir -p cmd/steelclock
+          $HOME/go/bin/go-winres make --out winres/rsrc
+          cp winres/*.syso cmd/steelclock/
+          echo "Windows resources generated with version ${{ steps.version.outputs.version }}"
+        else
+          echo "Warning: winres/winres.json not found, skipping resource generation"
+        fi
+
+    - name: Build Windows executable
+      shell: bash
+      run: |
+        GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H windowsgui" -o steelclock.exe ./cmd/steelclock
+        echo "Built steelclock.exe"
+
+    - name: Create release package
+      shell: bash
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        PACKAGE_NAME="steelclock-v${VERSION}-windows-amd64"
+
+        # Create release directory
+        mkdir -p release/$PACKAGE_NAME
+
+        # Copy executable
+        cp steelclock.exe release/$PACKAGE_NAME/
+
+        # Copy configs directory
+        cp -r configs release/$PACKAGE_NAME/
+
+        # Copy README
+        cp README.md release/$PACKAGE_NAME/
+
+        # Copy LICENSE
+        if [ -f LICENSE ]; then
+          cp LICENSE release/$PACKAGE_NAME/
+        fi
+
+        # Copy ICON_SETUP.md if exists
+        if [ -f ICON_SETUP.md ]; then
+          cp ICON_SETUP.md release/$PACKAGE_NAME/
+        fi
+
+        # Create archive
+        cd release
+        7z a "${PACKAGE_NAME}.zip" "$PACKAGE_NAME"
+        cd ..
+
+        echo "Created release package: ${PACKAGE_NAME}.zip"
+        ls -lh release/*.zip
+
+    - name: Generate release notes
+      id: release_notes
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const tag = '${{ steps.version.outputs.tag }}';
+
+          // Get all tags
+          const tags = await github.rest.repos.listTags({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            per_page: 100
+          });
+
+          // Find previous tag
+          const currentTagIndex = tags.data.findIndex(t => t.name === tag);
+          const previousTag = currentTagIndex < tags.data.length - 1
+            ? tags.data[currentTagIndex + 1].name
+            : null;
+
+          let releaseNotes = `## What's New in ${tag}\n\n`;
+
+          if (previousTag) {
+            // Get commits between tags
+            const comparison = await github.rest.repos.compareCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              base: previousTag,
+              head: tag
+            });
+
+            releaseNotes += `### Changes since ${previousTag}\n\n`;
+
+            // Group commits by type
+            const features = [];
+            const fixes = [];
+            const other = [];
+
+            comparison.data.commits.forEach(commit => {
+              const msg = commit.commit.message.split('\n')[0];
+              const lowerMsg = msg.toLowerCase();
+
+              if (lowerMsg.startsWith('feat:') || lowerMsg.includes('feature')) {
+                features.push(`- ${msg}`);
+              } else if (lowerMsg.startsWith('fix:') || lowerMsg.includes('fixed')) {
+                fixes.push(`- ${msg}`);
+              } else {
+                other.push(`- ${msg}`);
+              }
+            });
+
+            if (features.length > 0) {
+              releaseNotes += `#### ✨ Features\n${features.join('\n')}\n\n`;
+            }
+            if (fixes.length > 0) {
+              releaseNotes += `#### 🐛 Bug Fixes\n${fixes.join('\n')}\n\n`;
+            }
+            if (other.length > 0) {
+              releaseNotes += `#### 📝 Other Changes\n${other.join('\n')}\n\n`;
+            }
+
+            releaseNotes += `\n**Full Changelog**: https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${previousTag}...${tag}`;
+          } else {
+            releaseNotes += 'Initial release\n';
+          }
+
+          return releaseNotes;
+        result-encoding: string
+
+    - name: Create GitHub Release Draft
+      uses: softprops/action-gh-release@v2
+      with:
+        draft: true
+        name: Release ${{ steps.version.outputs.tag }}
+        body: ${{ steps.release_notes.outputs.result }}
+        files: |
+          release/*.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
