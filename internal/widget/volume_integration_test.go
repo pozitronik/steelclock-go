@@ -263,7 +263,7 @@ func TestVolumeWidget_NoMemoryLeak(t *testing.T) {
 	t.Log("Created and destroyed 100 widgets without issues")
 }
 
-// TestVolumeWidget_VolumeChange tests volume change detection
+// TestVolumeWidget_VolumeChange tests volume change detection and auto-hide trigger
 func TestVolumeWidget_VolumeChange(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume",
@@ -273,7 +273,9 @@ func TestVolumeWidget_VolumeChange(t *testing.T) {
 			X: 0, Y: 0, W: 128, H: 40,
 		},
 		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
+			DisplayMode:     "bar_horizontal",
+			AutoHide:        true, // Enable auto-hide to test trigger mechanism
+			AutoHideTimeout: 1.0,  // 1 second timeout
 		},
 	}
 
@@ -283,20 +285,39 @@ func TestVolumeWidget_VolumeChange(t *testing.T) {
 	}
 	defer widget.Stop()
 
-	// Wait for initial volume
-	time.Sleep(200 * time.Millisecond)
+	// Wait for initial volume read (which should trigger auto-hide and make widget visible)
+	time.Sleep(300 * time.Millisecond)
 
 	widget.mu.RLock()
 	initialVolume := widget.volume
-	lastChangeTime := widget.lastVolumeChange
 	widget.mu.RUnlock()
 
-	t.Logf("Initial volume: %.2f%%, last change: %v ago", initialVolume, time.Since(lastChangeTime))
+	t.Logf("Initial volume: %.2f%%", initialVolume)
 
-	// The test just verifies the tracking works
-	// We can't programmatically change system volume in a unit test
-	// but we can verify the tracking fields exist and are initialized
-	if lastChangeTime.IsZero() {
-		t.Error("lastVolumeChange not initialized")
+	// Widget should be visible after volume is detected (auto-hide triggered)
+	img, err := widget.Render()
+	if err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Error("Widget should be visible after volume change detected, but got nil image")
+	} else {
+		t.Log("Volume change detection working: widget is visible after initial volume read")
+	}
+
+	// Wait for auto-hide timeout
+	time.Sleep(1200 * time.Millisecond)
+
+	// Widget should now be hidden
+	img, err = widget.Render()
+	if err != nil {
+		t.Fatalf("Render() after timeout error = %v", err)
+	}
+
+	if img != nil {
+		t.Error("Widget should be hidden after auto-hide timeout, but got image")
+	} else {
+		t.Log("Auto-hide timeout working: widget is now hidden")
 	}
 }

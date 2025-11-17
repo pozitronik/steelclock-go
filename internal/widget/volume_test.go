@@ -1,6 +1,7 @@
 package widget
 
 import (
+	"runtime"
 	"testing"
 	"time"
 
@@ -313,6 +314,11 @@ func TestVolumeWidget_RenderTriangle(t *testing.T) {
 
 // TestVolumeWidget_AutoHide tests auto-hide functionality
 func TestVolumeWidget_AutoHide(t *testing.T) {
+	// Skip on non-Windows platforms - volume reading is Windows-only
+	if runtime.GOOS != "windows" {
+		t.Skip("Volume widget auto-hide test requires Windows (volume reading not supported on this platform)")
+	}
+
 	cfg := config.WidgetConfig{
 		Type: "volume",
 		ID:   "test_volume",
@@ -335,7 +341,7 @@ func TestVolumeWidget_AutoHide(t *testing.T) {
 	}
 	defer widget.Stop()
 
-	// Widget should start hidden (lastVolumeChange = zero time)
+	// Widget should start hidden (auto-hide lastTriggerTime = zero time)
 	img, err := widget.Render()
 	if err != nil {
 		t.Errorf("Render() initial error = %v", err)
