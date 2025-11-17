@@ -6,6 +6,7 @@ package widget
 import (
 	"fmt"
 	"log"
+	"runtime"
 	"sync"
 
 	"github.com/go-ole/go-ole"
@@ -15,11 +16,13 @@ import (
 // VolumeReaderWCA manages Windows Core Audio using go-wca library
 // with proper COM lifecycle (initialize once, not per call)
 type VolumeReaderWCA struct {
-	mu          sync.Mutex
-	initialized bool
-	aev         *wca.IAudioEndpointVolume
-	mmd         *wca.IMMDevice
-	mmde        *wca.IMMDeviceEnumerator
+	mu             sync.Mutex
+	initialized    bool
+	comInitialized bool // Track if we initialized COM (vs it was already initialized)
+	threadLocked   bool // Track if we locked the OS thread
+	aev            *wca.IAudioEndpointVolume
+	mmd            *wca.IMMDevice
+	mmde           *wca.IMMDeviceEnumerator
 }
 
 // NewVolumeReaderWCA creates a volume reader using go-wca with proper lifecycle
@@ -38,19 +41,45 @@ func (vr *VolumeReaderWCA) initialize() error {
 	vr.mu.Lock()
 	defer vr.mu.Unlock()
 
+	// Lock this goroutine to the current OS thread for COM apartment threading
+	// COM requires thread affinity - once initialized on a thread, all COM calls
+	// must happen on that same thread
+	runtime.LockOSThread()
+	vr.threadLocked = true
+
 	log.Printf("[VOLUME-WCA] Initializing COM (ONCE per goroutine)")
 
 	// Initialize COM - ONCE, not per call
-	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED); err != nil {
-		return fmt.Errorf("CoInitializeEx failed: %w", err)
+	// Note: CoInitializeEx may return an error if COM is already initialized on this thread
+	// In test environments, this is expected and we handle it gracefully
+	err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED)
+	if err != nil {
+		// Check if the error is because COM is already initialized (S_FALSE or RPC_E_CHANGED_MODE)
+		// In that case, we can continue - COM is ready to use
+		errMsg := err.Error()
+		if errMsg == "Incorrect function." || errMsg == "Cannot change thread mode after it is set." {
+			log.Printf("[VOLUME-WCA] COM already initialized on this thread (expected in test environment)")
+			// Don't set comInitialized since we didn't initialize it
+		} else {
+			runtime.UnlockOSThread()
+			vr.threadLocked = false
+			return fmt.Errorf("CoInitializeEx failed: %w", err)
+		}
+	} else {
+		log.Printf("[VOLUME-WCA] COM initialized successfully")
+		vr.comInitialized = true
 	}
-
-	log.Printf("[VOLUME-WCA] COM initialized")
 
 	// Create device enumerator
 	var mmde *wca.IMMDeviceEnumerator
 	if err := wca.CoCreateInstance(wca.CLSID_MMDeviceEnumerator, 0, wca.CLSCTX_ALL, wca.IID_IMMDeviceEnumerator, &mmde); err != nil {
-		ole.CoUninitialize()
+		if vr.comInitialized {
+			ole.CoUninitialize()
+		}
+		if vr.threadLocked {
+			runtime.UnlockOSThread()
+			vr.threadLocked = false
+		}
 		return fmt.Errorf("CoCreateInstance failed: %w", err)
 	}
 	vr.mmde = mmde
@@ -143,10 +172,24 @@ func (vr *VolumeReaderWCA) Close() {
 	log.Printf("[VOLUME-WCA] Closing volume reader")
 
 	vr.cleanup()
-	ole.CoUninitialize()
+
+	// Only uninitialize COM if we initialized it (not if it was already initialized)
+	if vr.comInitialized {
+		ole.CoUninitialize()
+		vr.comInitialized = false
+		log.Printf("[VOLUME-WCA] COM uninitialized")
+	}
+
+	// Only unlock the thread if we locked it
+	if vr.threadLocked {
+		runtime.UnlockOSThread()
+		vr.threadLocked = false
+		log.Printf("[VOLUME-WCA] OS thread unlocked")
+	}
+
 	vr.initialized = false
 
-	log.Printf("[VOLUME-WCA] COM uninitialized, volume reader closed")
+	log.Printf("[VOLUME-WCA] Volume reader closed")
 }
 
 // newVolumeReader creates a platform-specific volume reader (Windows implementation using go-wca)
