@@ -139,8 +139,8 @@ func TestCreateWidgets_DisabledWidget(t *testing.T) {
 	}
 }
 
-// TestCreateWidgets_ErrorPropagation tests that errors are properly propagated
-func TestCreateWidgets_ErrorPropagation(t *testing.T) {
+// TestCreateWidgets_PartialFailure tests graceful handling when some widgets fail
+func TestCreateWidgets_PartialFailure(t *testing.T) {
 	configs := []config.WidgetConfig{
 		createDefaultConfig("clock"),
 		{
@@ -151,15 +151,53 @@ func TestCreateWidgets_ErrorPropagation(t *testing.T) {
 				X: 0, Y: 0, W: 128, H: 40,
 			},
 		},
+		createDefaultConfig("cpu"),
 	}
 
 	widgets, err := CreateWidgets(configs)
-	if err == nil {
-		t.Error("CreateWidgets() should return error when one widget fails")
+
+	// Should succeed with partial widgets (skip the failed one)
+	if err != nil {
+		t.Errorf("CreateWidgets() should not error when some widgets succeed, got: %v", err)
 	}
 
+	// Should create 2 widgets (clock and cpu), skipping the invalid one
+	if len(widgets) != 2 {
+		t.Errorf("CreateWidgets() returned %d widgets, want 2 (skipping 1 failed widget)", len(widgets))
+	}
+}
+
+// TestCreateWidgets_AllFailed tests error when ALL widgets fail to initialize
+func TestCreateWidgets_AllFailed(t *testing.T) {
+	configs := []config.WidgetConfig{
+		{
+			Type:    "invalid_type_1",
+			ID:      "bad_widget_1",
+			Enabled: true,
+			Position: config.PositionConfig{
+				X: 0, Y: 0, W: 128, H: 40,
+			},
+		},
+		{
+			Type:    "invalid_type_2",
+			ID:      "bad_widget_2",
+			Enabled: true,
+			Position: config.PositionConfig{
+				X: 0, Y: 0, W: 128, H: 40,
+			},
+		},
+	}
+
+	widgets, err := CreateWidgets(configs)
+
+	// Should error when ALL widgets fail
+	if err == nil {
+		t.Error("CreateWidgets() should return error when all widgets fail")
+	}
+
+	// Should return nil widgets list on complete failure
 	if widgets != nil {
-		t.Error("CreateWidgets() should return nil widgets list on error")
+		t.Errorf("CreateWidgets() should return nil widgets list when all fail, got %d widgets", len(widgets))
 	}
 }
 
