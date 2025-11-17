@@ -456,8 +456,7 @@ The Memory widget displays RAM usage as a semicircular gauge:
 | `tx_needle_color`  | integer        | 0-255                                              | 200              | TX needle color (gauge mode)           |
 
 **Interface Names**:
-- Windows: `"Ethernet"`, `"Wi-Fi"`, etc. (from Network Connections)
-- Linux: `"eth0"`, `"wlan0"`, `"enp0s3"`, etc. (from `ip addr`)
+- `"Ethernet"`, `"Wi-Fi"`, etc. (from Network Connections)
 - Use `null` for auto-detection
 
 **Gauge Mode**:
@@ -513,8 +512,7 @@ The Network widget features a unique **dual/concentric gauge** display that show
 | `write_color`     | integer        | 0-255                                     | 200              | Write color                             |
 
 **Disk Names**:
-- Windows: `"PhysicalDrive0"`, `"PhysicalDrive1"`, ...
-- Linux: `"sda"`, `"sdb"`, `"nvme0n1"`, ...
+- `"PhysicalDrive0"`, `"PhysicalDrive1"`, ...
 - Use `null` for auto-selection
 
 Run SteelClock once to see available disks in logs:
@@ -562,7 +560,7 @@ Available disks: PhysicalDrive0, PhysicalDrive1
 | `indicator_color_on`  | integer | 0-255 | 255     | Color for ON state                      |
 | `indicator_color_off` | integer | 0-255 | 100     | Color for OFF state                     |
 
-**Emoji Support**: Use `"font": "Segoe UI Emoji"` (Windows) or `"Noto Color Emoji"` (Linux) to display emojis.
+**Emoji Support**: Use `"font": "Segoe UI Emoji"` to display emojis.
 
 **Alternative Symbols**:
 - Unicode arrows: ↑ ↓ ▲ ▼
@@ -638,13 +636,9 @@ The volume widget automatically triggers the auto-hide feature (see [Auto-Hide P
 
 When system audio is muted, all display modes show an X pattern (diagonal lines) over the volume indicator.
 
-**Platform Support**:
-- **Windows**: Full support using Windows Core Audio API (IAudioEndpointVolume via go-wca library). Reads real-time system volume and mute state with proper COM lifecycle management.
-- **Linux/macOS**: Not supported (returns error message)
-
 ### Volume Meter Widget
 
-**Display Modes**: text, bar_horizontal, bar_vertical, gauge, vu_meter, stereo_bars, stereo_vu
+**Display Modes**: text, bar_horizontal, bar_vertical, gauge, vu_meter (all modes support stereo with `stereo_mode: true`)
 
 ```json
 {
@@ -656,6 +650,7 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
     "clipping_color": 200,
     "left_channel_color": 255,
     "right_channel_color": 200,
+    "stereo_mode": false,
     "bar_border": false,
     "gauge_color": 200,
     "gauge_needle_color": 255,
@@ -681,12 +676,13 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
 
 | Property                 | Type    | Range                                                                         | Default          | Description                                            |
 |--------------------------|---------|-------------------------------------------------------------------------------|------------------|--------------------------------------------------------|
-| `display_mode`           | string  | text, bar_horizontal, bar_vertical, gauge, vu_meter, stereo_bars, stereo_vu  | "bar_horizontal" | Display mode                                           |
+| `display_mode`           | string  | text, bar_horizontal, bar_vertical, gauge, vu_meter                           | "bar_horizontal" | Display mode                                           |
 | `update_interval`        | number  | ≥0.03                                                                         | 0.1              | Meter update interval (seconds)                        |
 | `fill_color`             | integer | 0-255                                                                         | 255              | Main meter fill color                                  |
 | `clipping_color`         | integer | 0-255                                                                         | 200              | Color when clipping detected                           |
-| `left_channel_color`     | integer | 0-255                                                                         | 255              | Left channel color (stereo modes)                      |
-| `right_channel_color`    | integer | 0-255                                                                         | 200              | Right channel color (stereo modes)                     |
+| `left_channel_color`     | integer | 0-255                                                                         | 255              | Left channel color (when stereo_mode enabled)          |
+| `right_channel_color`    | integer | 0-255                                                                         | 200              | Right channel color (when stereo_mode enabled)         |
+| `stereo_mode`            | boolean | -                                                                             | false            | Display left and right channels separately             |
 | `bar_border`             | boolean | -                                                                             | false            | Draw border around bars                                |
 | `gauge_color`            | integer | 0-255                                                                         | 200              | Gauge arc and tick marks color                         |
 | `gauge_needle_color`     | integer | 0-255                                                                         | 255              | Gauge needle color                                     |
@@ -705,12 +701,16 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
 **Display Mode Details**:
 
 **text**: Shows peak level as percentage or dB. When `use_db_scale` is true, displays dB value (e.g., "-12.3 dB"). Shows "CLIP" when clipping is detected.
+- **Stereo mode**: Displays both channels (e.g., "L:45% R:52%")
 
 **bar_horizontal**: Horizontal bar showing current audio peak level with decay. Peak hold line shows maximum recent peak.
+- **Stereo mode**: Two horizontal bars stacked (top = left channel, bottom = right channel)
 
 **bar_vertical**: Vertical bar showing current audio peak level with decay. Peak hold line shows maximum recent peak.
+- **Stereo mode**: Two vertical bars side by side (left = left channel, right = right channel)
 
 **gauge**: Semicircular gauge with needle pointing to current peak level (similar to volume widget gauge).
+- **Stereo mode**: Two gauges side by side (left = left channel, right = right channel)
 
 **vu_meter**: VU (Volume Unit) meter with color zones:
 - Green zone: 0-70% (normal levels)
@@ -718,17 +718,7 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
 - Red zone: 90-100% (high levels)
 - Peak hold line indicates maximum recent level
 - Smooth decay ballistics (controlled by `decay_rate`)
-
-**stereo_bars**: Dual horizontal bars showing left and right channel levels separately:
-- Top bar: Left channel (color: `left_channel_color`)
-- Bottom bar: Right channel (color: `right_channel_color`)
-- Separator line between channels
-
-**stereo_vu**: Dual VU meters showing left and right channel levels with color zones:
-- Top VU meter: Left channel
-- Bottom VU meter: Right channel
-- Independent peak tracking per channel
-- Color zones per channel (green/yellow/red)
+- **Stereo mode**: Two VU meters stacked (top = left channel, bottom = right channel) with independent peak tracking
 
 **Peak Decay Behavior**:
 
@@ -760,10 +750,6 @@ When `auto_hide_on_silence` is enabled:
 - Automatically hides after `auto_hide_silence_time` seconds of silence
 - Perfect for temporary audio level indicators
 - Works with standard `auto_hide` and `auto_hide_timeout` properties
-
-**Platform Support**:
-- **Windows**: Full support using Windows Core Audio API (IAudioMeterInformation via go-wca library). Reads real-time audio peak meter values with hardware support when available.
-- **Linux/macOS**: Not supported (returns error message)
 
 ## Examples
 
@@ -1131,7 +1117,7 @@ When `auto_hide_on_silence` is enabled:
 ### Fonts
 
 1. **Standard Text**: Arial, Consolas (monospace)
-2. **Emojis**: Segoe UI Emoji (Windows), Noto Color Emoji (Linux)
+2. **Emojis**: Segoe UI Emoji
 3. **Size**: 6-8px for dense dashboards, 10-16px for readability
 
 ## Troubleshooting
