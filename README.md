@@ -1,6 +1,6 @@
 # SteelClock (Go)
 
-[![CI](https://github.com/pozitronik/steelclock-go/actions/workflows/ci.yml/badge.svg)](https://github.com/pozitronik/steelclock/actions/workflows/ci.yml)
+[![CI](https://github.com/pozitronik/steelclock-go/actions/workflows/ci.yml/badge.svg)](https://github.com/pozitronik/steelclock-go/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/pozitronik/steelclock-go/branch/master/graph/badge.svg)](https://codecov.io/gh/pozitronik/steelclock-go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pozitronik/steelclock-go)](https://goreportcard.com/report/github.com/pozitronik/steelclock-go)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
