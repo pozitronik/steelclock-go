@@ -25,11 +25,8 @@ func CreateWidget(cfg config.WidgetConfig) (Widget, error) {
 		return NewDiskWidget(cfg)
 	case "keyboard":
 		return NewKeyboardWidget(cfg)
-	// case "volume":
-	// 	return NewVolumeWidget(cfg)
-	// Volume widget disabled due to github.com/itchyny/volume-go library issues
-	// The Windows COM API has fundamental stability problems with continuous polling
-	// Code preserved in volume.go, volume_windows.go, volume_unix.go for future implementation
+	case "volume":
+		return NewVolumeWidget(cfg)
 	default:
 		return nil, fmt.Errorf("unknown widget type: %s", cfg.Type)
 	}
