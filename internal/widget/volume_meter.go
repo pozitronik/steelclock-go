@@ -513,7 +513,9 @@ func (w *VolumeMeterWidget) renderGauge(img *image.Gray, peak float64, isClippin
 		needleColor = w.clippingColor
 	}
 
-	bitmap.DrawGauge(img, pos, peak, w.gaugeColor, needleColor)
+	// DrawGauge expects percentage as 0-100, not 0.0-1.0
+	percentage := peak * 100.0
+	bitmap.DrawGauge(img, pos, percentage, w.gaugeColor, needleColor)
 }
 
 // renderVUMeter renders VU meter style display
