@@ -14,8 +14,9 @@ import (
 func skipIfNoAudioDevice(t *testing.T) {
 	t.Helper()
 
-	// Only check on Windows
+	// Volume widget is Windows-only
 	if runtime.GOOS != "windows" {
+		t.Skip("Volume widget is Windows-only (requires Windows Core Audio API)")
 		return
 	}
 
