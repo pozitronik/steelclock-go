@@ -168,6 +168,7 @@ SteelClock supports 7 widget types:
 5. **disk** - Disk I/O monitor
 6. **keyboard** - Keyboard lock indicators
 7. **volume** - System volume indicator
+8. **volume_meter** - Realtime audio peak meter (VU meter)
 
 ## Common Properties
 
@@ -639,6 +640,129 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
 
 **Platform Support**:
 - **Windows**: Full support using Windows Core Audio API (IAudioEndpointVolume via go-wca library). Reads real-time system volume and mute state with proper COM lifecycle management.
+- **Linux/macOS**: Not supported (returns error message)
+
+### Volume Meter Widget
+
+**Display Modes**: text, bar_horizontal, bar_vertical, gauge, vu_meter, stereo_bars, stereo_vu
+
+```json
+{
+  "type": "volume_meter",
+  "properties": {
+    "display_mode": "vu_meter",
+    "update_interval": 0.1,
+    "fill_color": 255,
+    "clipping_color": 200,
+    "left_channel_color": 255,
+    "right_channel_color": 200,
+    "bar_border": false,
+    "gauge_color": 200,
+    "gauge_needle_color": 255,
+    "use_db_scale": false,
+    "show_clipping": true,
+    "clipping_threshold": 0.99,
+    "silence_threshold": 0.01,
+    "decay_rate": 2.0,
+    "show_peak_hold": true,
+    "peak_hold_time": 1.0,
+    "auto_hide_on_silence": false,
+    "auto_hide_silence_time": 2.0,
+    "font": null,
+    "font_size": 10,
+    "horizontal_align": "center",
+    "vertical_align": "center",
+    "padding": 0,
+    "auto_hide": false,
+    "auto_hide_timeout": 2.0
+  }
+}
+```
+
+| Property                 | Type    | Range                                                                         | Default          | Description                                            |
+|--------------------------|---------|-------------------------------------------------------------------------------|------------------|--------------------------------------------------------|
+| `display_mode`           | string  | text, bar_horizontal, bar_vertical, gauge, vu_meter, stereo_bars, stereo_vu  | "bar_horizontal" | Display mode                                           |
+| `update_interval`        | number  | ≥0.03                                                                         | 0.1              | Meter update interval (seconds)                        |
+| `fill_color`             | integer | 0-255                                                                         | 255              | Main meter fill color                                  |
+| `clipping_color`         | integer | 0-255                                                                         | 200              | Color when clipping detected                           |
+| `left_channel_color`     | integer | 0-255                                                                         | 255              | Left channel color (stereo modes)                      |
+| `right_channel_color`    | integer | 0-255                                                                         | 200              | Right channel color (stereo modes)                     |
+| `bar_border`             | boolean | -                                                                             | false            | Draw border around bars                                |
+| `gauge_color`            | integer | 0-255                                                                         | 200              | Gauge arc and tick marks color                         |
+| `gauge_needle_color`     | integer | 0-255                                                                         | 255              | Gauge needle color                                     |
+| `use_db_scale`           | boolean | -                                                                             | false            | Use logarithmic dB scale (-60dB to 0dB)                |
+| `show_clipping`          | boolean | -                                                                             | true             | Show clipping indicator                                |
+| `clipping_threshold`     | number  | 0.0-1.0                                                                       | 0.99             | Peak level that triggers clipping (0.0=0%, 1.0=100%)   |
+| `silence_threshold`      | number  | 0.0-1.0                                                                       | 0.01             | Peak level below which is considered silence           |
+| `decay_rate`             | number  | ≥0.1                                                                          | 2.0              | Peak decay rate (units/second, VU meter ballistics)    |
+| `show_peak_hold`         | boolean | -                                                                             | true             | Show peak hold line (VU and bar modes)                 |
+| `peak_hold_time`         | number  | ≥0.1                                                                          | 1.0              | How long to hold peak indicator (seconds)              |
+| `auto_hide_on_silence`   | boolean | -                                                                             | false            | Auto-hide when no audio detected                       |
+| `auto_hide_silence_time` | number  | ≥0.5                                                                          | 2.0              | Time after last audio before hiding (seconds)          |
+
+**Note**: The volume meter widget also supports `auto_hide` and `auto_hide_timeout` properties (see [Auto-Hide Properties](#auto-hide-properties)). When `auto_hide_on_silence` is enabled, the widget triggers visibility when audio is detected above the `silence_threshold`.
+
+**Display Mode Details**:
+
+**text**: Shows peak level as percentage or dB. When `use_db_scale` is true, displays dB value (e.g., "-12.3 dB"). Shows "CLIP" when clipping is detected.
+
+**bar_horizontal**: Horizontal bar showing current audio peak level with decay. Peak hold line shows maximum recent peak.
+
+**bar_vertical**: Vertical bar showing current audio peak level with decay. Peak hold line shows maximum recent peak.
+
+**gauge**: Semicircular gauge with needle pointing to current peak level (similar to volume widget gauge).
+
+**vu_meter**: VU (Volume Unit) meter with color zones:
+- Green zone: 0-70% (normal levels)
+- Yellow zone: 70-90% (approaching limit)
+- Red zone: 90-100% (high levels)
+- Peak hold line indicates maximum recent level
+- Smooth decay ballistics (controlled by `decay_rate`)
+
+**stereo_bars**: Dual horizontal bars showing left and right channel levels separately:
+- Top bar: Left channel (color: `left_channel_color`)
+- Bottom bar: Right channel (color: `right_channel_color`)
+- Separator line between channels
+
+**stereo_vu**: Dual VU meters showing left and right channel levels with color zones:
+- Top VU meter: Left channel
+- Bottom VU meter: Right channel
+- Independent peak tracking per channel
+- Color zones per channel (green/yellow/red)
+
+**Peak Decay Behavior**:
+
+The meter features smooth peak decay (VU meter ballistics) controlled by `decay_rate`:
+- Peak values decay gradually after audio quiets
+- `decay_rate`: units per second to decay (default 2.0 means full scale decay in 0.5 seconds)
+- Instant rise time when audio increases
+- Creates smooth, professional-looking meters
+
+**Clipping Detection**:
+
+When audio peaks exceed `clipping_threshold` (default 0.99 = 99% of maximum):
+- Meter changes to `clipping_color`
+- Text mode shows "CLIP" message
+- Helps identify potential audio distortion
+
+**dB Scale Mode**:
+
+When `use_db_scale` is enabled:
+- Linear peak values (0.0-1.0) are converted to logarithmic dB scale (-60dB to 0dB)
+- More accurate representation of perceived loudness
+- Professional audio application standard
+- 0dB = maximum (1.0), -60dB = minimum audible (0.001)
+
+**Auto-Hide on Silence**:
+
+When `auto_hide_on_silence` is enabled:
+- Widget triggers auto-hide when audio detected above `silence_threshold`
+- Automatically hides after `auto_hide_silence_time` seconds of silence
+- Perfect for temporary audio level indicators
+- Works with standard `auto_hide` and `auto_hide_timeout` properties
+
+**Platform Support**:
+- **Windows**: Full support using Windows Core Audio API (IAudioMeterInformation via go-wca library). Reads real-time audio peak meter values with hardware support when available.
 - **Linux/macOS**: Not supported (returns error message)
 
 ## Examples
