@@ -333,30 +333,39 @@ func TestVolumeWidget_AutoHide(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewVolumeWidget() error = %v", err)
 	}
+	defer widget.Stop()
 
-	// Update to set initial volume
-	_ = widget.Update()
-
-	// Widget should be visible initially (within timeout)
+	// Widget should start hidden (lastVolumeChange = zero time)
 	img, err := widget.Render()
 	if err != nil {
-		t.Errorf("Render() error = %v", err)
+		t.Errorf("Render() initial error = %v", err)
+	}
+	if img != nil {
+		t.Error("Widget should start hidden with auto-hide enabled, but got image")
+	}
+
+	// Wait for background polling to detect volume (triggers volume change)
+	time.Sleep(200 * time.Millisecond)
+
+	// After volume is detected, widget should be visible
+	img, err = widget.Render()
+	if err != nil {
+		t.Errorf("Render() after volume change error = %v", err)
 	}
 	if img == nil {
-		t.Error("Render() returned nil image")
+		t.Error("Widget should be visible after volume change, but got nil")
 	}
 
 	// Wait for auto-hide timeout
 	time.Sleep(150 * time.Millisecond)
 
-	// Widget should still render but might be empty/transparent
-	// (depends on implementation - just verify it doesn't crash)
+	// Widget should be hidden again
 	img, err = widget.Render()
 	if err != nil {
 		t.Errorf("Render() after timeout error = %v", err)
 	}
-	if img == nil {
-		t.Error("Render() after timeout returned nil image")
+	if img != nil {
+		t.Error("Widget should be hidden after timeout, but got image")
 	}
 }
 

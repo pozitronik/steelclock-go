@@ -115,8 +115,8 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		gaugeNeedleColor:  uint8(gaugeNeedleColor),
 		triangleFillColor: uint8(triangleFillColor),
 		triangleBorder:    cfg.Properties.TriangleBorder,
-		lastVolumeChange:  time.Now(),
-		lastSuccessTime:   time.Now(), // Initialize to prevent false "stuck" detection
+		lastVolumeChange:  time.Time{}, // Zero time = widget starts hidden if auto-hide is enabled
+		lastSuccessTime:   time.Now(),  // Initialize to prevent false "stuck" detection
 		face:              fontFace,
 		stopChan:          make(chan struct{}),
 	}
@@ -325,9 +325,8 @@ func (w *VolumeWidget) Render() (image.Image, error) {
 	if w.autoHide {
 		timeSinceChange := time.Since(w.lastVolumeChange).Seconds()
 		if timeSinceChange > w.autoHideTimeout {
-			// Return transparent/empty image
-			img := bitmap.NewGrayscaleImage(pos.W, pos.H, uint8(style.BackgroundColor))
-			return img, nil
+			// Return nil to hide widget and show content below
+			return nil, nil
 		}
 	}
 
