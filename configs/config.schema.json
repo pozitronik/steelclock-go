@@ -735,8 +735,8 @@
               "properties": {
                 "display_mode": {
                   "type": "string",
-                  "description": "Display mode: text, bar_horizontal, bar_vertical, gauge, vu_meter, stereo_bars, stereo_vu",
-                  "enum": ["text", "bar_horizontal", "bar_vertical", "gauge", "vu_meter", "stereo_bars", "stereo_vu"],
+                  "description": "Display mode: text, bar_horizontal, bar_vertical, gauge, vu_meter (use stereo_mode for dual channel display)",
+                  "enum": ["text", "bar_horizontal", "bar_vertical", "gauge", "vu_meter"],
                   "default": "bar_horizontal"
                 },
                 "update_interval": {
@@ -772,6 +772,11 @@
                   "minimum": 0,
                   "maximum": 255,
                   "default": 200
+                },
+                "stereo_mode": {
+                  "type": "boolean",
+                  "description": "Enable stereo mode to display left and right channels separately (works with all display modes)",
+                  "default": false
                 },
                 "bar_border": {
                   "type": "boolean",

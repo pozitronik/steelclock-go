@@ -116,6 +116,7 @@ type WidgetProperties struct {
 	ClippingColor       int     `json:"clipping_color,omitempty"`
 	LeftChannelColor    int     `json:"left_channel_color,omitempty"`
 	RightChannelColor   int     `json:"right_channel_color,omitempty"`
+	StereoMode          bool    `json:"stereo_mode,omitempty"`
 	UseDBScale          bool    `json:"use_db_scale,omitempty"`
 	ShowClipping        bool    `json:"show_clipping,omitempty"`
 	ClippingThreshold   float64 `json:"clipping_threshold,omitempty"`

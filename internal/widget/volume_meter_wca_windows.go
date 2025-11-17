@@ -8,10 +8,64 @@ import (
 	"log"
 	"runtime"
 	"sync"
+	"syscall"
+	"unsafe"
 
 	"github.com/go-ole/go-ole"
 	"github.com/moutend/go-wca/pkg/wca"
 )
+
+// Direct COM calls for IAudioMeterInformation methods not implemented in go-wca
+// These use syscall to directly call the vtable methods
+
+// getMeteringChannelCount calls IAudioMeterInformation::GetMeteringChannelCount directly via vtable
+func getMeteringChannelCount(ami *wca.IAudioMeterInformation) (uint32, error) {
+	// Get the vtable pointer
+	vtbl := *(**uintptr)(unsafe.Pointer(ami))
+
+	// GetMeteringChannelCount is at offset 4 in the vtable
+	// (0=QueryInterface, 1=AddRef, 2=Release, 3=GetPeakValue, 4=GetMeteringChannelCount)
+	getMeteringChannelCountPtr := *(*uintptr)(unsafe.Pointer(uintptr(unsafe.Pointer(vtbl)) + 4*unsafe.Sizeof(uintptr(0))))
+
+	var channelCount uint32
+	ret, _, _ := syscall.SyscallN(
+		getMeteringChannelCountPtr,
+		uintptr(unsafe.Pointer(ami)),
+		uintptr(unsafe.Pointer(&channelCount)),
+	)
+
+	if ret != 0 {
+		return 0, ole.NewError(ret)
+	}
+
+	return channelCount, nil
+}
+
+// getChannelsPeakValues calls IAudioMeterInformation::GetChannelsPeakValues directly via vtable
+func getChannelsPeakValues(ami *wca.IAudioMeterInformation, channelCount uint32, peaks []float32) error {
+	if channelCount == 0 || len(peaks) == 0 {
+		return nil
+	}
+
+	// Get the vtable pointer
+	vtbl := *(**uintptr)(unsafe.Pointer(ami))
+
+	// GetChannelsPeakValues is at offset 5 in the vtable
+	getChannelsPeakValuesPtr := *(*uintptr)(unsafe.Pointer(uintptr(unsafe.Pointer(vtbl)) + 5*unsafe.Sizeof(uintptr(0))))
+
+	ret, _, _ := syscall.SyscallN(
+		getChannelsPeakValuesPtr,
+		uintptr(unsafe.Pointer(ami)),
+		uintptr(channelCount),
+		uintptr(unsafe.Pointer(&peaks[0])),
+	)
+
+	if ret != 0 {
+		return ole.NewError(ret)
+	}
+
+	return nil
+}
 
 // MeterReaderWCA manages Windows Core Audio meter using go-wca library
 // with proper COM lifecycle (initialize once, not per call)
@@ -133,11 +187,35 @@ func (mr *MeterReaderWCA) GetMeterData(clippingThreshold, silenceThreshold float
 	data.IsClipping = data.Peak >= clippingThreshold
 	data.HasAudio = data.Peak > silenceThreshold
 
-	// NOTE: GetMeteringChannelCount and GetChannelsPeakValues are not implemented in go-wca
-	// (they return E_NOTIMPL). For now, we only support mono metering using overall peak.
-	// TODO: Implement proper COM calls for per-channel metering when needed.
-	data.ChannelCount = 1 // Assume mono for now
-	data.ChannelPeaks = []float64{data.Peak}
+	// Get channel count using direct COM call
+	channelCount, err := getMeteringChannelCount(mr.ami)
+	if err != nil {
+		// If channel count fails, fall back to mono
+		log.Printf("[METER-WCA] GetMeteringChannelCount failed (falling back to mono): %v", err)
+		data.ChannelCount = 1
+		data.ChannelPeaks = []float64{data.Peak}
+		return data, nil
+	}
+	data.ChannelCount = int(channelCount)
+
+	// Get per-channel peak values using direct COM call
+	if channelCount > 0 {
+		channelPeaks := make([]float32, channelCount)
+		if err := getChannelsPeakValues(mr.ami, channelCount, channelPeaks); err != nil {
+			// If per-channel fails, fall back to using overall peak for all channels
+			log.Printf("[METER-WCA] GetChannelsPeakValues failed (using overall peak): %v", err)
+			data.ChannelPeaks = make([]float64, channelCount)
+			for i := range data.ChannelPeaks {
+				data.ChannelPeaks[i] = data.Peak
+			}
+		} else {
+			// Convert to float64
+			data.ChannelPeaks = make([]float64, channelCount)
+			for i, p := range channelPeaks {
+				data.ChannelPeaks[i] = float64(p)
+			}
+		}
+	}
 
 	return data, nil
 }

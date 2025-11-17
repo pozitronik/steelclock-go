@@ -45,6 +45,7 @@ type VolumeMeterWidget struct {
 	verticalAlign     string
 
 	// Meter configuration
+	stereoMode          bool
 	useDBScale          bool
 	showClipping        bool
 	clippingThreshold   float64
@@ -100,11 +101,9 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		"bar_vertical":   true,
 		"gauge":          true,
 		"vu_meter":       true,
-		"stereo_bars":    true,
-		"stereo_vu":      true,
 	}
 	if !validModes[displayMode] {
-		return nil, fmt.Errorf("invalid display mode: %s (valid: text, bar_horizontal, bar_vertical, gauge, vu_meter, stereo_bars, stereo_vu)", displayMode)
+		return nil, fmt.Errorf("invalid display mode: %s (valid: text, bar_horizontal, bar_vertical, gauge, vu_meter)", displayMode)
 	}
 
 	fillColor := cfg.Properties.FillColor
@@ -202,6 +201,7 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		gaugeNeedleColor:    uint8(gaugeNeedleColor),
 		horizontalAlign:     horizontalAlign,
 		verticalAlign:       verticalAlign,
+		stereoMode:          cfg.Properties.StereoMode,
 		useDBScale:          cfg.Properties.UseDBScale,
 		showClipping:        cfg.Properties.ShowClipping,
 		clippingThreshold:   clippingThreshold,
@@ -374,21 +374,35 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 	pos := w.GetPosition()
 	img := image.NewGray(image.Rect(0, 0, pos.W, pos.H))
 
-	switch w.displayMode {
-	case "text":
-		w.renderText(img, peak, isClipping)
-	case "bar_horizontal":
-		w.renderBarHorizontal(img, peak, peakHold, isClipping)
-	case "bar_vertical":
-		w.renderBarVertical(img, peak, peakHold, isClipping)
-	case "gauge":
-		w.renderGauge(img, peak, isClipping)
-	case "vu_meter":
-		w.renderVUMeter(img, peak, peakHold, isClipping)
-	case "stereo_bars":
-		w.renderStereoBars(img, channelPeaks, isClipping)
-	case "stereo_vu":
-		w.renderStereoVU(img, channelPeaks, peakHold, isClipping)
+	// Check if we should render in stereo mode
+	if w.stereoMode && len(channelPeaks) >= 2 {
+		// Render stereo version of each mode
+		switch w.displayMode {
+		case "text":
+			w.renderTextStereo(img, channelPeaks, isClipping)
+		case "bar_horizontal":
+			w.renderBarHorizontalStereo(img, channelPeaks, peakHold, isClipping)
+		case "bar_vertical":
+			w.renderBarVerticalStereo(img, channelPeaks, peakHold, isClipping)
+		case "gauge":
+			w.renderGaugeStereo(img, channelPeaks, isClipping)
+		case "vu_meter":
+			w.renderVUMeterStereo(img, channelPeaks, peakHold, isClipping)
+		}
+	} else {
+		// Render mono version
+		switch w.displayMode {
+		case "text":
+			w.renderText(img, peak, isClipping)
+		case "bar_horizontal":
+			w.renderBarHorizontal(img, peak, peakHold, isClipping)
+		case "bar_vertical":
+			w.renderBarVertical(img, peak, peakHold, isClipping)
+		case "gauge":
+			w.renderGauge(img, peak, isClipping)
+		case "vu_meter":
+			w.renderVUMeter(img, peak, peakHold, isClipping)
+		}
 	}
 
 	return img, nil
@@ -569,8 +583,8 @@ func (w *VolumeMeterWidget) renderVUMeter(img *image.Gray, peak, peakHold float6
 	}
 }
 
-// renderStereoBars renders stereo bars (left/right channels separately)
-func (w *VolumeMeterWidget) renderStereoBars(img *image.Gray, channelPeaks []float64, isClipping bool) {
+// renderBarHorizontalStereo renders horizontal bars in stereo mode (left/right channels)
+func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPeaks []float64, peakHold float64, isClipping bool) {
 	pos := w.GetPosition()
 
 	if len(channelPeaks) < 2 {
@@ -608,8 +622,8 @@ func (w *VolumeMeterWidget) renderStereoBars(img *image.Gray, channelPeaks []flo
 	}
 }
 
-// renderStereoVU renders stereo VU meters
-func (w *VolumeMeterWidget) renderStereoVU(img *image.Gray, channelPeaks []float64, peakHold float64, isClipping bool) {
+// renderVUMeterStereo renders VU meters in stereo mode (left/right channels)
+func (w *VolumeMeterWidget) renderVUMeterStereo(img *image.Gray, channelPeaks []float64, peakHold float64, isClipping bool) {
 	pos := w.GetPosition()
 
 	if len(channelPeaks) < 2 {
@@ -656,6 +670,168 @@ func (w *VolumeMeterWidget) renderStereoVU(img *image.Gray, channelPeaks []float
 	// Draw separator
 	for x := 0; x < pos.W; x++ {
 		img.SetGray(x, halfHeight, color.Gray{Y: 64})
+	}
+}
+
+// renderTextStereo renders text display in stereo mode showing L/R channel values
+func (w *VolumeMeterWidget) renderTextStereo(img *image.Gray, channelPeaks []float64, isClipping bool) {
+	if w.face == nil {
+		return
+	}
+
+	if len(channelPeaks) < 2 {
+		// Fall back to mono display
+		peak := 0.0
+		if len(channelPeaks) > 0 {
+			peak = channelPeaks[0]
+		}
+		w.renderText(img, peak, isClipping)
+		return
+	}
+
+	var text string
+	if w.useDBScale {
+		// Convert normalized dB back to actual dB for display
+		leftDB := (channelPeaks[0] * 60.0) - 60.0
+		rightDB := (channelPeaks[1] * 60.0) - 60.0
+		text = fmt.Sprintf("L:%.1f R:%.1f dB", leftDB, rightDB)
+	} else {
+		text = fmt.Sprintf("L:%.0f%% R:%.0f%%", channelPeaks[0]*100, channelPeaks[1]*100)
+	}
+
+	if isClipping && w.showClipping {
+		text += " CLIP"
+	}
+
+	bitmap.DrawAlignedText(img, text, w.face, w.horizontalAlign, w.verticalAlign, 0)
+}
+
+// renderBarVerticalStereo renders vertical bars in stereo mode (left/right channels)
+func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeaks []float64, peakHold float64, isClipping bool) {
+	pos := w.GetPosition()
+
+	if len(channelPeaks) < 2 {
+		// Not stereo, fall back to mono display
+		peak := 0.0
+		if len(channelPeaks) > 0 {
+			peak = channelPeaks[0]
+		}
+		w.renderBarVertical(img, peak, peakHold, isClipping)
+		return
+	}
+
+	// Draw two bars: left half = left channel, right half = right channel
+	halfWidth := pos.W / 2
+
+	// Left channel (left half)
+	leftHeight := int(float64(pos.H) * channelPeaks[0])
+	for y := pos.H - leftHeight; y < pos.H; y++ {
+		for x := 0; x < halfWidth; x++ {
+			img.SetGray(x, y, color.Gray{Y: w.leftChannelColor})
+		}
+	}
+
+	// Right channel (right half)
+	rightHeight := int(float64(pos.H) * channelPeaks[1])
+	for y := pos.H - rightHeight; y < pos.H; y++ {
+		for x := halfWidth; x < pos.W; x++ {
+			img.SetGray(x, y, color.Gray{Y: w.rightChannelColor})
+		}
+	}
+
+	// Draw separator
+	for y := 0; y < pos.H; y++ {
+		img.SetGray(halfWidth, y, color.Gray{Y: 64})
+	}
+
+	// Draw borders if enabled
+	if w.barBorder {
+		// Left bar border
+		for x := 0; x < halfWidth; x++ {
+			img.SetGray(x, 0, color.Gray{Y: 128})
+			img.SetGray(x, pos.H-1, color.Gray{Y: 128})
+		}
+		for y := 0; y < pos.H; y++ {
+			img.SetGray(0, y, color.Gray{Y: 128})
+			img.SetGray(halfWidth-1, y, color.Gray{Y: 128})
+		}
+
+		// Right bar border
+		for x := halfWidth; x < pos.W; x++ {
+			img.SetGray(x, 0, color.Gray{Y: 128})
+			img.SetGray(x, pos.H-1, color.Gray{Y: 128})
+		}
+		for y := 0; y < pos.H; y++ {
+			img.SetGray(halfWidth+1, y, color.Gray{Y: 128})
+			img.SetGray(pos.W-1, y, color.Gray{Y: 128})
+		}
+	}
+}
+
+// renderGaugeStereo renders gauges in stereo mode (left/right channels)
+func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []float64, isClipping bool) {
+	pos := w.GetPosition()
+
+	if len(channelPeaks) < 2 {
+		// Not stereo, fall back to mono display
+		peak := 0.0
+		if len(channelPeaks) > 0 {
+			peak = channelPeaks[0]
+		}
+		w.renderGauge(img, peak, isClipping)
+		return
+	}
+
+	// Draw two gauges side by side using sub-images
+	halfWidth := pos.W / 2
+
+	// Create left gauge sub-image
+	leftImg := image.NewGray(image.Rect(0, 0, halfWidth-1, pos.H))
+	leftGaugePos := config.PositionConfig{
+		X: 0,
+		Y: 0,
+		W: halfWidth - 1,
+		H: pos.H,
+	}
+	leftPercentage := channelPeaks[0] * 100.0
+	leftNeedleColor := w.gaugeNeedleColor
+	if isClipping && w.showClipping {
+		leftNeedleColor = w.clippingColor
+	}
+	bitmap.DrawGauge(leftImg, leftGaugePos, leftPercentage, w.gaugeColor, leftNeedleColor)
+
+	// Copy left gauge to main image
+	for y := 0; y < pos.H; y++ {
+		for x := 0; x < halfWidth-1; x++ {
+			img.SetGray(x, y, leftImg.GrayAt(x, y))
+		}
+	}
+
+	// Create right gauge sub-image
+	rightImg := image.NewGray(image.Rect(0, 0, halfWidth-1, pos.H))
+	rightGaugePos := config.PositionConfig{
+		X: 0,
+		Y: 0,
+		W: halfWidth - 1,
+		H: pos.H,
+	}
+	rightPercentage := channelPeaks[1] * 100.0
+	rightNeedleColor := w.gaugeNeedleColor
+	if isClipping && w.showClipping {
+		rightNeedleColor = w.clippingColor
+	}
+	bitmap.DrawGauge(rightImg, rightGaugePos, rightPercentage, w.gaugeColor, rightNeedleColor)
+
+	// Copy right gauge to main image (offset by halfWidth + 1)
+	for y := 0; y < pos.H; y++ {
+		for x := 0; x < halfWidth-1; x++ {
+			img.SetGray(halfWidth+1+x, y, rightImg.GrayAt(x, y))
+		}
+	}
+
+	// Draw separator
+	for y := 0; y < pos.H; y++ {
+		img.SetGray(halfWidth, y, color.Gray{Y: 64})
 	}
 }
 

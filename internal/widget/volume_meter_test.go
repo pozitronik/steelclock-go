@@ -310,8 +310,8 @@ func TestVolumeMeterWidget_PeakHold(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_AutoHideOnSilence tests auto-hide on silence
-func TestVolumeMeterWidget_AutoHideOnSilence(t *testing.T) {
+// TestVolumeMeterWidget_AutoHideConfig tests auto-hide configuration
+func TestVolumeMeterWidget_AutoHideConfig(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
