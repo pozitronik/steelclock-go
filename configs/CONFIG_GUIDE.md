@@ -638,8 +638,8 @@ The volume widget automatically triggers the auto-hide feature (see [Auto-Hide P
 When system audio is muted, all display modes show an X pattern (diagonal lines) over the volume indicator.
 
 **Platform Support**:
-- **Windows**: Full support (currently using mock data, Windows Core Audio API integration planned)
-- **Linux**: Mock data (ALSA/PulseAudio integration planned)
+- **Windows**: Full support using Windows Core Audio API (IAudioEndpointVolume via go-wca library). Reads real-time system volume and mute state with proper COM lifecycle management.
+- **Linux/macOS**: Not supported (returns error message)
 
 ## Examples
 
