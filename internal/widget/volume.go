@@ -26,19 +26,16 @@ type VolumeWidget struct {
 	displayMode       string
 	fillColor         uint8
 	barBorder         bool
-	autoHide          bool
-	autoHideTimeout   float64
 	gaugeColor        uint8
 	gaugeNeedleColor  uint8
 	triangleFillColor uint8
 	triangleBorder    bool
 
-	mu               sync.RWMutex
-	volume           float64 // 0-100
-	isMuted          bool
-	lastVolumeChange time.Time
-	lastVolume       float64
-	face             font.Face
+	mu         sync.RWMutex
+	volume     float64 // 0-100
+	isMuted    bool
+	lastVolume float64
+	face       font.Face
 
 	// Background polling
 	stopChan chan struct{}
@@ -86,11 +83,6 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		triangleFillColor = 255
 	}
 
-	autoHideTimeout := cfg.Properties.AutoHideTimeout
-	if autoHideTimeout == 0 {
-		autoHideTimeout = 2.0 // 2 seconds default
-	}
-
 	// Load font for text mode
 	var fontFace font.Face
 	if displayMode == "text" {
@@ -109,20 +101,17 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		displayMode:       displayMode,
 		fillColor:         uint8(fillColor),
 		barBorder:         cfg.Properties.BarBorder,
-		autoHide:          cfg.Properties.AutoHide,
-		autoHideTimeout:   autoHideTimeout,
 		gaugeColor:        uint8(gaugeColor),
 		gaugeNeedleColor:  uint8(gaugeNeedleColor),
 		triangleFillColor: uint8(triangleFillColor),
 		triangleBorder:    cfg.Properties.TriangleBorder,
-		lastVolumeChange:  time.Time{}, // Zero time = widget starts hidden if auto-hide is enabled
-		lastSuccessTime:   time.Now(),  // Initialize to prevent false "stuck" detection
+		lastSuccessTime:   time.Now(), // Initialize to prevent false "stuck" detection
 		face:              fontFace,
 		stopChan:          make(chan struct{}),
 	}
 
-	log.Printf("[VOLUME] Widget initialized: id=%s, mode=%s, autoHide=%v, timeout=%.1fs",
-		cfg.ID, displayMode, cfg.Properties.AutoHide, autoHideTimeout)
+	log.Printf("[VOLUME] Widget initialized: id=%s, mode=%s, autoHide=%v, timeout=%v",
+		cfg.ID, displayMode, base.IsAutoHideEnabled(), base.GetAutoHideTimeout())
 
 	// Start single background goroutine for polling volume
 	w.wg.Add(1)
@@ -267,9 +256,11 @@ func (w *VolumeWidget) pollVolumeBackground() {
 			// Update cached volume
 			changed := volume != w.lastVolume || muted != w.isMuted
 			if changed {
-				w.lastVolumeChange = time.Now()
 				w.lastVolume = volume
 				log.Printf("[VOLUME] Volume changed: %.1f%% (muted=%v)", volume, muted)
+
+				// Trigger auto-hide timer (widget becomes visible)
+				w.TriggerAutoHide()
 			}
 			w.volume = volume
 			w.isMuted = muted
@@ -321,13 +312,10 @@ func (w *VolumeWidget) Render() (image.Image, error) {
 	pos := w.GetPosition()
 	style := w.GetStyle()
 
-	// Check if we should hide the widget (auto-hide mode)
-	if w.autoHide {
-		timeSinceChange := time.Since(w.lastVolumeChange).Seconds()
-		if timeSinceChange > w.autoHideTimeout {
-			// Return nil to hide widget and show content below
-			return nil, nil
-		}
+	// Check if widget should be hidden (auto-hide mode)
+	if w.ShouldHide() {
+		// Return nil to hide widget and show content below
+		return nil, nil
 	}
 
 	// Create base image

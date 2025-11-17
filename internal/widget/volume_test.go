@@ -79,8 +79,8 @@ func TestNewVolumeWidget_Defaults(t *testing.T) {
 		t.Errorf("default fillColor = %v, want 255", widget.fillColor)
 	}
 
-	if widget.autoHideTimeout != 2.0 {
-		t.Errorf("default autoHideTimeout = %v, want 2.0", widget.autoHideTimeout)
+	if widget.GetAutoHideTimeout() != 2*time.Second {
+		t.Errorf("default autoHideTimeout = %v, want 2s", widget.GetAutoHideTimeout())
 	}
 
 	if widget.gaugeColor != 200 {
