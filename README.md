@@ -13,11 +13,13 @@ High-performance display manager for SteelSeries devices written in Go.
 - **System Tray Integration**: Runs in background with system tray icon
 - **Live Configuration Reload**: Edit and reload config without restarting
 - **Multiple Widgets**: Clock, CPU, Memory, Network, Disk, Keyboard indicators
-- **Display Modes**: Text, horizontal/vertical bars, and graphs
+- **Display Modes**: Text, horizontal/vertical bars, graphs, and analog gauges
+- **Gauge Displays**: Semicircular analog gauges with needles for CPU/Memory, dual concentric gauges for Network (RX/TX)
 - **Low Resource Usage**: Minimal CPU and memory footprint (~0.5% CPU, ~15MB RAM)
-- **Single Executable**: ~7MB, no dependencies, no DLLs required
+- **Single Executable**: ~10MB, no dependencies, no DLLs required
 - **Automatic Logging**: All output logged to `steelclock.log` with timestamps
 - **Cross-Platform Build**: Build for Windows from Linux/WSL or Windows
+- **JSON Schema Support**: Full IDE autocomplete and validation via included schema file
 
 ## Quick Start
 
@@ -73,6 +75,8 @@ Check this file if you encounter any issues or unexpected behavior.
 
 Edit `config.json` to customize widgets. The application supports live reload via the tray menu.
 
+For detailed configuration documentation with all widget properties and examples, see [CONFIG_GUIDE.md](configs/CONFIG_GUIDE.md) and [config.schema.json](configs/config.schema.json).
+
 ### Example Configuration
 
 ```json
@@ -109,14 +113,14 @@ Edit `config.json` to customize widgets. The application supports live reload vi
 
 ### Supported Widgets
 
-| Widget       | Description                       | Modes                                     |
-|--------------|-----------------------------------|-------------------------------------------|
-| **clock**    | Current time display              | text                                      |
-| **cpu**      | CPU usage                         | text, bar_horizontal, bar_vertical, graph |
-| **memory**   | RAM usage                         | text, bar_horizontal, bar_vertical, graph |
-| **network**  | Network I/O (RX/TX)               | text, bar_horizontal, bar_vertical, graph |
-| **disk**     | Disk I/O (read/write)             | text, bar_horizontal, bar_vertical, graph |
-| **keyboard** | Lock indicators (Caps/Num/Scroll) | text                                      |
+| Widget       | Description                       | Modes                                              |
+|--------------|-----------------------------------|----------------------------------------------------|
+| **clock**    | Current time display              | text                                               |
+| **cpu**      | CPU usage                         | text, bar_horizontal, bar_vertical, graph, gauge   |
+| **memory**   | RAM usage                         | text, bar_horizontal, bar_vertical, graph, gauge   |
+| **network**  | Network I/O (RX/TX)               | text, bar_horizontal, bar_vertical, graph, gauge   |
+| **disk**     | Disk I/O (read/write)             | text, bar_horizontal, bar_vertical, graph          |
+| **keyboard** | Lock indicators (Caps/Num/Scroll) | text                                               |
 
 ### Time Format
 
