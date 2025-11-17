@@ -580,3 +580,139 @@ func TestVolumeWidget_ConcurrentAccess(t *testing.T) {
 
 	// Should not crash or race
 }
+
+// TestVolumeWidget_Stop tests proper Stop() functionality
+func TestVolumeWidget_Stop(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume_stop",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "bar_horizontal",
+		},
+	}
+
+	widget, err := NewVolumeWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewVolumeWidget() error = %v", err)
+	}
+
+	// Let it run briefly to accumulate some metrics
+	time.Sleep(200 * time.Millisecond)
+
+	// Verify widget is functioning
+	widget.mu.RLock()
+	totalCallsBefore := widget.totalCalls
+	widget.mu.RUnlock()
+
+	if totalCallsBefore == 0 {
+		t.Error("Widget should have made some calls before Stop()")
+	}
+
+	// Stop the widget
+	widget.Stop()
+
+	// Verify cleanup
+	if widget.reader != nil {
+		t.Error("Reader should be cleaned up after Stop()")
+	}
+
+	// Give time for background goroutine to actually stop
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify no more calls are being made
+	widget.mu.RLock()
+	totalCallsAfter := widget.totalCalls
+	widget.mu.RUnlock()
+
+	if totalCallsAfter != totalCallsBefore {
+		t.Errorf("Calls should stop after Stop(), before=%d, after=%d", totalCallsBefore, totalCallsAfter)
+	}
+}
+
+// TestVolumeWidget_RenderMuted tests rendering with muted state
+func TestVolumeWidget_RenderMuted(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume_muted",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 64,
+			H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "bar_horizontal",
+		},
+	}
+
+	widget, err := NewVolumeWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewVolumeWidget() error = %v", err)
+	}
+	defer widget.Stop()
+
+	// Simulate muted state
+	widget.mu.Lock()
+	widget.isMuted = true
+	widget.volume = 50.0
+	widget.mu.Unlock()
+
+	// Render should include mute indicator
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() with muted state error = %v", err)
+	}
+
+	if img == nil {
+		t.Error("Render() with muted state returned nil image")
+	}
+
+	// Verify image was rendered (mute indicator should be drawn)
+	bounds := img.Bounds()
+	if bounds.Dx() != 64 || bounds.Dy() != 40 {
+		t.Errorf("Image size = %v, want 64x40", bounds)
+	}
+}
+
+// TestVolumeWidget_UpdateInterval tests GetUpdateInterval
+func TestVolumeWidget_UpdateInterval(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume_interval",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode:    "bar_horizontal",
+			UpdateInterval: 0.5, // 500ms
+		},
+	}
+
+	widget, err := NewVolumeWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewVolumeWidget() error = %v", err)
+	}
+	defer widget.Stop()
+
+	interval := widget.GetUpdateInterval()
+	expected := 500 * time.Millisecond
+
+	if interval != expected {
+		t.Errorf("GetUpdateInterval() = %v, want %v", interval, expected)
+	}
+}
