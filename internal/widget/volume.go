@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"log"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -13,29 +14,44 @@ import (
 	"golang.org/x/image/font"
 )
 
+// volumeReader interface abstracts platform-specific volume reading
+type volumeReader interface {
+	GetVolume() (volume float64, muted bool, err error)
+	Close()
+}
+
 // VolumeWidget displays system volume level
 type VolumeWidget struct {
 	*BaseWidget
 	displayMode       string
 	fillColor         uint8
 	barBorder         bool
-	autoHide          bool
-	autoHideTimeout   float64
 	gaugeColor        uint8
 	gaugeNeedleColor  uint8
 	triangleFillColor uint8
 	triangleBorder    bool
 
-	mu               sync.RWMutex
-	volume           float64 // 0-100
-	isMuted          bool
-	lastVolumeChange time.Time
-	lastVolume       float64
-	face             font.Face
+	mu         sync.RWMutex
+	volume     float64 // 0-100
+	isMuted    bool
+	lastVolume float64
+	face       font.Face
 
 	// Background polling
 	stopChan chan struct{}
 	wg       sync.WaitGroup
+
+	// Diagnostic metrics for COM call monitoring
+	totalCalls        int64
+	successfulCalls   int64
+	failedCalls       int64
+	lastSuccessTime   time.Time
+	maxCallDuration   time.Duration
+	totalCallDuration time.Duration // for calculating average
+	consecutiveErrors int
+
+	// Platform-specific volume reader (managed by polling goroutine)
+	reader volumeReader
 }
 
 // NewVolumeWidget creates a new volume widget
@@ -67,11 +83,6 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		triangleFillColor = 255
 	}
 
-	autoHideTimeout := cfg.Properties.AutoHideTimeout
-	if autoHideTimeout == 0 {
-		autoHideTimeout = 2.0 // 2 seconds default
-	}
-
 	// Load font for text mode
 	var fontFace font.Face
 	if displayMode == "text" {
@@ -90,16 +101,17 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		displayMode:       displayMode,
 		fillColor:         uint8(fillColor),
 		barBorder:         cfg.Properties.BarBorder,
-		autoHide:          cfg.Properties.AutoHide,
-		autoHideTimeout:   autoHideTimeout,
 		gaugeColor:        uint8(gaugeColor),
 		gaugeNeedleColor:  uint8(gaugeNeedleColor),
 		triangleFillColor: uint8(triangleFillColor),
 		triangleBorder:    cfg.Properties.TriangleBorder,
-		lastVolumeChange:  time.Now(),
+		lastSuccessTime:   time.Now(), // Initialize to prevent false "stuck" detection
 		face:              fontFace,
 		stopChan:          make(chan struct{}),
 	}
+
+	log.Printf("[VOLUME] Widget initialized: id=%s, mode=%s, autoHide=%v, timeout=%v",
+		cfg.ID, displayMode, base.IsAutoHideEnabled(), base.GetAutoHideTimeout())
 
 	// Start single background goroutine for polling volume
 	w.wg.Add(1)
@@ -113,34 +125,142 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 func (w *VolumeWidget) pollVolumeBackground() {
 	defer w.wg.Done()
 
-	log.Printf("Volume widget: background polling started")
+	// Panic recovery to prevent app crash
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[VOLUME] PANIC in polling goroutine: %v\nStack: %s", r, debug.Stack())
+		}
+	}()
+
+	log.Printf("[VOLUME] Background polling goroutine started")
+
+	// Initialize platform-specific volume reader on THIS goroutine
+	// On Windows: COM must be initialized on the same thread that uses it
+	reader, err := newVolumeReader()
+	if err != nil {
+		log.Printf("[VOLUME] FATAL: Failed to initialize volume reader: %v", err)
+		log.Printf("[VOLUME] Volume widget will not function")
+		return
+	}
+	w.reader = reader
+
+	// Ensure cleanup when goroutine exits
+	defer func() {
+		if w.reader != nil {
+			w.reader.Close()
+			w.reader = nil
+		}
+	}()
+
+	log.Printf("[VOLUME] Volume reader initialized successfully")
 
 	// Poll every 100ms for responsive display
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
+	// Health summary ticker (every 60 seconds)
+	healthTicker := time.NewTicker(60 * time.Second)
+	defer healthTicker.Stop()
+
+	iterationCount := int64(0)
+	lastHealthReport := time.Now()
+
 	for {
 		select {
 		case <-w.stopChan:
-			log.Printf("Volume widget: background polling stopped")
+			log.Printf("[VOLUME] Background polling stopped - shutdown requested")
 			return
 
+		case <-healthTicker.C:
+			// Log health metrics summary
+			w.mu.RLock()
+			avgDuration := time.Duration(0)
+			if w.totalCalls > 0 {
+				avgDuration = time.Duration(w.totalCallDuration.Nanoseconds() / w.totalCalls)
+			}
+			timeSinceSuccess := time.Since(w.lastSuccessTime)
+			successRate := float64(0)
+			if w.totalCalls > 0 {
+				successRate = float64(w.successfulCalls) / float64(w.totalCalls) * 100
+			}
+
+			log.Printf("[VOLUME] === HEALTH SUMMARY (last 60s) ===")
+			log.Printf("[VOLUME] Total calls: %d | Success: %d | Failed: %d | Success rate: %.1f%%",
+				w.totalCalls, w.successfulCalls, w.failedCalls, successRate)
+			log.Printf("[VOLUME] Avg duration: %v | Max duration: %v", avgDuration, w.maxCallDuration)
+			log.Printf("[VOLUME] Last success: %v ago | Consecutive errors: %d",
+				timeSinceSuccess, w.consecutiveErrors)
+			log.Printf("[VOLUME] Iterations: %d | Uptime: %v", iterationCount, time.Since(lastHealthReport))
+			w.mu.RUnlock()
+
+			lastHealthReport = time.Now()
+
 		case <-ticker.C:
-			// Directly call Windows API (synchronous)
-			// If it hangs, only THIS goroutine hangs - nothing else is affected
-			volume, muted, err := getSystemVolume()
+			iterationCount++
+
+			// Log every 100th iteration (every 10 seconds at 100ms tick)
+			if iterationCount%100 == 0 {
+				log.Printf("[VOLUME] Polling iteration #%d", iterationCount)
+			}
+
+			// Check for stuck state BEFORE calling getSystemVolume
+			w.mu.RLock()
+			timeSinceLastSuccess := time.Since(w.lastSuccessTime)
+			w.mu.RUnlock()
+
+			if timeSinceLastSuccess > 5*time.Second && iterationCount > 50 {
+				log.Printf("[VOLUME] === STUCK DETECTED === No successful update for %v!", timeSinceLastSuccess)
+			}
+
+			// Call volume reader with timing
+			callStart := time.Now()
+			volume, muted, err := w.reader.GetVolume()
+			callDuration := time.Since(callStart)
+
+			// Update health metrics
+			w.mu.Lock()
+			w.totalCalls++
+			w.totalCallDuration += callDuration
+
+			if callDuration > w.maxCallDuration {
+				w.maxCallDuration = callDuration
+				log.Printf("[VOLUME] NEW MAX DURATION: %v (previous max exceeded)", callDuration)
+			}
 
 			if err != nil {
-				// Ignore errors, keep displaying last known volume
+				// ERROR PATH - now we log instead of silently ignoring
+				w.failedCalls++
+				w.consecutiveErrors++
+				log.Printf("[VOLUME] ERROR iteration #%d: getSystemVolume() failed after %v: %v (consecutive errors: %d)",
+					iterationCount, callDuration, err, w.consecutiveErrors)
+				w.mu.Unlock()
 				continue
 			}
 
-			// Update cached volume under lock
-			w.mu.Lock()
+			// SUCCESS PATH
+			w.successfulCalls++
+			w.lastSuccessTime = time.Now()
+			if w.consecutiveErrors > 0 {
+				log.Printf("[VOLUME] RECOVERED: Success after %d consecutive errors", w.consecutiveErrors)
+				w.consecutiveErrors = 0
+			}
+
+			// Log slow calls
+			if callDuration > 100*time.Millisecond {
+				log.Printf("[VOLUME] WARNING iteration #%d: getSystemVolume() took %v (>100ms)", iterationCount, callDuration)
+			}
+			if callDuration > 500*time.Millisecond {
+				log.Printf("[VOLUME] ERROR iteration #%d: getSystemVolume() took %v (>500ms) - CRITICAL SLOWDOWN!", iterationCount, callDuration)
+			}
+
+			// Update cached volume
 			changed := volume != w.lastVolume || muted != w.isMuted
 			if changed {
-				w.lastVolumeChange = time.Now()
 				w.lastVolume = volume
+				log.Printf("[VOLUME] Volume changed: %.1f%% (muted=%v)", volume, muted)
+
+				// Trigger auto-hide timer (widget becomes visible)
+				w.TriggerAutoHide()
 			}
 			w.volume = volume
 			w.isMuted = muted
@@ -158,8 +278,30 @@ func (w *VolumeWidget) Update() error {
 
 // Stop stops the background polling goroutine
 func (w *VolumeWidget) Stop() {
+	log.Printf("[VOLUME] Shutdown initiated - stopping background polling")
+
 	close(w.stopChan)
 	w.wg.Wait()
+
+	// Log final health metrics
+	w.mu.RLock()
+	avgDuration := time.Duration(0)
+	if w.totalCalls > 0 {
+		avgDuration = time.Duration(w.totalCallDuration.Nanoseconds() / w.totalCalls)
+	}
+	successRate := float64(0)
+	if w.totalCalls > 0 {
+		successRate = float64(w.successfulCalls) / float64(w.totalCalls) * 100
+	}
+
+	log.Printf("[VOLUME] === FINAL HEALTH METRICS ===")
+	log.Printf("[VOLUME] Total calls: %d | Success: %d | Failed: %d | Success rate: %.1f%%",
+		w.totalCalls, w.successfulCalls, w.failedCalls, successRate)
+	log.Printf("[VOLUME] Avg duration: %v | Max duration: %v", avgDuration, w.maxCallDuration)
+	log.Printf("[VOLUME] Last volume: %.1f%% (muted=%v)", w.volume, w.isMuted)
+	w.mu.RUnlock()
+
+	log.Printf("[VOLUME] Widget shutdown complete")
 }
 
 // Render renders the volume widget
@@ -170,14 +312,10 @@ func (w *VolumeWidget) Render() (image.Image, error) {
 	pos := w.GetPosition()
 	style := w.GetStyle()
 
-	// Check if we should hide the widget (auto-hide mode)
-	if w.autoHide {
-		timeSinceChange := time.Since(w.lastVolumeChange).Seconds()
-		if timeSinceChange > w.autoHideTimeout {
-			// Return transparent/empty image
-			img := bitmap.NewGrayscaleImage(pos.W, pos.H, uint8(style.BackgroundColor))
-			return img, nil
-		}
+	// Check if widget should be hidden (auto-hide mode)
+	if w.ShouldHide() {
+		// Return nil to hide widget and show content below
+		return nil, nil
 	}
 
 	// Create base image
@@ -413,11 +551,4 @@ func (w *VolumeWidget) drawMuteIndicator(img *image.Gray, pos config.PositionCon
 			}
 		}
 	}
-}
-
-// getSystemVolume returns the current system volume (0-100) and mute status
-// This is a platform-specific function
-func getSystemVolume() (volume float64, muted bool, err error) {
-	// Get actual system volume from platform-specific implementation
-	return getSystemVolumeImpl()
 }

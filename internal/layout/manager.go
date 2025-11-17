@@ -48,6 +48,11 @@ func (m *Manager) Composite() (image.Image, error) {
 			return nil, fmt.Errorf("failed to render widget %s: %w", w.Name(), err)
 		}
 
+		// Skip if widget returned nil (hidden, e.g., auto-hide)
+		if widgetImg == nil {
+			continue
+		}
+
 		// Get widget position
 		pos := w.GetPosition()
 

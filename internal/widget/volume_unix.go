@@ -4,22 +4,26 @@
 package widget
 
 import (
-	"github.com/itchyny/volume-go"
+	"fmt"
 )
 
-// getSystemVolumeImpl gets the system volume on Unix-like systems
-func getSystemVolumeImpl() (vol float64, muted bool, err error) {
-	// Get current volume level (0-100)
-	volumeLevel, err := volume.GetVolume()
-	if err != nil {
-		return 0, false, err
-	}
+// unixVolumeReader is a stub implementation for Unix systems
+// Volume widget is currently only supported on Windows
+type unixVolumeReader struct{}
 
-	// Get mute status
-	isMuted, err := volume.GetMuted()
-	if err != nil {
-		return float64(volumeLevel), false, err
-	}
+// GetVolume returns an error indicating volume reading is not supported on Unix
+func (r *unixVolumeReader) GetVolume() (vol float64, muted bool, err error) {
+	return 0, false, fmt.Errorf("volume widget is not supported on this platform (Unix/Linux/macOS)")
+}
 
-	return float64(volumeLevel), isMuted, nil
+// Close does nothing on Unix (no resources to clean up)
+func (r *unixVolumeReader) Close() {
+	// No cleanup needed
+}
+
+// newVolumeReader creates a platform-specific volume reader (Unix stub)
+func newVolumeReader() (volumeReader, error) {
+	// Return stub that will error on GetVolume calls
+	// This allows the widget to initialize but not function
+	return &unixVolumeReader{}, nil
 }

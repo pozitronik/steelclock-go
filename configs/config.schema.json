@@ -216,6 +216,23 @@
         }
       }
     },
+    "autoHideProperties": {
+      "type": "object",
+      "description": "Auto-hide behavior properties (widget appears temporarily then hides)",
+      "properties": {
+        "auto_hide": {
+          "type": "boolean",
+          "description": "Enable auto-hide mode (widget starts hidden and appears on trigger)",
+          "default": false
+        },
+        "auto_hide_timeout": {
+          "type": "number",
+          "description": "Seconds to wait before hiding widget after last trigger",
+          "minimum": 0.1,
+          "default": 2.0
+        }
+      }
+    },
     "clockWidget": {
       "allOf": [
         {"$ref": "#/definitions/widgetBase"},
@@ -240,7 +257,9 @@
                 "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
                 "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
                 "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
+                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
+                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
               }
             }
           }
@@ -315,7 +334,9 @@
                 "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
                 "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
                 "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
+                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
+                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
               }
             }
           }
@@ -379,7 +400,9 @@
                 "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
                 "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
                 "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
+                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
+                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
               }
             }
           }
@@ -472,7 +495,9 @@
                 "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
                 "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
                 "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
+                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
+                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
               }
             }
           }
@@ -539,7 +564,9 @@
                 "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
                 "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
                 "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
+                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
+                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
               }
             }
           }
@@ -615,7 +642,9 @@
                 "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
                 "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
                 "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
+                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
+                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
               }
             }
           }
@@ -655,17 +684,6 @@
                   "description": "Draw border around bars",
                   "default": false
                 },
-                "auto_hide": {
-                  "type": "boolean",
-                  "description": "Only show widget when volume is changing",
-                  "default": false
-                },
-                "auto_hide_timeout": {
-                  "type": "number",
-                  "description": "Seconds to wait before hiding widget after volume change",
-                  "minimum": 0.1,
-                  "default": 2.0
-                },
                 "gauge_color": {
                   "type": "integer",
                   "description": "Gauge arc and tick color (0-255)",
@@ -696,7 +714,9 @@
                 "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
                 "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
                 "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
+                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
+                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
               }
             }
           }

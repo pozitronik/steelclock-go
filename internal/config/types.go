@@ -63,6 +63,8 @@ type WidgetProperties struct {
 	HorizontalAlign string  `json:"horizontal_align,omitempty"`
 	VerticalAlign   string  `json:"vertical_align,omitempty"`
 	Padding         int     `json:"padding,omitempty"`
+	AutoHide        bool    `json:"auto_hide,omitempty"`
+	AutoHideTimeout float64 `json:"auto_hide_timeout,omitempty"` // seconds
 
 	// Clock widget
 	Format string `json:"format,omitempty"`
@@ -105,10 +107,8 @@ type WidgetProperties struct {
 	IndicatorColorOff int    `json:"indicator_color_off,omitempty"`
 
 	// Volume widget
-	AutoHide          bool    `json:"auto_hide,omitempty"`
-	AutoHideTimeout   float64 `json:"auto_hide_timeout,omitempty"`
-	GaugeColor        int     `json:"gauge_color,omitempty"`
-	GaugeNeedleColor  int     `json:"gauge_needle_color,omitempty"`
-	TriangleFillColor int     `json:"triangle_fill_color,omitempty"`
-	TriangleBorder    bool    `json:"triangle_border,omitempty"`
+	GaugeColor        int  `json:"gauge_color,omitempty"`
+	GaugeNeedleColor  int  `json:"gauge_needle_color,omitempty"`
+	TriangleFillColor int  `json:"triangle_fill_color,omitempty"`
+	TriangleBorder    bool `json:"triangle_border,omitempty"`
 }

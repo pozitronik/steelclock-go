@@ -246,6 +246,45 @@ Widgets supporting text mode share these properties:
 - Font name: `"Arial"`, `"Consolas"`, `"Segoe UI Emoji"`
 - TTF path: `"C:/Windows/Fonts/arial.ttf"`
 
+### Auto-Hide Properties
+
+All widgets support auto-hide functionality, which allows widgets to appear temporarily and then hide:
+
+| Property            | Type    | Default | Description                                          |
+|---------------------|---------|---------|------------------------------------------------------|
+| `auto_hide`         | boolean | false   | Enable auto-hide mode (widget starts hidden)         |
+| `auto_hide_timeout` | number  | 2.0     | Seconds to wait before hiding after last trigger     |
+
+**How Auto-Hide Works**:
+
+1. Widget starts hidden when `auto_hide` is enabled
+2. Widget becomes visible when triggered (e.g., volume change, notification received)
+3. Widget remains visible for `auto_hide_timeout` seconds after last trigger
+4. Widget becomes invisible again after timeout expires
+5. When hidden, widget returns nil from Render(), allowing widgets below to show through
+
+**Use Cases**:
+- Volume indicators that appear only when volume changes
+- Notification widgets that appear temporarily
+- Status indicators that show only when state changes
+- Any widget that should not take permanent screen space
+
+**Widget-Specific Triggers**:
+- **Volume Widget**: Triggers when volume level or mute state changes
+- **Custom Widgets**: Can call `TriggerAutoHide()` method when content changes
+
+**Example**:
+```json
+{
+  "type": "volume",
+  "id": "temp_volume",
+  "properties": {
+    "auto_hide": true,
+    "auto_hide_timeout": 3.0
+  }
+}
+```
+
 ## Widget-Specific Properties
 
 ### Clock Widget
@@ -541,8 +580,6 @@ Available disks: PhysicalDrive0, PhysicalDrive1
     "update_interval": 0.1,
     "fill_color": 255,
     "bar_border": false,
-    "auto_hide": false,
-    "auto_hide_timeout": 2.0,
     "gauge_color": 200,
     "gauge_needle_color": 255,
     "triangle_fill_color": 255,
@@ -551,7 +588,9 @@ Available disks: PhysicalDrive0, PhysicalDrive1
     "font_size": 10,
     "horizontal_align": "center",
     "vertical_align": "center",
-    "padding": 0
+    "padding": 0,
+    "auto_hide": false,
+    "auto_hide_timeout": 2.0
   }
 }
 ```
@@ -562,12 +601,12 @@ Available disks: PhysicalDrive0, PhysicalDrive1
 | `update_interval`     | number  | ≥0.1                                                   | 0.1              | Update interval (seconds)                    |
 | `fill_color`          | integer | 0-255                                                  | 255              | Bar/triangle fill color                      |
 | `bar_border`          | boolean | -                                                      | false            | Draw border around bars                      |
-| `auto_hide`           | boolean | -                                                      | false            | Only show when volume changes                |
-| `auto_hide_timeout`   | number  | ≥0.1                                                   | 2.0              | Seconds before hiding after volume change    |
 | `gauge_color`         | integer | 0-255                                                  | 200              | Gauge arc and tick marks color               |
 | `gauge_needle_color`  | integer | 0-255                                                  | 255              | Gauge needle color                           |
 | `triangle_fill_color` | integer | 0-255                                                  | 255              | Triangle fill color                          |
 | `triangle_border`     | boolean | -                                                      | false            | Draw border around triangle                  |
+
+**Note**: The volume widget also supports `auto_hide` and `auto_hide_timeout` properties (see [Auto-Hide Properties](#auto-hide-properties)). When auto-hide is enabled, the widget triggers visibility on volume or mute state changes.
 
 **Display Mode Details**:
 
@@ -590,22 +629,17 @@ Available disks: PhysicalDrive0, PhysicalDrive1
 - Vertical bar pattern (|||) for filled sections
 - Optional border
 
-**Auto-Hide Feature**:
+**Auto-Hide Support**:
 
-When `auto_hide` is enabled, the widget only appears when:
-1. Volume level changes (user adjusts volume)
-2. For `auto_hide_timeout` seconds after the last change
-3. After the timeout, the widget becomes invisible
-
-This is useful for temporary volume indicators that don't take permanent screen space.
+The volume widget automatically triggers the auto-hide feature (see [Auto-Hide Properties](#auto-hide-properties)) when volume level or mute state changes. This makes it ideal for temporary on-screen volume indicators.
 
 **Mute Indicator**:
 
 When system audio is muted, all display modes show an X pattern (diagonal lines) over the volume indicator.
 
 **Platform Support**:
-- **Windows**: Full support (currently using mock data, Windows Core Audio API integration planned)
-- **Linux**: Mock data (ALSA/PulseAudio integration planned)
+- **Windows**: Full support using Windows Core Audio API (IAudioEndpointVolume via go-wca library). Reads real-time system volume and mute state with proper COM lifecycle management.
+- **Linux/macOS**: Not supported (returns error message)
 
 ## Examples
 
