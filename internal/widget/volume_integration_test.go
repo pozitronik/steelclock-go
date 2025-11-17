@@ -12,6 +12,8 @@ import (
 
 // TestVolumeWidget_BackgroundPolling tests that the background goroutine works
 func TestVolumeWidget_BackgroundPolling(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
 	cfg := config.WidgetConfig{
 		Type:    "volume",
 		ID:      "test_volume_polling",
@@ -57,6 +59,8 @@ func TestVolumeWidget_BackgroundPolling(t *testing.T) {
 
 // TestVolumeWidget_StopCleanup tests proper cleanup on Stop
 func TestVolumeWidget_StopCleanup(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
 	cfg := config.WidgetConfig{
 		Type:    "volume",
 		ID:      "test_volume_cleanup",
@@ -91,6 +95,7 @@ func TestVolumeWidget_LongRunning(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping long-running test in short mode")
 	}
+	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
 		Type:    "volume",
@@ -164,6 +169,8 @@ func TestVolumeWidget_LongRunning(t *testing.T) {
 
 // TestVolumeWidget_HealthMetrics tests health tracking
 func TestVolumeWidget_HealthMetrics(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
 	cfg := config.WidgetConfig{
 		Type:    "volume",
 		ID:      "test_volume_health",
@@ -229,6 +236,7 @@ func TestVolumeWidget_NoMemoryLeak(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping memory leak test in short mode")
 	}
+	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
 		Type:    "volume",
@@ -265,6 +273,8 @@ func TestVolumeWidget_NoMemoryLeak(t *testing.T) {
 
 // TestVolumeWidget_VolumeChange tests volume change detection and auto-hide trigger
 func TestVolumeWidget_VolumeChange(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
 	cfg := config.WidgetConfig{
 		Type:    "volume",
 		ID:      "test_volume_change",
