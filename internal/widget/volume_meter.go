@@ -405,9 +405,9 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 		case "text":
 			w.renderTextStereo(img, channelPeaks, isClipping)
 		case "bar_horizontal":
-			w.renderBarHorizontalStereo(img, channelPeaks, actualPeak, peakHoldValues, isClipping)
+			w.renderBarHorizontalStereo(img, channelPeaks, peakHoldValues, isClipping)
 		case "bar_vertical":
-			w.renderBarVerticalStereo(img, channelPeaks, actualPeak, peakHoldValues, isClipping)
+			w.renderBarVerticalStereo(img, channelPeaks, peakHoldValues, isClipping)
 		case "gauge":
 			w.renderGaugeStereo(img, channelPeaks, peakHoldValues, isClipping)
 		}
@@ -566,7 +566,7 @@ func (w *VolumeMeterWidget) renderGauge(img *image.Gray, peak, peakHold float64,
 }
 
 // renderBarHorizontalStereo renders horizontal bars in stereo mode (left/right channels)
-func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPeaks []float64, actualPeak float64, peakHoldValues []float64, isClipping bool) {
+func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPeaks []float64, peakHoldValues []float64, isClipping bool) {
 	pos := w.GetPosition()
 
 	if len(channelPeaks) < 2 {
@@ -670,7 +670,7 @@ func (w *VolumeMeterWidget) renderTextStereo(img *image.Gray, channelPeaks []flo
 }
 
 // renderBarVerticalStereo renders vertical bars in stereo mode (left/right channels)
-func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeaks []float64, actualPeak float64, peakHoldValues []float64, isClipping bool) {
+func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeaks []float64, peakHoldValues []float64, isClipping bool) {
 	pos := w.GetPosition()
 
 	if len(channelPeaks) < 2 {
