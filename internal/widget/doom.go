@@ -170,7 +170,7 @@ func (w *DoomWidget) DrawFrame(img *image.RGBA) {
 }
 
 // SetTitle implements DoomFrontend interface
-func (w *DoomWidget) SetTitle(title string) {
+func (w *DoomWidget) SetTitle(_ string) {
 	// No-op for embedded display
 }
 
@@ -188,12 +188,12 @@ func (w *DoomWidget) GetEvent(event *gore.DoomEvent) bool {
 }
 
 // CacheSound implements DoomFrontend interface
-func (w *DoomWidget) CacheSound(name string, data []byte) {
+func (w *DoomWidget) CacheSound(_ string, _ []byte) {
 	// No-op - no audio on OLED display
 }
 
 // PlaySound implements DoomFrontend interface
-func (w *DoomWidget) PlaySound(name string, channel, vol, sep int) {
+func (w *DoomWidget) PlaySound(_ string, _, _, _ int) {
 	// No-op - no audio on OLED display
 }
 
