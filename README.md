@@ -114,16 +114,16 @@ For detailed configuration documentation with all widget properties and examples
 
 ### Supported Widgets
 
-| Widget           | Description                       | Modes                                                                |
-|------------------|-----------------------------------|----------------------------------------------------------------------|
-| **clock**        | Current time display              | text                                                                 |
-| **cpu**          | CPU usage                         | text, bar_horizontal, bar_vertical, graph, gauge                     |
-| **memory**       | RAM usage                         | text, bar_horizontal, bar_vertical, graph, gauge                     |
-| **network**      | Network I/O (RX/TX)               | text, bar_horizontal, bar_vertical, graph, gauge                     |
-| **disk**         | Disk I/O (read/write)             | text, bar_horizontal, bar_vertical, graph                            |
-| **keyboard**     | Lock indicators (Caps/Num/Scroll) | text                                                                 |
-| **volume**       | System volume level and mute      | text, bar_horizontal, bar_vertical, gauge, triangle                  |
-| **volume_meter** | Realtime audio peak meter         | text, bar_horizontal, bar_vertical, gauge, vu_meter (stereo support) |
+| Widget           | Description                       | Modes                                                           |
+|------------------|-----------------------------------|-----------------------------------------------------------------|
+| **clock**        | Current time display              | text                                                            |
+| **cpu**          | CPU usage                         | text, bar_horizontal, bar_vertical, graph, gauge                |
+| **memory**       | RAM usage                         | text, bar_horizontal, bar_vertical, graph, gauge                |
+| **network**      | Network I/O (RX/TX)               | text, bar_horizontal, bar_vertical, graph, gauge                |
+| **disk**         | Disk I/O (read/write)             | text, bar_horizontal, bar_vertical, graph                       |
+| **keyboard**     | Lock indicators (Caps/Num/Scroll) | text                                                            |
+| **volume**       | System volume level and mute      | text, bar_horizontal, bar_vertical, gauge, triangle             |
+| **volume_meter** | Realtime audio peak meter         | text, bar_horizontal, bar_vertical, gauge (stereo & VU support) |
 
 ### Time Format
 

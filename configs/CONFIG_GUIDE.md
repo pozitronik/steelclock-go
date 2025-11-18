@@ -638,19 +638,20 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
 
 ### Volume Meter Widget
 
-**Display Modes**: text, bar_horizontal, bar_vertical, gauge, vu_meter (all modes support stereo with `stereo_mode: true`)
+**Display Modes**: text, bar_horizontal, bar_vertical, gauge (all modes support stereo with `stereo_mode: true` and professional metering with `vu_mode: true`)
 
 ```json
 {
   "type": "volume_meter",
   "properties": {
-    "display_mode": "vu_meter",
+    "display_mode": "bar_horizontal",
     "update_interval": 0.1,
     "fill_color": 255,
     "clipping_color": 200,
     "left_channel_color": 255,
     "right_channel_color": 200,
     "stereo_mode": false,
+    "vu_mode": false,
     "bar_border": false,
     "gauge_color": 200,
     "gauge_needle_color": 255,
@@ -659,6 +660,7 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
     "clipping_threshold": 0.99,
     "silence_threshold": 0.01,
     "decay_rate": 2.0,
+    "show_peak": false,
     "show_peak_hold": true,
     "peak_hold_time": 1.0,
     "auto_hide_on_silence": false,
@@ -676,22 +678,24 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
 
 | Property                 | Type    | Range                                                                         | Default          | Description                                            |
 |--------------------------|---------|-------------------------------------------------------------------------------|------------------|--------------------------------------------------------|
-| `display_mode`           | string  | text, bar_horizontal, bar_vertical, gauge, vu_meter                           | "bar_horizontal" | Display mode                                           |
+| `display_mode`           | string  | text, bar_horizontal, bar_vertical, gauge                                     | "bar_horizontal" | Display mode                                           |
 | `update_interval`        | number  | ≥0.03                                                                         | 0.1              | Meter update interval (seconds)                        |
 | `fill_color`             | integer | 0-255                                                                         | 255              | Main meter fill color                                  |
 | `clipping_color`         | integer | 0-255                                                                         | 200              | Color when clipping detected                           |
 | `left_channel_color`     | integer | 0-255                                                                         | 255              | Left channel color (when stereo_mode enabled)          |
 | `right_channel_color`    | integer | 0-255                                                                         | 200              | Right channel color (when stereo_mode enabled)         |
 | `stereo_mode`            | boolean | -                                                                             | false            | Display left and right channels separately             |
+| `vu_mode`                | boolean | -                                                                             | false            | Enable professional VU metering with visible scales    |
 | `bar_border`             | boolean | -                                                                             | false            | Draw border around bars                                |
 | `gauge_color`            | integer | 0-255                                                                         | 200              | Gauge arc and tick marks color                         |
 | `gauge_needle_color`     | integer | 0-255                                                                         | 255              | Gauge needle color                                     |
 | `use_db_scale`           | boolean | -                                                                             | false            | Use logarithmic dB scale (-60dB to 0dB)                |
-| `show_clipping`          | boolean | -                                                                             | true             | Show clipping indicator                                |
+| `show_clipping`          | boolean | -                                                                             | true             | Show clipping indicator (all modes)                    |
 | `clipping_threshold`     | number  | 0.0-1.0                                                                       | 0.99             | Peak level that triggers clipping (0.0=0%, 1.0=100%)   |
 | `silence_threshold`      | number  | 0.0-1.0                                                                       | 0.01             | Peak level below which is considered silence           |
 | `decay_rate`             | number  | ≥0.1                                                                          | 2.0              | Peak decay rate (units/second, VU meter ballistics)    |
-| `show_peak_hold`         | boolean | -                                                                             | true             | Show peak hold line (VU and bar modes)                 |
+| `show_peak`              | boolean | -                                                                             | false            | Show instantaneous peak line (current actual peak)     |
+| `show_peak_hold`         | boolean | -                                                                             | true             | Show peak hold line (held maximum peak)                |
 | `peak_hold_time`         | number  | ≥0.1                                                                          | 1.0              | How long to hold peak indicator (seconds)              |
 | `auto_hide_on_silence`   | boolean | -                                                                             | false            | Auto-hide when no audio detected                       |
 | `auto_hide_silence_time` | number  | ≥0.5                                                                          | 2.0              | Time after last audio before hiding (seconds)          |
@@ -703,22 +707,22 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
 **text**: Shows peak level as percentage or dB. When `use_db_scale` is true, displays dB value (e.g., "-12.3 dB"). Shows "CLIP" when clipping is detected.
 - **Stereo mode**: Displays both channels (e.g., "L:45% R:52%")
 
-**bar_horizontal**: Horizontal bar showing current audio peak level with decay. Peak hold line shows maximum recent peak.
+**bar_horizontal**: Horizontal bar showing current audio peak level with smooth decay.
 - **Stereo mode**: Two horizontal bars stacked (top = left channel, bottom = right channel)
+- **VU mode**: Adds visible scale tick marks at key positions (0%, 70%, 90%, 100% or -60dB, -20dB, -10dB, -3dB, 0dB)
+- **show_peak**: Bright line showing instantaneous actual peak (faster than decayed bar)
+- **show_peak_hold**: Line showing held maximum peak
 
-**bar_vertical**: Vertical bar showing current audio peak level with decay. Peak hold line shows maximum recent peak.
+**bar_vertical**: Vertical bar showing current audio peak level with smooth decay.
 - **Stereo mode**: Two vertical bars side by side (left = left channel, right = right channel)
+- **VU mode**: Adds visible scale tick marks on the right edge
+- **show_peak**: Bright line showing instantaneous actual peak
+- **show_peak_hold**: Line showing held maximum peak
 
-**gauge**: Semicircular gauge with needle pointing to current peak level (similar to volume widget gauge).
+**gauge**: Semicircular gauge with needle pointing to current peak level.
 - **Stereo mode**: Two gauges side by side (left = left channel, right = right channel)
-
-**vu_meter**: VU (Volume Unit) meter with color zones:
-- Green zone: 0-70% (normal levels)
-- Yellow zone: 70-90% (approaching limit)
-- Red zone: 90-100% (high levels)
-- Peak hold line indicates maximum recent level
-- Smooth decay ballistics (controlled by `decay_rate`)
-- **Stereo mode**: Two VU meters stacked (top = left channel, bottom = right channel) with independent peak tracking
+- **show_clipping**: Changes needle color to red when clipping detected
+- **VU mode**: (Future: adds colored arc segments for green/yellow/red zones)
 
 **Peak Decay Behavior**:
 

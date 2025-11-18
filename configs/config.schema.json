@@ -735,8 +735,8 @@
               "properties": {
                 "display_mode": {
                   "type": "string",
-                  "description": "Display mode: text, bar_horizontal, bar_vertical, gauge, vu_meter (use stereo_mode for dual channel display)",
-                  "enum": ["text", "bar_horizontal", "bar_vertical", "gauge", "vu_meter"],
+                  "description": "Display mode: text, bar_horizontal, bar_vertical, gauge (use vu_mode for professional metering)",
+                  "enum": ["text", "bar_horizontal", "bar_vertical", "gauge"],
                   "default": "bar_horizontal"
                 },
                 "update_interval": {
@@ -776,6 +776,11 @@
                 "stereo_mode": {
                   "type": "boolean",
                   "description": "Enable stereo mode to display left and right channels separately (works with all display modes)",
+                  "default": false
+                },
+                "vu_mode": {
+                  "type": "boolean",
+                  "description": "Enable professional VU meter mode with visible scale marks and zone boundaries (works with bar and gauge modes)",
                   "default": false
                 },
                 "bar_border": {
@@ -827,9 +832,14 @@
                   "minimum": 0.1,
                   "default": 2.0
                 },
+                "show_peak": {
+                  "type": "boolean",
+                  "description": "Show instantaneous peak line (bright line showing current actual peak above the decayed value)",
+                  "default": false
+                },
                 "show_peak_hold": {
                   "type": "boolean",
-                  "description": "Show peak hold line in VU and bar modes",
+                  "description": "Show peak hold line (held maximum peak that decays slowly)",
                   "default": true
                 },
                 "peak_hold_time": {

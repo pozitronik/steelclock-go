@@ -39,6 +39,7 @@ type VolumeMeterWidget struct {
 	leftChannelColor  uint8
 	rightChannelColor uint8
 	barBorder         bool
+	borderColor       uint8
 	gaugeColor        uint8
 	gaugeNeedleColor  uint8
 	horizontalAlign   string
@@ -46,11 +47,13 @@ type VolumeMeterWidget struct {
 
 	// Meter configuration
 	stereoMode          bool
+	vuMode              bool
 	useDBScale          bool
 	showClipping        bool
 	clippingThreshold   float64
 	silenceThreshold    float64
 	decayRate           float64 // normalized units per second (0.0-1.0/s)
+	showPeak            bool
 	showPeakHold        bool
 	peakHoldTime        time.Duration
 	autoHideOnSilence   bool
@@ -100,10 +103,9 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		"bar_horizontal": true,
 		"bar_vertical":   true,
 		"gauge":          true,
-		"vu_meter":       true,
 	}
 	if !validModes[displayMode] {
-		return nil, fmt.Errorf("invalid display mode: %s (valid: text, bar_horizontal, bar_vertical, gauge, vu_meter)", displayMode)
+		return nil, fmt.Errorf("invalid display mode: %s (valid: text, bar_horizontal, bar_vertical, gauge)", displayMode)
 	}
 
 	fillColor := cfg.Properties.FillColor
@@ -189,6 +191,15 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		verticalAlign = "center"
 	}
 
+	// Check for border in both properties and style
+	barBorder := cfg.Properties.BarBorder || cfg.Style.Border
+
+	// Get border color from style config
+	borderColor := cfg.Style.BorderColor
+	if borderColor == 0 {
+		borderColor = 255 // Default: bright white
+	}
+
 	w := &VolumeMeterWidget{
 		BaseWidget:          base,
 		displayMode:         displayMode,
@@ -196,17 +207,20 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		clippingColor:       uint8(clippingColor),
 		leftChannelColor:    uint8(leftChannelColor),
 		rightChannelColor:   uint8(rightChannelColor),
-		barBorder:           cfg.Properties.BarBorder,
+		barBorder:           barBorder,
+		borderColor:         uint8(borderColor),
 		gaugeColor:          uint8(gaugeColor),
 		gaugeNeedleColor:    uint8(gaugeNeedleColor),
 		horizontalAlign:     horizontalAlign,
 		verticalAlign:       verticalAlign,
 		stereoMode:          cfg.Properties.StereoMode,
+		vuMode:              cfg.Properties.VUMode,
 		useDBScale:          cfg.Properties.UseDBScale,
 		showClipping:        cfg.Properties.ShowClipping,
 		clippingThreshold:   clippingThreshold,
 		silenceThreshold:    silenceThreshold,
 		decayRate:           decayRate,
+		showPeak:            cfg.Properties.ShowPeak,
 		showPeakHold:        cfg.Properties.ShowPeakHold,
 		peakHoldTime:        peakHoldTime,
 		autoHideOnSilence:   cfg.Properties.AutoHideOnSilence,
@@ -217,8 +231,8 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		stopChan:            make(chan struct{}),
 	}
 
-	log.Printf("[METER] Widget initialized: id=%s, mode=%s, dB=%v, clipping=%v, autoHide=%v",
-		cfg.ID, displayMode, w.useDBScale, w.showClipping, base.IsAutoHideEnabled())
+	log.Printf("[METER] Widget initialized: id=%s, mode=%s, dB=%v, clipping=%v, autoHide=%v, vuMode=%v, showPeak=%v, showPeakHold=%v, stereo=%v, border=%v",
+		cfg.ID, displayMode, w.useDBScale, w.showClipping, base.IsAutoHideEnabled(), w.vuMode, w.showPeak, w.showPeakHold, w.stereoMode, w.barBorder)
 
 	// Start background polling goroutine
 	w.wg.Add(1)
@@ -315,12 +329,16 @@ func (w *VolumeMeterWidget) updateMeter() {
 	w.isClipping = data.IsClipping
 	w.hasAudio = data.HasAudio
 
-	// Apply decay to display peak
+	// Apply ballistics to display peak (smooth rise and fall like real VU meter)
 	if w.peak > w.displayPeak {
-		// New peak - update immediately
-		w.displayPeak = w.peak
+		// Rising: apply rise ballistics (faster than decay, but not instant)
+		rise := w.decayRate * 3.0 * timeDelta // Rise 3x faster than fall
+		w.displayPeak += rise
+		if w.displayPeak > w.peak {
+			w.displayPeak = w.peak
+		}
 	} else {
-		// Decay
+		// Falling: apply fall ballistics (decay)
 		decay := w.decayRate * timeDelta
 		w.displayPeak -= decay
 		if w.displayPeak < w.peak {
@@ -349,22 +367,30 @@ func (w *VolumeMeterWidget) updateMeter() {
 
 // Render renders the volume meter widget
 func (w *VolumeMeterWidget) Render() (image.Image, error) {
+	log.Printf("[METER] Render() called")
+
 	// Check auto-hide
 	if w.ShouldHide() {
+		log.Printf("[METER] Widget is hidden (ShouldHide=true)")
 		return nil, nil
 	}
 
 	w.mu.RLock()
-	peak := w.displayPeak
+	actualPeak := w.peak         // Instantaneous peak (for show_peak)
+	displayPeak := w.displayPeak // Decayed peak (for main display)
 	channelPeaks := make([]float64, len(w.channelPeaks))
 	copy(channelPeaks, w.channelPeaks)
 	isClipping := w.isClipping
 	peakHold := w.peakHoldValue
 	w.mu.RUnlock()
 
+	log.Printf("[METER] Render values: actualPeak=%.3f, displayPeak=%.3f, isClipping=%v, channels=%d",
+		actualPeak, displayPeak, isClipping, len(channelPeaks))
+
 	// Convert to dB if needed
 	if w.useDBScale {
-		peak = w.linearToDBNormalized(peak)
+		actualPeak = w.linearToDBNormalized(actualPeak)
+		displayPeak = w.linearToDBNormalized(displayPeak)
 		peakHold = w.linearToDBNormalized(peakHold)
 		for i := range channelPeaks {
 			channelPeaks[i] = w.linearToDBNormalized(channelPeaks[i])
@@ -381,27 +407,23 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 		case "text":
 			w.renderTextStereo(img, channelPeaks, isClipping)
 		case "bar_horizontal":
-			w.renderBarHorizontalStereo(img, channelPeaks, peakHold, isClipping)
+			w.renderBarHorizontalStereo(img, channelPeaks, actualPeak, peakHold, isClipping)
 		case "bar_vertical":
-			w.renderBarVerticalStereo(img, channelPeaks, peakHold, isClipping)
+			w.renderBarVerticalStereo(img, channelPeaks, actualPeak, peakHold, isClipping)
 		case "gauge":
 			w.renderGaugeStereo(img, channelPeaks, isClipping)
-		case "vu_meter":
-			w.renderVUMeterStereo(img, channelPeaks, peakHold, isClipping)
 		}
 	} else {
 		// Render mono version
 		switch w.displayMode {
 		case "text":
-			w.renderText(img, peak, isClipping)
+			w.renderText(img, displayPeak, isClipping)
 		case "bar_horizontal":
-			w.renderBarHorizontal(img, peak, peakHold, isClipping)
+			w.renderBarHorizontal(img, displayPeak, actualPeak, peakHold, isClipping)
 		case "bar_vertical":
-			w.renderBarVertical(img, peak, peakHold, isClipping)
+			w.renderBarVertical(img, displayPeak, actualPeak, peakHold, isClipping)
 		case "gauge":
-			w.renderGauge(img, peak, isClipping)
-		case "vu_meter":
-			w.renderVUMeter(img, peak, peakHold, isClipping)
+			w.renderGauge(img, displayPeak, isClipping)
 		}
 	}
 
@@ -452,9 +474,12 @@ func (w *VolumeMeterWidget) renderText(img *image.Gray, peak float64, isClipping
 }
 
 // renderBarHorizontal renders horizontal bar display
-func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, peak, peakHold float64, isClipping bool) {
+func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, displayPeak, actualPeak, peakHold float64, isClipping bool) {
 	pos := w.GetPosition()
-	barWidth := int(float64(pos.W) * peak)
+	barWidth := int(float64(pos.W) * displayPeak)
+
+	log.Printf("[METER] renderBarHorizontal: displayPeak=%.3f, actualPeak=%.3f, peakHold=%.3f, barWidth=%d, showPeak=%v, vuMode=%v",
+		displayPeak, actualPeak, peakHold, barWidth, w.showPeak, w.vuMode)
 
 	fillColor := w.fillColor
 	if isClipping && w.showClipping {
@@ -468,9 +493,10 @@ func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, peak, peakHold 
 		}
 	}
 
-	// Draw peak hold line
-	if w.showPeakHold && peakHold > 0 {
-		peakX := int(float64(pos.W) * peakHold)
+	// Draw instantaneous peak line (bright white, always visible when enabled)
+	if w.showPeak && actualPeak > 0 {
+		peakX := int(float64(pos.W) * actualPeak)
+		log.Printf("[METER] Drawing peak line at x=%d (actualPeak=%.3f, pos.W=%d)", peakX, actualPeak, pos.W)
 		if peakX < pos.W {
 			for y := 0; y < pos.H; y++ {
 				img.SetGray(peakX, y, color.Gray{Y: 255})
@@ -478,16 +504,32 @@ func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, peak, peakHold 
 		}
 	}
 
+	// Draw peak hold line (slightly dimmer)
+	if w.showPeakHold && peakHold > 0 {
+		peakX := int(float64(pos.W) * peakHold)
+		if peakX < pos.W {
+			for y := 0; y < pos.H; y++ {
+				img.SetGray(peakX, y, color.Gray{Y: 180})
+			}
+		}
+	}
+
+	// Draw VU scale AFTER the bar so it's visible on top
+	if w.vuMode {
+		log.Printf("[METER] Drawing VU scale")
+		w.drawVUScaleHorizontal(img, pos)
+	}
+
 	// Draw border
 	if w.barBorder {
-		bitmap.DrawBorder(img, 128)
+		bitmap.DrawBorder(img, w.borderColor)
 	}
 }
 
 // renderBarVertical renders vertical bar display
-func (w *VolumeMeterWidget) renderBarVertical(img *image.Gray, peak, peakHold float64, isClipping bool) {
+func (w *VolumeMeterWidget) renderBarVertical(img *image.Gray, displayPeak, actualPeak, peakHold float64, isClipping bool) {
 	pos := w.GetPosition()
-	barHeight := int(float64(pos.H) * peak)
+	barHeight := int(float64(pos.H) * displayPeak)
 	startY := pos.H - barHeight
 
 	fillColor := w.fillColor
@@ -502,9 +544,9 @@ func (w *VolumeMeterWidget) renderBarVertical(img *image.Gray, peak, peakHold fl
 		}
 	}
 
-	// Draw peak hold line
-	if w.showPeakHold && peakHold > 0 {
-		peakY := pos.H - int(float64(pos.H)*peakHold)
+	// Draw instantaneous peak line (bright white, always visible when enabled)
+	if w.showPeak && actualPeak > 0 {
+		peakY := pos.H - int(float64(pos.H)*actualPeak)
 		if peakY >= 0 {
 			for x := 0; x < pos.W; x++ {
 				img.SetGray(x, peakY, color.Gray{Y: 255})
@@ -512,9 +554,24 @@ func (w *VolumeMeterWidget) renderBarVertical(img *image.Gray, peak, peakHold fl
 		}
 	}
 
+	// Draw peak hold line (slightly dimmer)
+	if w.showPeakHold && peakHold > 0 {
+		peakY := pos.H - int(float64(pos.H)*peakHold)
+		if peakY >= 0 {
+			for x := 0; x < pos.W; x++ {
+				img.SetGray(x, peakY, color.Gray{Y: 180})
+			}
+		}
+	}
+
+	// Draw VU scale AFTER the bar so it's visible on top
+	if w.vuMode {
+		w.drawVUScaleVertical(img, pos)
+	}
+
 	// Draw border
 	if w.barBorder {
-		bitmap.DrawBorder(img, 128)
+		bitmap.DrawBorder(img, w.borderColor)
 	}
 }
 
@@ -532,59 +589,8 @@ func (w *VolumeMeterWidget) renderGauge(img *image.Gray, peak float64, isClippin
 	bitmap.DrawGauge(img, pos, percentage, w.gaugeColor, needleColor)
 }
 
-// renderVUMeter renders VU meter style display
-func (w *VolumeMeterWidget) renderVUMeter(img *image.Gray, peak, peakHold float64, isClipping bool) {
-	// VU meter is like horizontal bar but with color zones
-	pos := w.GetPosition()
-
-	// Draw colored zones: green (0-70%), yellow (70-90%), red (90-100%)
-	greenWidth := int(float64(pos.W) * 0.7)
-	yellowWidth := int(float64(pos.W) * 0.9)
-
-	barWidth := int(float64(pos.W) * peak)
-
-	for y := 0; y < pos.H; y++ {
-		for x := 0; x < barWidth; x++ {
-			var fillColor uint8
-			if x < greenWidth {
-				fillColor = 128 // Green zone
-			} else if x < yellowWidth {
-				fillColor = 192 // Yellow zone
-			} else {
-				fillColor = 255 // Red zone
-			}
-
-			if isClipping && w.showClipping {
-				fillColor = w.clippingColor
-			}
-
-			img.SetGray(x, y, color.Gray{Y: fillColor})
-		}
-	}
-
-	// Draw peak hold line
-	if w.showPeakHold && peakHold > 0 {
-		peakX := int(float64(pos.W) * peakHold)
-		if peakX < pos.W {
-			for y := 0; y < pos.H; y++ {
-				img.SetGray(peakX, y, color.Gray{Y: 255})
-			}
-		}
-	}
-
-	// Draw zone markers (vertical lines)
-	for y := 0; y < pos.H; y++ {
-		if greenWidth < pos.W {
-			img.SetGray(greenWidth, y, color.Gray{Y: 64})
-		}
-		if yellowWidth < pos.W {
-			img.SetGray(yellowWidth, y, color.Gray{Y: 64})
-		}
-	}
-}
-
 // renderBarHorizontalStereo renders horizontal bars in stereo mode (left/right channels)
-func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPeaks []float64, peakHold float64, isClipping bool) {
+func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPeaks []float64, actualPeak, peakHold float64, isClipping bool) {
 	pos := w.GetPosition()
 
 	if len(channelPeaks) < 2 {
@@ -593,7 +599,7 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 		if len(channelPeaks) > 0 {
 			peak = channelPeaks[0]
 		}
-		w.renderBarHorizontal(img, peak, 0, isClipping)
+		w.renderBarHorizontal(img, peak, actualPeak, peakHold, isClipping)
 		return
 	}
 
@@ -616,60 +622,39 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 		}
 	}
 
-	// Draw separator
-	for x := 0; x < pos.W; x++ {
-		img.SetGray(x, halfHeight, color.Gray{Y: 64})
-	}
-}
-
-// renderVUMeterStereo renders VU meters in stereo mode (left/right channels)
-func (w *VolumeMeterWidget) renderVUMeterStereo(img *image.Gray, channelPeaks []float64, peakHold float64, isClipping bool) {
-	pos := w.GetPosition()
-
-	if len(channelPeaks) < 2 {
-		// Not stereo, fall back to mono VU
-		peak := 0.0
-		if len(channelPeaks) > 0 {
-			peak = channelPeaks[0]
-		}
-		w.renderVUMeter(img, peak, peakHold, isClipping)
-		return
-	}
-
-	// Draw two VU meters: top half = left, bottom half = right
-	halfHeight := pos.H / 2
-
-	// Helper function to draw a single VU bar
-	drawVU := func(startY, height int, peak float64, channelColor uint8) {
-		greenWidth := int(float64(pos.W) * 0.7)
-		yellowWidth := int(float64(pos.W) * 0.9)
-		barWidth := int(float64(pos.W) * peak)
-
-		for y := startY; y < startY+height; y++ {
-			for x := 0; x < barWidth; x++ {
-				var fillColor uint8
-				if x < greenWidth {
-					fillColor = channelColor - 64 // Darker for green
-				} else if x < yellowWidth {
-					fillColor = channelColor - 32 // Medium for yellow
-				} else {
-					fillColor = channelColor // Full brightness for red
-				}
-
-				img.SetGray(x, y, color.Gray{Y: fillColor})
+	// Draw instantaneous peak line (bright white, always visible when enabled)
+	if w.showPeak && actualPeak > 0 {
+		peakX := int(float64(pos.W) * actualPeak)
+		if peakX < pos.W {
+			for y := 0; y < pos.H; y++ {
+				img.SetGray(peakX, y, color.Gray{Y: 255})
 			}
 		}
 	}
 
-	// Left channel (top)
-	drawVU(0, halfHeight, channelPeaks[0], w.leftChannelColor)
+	// Draw peak hold line (slightly dimmer)
+	if w.showPeakHold && peakHold > 0 {
+		peakX := int(float64(pos.W) * peakHold)
+		if peakX < pos.W {
+			for y := 0; y < pos.H; y++ {
+				img.SetGray(peakX, y, color.Gray{Y: 180})
+			}
+		}
+	}
 
-	// Right channel (bottom)
-	drawVU(halfHeight, halfHeight, channelPeaks[1], w.rightChannelColor)
+	// Draw VU scale AFTER the bars so it's visible on top
+	if w.vuMode {
+		w.drawVUScaleHorizontal(img, pos)
+	}
 
 	// Draw separator
 	for x := 0; x < pos.W; x++ {
 		img.SetGray(x, halfHeight, color.Gray{Y: 64})
+	}
+
+	// Draw border
+	if w.barBorder {
+		bitmap.DrawBorder(img, w.borderColor)
 	}
 }
 
@@ -707,8 +692,11 @@ func (w *VolumeMeterWidget) renderTextStereo(img *image.Gray, channelPeaks []flo
 }
 
 // renderBarVerticalStereo renders vertical bars in stereo mode (left/right channels)
-func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeaks []float64, peakHold float64, isClipping bool) {
+func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeaks []float64, actualPeak, peakHold float64, isClipping bool) {
 	pos := w.GetPosition()
+
+	log.Printf("[METER] renderBarVerticalStereo: channelPeaks=[%.3f, %.3f], actualPeak=%.3f, peakHold=%.3f, showPeak=%v, vuMode=%v",
+		channelPeaks[0], channelPeaks[1], actualPeak, peakHold, w.showPeak, w.vuMode)
 
 	if len(channelPeaks) < 2 {
 		// Not stereo, fall back to mono display
@@ -716,7 +704,7 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 		if len(channelPeaks) > 0 {
 			peak = channelPeaks[0]
 		}
-		w.renderBarVertical(img, peak, peakHold, isClipping)
+		w.renderBarVertical(img, peak, actualPeak, peakHold, isClipping)
 		return
 	}
 
@@ -739,6 +727,33 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 		}
 	}
 
+	// Draw instantaneous peak line (bright white, always visible when enabled)
+	if w.showPeak && actualPeak > 0 {
+		peakY := pos.H - int(float64(pos.H)*actualPeak)
+		log.Printf("[METER] Drawing peak line at y=%d (actualPeak=%.3f, pos.H=%d)", peakY, actualPeak, pos.H)
+		if peakY >= 0 && peakY < pos.H {
+			for x := 0; x < pos.W; x++ {
+				img.SetGray(x, peakY, color.Gray{Y: 255})
+			}
+		}
+	}
+
+	// Draw peak hold line (slightly dimmer)
+	if w.showPeakHold && peakHold > 0 {
+		peakY := pos.H - int(float64(pos.H)*peakHold)
+		if peakY >= 0 && peakY < pos.H {
+			for x := 0; x < pos.W; x++ {
+				img.SetGray(x, peakY, color.Gray{Y: 180})
+			}
+		}
+	}
+
+	// Draw VU scale AFTER the bars so it's visible on top
+	if w.vuMode {
+		log.Printf("[METER] Drawing VU scale (vertical stereo)")
+		w.drawVUScaleVertical(img, pos)
+	}
+
 	// Draw separator
 	for y := 0; y < pos.H; y++ {
 		img.SetGray(halfWidth, y, color.Gray{Y: 64})
@@ -748,22 +763,22 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 	if w.barBorder {
 		// Left bar border
 		for x := 0; x < halfWidth; x++ {
-			img.SetGray(x, 0, color.Gray{Y: 128})
-			img.SetGray(x, pos.H-1, color.Gray{Y: 128})
+			img.SetGray(x, 0, color.Gray{Y: w.borderColor})
+			img.SetGray(x, pos.H-1, color.Gray{Y: w.borderColor})
 		}
 		for y := 0; y < pos.H; y++ {
-			img.SetGray(0, y, color.Gray{Y: 128})
-			img.SetGray(halfWidth-1, y, color.Gray{Y: 128})
+			img.SetGray(0, y, color.Gray{Y: w.borderColor})
+			img.SetGray(halfWidth-1, y, color.Gray{Y: w.borderColor})
 		}
 
 		// Right bar border
 		for x := halfWidth; x < pos.W; x++ {
-			img.SetGray(x, 0, color.Gray{Y: 128})
-			img.SetGray(x, pos.H-1, color.Gray{Y: 128})
+			img.SetGray(x, 0, color.Gray{Y: w.borderColor})
+			img.SetGray(x, pos.H-1, color.Gray{Y: w.borderColor})
 		}
 		for y := 0; y < pos.H; y++ {
-			img.SetGray(halfWidth+1, y, color.Gray{Y: 128})
-			img.SetGray(pos.W-1, y, color.Gray{Y: 128})
+			img.SetGray(halfWidth+1, y, color.Gray{Y: w.borderColor})
+			img.SetGray(pos.W-1, y, color.Gray{Y: w.borderColor})
 		}
 	}
 }
@@ -832,6 +847,171 @@ func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []fl
 	// Draw separator
 	for y := 0; y < pos.H; y++ {
 		img.SetGray(halfWidth, y, color.Gray{Y: 64})
+	}
+}
+
+// drawVUScaleHorizontal draws VU meter scale marks on horizontal bar
+func (w *VolumeMeterWidget) drawVUScaleHorizontal(img *image.Gray, pos config.PositionConfig) {
+	// Define scale positions based on mode
+	var marks []struct {
+		position float64 // 0.0-1.0
+		label    string
+		priority int // 0=minor, 1=major, 2=critical
+	}
+
+	if w.useDBScale {
+		// dB scale: -60, -40, -20, -10, -3, 0
+		marks = []struct {
+			position float64
+			label    string
+			priority int
+		}{
+			{0.0, "-60", 0},   // Minor
+			{0.333, "-40", 0}, // Minor
+			{0.667, "-20", 1}, // Major
+			{0.833, "-10", 1}, // Major
+			{0.95, "-3", 2},   // Critical
+			{1.0, "0", 2},     // Critical
+		}
+	} else {
+		// Linear scale: 0%, 25%, 50%, 70%, 90%, 100%
+		marks = []struct {
+			position float64
+			label    string
+			priority int
+		}{
+			{0.0, "0", 0},   // Minor
+			{0.25, "25", 0}, // Minor
+			{0.5, "50", 0},  // Minor
+			{0.7, "70", 1},  // Major (yellow zone)
+			{0.9, "90", 2},  // Critical (red zone)
+			{1.0, "100", 2}, // Critical
+		}
+	}
+
+	log.Printf("[METER] drawVUScaleHorizontal: useDBScale=%v, pos.W=%d, pos.H=%d, marks=%d", w.useDBScale, pos.W, pos.H, len(marks))
+
+	// Draw tick marks with logarithmic height progression
+	for _, mark := range marks {
+		x := int(float64(pos.W) * mark.position)
+		if x >= pos.W {
+			x = pos.W - 1
+		}
+
+		var tickHeight int
+		var brightness uint8
+
+		switch mark.priority {
+		case 0: // Minor ticks: 15% of height
+			tickHeight = int(float64(pos.H) * 0.15)
+			if tickHeight < 3 {
+				tickHeight = 3
+			}
+			brightness = 150
+		case 1: // Normal major ticks: 30% of height
+			tickHeight = int(float64(pos.H) * 0.30)
+			if tickHeight < 5 {
+				tickHeight = 5
+			}
+			brightness = 180
+		case 2: // Critical ticks: 50% of height
+			tickHeight = int(float64(pos.H) * 0.50)
+			if tickHeight < 8 {
+				tickHeight = 8
+			}
+			brightness = 200
+		}
+
+		log.Printf("[METER] Drawing tick (priority=%d) at x=%d, height=%d (label=%s)", mark.priority, x, tickHeight, mark.label)
+
+		// Draw from bottom up
+		for i := 0; i < tickHeight; i++ {
+			if pos.H-1-i >= 0 {
+				img.SetGray(x, pos.H-1-i, color.Gray{Y: brightness})
+			}
+		}
+	}
+}
+
+// drawVUScaleVertical draws VU meter scale marks on vertical bar
+func (w *VolumeMeterWidget) drawVUScaleVertical(img *image.Gray, pos config.PositionConfig) {
+	// Define scale positions based on mode
+	var marks []struct {
+		position float64 // 0.0-1.0
+		label    string
+		priority int // 0=minor, 1=major, 2=critical
+	}
+
+	if w.useDBScale {
+		// dB scale: -60, -40, -20, -10, -3, 0
+		marks = []struct {
+			position float64
+			label    string
+			priority int
+		}{
+			{0.0, "-60", 0},   // Minor
+			{0.333, "-40", 0}, // Minor
+			{0.667, "-20", 1}, // Major
+			{0.833, "-10", 1}, // Major
+			{0.95, "-3", 2},   // Critical
+			{1.0, "0", 2},     // Critical
+		}
+	} else {
+		// Linear scale: 0%, 25%, 50%, 70%, 90%, 100%
+		marks = []struct {
+			position float64
+			label    string
+			priority int
+		}{
+			{0.0, "0", 0},   // Minor
+			{0.25, "25", 0}, // Minor
+			{0.5, "50", 0},  // Minor
+			{0.7, "70", 1},  // Major (yellow zone)
+			{0.9, "90", 2},  // Critical (red zone)
+			{1.0, "100", 2}, // Critical
+		}
+	}
+
+	// Draw tick marks with logarithmic width progression
+	for _, mark := range marks {
+		y := pos.H - int(float64(pos.H)*mark.position)
+		if y < 0 {
+			y = 0
+		}
+		if y >= pos.H {
+			y = pos.H - 1
+		}
+
+		var tickWidth int
+		var brightness uint8
+
+		switch mark.priority {
+		case 0: // Minor ticks: 15% of width
+			tickWidth = int(float64(pos.W) * 0.15)
+			if tickWidth < 3 {
+				tickWidth = 3
+			}
+			brightness = 150
+		case 1: // Normal major ticks: 30% of width
+			tickWidth = int(float64(pos.W) * 0.30)
+			if tickWidth < 5 {
+				tickWidth = 5
+			}
+			brightness = 180
+		case 2: // Critical ticks: 50% of width
+			tickWidth = int(float64(pos.W) * 0.50)
+			if tickWidth < 8 {
+				tickWidth = 8
+			}
+			brightness = 200
+		}
+
+		// Draw from right edge leftward
+		for i := 0; i < tickWidth; i++ {
+			if pos.W-1-i >= 0 {
+				img.SetGray(pos.W-1-i, y, color.Gray{Y: brightness})
+			}
+		}
 	}
 }
 
