@@ -425,9 +425,9 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 		case "text":
 			w.renderText(img, displayPeak, isClipping)
 		case "bar_horizontal":
-			w.renderBarHorizontal(img, displayPeak, actualPeak, monoPeakHold, isClipping)
+			w.renderBarHorizontal(img, displayPeak, monoPeakHold, isClipping)
 		case "bar_vertical":
-			w.renderBarVertical(img, displayPeak, actualPeak, monoPeakHold, isClipping)
+			w.renderBarVertical(img, displayPeak, monoPeakHold, isClipping)
 		case "gauge":
 			w.renderGauge(img, displayPeak, monoPeakHold, isClipping)
 		}
@@ -480,7 +480,7 @@ func (w *VolumeMeterWidget) renderText(img *image.Gray, peak float64, isClipping
 }
 
 // renderBarHorizontal renders horizontal bar display
-func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, displayPeak, actualPeak, peakHold float64, isClipping bool) {
+func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, displayPeak, peakHold float64, isClipping bool) {
 	pos := w.GetPosition()
 	barWidth := int(float64(pos.W) * displayPeak)
 
@@ -513,7 +513,7 @@ func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, displayPeak, ac
 }
 
 // renderBarVertical renders vertical bar display
-func (w *VolumeMeterWidget) renderBarVertical(img *image.Gray, displayPeak, actualPeak, peakHold float64, isClipping bool) {
+func (w *VolumeMeterWidget) renderBarVertical(img *image.Gray, displayPeak, peakHold float64, isClipping bool) {
 	pos := w.GetPosition()
 	barHeight := int(float64(pos.H) * displayPeak)
 	startY := pos.H - barHeight
@@ -579,7 +579,7 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 		if len(peakHoldValues) > 0 {
 			peakHold = peakHoldValues[0]
 		}
-		w.renderBarHorizontal(img, peak, actualPeak, peakHold, isClipping)
+		w.renderBarHorizontal(img, peak, peakHold, isClipping)
 		return
 	}
 
@@ -683,7 +683,7 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 		if len(peakHoldValues) > 0 {
 			peakHold = peakHoldValues[0]
 		}
-		w.renderBarVertical(img, peak, actualPeak, peakHold, isClipping)
+		w.renderBarVertical(img, peak, peakHold, isClipping)
 		return
 	}
 
