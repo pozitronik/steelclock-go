@@ -132,6 +132,12 @@ func startAppWithConfig(cfg *config.Config) error {
 		log.Printf("Using custom bundled font URL: %s", cfg.BundledFontURL)
 	}
 
+	// Set bundled WAD URL if configured
+	if cfg.BundledWadURL != "" {
+		widget.SetBundledWadURL(cfg.BundledWadURL)
+		log.Printf("Using custom bundled WAD URL: %s", cfg.BundledWadURL)
+	}
+
 	// Create or reuse GameSense client
 	var err error
 	if client == nil {

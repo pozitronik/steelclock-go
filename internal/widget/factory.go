@@ -30,6 +30,8 @@ func CreateWidget(cfg config.WidgetConfig) (Widget, error) {
 		return NewVolumeWidget(cfg)
 	case "volume_meter":
 		return NewVolumeMeterWidget(cfg)
+	case "doom":
+		return NewDoomWidget(cfg)
 	default:
 		return nil, fmt.Errorf("unknown widget type: %s", cfg.Type)
 	}

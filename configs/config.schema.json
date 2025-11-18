@@ -34,6 +34,12 @@
       "format": "uri",
       "default": "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf"
     },
+    "bundled_wad_url": {
+      "type": "string",
+      "description": "URL to download the DOOM shareware WAD file if not found. Default: https://distro.ibiblio.org/slitaz/sources/packages/d/doom1.wad",
+      "format": "uri",
+      "default": "https://distro.ibiblio.org/slitaz/sources/packages/d/doom1.wad"
+    },
     "display": {
       "type": "object",
       "description": "Physical display configuration",
@@ -92,7 +98,8 @@
           {"$ref": "#/definitions/diskWidget"},
           {"$ref": "#/definitions/keyboardWidget"},
           {"$ref": "#/definitions/volumeWidget"},
-          {"$ref": "#/definitions/volumeMeterWidget"}
+          {"$ref": "#/definitions/volumeMeterWidget"},
+          {"$ref": "#/definitions/doomWidget"}
         ]
       }
     }
@@ -856,6 +863,26 @@
                 "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
                 "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
                 "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "doomWidget": {
+      "allOf": [
+        {"$ref": "#/definitions/widgetBase"},
+        {
+          "properties": {
+            "type": {"const": "doom"},
+            "properties": {
+              "type": "object",
+              "properties": {
+                "wad_name": {
+                  "type": "string",
+                  "description": "WAD filename in working directory (doom1.wad, doom.wad, doom2.wad, etc.). Auto-downloads shareware if not found.",
+                  "default": "doom1.wad"
+                }
               }
             }
           }

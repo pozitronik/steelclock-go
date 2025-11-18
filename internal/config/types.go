@@ -7,6 +7,7 @@ type Config struct {
 	RefreshRateMs    int            `json:"refresh_rate_ms"`
 	UnregisterOnExit bool           `json:"unregister_on_exit,omitempty"`
 	BundledFontURL   string         `json:"bundled_font_url,omitempty"`
+	BundledWadURL    string         `json:"bundled_wad_url,omitempty"`
 	Display          DisplayConfig  `json:"display"`
 	Layout           *LayoutConfig  `json:"layout,omitempty"`
 	Widgets          []WidgetConfig `json:"widgets"`
@@ -126,4 +127,7 @@ type WidgetProperties struct {
 	PeakHoldTime        float64 `json:"peak_hold_time,omitempty"`
 	AutoHideOnSilence   bool    `json:"auto_hide_on_silence,omitempty"`
 	AutoHideSilenceTime float64 `json:"auto_hide_silence_time,omitempty"`
+
+	// DOOM widget
+	WadName string `json:"wad_name,omitempty"`
 }
