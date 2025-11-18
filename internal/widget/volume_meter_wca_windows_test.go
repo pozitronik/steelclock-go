@@ -331,9 +331,7 @@ func TestMeterReaderWCA_ErrorAfterClose(t *testing.T) {
 	_, err = reader.GetMeterData(0.99, 0.01)
 	if err == nil {
 		t.Error("GetMeterData() should return error after Close()")
-	}
-
-	if !strings.Contains(err.Error(), "not initialized") {
+	} else if !strings.Contains(err.Error(), "not initialized") {
 		t.Errorf("Error should mention 'not initialized', got: %v", err)
 	}
 }

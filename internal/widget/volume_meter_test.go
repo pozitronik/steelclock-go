@@ -81,9 +81,7 @@ func TestVolumeMeterWidget_InvalidDisplayMode(t *testing.T) {
 	_, err := NewVolumeMeterWidget(cfg)
 	if err == nil {
 		t.Error("NewVolumeMeterWidget() should return error for invalid display mode")
-	}
-
-	if !strings.Contains(err.Error(), "invalid display mode") {
+	} else if !strings.Contains(err.Error(), "invalid display mode") {
 		t.Errorf("Error should mention invalid display mode, got: %v", err)
 	}
 }
@@ -301,12 +299,14 @@ func TestVolumeMeterWidget_PeakHold(t *testing.T) {
 	time.Sleep(300 * time.Millisecond)
 
 	widget.mu.RLock()
-	peakHoldValue := widget.peakHoldValue
+	peakHoldValues := widget.peakHoldValues
 	widget.mu.RUnlock()
 
-	// Peak hold value should be within valid range
-	if peakHoldValue < 0 || peakHoldValue > 1.0 {
-		t.Errorf("peakHoldValue = %.2f, should be in [0.0, 1.0]", peakHoldValue)
+	// Peak hold values should be within valid range
+	for i, peakHoldValue := range peakHoldValues {
+		if peakHoldValue < 0 || peakHoldValue > 1.0 {
+			t.Errorf("peakHoldValues[%d] = %.2f, should be in [0.0, 1.0]", i, peakHoldValue)
+		}
 	}
 }
 
