@@ -132,7 +132,7 @@ func validateConfig(cfg *Config) error {
 	enabledCount := 0
 	validTypes := map[string]bool{
 		"clock": true, "cpu": true, "memory": true,
-		"network": true, "disk": true, "keyboard": true, "volume": true,
+		"network": true, "disk": true, "keyboard": true, "volume": true, "volume_meter": true,
 	}
 
 	for i, w := range cfg.Widgets {
@@ -146,7 +146,7 @@ func validateConfig(cfg *Config) error {
 			return fmt.Errorf("widget[%d] (%s): type is required", i, w.ID)
 		}
 		if !validTypes[w.Type] {
-			return fmt.Errorf("widget[%d] (%s): invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, volume)", i, w.ID, w.Type)
+			return fmt.Errorf("widget[%d] (%s): invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, volume, volume_meter)", i, w.ID, w.Type)
 		}
 
 		if w.Enabled {

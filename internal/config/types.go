@@ -111,4 +111,19 @@ type WidgetProperties struct {
 	GaugeNeedleColor  int  `json:"gauge_needle_color,omitempty"`
 	TriangleFillColor int  `json:"triangle_fill_color,omitempty"`
 	TriangleBorder    bool `json:"triangle_border,omitempty"`
+
+	// Volume meter widget
+	ClippingColor       int     `json:"clipping_color,omitempty"`
+	LeftChannelColor    int     `json:"left_channel_color,omitempty"`
+	RightChannelColor   int     `json:"right_channel_color,omitempty"`
+	StereoMode          bool    `json:"stereo_mode,omitempty"`
+	UseDBScale          bool    `json:"use_db_scale,omitempty"`
+	ShowClipping        bool    `json:"show_clipping,omitempty"`
+	ClippingThreshold   float64 `json:"clipping_threshold,omitempty"`
+	SilenceThreshold    float64 `json:"silence_threshold,omitempty"`
+	DecayRate           float64 `json:"decay_rate,omitempty"`
+	ShowPeakHold        bool    `json:"show_peak_hold,omitempty"`
+	PeakHoldTime        float64 `json:"peak_hold_time,omitempty"`
+	AutoHideOnSilence   bool    `json:"auto_hide_on_silence,omitempty"`
+	AutoHideSilenceTime float64 `json:"auto_hide_silence_time,omitempty"`
 }

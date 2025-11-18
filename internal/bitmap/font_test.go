@@ -124,7 +124,10 @@ func TestDownloadBundledFont(t *testing.T) {
 	oldCacheDir := os.Getenv("FONTCONFIG_PATH")
 	defer func() {
 		if oldCacheDir != "" {
-			os.Setenv("FONTCONFIG_PATH", oldCacheDir)
+			err := os.Setenv("FONTCONFIG_PATH", oldCacheDir)
+			if err != nil {
+				return
+			}
 		}
 	}()
 

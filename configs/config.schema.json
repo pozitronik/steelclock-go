@@ -91,7 +91,8 @@
           {"$ref": "#/definitions/networkWidget"},
           {"$ref": "#/definitions/diskWidget"},
           {"$ref": "#/definitions/keyboardWidget"},
-          {"$ref": "#/definitions/volumeWidget"}
+          {"$ref": "#/definitions/volumeWidget"},
+          {"$ref": "#/definitions/volumeMeterWidget"}
         ]
       }
     }
@@ -709,6 +710,144 @@
                   "type": "boolean",
                   "description": "Draw border around triangle",
                   "default": false
+                },
+                "font": {"$ref": "#/definitions/textProperties/properties/font"},
+                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
+                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
+                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
+                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
+                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "volumeMeterWidget": {
+      "allOf": [
+        {"$ref": "#/definitions/widgetBase"},
+        {
+          "properties": {
+            "type": {"const": "volume_meter"},
+            "properties": {
+              "type": "object",
+              "properties": {
+                "display_mode": {
+                  "type": "string",
+                  "description": "Display mode: text, bar_horizontal, bar_vertical, gauge",
+                  "enum": ["text", "bar_horizontal", "bar_vertical", "gauge"],
+                  "default": "bar_horizontal"
+                },
+                "update_interval": {
+                  "type": "number",
+                  "description": "Meter update interval in seconds (matches display refresh rate)",
+                  "minimum": 0.03,
+                  "default": 0.1
+                },
+                "fill_color": {
+                  "type": "integer",
+                  "description": "Main meter fill color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "clipping_color": {
+                  "type": "integer",
+                  "description": "Color when clipping is detected (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 200
+                },
+                "left_channel_color": {
+                  "type": "integer",
+                  "description": "Left channel color for stereo modes (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "right_channel_color": {
+                  "type": "integer",
+                  "description": "Right channel color for stereo modes (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 200
+                },
+                "stereo_mode": {
+                  "type": "boolean",
+                  "description": "Enable stereo mode to display left and right channels separately (works with all display modes)",
+                  "default": false
+                },
+                "bar_border": {
+                  "type": "boolean",
+                  "description": "Draw border around bars",
+                  "default": false
+                },
+                "gauge_color": {
+                  "type": "integer",
+                  "description": "Gauge arc and tick color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 200
+                },
+                "gauge_needle_color": {
+                  "type": "integer",
+                  "description": "Gauge needle color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "use_db_scale": {
+                  "type": "boolean",
+                  "description": "Use logarithmic dB scale instead of linear (-60dB to 0dB mapped to 0-100%)",
+                  "default": false
+                },
+                "show_clipping": {
+                  "type": "boolean",
+                  "description": "Show clipping indicator when peak exceeds threshold",
+                  "default": true
+                },
+                "clipping_threshold": {
+                  "type": "number",
+                  "description": "Peak level that triggers clipping indicator (0.0-1.0)",
+                  "minimum": 0.0,
+                  "maximum": 1.0,
+                  "default": 0.99
+                },
+                "silence_threshold": {
+                  "type": "number",
+                  "description": "Peak level below which is considered silence (0.0-1.0)",
+                  "minimum": 0.0,
+                  "maximum": 1.0,
+                  "default": 0.01
+                },
+                "decay_rate": {
+                  "type": "number",
+                  "description": "Peak decay rate in units per second (VU meter ballistics)",
+                  "minimum": 0.1,
+                  "default": 2.0
+                },
+                "show_peak_hold": {
+                  "type": "boolean",
+                  "description": "Show peak hold line (held maximum peak that decays slowly)",
+                  "default": true
+                },
+                "peak_hold_time": {
+                  "type": "number",
+                  "description": "How long to hold peak indicator in seconds",
+                  "minimum": 0.1,
+                  "default": 1.0
+                },
+                "auto_hide_on_silence": {
+                  "type": "boolean",
+                  "description": "Auto-hide widget when no audio detected (triggers auto_hide)",
+                  "default": false
+                },
+                "auto_hide_silence_time": {
+                  "type": "number",
+                  "description": "Time after last audio before hiding (seconds)",
+                  "minimum": 0.5,
+                  "default": 2.0
                 },
                 "font": {"$ref": "#/definitions/textProperties/properties/font"},
                 "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
