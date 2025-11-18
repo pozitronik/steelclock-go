@@ -30,7 +30,7 @@ func TestSetBundledWadURL(t *testing.T) {
 func TestGetWadFile_FileExists(t *testing.T) {
 	// Create a temporary WAD file
 	tmpFile := "test_existing.wad"
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	content := []byte("test wad content")
 	if err := os.WriteFile(tmpFile, content, 0644); err != nil {
@@ -56,7 +56,7 @@ func TestGetWadFile_FileNotExists(t *testing.T) {
 	// Test with non-existent file - will attempt download
 	// This is a network test and will actually download the file
 	nonexistent := "test_download_12345.wad"
-	defer os.Remove(nonexistent) // Clean up
+	defer func() { _ = os.Remove(nonexistent) }() // Clean up
 
 	result, err := GetWadFile(nonexistent)
 	if err != nil {
@@ -74,7 +74,7 @@ func TestGetWadFile_FileNotExists(t *testing.T) {
 func TestGetWadFileWithProgress_FileExists(t *testing.T) {
 	// Create a temporary WAD file
 	tmpFile := "test_progress.wad"
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	content := []byte("test wad content")
 	if err := os.WriteFile(tmpFile, content, 0644); err != nil {
@@ -113,7 +113,7 @@ func TestGetWadFileWithProgress_FileExists(t *testing.T) {
 func TestGetWadFileWithProgress_ProgressCallback(t *testing.T) {
 	// Create a temporary WAD file to test progress tracking
 	tmpFile := "test_callback.wad"
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	content := []byte("test wad content")
 	if err := os.WriteFile(tmpFile, content, 0644); err != nil {

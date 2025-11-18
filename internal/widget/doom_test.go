@@ -14,7 +14,7 @@ import (
 func TestNewDoomWidget(t *testing.T) {
 	// Create a temporary WAD file to avoid download during test
 	tmpFile := "test_doom.wad"
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	if err := os.WriteFile(tmpFile, []byte("test wad content"), 0644); err != nil {
 		t.Fatalf("Failed to create test WAD file: %v", err)
@@ -61,7 +61,7 @@ func TestNewDoomWidget(t *testing.T) {
 func TestDoomWidgetRender_EmptyFrame(t *testing.T) {
 	// Create a temporary WAD to avoid download
 	tmpFile := "test_empty_frame.wad"
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	if err := os.WriteFile(tmpFile, []byte("test wad"), 0644); err != nil {
 		t.Fatalf("Failed to create test WAD: %v", err)
@@ -112,7 +112,7 @@ func TestDoomWidgetRender_EmptyFrame(t *testing.T) {
 func TestDoomWidgetRender_DownloadProgress(t *testing.T) {
 	// Create a temporary WAD to avoid actual download
 	tmpFile := "test_progress_render.wad"
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	if err := os.WriteFile(tmpFile, []byte("test wad"), 0644); err != nil {
 		t.Fatalf("Failed to create test WAD: %v", err)
@@ -183,7 +183,7 @@ func TestDoomWidgetRender_DownloadProgress(t *testing.T) {
 func TestDoomWidgetRender_DownloadError(t *testing.T) {
 	// Create a temporary WAD to avoid actual download
 	tmpFile := "test_error_render.wad"
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	if err := os.WriteFile(tmpFile, []byte("test wad"), 0644); err != nil {
 		t.Fatalf("Failed to create test WAD: %v", err)

@@ -80,7 +80,7 @@ func setupLogging() {
 	// Get executable directory
 	exePath, err := os.Executable()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: Failed to get executable path: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: Failed to get executable path: %v\n", err)
 		return
 	}
 	exeDir := filepath.Dir(exePath)
@@ -91,7 +91,7 @@ func setupLogging() {
 	// Open log file (append mode)
 	logFile, err = os.OpenFile(logFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: Failed to open log file: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: Failed to open log file: %v\n", err)
 		return
 	}
 
@@ -104,7 +104,7 @@ func setupLogging() {
 // closeLogging closes the log file
 func closeLogging() {
 	if logFile != nil {
-		logFile.Close()
+		_ = logFile.Close()
 	}
 }
 
