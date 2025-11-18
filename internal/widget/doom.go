@@ -1,6 +1,7 @@
 package widget
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"log"
@@ -22,6 +23,11 @@ type DoomWidget struct {
 	wg         sync.WaitGroup
 	started    bool
 
+	// Download state
+	isDownloading    bool
+	downloadProgress float64 // 0.0 to 1.0
+	downloadError    error
+
 	// Rendering
 	scale float64 // Downscale factor from DOOM resolution to display
 }
@@ -36,14 +42,6 @@ func NewDoomWidget(cfg config.WidgetConfig) (*DoomWidget, error) {
 		wadName = "doom1.wad"
 	}
 
-	// Get WAD file from working directory (will auto-download if not found)
-	wadFile, err := GetWadFile(wadName)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Printf("[DOOM] Using WAD file: %s", wadFile)
-
 	// Calculate scale factor (DOOM renders at 320x200, we display at 128x40)
 	scaleX := float64(cfg.Position.W) / 320.0
 	scaleY := float64(cfg.Position.H) / 200.0
@@ -54,12 +52,12 @@ func NewDoomWidget(cfg config.WidgetConfig) (*DoomWidget, error) {
 
 	w := &DoomWidget{
 		BaseWidget: base,
-		wadFile:    wadFile,
+		wadFile:    wadName,
 		scale:      scale,
 		stopChan:   make(chan struct{}),
 	}
 
-	// Initialize DOOM in background
+	// Initialize DOOM in background (handles WAD download if needed)
 	w.wg.Add(1)
 	go w.runDoom()
 
@@ -74,34 +72,52 @@ func (w *DoomWidget) runDoom() {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("[DOOM] PANIC in Gore.Run: %v", r)
+			w.mu.Lock()
+			w.downloadError = fmt.Errorf("panic: %v", r)
+			w.mu.Unlock()
 		}
 	}()
 
+	// Progress callback for download
+	progressCallback := func(progress float64) {
+		w.mu.Lock()
+		w.downloadProgress = progress
+		w.mu.Unlock()
+	}
+
+	// Get WAD file (may download with progress updates)
+	wadFile, err := GetWadFileWithProgress(w.wadFile, progressCallback, &w.isDownloading, &w.mu)
+	if err != nil {
+		log.Printf("[DOOM] Failed to get WAD file: %v", err)
+		w.mu.Lock()
+		w.downloadError = err
+		w.isDownloading = false
+		w.mu.Unlock()
+		return
+	}
+
 	w.mu.Lock()
+	w.wadFile = wadFile
+	w.isDownloading = false
 	w.started = true
 	w.mu.Unlock()
 
-	log.Printf("[DOOM] Starting DOOM engine with WAD: %s", w.wadFile)
+	log.Printf("[DOOM] Starting engine with WAD: %s", wadFile)
 
 	// Run DOOM main loop with demo playback
-	// The engine will call our DrawFrame() method for each frame
-	args := []string{"-iwad", w.wadFile}
-	log.Printf("[DOOM] Gore.Run args: %v", args)
-
-	// Set a timeout to detect if Gore hangs
+	args := []string{"-iwad", wadFile}
 	done := make(chan struct{})
 	go func() {
 		gore.Run(w, args)
 		close(done)
-		log.Printf("[DOOM] Gore.Run exited normally")
 	}()
 
 	// Wait for either completion or stop signal
 	select {
 	case <-done:
-		log.Printf("[DOOM] Gore finished")
+		log.Printf("[DOOM] Engine stopped")
 	case <-w.stopChan:
-		log.Printf("[DOOM] Stop requested while Gore was running")
+		log.Printf("[DOOM] Stop requested")
 	}
 }
 
@@ -155,19 +171,11 @@ func (w *DoomWidget) DrawFrame(img *image.RGBA) {
 
 // SetTitle implements DoomFrontend interface
 func (w *DoomWidget) SetTitle(title string) {
-	log.Printf("[DOOM] SetTitle called: %s", title)
 	// No-op for embedded display
 }
 
 // GetEvent implements DoomFrontend interface
 func (w *DoomWidget) GetEvent(event *gore.DoomEvent) bool {
-	// Only log first few calls to avoid spam
-	w.mu.Lock()
-	if w.currentImg == nil {
-		log.Printf("[DOOM] GetEvent called (waiting for first frame)")
-	}
-	w.mu.Unlock()
-
 	select {
 	case <-w.stopChan:
 		event.Type = gore.Ev_quit
@@ -181,12 +189,6 @@ func (w *DoomWidget) GetEvent(event *gore.DoomEvent) bool {
 
 // CacheSound implements DoomFrontend interface
 func (w *DoomWidget) CacheSound(name string, data []byte) {
-	// Only log first call
-	w.mu.Lock()
-	if w.currentImg == nil {
-		log.Printf("[DOOM] CacheSound called: %s (%d bytes)", name, len(data))
-	}
-	w.mu.Unlock()
 	// No-op - no audio on OLED display
 }
 
@@ -195,18 +197,125 @@ func (w *DoomWidget) PlaySound(name string, channel, vol, sep int) {
 	// No-op - no audio on OLED display
 }
 
-// Render renders the current DOOM frame
+// Render renders the current DOOM frame or download progress
 func (w *DoomWidget) Render() (image.Image, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	if w.currentImg == nil {
-		// Return empty image while DOOM is loading
-		pos := w.GetPosition()
-		return image.NewGray(image.Rect(0, 0, pos.W, pos.H)), nil
+	pos := w.GetPosition()
+	img := image.NewGray(image.Rect(0, 0, pos.W, pos.H))
+
+	// Show download error if any
+	if w.downloadError != nil {
+		w.drawText(img, "Download failed!", pos.W/2, pos.H/2-4)
+		return img, nil
 	}
 
-	return w.currentImg, nil
+	// Show download progress bar
+	if w.isDownloading {
+		w.drawProgressBar(img, w.downloadProgress, pos.W, pos.H)
+		return img, nil
+	}
+
+	// Show DOOM frame if available
+	if w.currentImg != nil {
+		return w.currentImg, nil
+	}
+
+	// Return empty image while DOOM is initializing
+	return img, nil
+}
+
+// drawProgressBar renders a download progress bar
+func (w *DoomWidget) drawProgressBar(img *image.Gray, progress float64, width, height int) {
+	// Draw title
+	w.drawText(img, "Downloading DOOM", width/2, 4)
+
+	// Progress bar dimensions
+	barWidth := width - 20
+	barHeight := 8
+	barX := 10
+	barY := height/2 - barHeight/2
+
+	// Draw border
+	for x := barX; x < barX+barWidth; x++ {
+		img.SetGray(x, barY, color.Gray{Y: 255})
+		img.SetGray(x, barY+barHeight-1, color.Gray{Y: 255})
+	}
+	for y := barY; y < barY+barHeight; y++ {
+		img.SetGray(barX, y, color.Gray{Y: 255})
+		img.SetGray(barX+barWidth-1, y, color.Gray{Y: 255})
+	}
+
+	// Draw filled portion
+	fillWidth := int(float64(barWidth-2) * progress)
+	for y := barY + 1; y < barY+barHeight-1; y++ {
+		for x := barX + 1; x < barX+1+fillWidth; x++ {
+			img.SetGray(x, y, color.Gray{Y: 255})
+		}
+	}
+
+	// Draw percentage text
+	percentText := fmt.Sprintf("%.0f%%", progress*100)
+	w.drawText(img, percentText, width/2, barY+barHeight+6)
+}
+
+// drawText draws centered text on the image (simple 3x5 pixel font)
+func (w *DoomWidget) drawText(img *image.Gray, text string, centerX, y int) {
+	charWidth := 4
+	totalWidth := len(text) * charWidth
+	x := centerX - totalWidth/2
+
+	for i, ch := range text {
+		w.drawChar(img, ch, x+i*charWidth, y)
+	}
+}
+
+// drawChar draws a single character using 3x5 pixel patterns
+func (w *DoomWidget) drawChar(img *image.Gray, ch rune, x, y int) {
+	white := color.Gray{Y: 255}
+
+	patterns := map[rune][][]bool{
+		'D': {{true, true, false}, {true, false, true}, {true, false, true}, {true, false, true}, {true, true, false}},
+		'o': {{false, true, false}, {true, false, true}, {true, false, true}, {true, false, true}, {false, true, false}},
+		'w': {{true, false, true}, {true, false, true}, {true, false, true}, {true, true, true}, {true, false, true}},
+		'n': {{true, true, false}, {true, false, true}, {true, false, true}, {true, false, true}, {true, false, true}},
+		'l': {{true, false, false}, {true, false, false}, {true, false, false}, {true, false, false}, {true, true, true}},
+		'a': {{false, true, false}, {true, false, true}, {true, true, true}, {true, false, true}, {true, false, true}},
+		'd': {{false, false, true}, {false, false, true}, {false, true, true}, {true, false, true}, {false, true, true}},
+		'i': {{false, true, false}, {false, false, false}, {false, true, false}, {false, true, false}, {false, true, false}},
+		'g': {{false, true, true}, {true, false, false}, {true, false, true}, {true, false, true}, {false, true, true}},
+		'M': {{true, false, true}, {true, true, true}, {true, true, true}, {true, false, true}, {true, false, true}},
+		'O': {{false, true, false}, {true, false, true}, {true, false, true}, {true, false, true}, {false, true, false}},
+		' ': {{false, false, false}, {false, false, false}, {false, false, false}, {false, false, false}, {false, false, false}},
+		'%': {{true, false, true}, {false, false, true}, {false, true, false}, {true, false, false}, {true, false, true}},
+		'0': {{false, true, false}, {true, false, true}, {true, false, true}, {true, false, true}, {false, true, false}},
+		'1': {{false, true, false}, {true, true, false}, {false, true, false}, {false, true, false}, {true, true, true}},
+		'2': {{true, true, false}, {false, false, true}, {false, true, false}, {true, false, false}, {true, true, true}},
+		'3': {{true, true, true}, {false, false, true}, {false, true, true}, {false, false, true}, {true, true, true}},
+		'4': {{true, false, true}, {true, false, true}, {true, true, true}, {false, false, true}, {false, false, true}},
+		'5': {{true, true, true}, {true, false, false}, {true, true, true}, {false, false, true}, {true, true, true}},
+		'6': {{false, true, true}, {true, false, false}, {true, true, true}, {true, false, true}, {true, true, true}},
+		'7': {{true, true, true}, {false, false, true}, {false, true, false}, {false, true, false}, {false, true, false}},
+		'8': {{true, true, true}, {true, false, true}, {true, true, true}, {true, false, true}, {true, true, true}},
+		'9': {{true, true, true}, {true, false, true}, {true, true, true}, {false, false, true}, {true, true, false}},
+		'f': {{false, true, true}, {true, false, false}, {true, true, false}, {true, false, false}, {true, false, false}},
+		'e': {{true, true, true}, {true, false, false}, {true, true, false}, {true, false, false}, {true, true, true}},
+		'!': {{false, true, false}, {false, true, false}, {false, true, false}, {false, false, false}, {false, true, false}},
+	}
+
+	pattern, ok := patterns[ch]
+	if !ok {
+		return
+	}
+
+	for row := 0; row < len(pattern) && row < 5; row++ {
+		for col := 0; col < len(pattern[row]) && col < 3; col++ {
+			if pattern[row][col] {
+				img.SetGray(x+col, y+row, white)
+			}
+		}
+	}
 }
 
 // Update is called periodically
