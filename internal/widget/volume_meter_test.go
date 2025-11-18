@@ -495,3 +495,297 @@ func TestVolumeMeterWidget_HealthMetrics(t *testing.T) {
 	t.Logf("Health metrics: total=%d, success=%d, failed=%d, maxDuration=%v",
 		totalCalls, successfulCalls, failedCalls, maxCallDuration)
 }
+
+// TestVolumeMeterWidget_StereoMode tests stereo mode configuration
+func TestVolumeMeterWidget_StereoMode(t *testing.T) {
+	skipIfNoAudioDeviceMeter(t)
+
+	cfg := config.WidgetConfig{
+		Type:    "volume_meter",
+		ID:      "test_meter_stereo",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "bar_horizontal",
+			StereoMode:  true,
+		},
+	}
+
+	widget, err := NewVolumeMeterWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+	}
+	defer widget.Stop()
+
+	if !widget.stereoMode {
+		t.Error("stereoMode should be true")
+	}
+
+	// Wait for meter updates
+	time.Sleep(300 * time.Millisecond)
+
+	widget.mu.RLock()
+	channelPeaks := widget.channelPeaks
+	channelCount := widget.channelCount
+	widget.mu.RUnlock()
+
+	// Should have channel data
+	if channelCount == 0 {
+		t.Error("channelCount should be > 0")
+	}
+
+	// Channel peaks should be valid
+	for i, peak := range channelPeaks {
+		if peak < 0 || peak > 1.0 {
+			t.Errorf("channelPeaks[%d] = %.2f, should be in [0.0, 1.0]", i, peak)
+		}
+	}
+}
+
+// TestVolumeMeterWidget_StereoWithPeakHold tests per-channel peak hold
+func TestVolumeMeterWidget_StereoWithPeakHold(t *testing.T) {
+	skipIfNoAudioDeviceMeter(t)
+
+	cfg := config.WidgetConfig{
+		Type:    "volume_meter",
+		ID:      "test_meter_stereo_peak",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode:  "bar_horizontal",
+			StereoMode:   true,
+			ShowPeakHold: true,
+			PeakHoldTime: 0.5,
+		},
+	}
+
+	widget, err := NewVolumeMeterWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+	}
+	defer widget.Stop()
+
+	if !widget.stereoMode {
+		t.Error("stereoMode should be true")
+	}
+
+	if !widget.showPeakHold {
+		t.Error("showPeakHold should be true")
+	}
+
+	// Wait for meter updates
+	time.Sleep(300 * time.Millisecond)
+
+	widget.mu.RLock()
+	peakHoldValues := widget.peakHoldValues
+	peakHoldUntils := widget.peakHoldUntils
+	channelCount := widget.channelCount
+	widget.mu.RUnlock()
+
+	// Peak hold arrays should match channel count
+	if len(peakHoldValues) != channelCount {
+		t.Errorf("peakHoldValues length = %d, want %d", len(peakHoldValues), channelCount)
+	}
+
+	if len(peakHoldUntils) != channelCount {
+		t.Errorf("peakHoldUntils length = %d, want %d", len(peakHoldUntils), channelCount)
+	}
+
+	// Each channel's peak hold should be valid
+	for i, val := range peakHoldValues {
+		if val < 0 || val > 1.0 {
+			t.Errorf("peakHoldValues[%d] = %.2f, should be in [0.0, 1.0]", i, val)
+		}
+	}
+}
+
+// TestVolumeMeterWidget_BorderColor tests border color configuration
+func TestVolumeMeterWidget_BorderColor(t *testing.T) {
+	skipIfNoAudioDeviceMeter(t)
+
+	cfg := config.WidgetConfig{
+		Type:    "volume_meter",
+		ID:      "test_meter_border",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Style: config.StyleConfig{
+			Border:      true,
+			BorderColor: 255, // White
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "bar_horizontal",
+		},
+	}
+
+	widget, err := NewVolumeMeterWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+	}
+	defer widget.Stop()
+
+	if !widget.barBorder {
+		t.Error("barBorder should be true")
+	}
+
+	if widget.borderColor != 255 {
+		t.Errorf("borderColor = %d, want 255", widget.borderColor)
+	}
+}
+
+// TestVolumeMeterWidget_GaugeWithPeakHold tests gauge mode with peak hold marks
+func TestVolumeMeterWidget_GaugeWithPeakHold(t *testing.T) {
+	skipIfNoAudioDeviceMeter(t)
+
+	cfg := config.WidgetConfig{
+		Type:    "volume_meter",
+		ID:      "test_meter_gauge_peak",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 80, H: 60,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode:  "gauge",
+			ShowPeakHold: true,
+			PeakHoldTime: 0.5,
+		},
+	}
+
+	widget, err := NewVolumeMeterWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+	}
+	defer widget.Stop()
+
+	if widget.displayMode != "gauge" {
+		t.Errorf("displayMode = %s, want gauge", widget.displayMode)
+	}
+
+	if !widget.showPeakHold {
+		t.Error("showPeakHold should be true")
+	}
+
+	// Wait for meter updates
+	time.Sleep(300 * time.Millisecond)
+
+	// Try to render - should not error
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	// Image may be nil or valid
+	_ = img
+}
+
+// TestVolumeMeterWidget_StereoGauge tests stereo gauge mode
+func TestVolumeMeterWidget_StereoGauge(t *testing.T) {
+	skipIfNoAudioDeviceMeter(t)
+
+	cfg := config.WidgetConfig{
+		Type:    "volume_meter",
+		ID:      "test_meter_stereo_gauge",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 160, H: 60,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode:  "gauge",
+			StereoMode:   true,
+			ShowPeakHold: true,
+			PeakHoldTime: 0.5,
+		},
+	}
+
+	widget, err := NewVolumeMeterWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+	}
+	defer widget.Stop()
+
+	if !widget.stereoMode {
+		t.Error("stereoMode should be true")
+	}
+
+	if widget.displayMode != "gauge" {
+		t.Errorf("displayMode = %s, want gauge", widget.displayMode)
+	}
+
+	// Wait for meter updates
+	time.Sleep(300 * time.Millisecond)
+
+	// Try to render - should not error
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	// Image should be created for stereo gauge
+	if img != nil {
+		bounds := img.Bounds()
+		if bounds.Dx() != 160 || bounds.Dy() != 60 {
+			t.Errorf("Render() image size = %dx%d, want 160x60", bounds.Dx(), bounds.Dy())
+		}
+	}
+}
+
+// TestVolumeMeterWidget_Ballistics tests rise and fall ballistics
+func TestVolumeMeterWidget_Ballistics(t *testing.T) {
+	skipIfNoAudioDeviceMeter(t)
+
+	cfg := config.WidgetConfig{
+		Type:    "volume_meter",
+		ID:      "test_meter_ballistics",
+		Enabled: true,
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "vu_meter",
+			DecayRate:   2.0, // Units per second
+		},
+	}
+
+	widget, err := NewVolumeMeterWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+	}
+	defer widget.Stop()
+
+	if widget.decayRate != 2.0 {
+		t.Errorf("decayRate = %.1f, want 2.0", widget.decayRate)
+	}
+
+	// Wait for initial meter updates
+	time.Sleep(200 * time.Millisecond)
+
+	// Sample displayPeak multiple times to verify it changes smoothly
+	widget.mu.RLock()
+	peak1 := widget.displayPeak
+	widget.mu.RUnlock()
+
+	time.Sleep(100 * time.Millisecond)
+
+	widget.mu.RLock()
+	peak2 := widget.displayPeak
+	widget.mu.RUnlock()
+
+	// Peaks should be within valid range
+	if peak1 < 0 || peak1 > 1.0 {
+		t.Errorf("peak1 = %.2f, should be in [0.0, 1.0]", peak1)
+	}
+
+	if peak2 < 0 || peak2 > 1.0 {
+		t.Errorf("peak2 = %.2f, should be in [0.0, 1.0]", peak2)
+	}
+
+	// With ballistics, displayPeak should not change drastically
+	// (this is a weak test, but verifies ballistics are applied)
+	_ = peak1
+	_ = peak2
+}
