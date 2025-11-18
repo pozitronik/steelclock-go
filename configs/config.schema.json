@@ -735,7 +735,7 @@
               "properties": {
                 "display_mode": {
                   "type": "string",
-                  "description": "Display mode: text, bar_horizontal, bar_vertical, gauge (use vu_mode for professional metering)",
+                  "description": "Display mode: text, bar_horizontal, bar_vertical, gauge",
                   "enum": ["text", "bar_horizontal", "bar_vertical", "gauge"],
                   "default": "bar_horizontal"
                 },
@@ -776,11 +776,6 @@
                 "stereo_mode": {
                   "type": "boolean",
                   "description": "Enable stereo mode to display left and right channels separately (works with all display modes)",
-                  "default": false
-                },
-                "vu_mode": {
-                  "type": "boolean",
-                  "description": "Enable professional VU meter mode with visible scale marks and zone boundaries (works with bar and gauge modes)",
                   "default": false
                 },
                 "bar_border": {

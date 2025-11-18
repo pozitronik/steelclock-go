@@ -47,7 +47,6 @@ type VolumeMeterWidget struct {
 
 	// Meter configuration
 	stereoMode          bool
-	vuMode              bool
 	useDBScale          bool
 	showClipping        bool
 	clippingThreshold   float64
@@ -214,7 +213,6 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		horizontalAlign:     horizontalAlign,
 		verticalAlign:       verticalAlign,
 		stereoMode:          cfg.Properties.StereoMode,
-		vuMode:              cfg.Properties.VUMode,
 		useDBScale:          cfg.Properties.UseDBScale,
 		showClipping:        cfg.Properties.ShowClipping,
 		clippingThreshold:   clippingThreshold,
@@ -231,8 +229,8 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		stopChan:            make(chan struct{}),
 	}
 
-	log.Printf("[METER] Widget initialized: id=%s, mode=%s, dB=%v, clipping=%v, autoHide=%v, vuMode=%v, showPeak=%v, showPeakHold=%v, stereo=%v, border=%v",
-		cfg.ID, displayMode, w.useDBScale, w.showClipping, base.IsAutoHideEnabled(), w.vuMode, w.showPeak, w.showPeakHold, w.stereoMode, w.barBorder)
+	log.Printf("[METER] Widget initialized: id=%s, mode=%s, dB=%v, clipping=%v, autoHide=%v, showPeak=%v, showPeakHold=%v, stereo=%v, border=%v",
+		cfg.ID, displayMode, w.useDBScale, w.showClipping, base.IsAutoHideEnabled(), w.showPeak, w.showPeakHold, w.stereoMode, w.barBorder)
 
 	// Start background polling goroutine
 	w.wg.Add(1)
@@ -478,8 +476,8 @@ func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, displayPeak, ac
 	pos := w.GetPosition()
 	barWidth := int(float64(pos.W) * displayPeak)
 
-	log.Printf("[METER] renderBarHorizontal: displayPeak=%.3f, actualPeak=%.3f, peakHold=%.3f, barWidth=%d, showPeak=%v, vuMode=%v",
-		displayPeak, actualPeak, peakHold, barWidth, w.showPeak, w.vuMode)
+	log.Printf("[METER] renderBarHorizontal: displayPeak=%.3f, actualPeak=%.3f, peakHold=%.3f, barWidth=%d, showPeak=%v",
+		displayPeak, actualPeak, peakHold, barWidth, w.showPeak)
 
 	fillColor := w.fillColor
 	if isClipping && w.showClipping {
@@ -512,12 +510,6 @@ func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, displayPeak, ac
 				img.SetGray(peakX, y, color.Gray{Y: 180})
 			}
 		}
-	}
-
-	// Draw VU scale AFTER the bar so it's visible on top
-	if w.vuMode {
-		log.Printf("[METER] Drawing VU scale")
-		w.drawVUScaleHorizontal(img, pos)
 	}
 
 	// Draw border
@@ -562,11 +554,6 @@ func (w *VolumeMeterWidget) renderBarVertical(img *image.Gray, displayPeak, actu
 				img.SetGray(x, peakY, color.Gray{Y: 180})
 			}
 		}
-	}
-
-	// Draw VU scale AFTER the bar so it's visible on top
-	if w.vuMode {
-		w.drawVUScaleVertical(img, pos)
 	}
 
 	// Draw border
@@ -642,11 +629,6 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 		}
 	}
 
-	// Draw VU scale AFTER the bars so it's visible on top
-	if w.vuMode {
-		w.drawVUScaleHorizontal(img, pos)
-	}
-
 	// Draw separator
 	for x := 0; x < pos.W; x++ {
 		img.SetGray(x, halfHeight, color.Gray{Y: 64})
@@ -695,8 +677,8 @@ func (w *VolumeMeterWidget) renderTextStereo(img *image.Gray, channelPeaks []flo
 func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeaks []float64, actualPeak, peakHold float64, isClipping bool) {
 	pos := w.GetPosition()
 
-	log.Printf("[METER] renderBarVerticalStereo: channelPeaks=[%.3f, %.3f], actualPeak=%.3f, peakHold=%.3f, showPeak=%v, vuMode=%v",
-		channelPeaks[0], channelPeaks[1], actualPeak, peakHold, w.showPeak, w.vuMode)
+	log.Printf("[METER] renderBarVerticalStereo: channelPeaks=[%.3f, %.3f], actualPeak=%.3f, peakHold=%.3f, showPeak=%v",
+		channelPeaks[0], channelPeaks[1], actualPeak, peakHold, w.showPeak)
 
 	if len(channelPeaks) < 2 {
 		// Not stereo, fall back to mono display
@@ -746,12 +728,6 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 				img.SetGray(x, peakY, color.Gray{Y: 180})
 			}
 		}
-	}
-
-	// Draw VU scale AFTER the bars so it's visible on top
-	if w.vuMode {
-		log.Printf("[METER] Drawing VU scale (vertical stereo)")
-		w.drawVUScaleVertical(img, pos)
 	}
 
 	// Draw separator
@@ -847,171 +823,6 @@ func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []fl
 	// Draw separator
 	for y := 0; y < pos.H; y++ {
 		img.SetGray(halfWidth, y, color.Gray{Y: 64})
-	}
-}
-
-// drawVUScaleHorizontal draws VU meter scale marks on horizontal bar
-func (w *VolumeMeterWidget) drawVUScaleHorizontal(img *image.Gray, pos config.PositionConfig) {
-	// Define scale positions based on mode
-	var marks []struct {
-		position float64 // 0.0-1.0
-		label    string
-		priority int // 0=minor, 1=major, 2=critical
-	}
-
-	if w.useDBScale {
-		// dB scale: -60, -40, -20, -10, -3, 0
-		marks = []struct {
-			position float64
-			label    string
-			priority int
-		}{
-			{0.0, "-60", 0},   // Minor
-			{0.333, "-40", 0}, // Minor
-			{0.667, "-20", 1}, // Major
-			{0.833, "-10", 1}, // Major
-			{0.95, "-3", 2},   // Critical
-			{1.0, "0", 2},     // Critical
-		}
-	} else {
-		// Linear scale: 0%, 25%, 50%, 70%, 90%, 100%
-		marks = []struct {
-			position float64
-			label    string
-			priority int
-		}{
-			{0.0, "0", 0},   // Minor
-			{0.25, "25", 0}, // Minor
-			{0.5, "50", 0},  // Minor
-			{0.7, "70", 1},  // Major (yellow zone)
-			{0.9, "90", 2},  // Critical (red zone)
-			{1.0, "100", 2}, // Critical
-		}
-	}
-
-	log.Printf("[METER] drawVUScaleHorizontal: useDBScale=%v, pos.W=%d, pos.H=%d, marks=%d", w.useDBScale, pos.W, pos.H, len(marks))
-
-	// Draw tick marks with logarithmic height progression
-	for _, mark := range marks {
-		x := int(float64(pos.W) * mark.position)
-		if x >= pos.W {
-			x = pos.W - 1
-		}
-
-		var tickHeight int
-		var brightness uint8
-
-		switch mark.priority {
-		case 0: // Minor ticks: 15% of height
-			tickHeight = int(float64(pos.H) * 0.15)
-			if tickHeight < 3 {
-				tickHeight = 3
-			}
-			brightness = 150
-		case 1: // Normal major ticks: 30% of height
-			tickHeight = int(float64(pos.H) * 0.30)
-			if tickHeight < 5 {
-				tickHeight = 5
-			}
-			brightness = 180
-		case 2: // Critical ticks: 50% of height
-			tickHeight = int(float64(pos.H) * 0.50)
-			if tickHeight < 8 {
-				tickHeight = 8
-			}
-			brightness = 200
-		}
-
-		log.Printf("[METER] Drawing tick (priority=%d) at x=%d, height=%d (label=%s)", mark.priority, x, tickHeight, mark.label)
-
-		// Draw from bottom up
-		for i := 0; i < tickHeight; i++ {
-			if pos.H-1-i >= 0 {
-				img.SetGray(x, pos.H-1-i, color.Gray{Y: brightness})
-			}
-		}
-	}
-}
-
-// drawVUScaleVertical draws VU meter scale marks on vertical bar
-func (w *VolumeMeterWidget) drawVUScaleVertical(img *image.Gray, pos config.PositionConfig) {
-	// Define scale positions based on mode
-	var marks []struct {
-		position float64 // 0.0-1.0
-		label    string
-		priority int // 0=minor, 1=major, 2=critical
-	}
-
-	if w.useDBScale {
-		// dB scale: -60, -40, -20, -10, -3, 0
-		marks = []struct {
-			position float64
-			label    string
-			priority int
-		}{
-			{0.0, "-60", 0},   // Minor
-			{0.333, "-40", 0}, // Minor
-			{0.667, "-20", 1}, // Major
-			{0.833, "-10", 1}, // Major
-			{0.95, "-3", 2},   // Critical
-			{1.0, "0", 2},     // Critical
-		}
-	} else {
-		// Linear scale: 0%, 25%, 50%, 70%, 90%, 100%
-		marks = []struct {
-			position float64
-			label    string
-			priority int
-		}{
-			{0.0, "0", 0},   // Minor
-			{0.25, "25", 0}, // Minor
-			{0.5, "50", 0},  // Minor
-			{0.7, "70", 1},  // Major (yellow zone)
-			{0.9, "90", 2},  // Critical (red zone)
-			{1.0, "100", 2}, // Critical
-		}
-	}
-
-	// Draw tick marks with logarithmic width progression
-	for _, mark := range marks {
-		y := pos.H - int(float64(pos.H)*mark.position)
-		if y < 0 {
-			y = 0
-		}
-		if y >= pos.H {
-			y = pos.H - 1
-		}
-
-		var tickWidth int
-		var brightness uint8
-
-		switch mark.priority {
-		case 0: // Minor ticks: 15% of width
-			tickWidth = int(float64(pos.W) * 0.15)
-			if tickWidth < 3 {
-				tickWidth = 3
-			}
-			brightness = 150
-		case 1: // Normal major ticks: 30% of width
-			tickWidth = int(float64(pos.W) * 0.30)
-			if tickWidth < 5 {
-				tickWidth = 5
-			}
-			brightness = 180
-		case 2: // Critical ticks: 50% of width
-			tickWidth = int(float64(pos.W) * 0.50)
-			if tickWidth < 8 {
-				tickWidth = 8
-			}
-			brightness = 200
-		}
-
-		// Draw from right edge leftward
-		for i := 0; i < tickWidth; i++ {
-			if pos.W-1-i >= 0 {
-				img.SetGray(pos.W-1-i, y, color.Gray{Y: brightness})
-			}
-		}
 	}
 }
 

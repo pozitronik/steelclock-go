@@ -638,7 +638,7 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
 
 ### Volume Meter Widget
 
-**Display Modes**: text, bar_horizontal, bar_vertical, gauge (all modes support stereo with `stereo_mode: true` and professional metering with `vu_mode: true`)
+**Display Modes**: text, bar_horizontal, bar_vertical, gauge (all modes support stereo with `stereo_mode: true`)
 
 ```json
 {
@@ -651,7 +651,6 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
     "left_channel_color": 255,
     "right_channel_color": 200,
     "stereo_mode": false,
-    "vu_mode": false,
     "bar_border": false,
     "gauge_color": 200,
     "gauge_needle_color": 255,
@@ -685,7 +684,6 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
 | `left_channel_color`     | integer | 0-255                                                                         | 255              | Left channel color (when stereo_mode enabled)          |
 | `right_channel_color`    | integer | 0-255                                                                         | 200              | Right channel color (when stereo_mode enabled)         |
 | `stereo_mode`            | boolean | -                                                                             | false            | Display left and right channels separately             |
-| `vu_mode`                | boolean | -                                                                             | false            | Enable professional VU metering with visible scales    |
 | `bar_border`             | boolean | -                                                                             | false            | Draw border around bars                                |
 | `gauge_color`            | integer | 0-255                                                                         | 200              | Gauge arc and tick marks color                         |
 | `gauge_needle_color`     | integer | 0-255                                                                         | 255              | Gauge needle color                                     |
@@ -709,20 +707,17 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
 
 **bar_horizontal**: Horizontal bar showing current audio peak level with smooth decay.
 - **Stereo mode**: Two horizontal bars stacked (top = left channel, bottom = right channel)
-- **VU mode**: Adds visible scale tick marks at key positions (0%, 70%, 90%, 100% or -60dB, -20dB, -10dB, -3dB, 0dB)
 - **show_peak**: Bright line showing instantaneous actual peak (faster than decayed bar)
 - **show_peak_hold**: Line showing held maximum peak
 
 **bar_vertical**: Vertical bar showing current audio peak level with smooth decay.
 - **Stereo mode**: Two vertical bars side by side (left = left channel, right = right channel)
-- **VU mode**: Adds visible scale tick marks on the right edge
 - **show_peak**: Bright line showing instantaneous actual peak
 - **show_peak_hold**: Line showing held maximum peak
 
 **gauge**: Semicircular gauge with needle pointing to current peak level.
 - **Stereo mode**: Two gauges side by side (left = left channel, right = right channel)
 - **show_clipping**: Changes needle color to red when clipping detected
-- **VU mode**: (Future: adds colored arc segments for green/yellow/red zones)
 
 **Peak Decay Behavior**:
 
