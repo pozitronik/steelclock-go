@@ -374,7 +374,6 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 	}
 
 	w.mu.RLock()
-	actualPeak := w.peak         // Instantaneous peak (for show_peak)
 	displayPeak := w.displayPeak // Decayed peak (for main display)
 	channelPeaks := make([]float64, len(w.channelPeaks))
 	copy(channelPeaks, w.channelPeaks)
@@ -385,7 +384,6 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 
 	// Convert to dB if needed
 	if w.useDBScale {
-		actualPeak = w.linearToDBNormalized(actualPeak)
 		displayPeak = w.linearToDBNormalized(displayPeak)
 		for i := range channelPeaks {
 			channelPeaks[i] = w.linearToDBNormalized(channelPeaks[i])
