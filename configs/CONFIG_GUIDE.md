@@ -659,7 +659,6 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
     "clipping_threshold": 0.99,
     "silence_threshold": 0.01,
     "decay_rate": 2.0,
-    "show_peak": false,
     "show_peak_hold": true,
     "peak_hold_time": 1.0,
     "auto_hide_on_silence": false,
@@ -692,7 +691,6 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
 | `clipping_threshold`     | number  | 0.0-1.0                                                                       | 0.99             | Peak level that triggers clipping (0.0=0%, 1.0=100%)   |
 | `silence_threshold`      | number  | 0.0-1.0                                                                       | 0.01             | Peak level below which is considered silence           |
 | `decay_rate`             | number  | ≥0.1                                                                          | 2.0              | Peak decay rate (units/second, VU meter ballistics)    |
-| `show_peak`              | boolean | -                                                                             | false            | Show instantaneous peak line (current actual peak)     |
 | `show_peak_hold`         | boolean | -                                                                             | true             | Show peak hold line (held maximum peak)                |
 | `peak_hold_time`         | number  | ≥0.1                                                                          | 1.0              | How long to hold peak indicator (seconds)              |
 | `auto_hide_on_silence`   | boolean | -                                                                             | false            | Auto-hide when no audio detected                       |
@@ -707,13 +705,11 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
 
 **bar_horizontal**: Horizontal bar showing current audio peak level with smooth decay.
 - **Stereo mode**: Two horizontal bars stacked (top = left channel, bottom = right channel)
-- **show_peak**: Bright line showing instantaneous actual peak (faster than decayed bar)
-- **show_peak_hold**: Line showing held maximum peak
+- **show_peak_hold**: Line showing held maximum peak per channel
 
 **bar_vertical**: Vertical bar showing current audio peak level with smooth decay.
 - **Stereo mode**: Two vertical bars side by side (left = left channel, right = right channel)
-- **show_peak**: Bright line showing instantaneous actual peak
-- **show_peak_hold**: Line showing held maximum peak
+- **show_peak_hold**: Line showing held maximum peak per channel
 
 **gauge**: Semicircular gauge with needle pointing to current peak level.
 - **Stereo mode**: Two gauges side by side (left = left channel, right = right channel)

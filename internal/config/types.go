@@ -122,7 +122,6 @@ type WidgetProperties struct {
 	ClippingThreshold   float64 `json:"clipping_threshold,omitempty"`
 	SilenceThreshold    float64 `json:"silence_threshold,omitempty"`
 	DecayRate           float64 `json:"decay_rate,omitempty"`
-	ShowPeak            bool    `json:"show_peak,omitempty"`
 	ShowPeakHold        bool    `json:"show_peak_hold,omitempty"`
 	PeakHoldTime        float64 `json:"peak_hold_time,omitempty"`
 	AutoHideOnSilence   bool    `json:"auto_hide_on_silence,omitempty"`

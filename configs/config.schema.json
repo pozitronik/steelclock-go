@@ -827,11 +827,6 @@
                   "minimum": 0.1,
                   "default": 2.0
                 },
-                "show_peak": {
-                  "type": "boolean",
-                  "description": "Show instantaneous peak line (bright line showing current actual peak above the decayed value)",
-                  "default": false
-                },
                 "show_peak_hold": {
                   "type": "boolean",
                   "description": "Show peak hold line (held maximum peak that decays slowly)",

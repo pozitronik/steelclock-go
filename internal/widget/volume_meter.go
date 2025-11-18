@@ -52,7 +52,6 @@ type VolumeMeterWidget struct {
 	clippingThreshold   float64
 	silenceThreshold    float64
 	decayRate           float64 // normalized units per second (0.0-1.0/s)
-	showPeak            bool
 	showPeakHold        bool
 	peakHoldTime        time.Duration
 	autoHideOnSilence   bool
@@ -218,7 +217,6 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		clippingThreshold:   clippingThreshold,
 		silenceThreshold:    silenceThreshold,
 		decayRate:           decayRate,
-		showPeak:            cfg.Properties.ShowPeak,
 		showPeakHold:        cfg.Properties.ShowPeakHold,
 		peakHoldTime:        peakHoldTime,
 		autoHideOnSilence:   cfg.Properties.AutoHideOnSilence,
@@ -229,8 +227,8 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		stopChan:            make(chan struct{}),
 	}
 
-	log.Printf("[METER] Widget initialized: id=%s, mode=%s, dB=%v, clipping=%v, autoHide=%v, showPeak=%v, showPeakHold=%v, stereo=%v, border=%v",
-		cfg.ID, displayMode, w.useDBScale, w.showClipping, base.IsAutoHideEnabled(), w.showPeak, w.showPeakHold, w.stereoMode, w.barBorder)
+	log.Printf("[METER] Widget initialized: id=%s, mode=%s, dB=%v, clipping=%v, autoHide=%v, showPeakHold=%v, stereo=%v, border=%v",
+		cfg.ID, displayMode, w.useDBScale, w.showClipping, base.IsAutoHideEnabled(), w.showPeakHold, w.stereoMode, w.barBorder)
 
 	// Start background polling goroutine
 	w.wg.Add(1)
@@ -335,16 +333,22 @@ func (w *VolumeMeterWidget) updateMeter() {
 		if w.displayPeak > w.peak {
 			w.displayPeak = w.peak
 		}
-	} else {
-		// Falling: apply fall ballistics (decay)
+	} else if w.displayPeak > w.peak {
+		// Falling: apply fall ballistics (decay) - only when displayPeak is above current peak
 		decay := w.decayRate * timeDelta
 		w.displayPeak -= decay
 		if w.displayPeak < w.peak {
-			w.displayPeak = w.peak
+			w.displayPeak = w.peak // Don't fall below current peak
 		}
-		if w.displayPeak < 0 {
-			w.displayPeak = 0
-		}
+	}
+	// If w.peak == w.displayPeak, do nothing (already at current level)
+
+	// Clamp to valid range
+	if w.displayPeak < 0 {
+		w.displayPeak = 0
+	}
+	if w.displayPeak > 1.0 {
+		w.displayPeak = 1.0
 	}
 
 	// Peak hold (per-channel)
@@ -496,9 +500,6 @@ func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, displayPeak, ac
 	pos := w.GetPosition()
 	barWidth := int(float64(pos.W) * displayPeak)
 
-	log.Printf("[METER] renderBarHorizontal: displayPeak=%.3f, actualPeak=%.3f, peakHold=%.3f, barWidth=%d, showPeak=%v",
-		displayPeak, actualPeak, peakHold, barWidth, w.showPeak)
-
 	fillColor := w.fillColor
 	if isClipping && w.showClipping {
 		fillColor = w.clippingColor
@@ -511,18 +512,7 @@ func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, displayPeak, ac
 		}
 	}
 
-	// Draw instantaneous peak line (bright white, always visible when enabled)
-	if w.showPeak && actualPeak > 0 {
-		peakX := int(float64(pos.W) * actualPeak)
-		log.Printf("[METER] Drawing peak line at x=%d (actualPeak=%.3f, pos.W=%d)", peakX, actualPeak, pos.W)
-		if peakX < pos.W {
-			for y := 0; y < pos.H; y++ {
-				img.SetGray(peakX, y, color.Gray{Y: 255})
-			}
-		}
-	}
-
-	// Draw peak hold line (slightly dimmer)
+	// Draw peak hold line
 	if w.showPeakHold && peakHold > 0 {
 		peakX := int(float64(pos.W) * peakHold)
 		if peakX < pos.W {
@@ -556,17 +546,7 @@ func (w *VolumeMeterWidget) renderBarVertical(img *image.Gray, displayPeak, actu
 		}
 	}
 
-	// Draw instantaneous peak line (bright white, always visible when enabled)
-	if w.showPeak && actualPeak > 0 {
-		peakY := pos.H - int(float64(pos.H)*actualPeak)
-		if peakY >= 0 {
-			for x := 0; x < pos.W; x++ {
-				img.SetGray(x, peakY, color.Gray{Y: 255})
-			}
-		}
-	}
-
-	// Draw peak hold line (slightly dimmer)
+	// Draw peak hold line
 	if w.showPeakHold && peakHold > 0 {
 		peakY := pos.H - int(float64(pos.H)*peakHold)
 		if peakY >= 0 {
@@ -630,16 +610,6 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 	for y := halfHeight; y < pos.H; y++ {
 		for x := 0; x < rightWidth; x++ {
 			img.SetGray(x, y, color.Gray{Y: w.rightChannelColor})
-		}
-	}
-
-	// Draw instantaneous peak line (bright white, always visible when enabled)
-	if w.showPeak && actualPeak > 0 {
-		peakX := int(float64(pos.W) * actualPeak)
-		if peakX < pos.W {
-			for y := 0; y < pos.H; y++ {
-				img.SetGray(peakX, y, color.Gray{Y: 255})
-			}
 		}
 	}
 
@@ -714,8 +684,8 @@ func (w *VolumeMeterWidget) renderTextStereo(img *image.Gray, channelPeaks []flo
 func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeaks []float64, actualPeak float64, peakHoldValues []float64, isClipping bool) {
 	pos := w.GetPosition()
 
-	log.Printf("[METER] renderBarVerticalStereo: channelPeaks=[%.3f, %.3f], actualPeak=%.3f, peakHoldValues=%v, showPeak=%v",
-		channelPeaks[0], channelPeaks[1], actualPeak, peakHoldValues, w.showPeak)
+	log.Printf("[METER] renderBarVerticalStereo: channelPeaks=[%.3f, %.3f], actualPeak=%.3f, peakHoldValues=%v",
+		channelPeaks[0], channelPeaks[1], actualPeak, peakHoldValues)
 
 	if len(channelPeaks) < 2 {
 		// Not stereo, fall back to mono display
@@ -747,17 +717,6 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 	for y := pos.H - rightHeight; y < pos.H; y++ {
 		for x := halfWidth; x < pos.W; x++ {
 			img.SetGray(x, y, color.Gray{Y: w.rightChannelColor})
-		}
-	}
-
-	// Draw instantaneous peak line (bright white, always visible when enabled)
-	if w.showPeak && actualPeak > 0 {
-		peakY := pos.H - int(float64(pos.H)*actualPeak)
-		log.Printf("[METER] Drawing peak line at y=%d (actualPeak=%.3f, pos.H=%d)", peakY, actualPeak, pos.H)
-		if peakY >= 0 && peakY < pos.H {
-			for x := 0; x < pos.W; x++ {
-				img.SetGray(x, peakY, color.Gray{Y: 255})
-			}
 		}
 	}
 
