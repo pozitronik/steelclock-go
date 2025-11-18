@@ -120,7 +120,7 @@ func TestGetWadFileWithProgress_ProgressCallback(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	progressValues := []float64{}
+	var progressValues []float64
 	progressCallback := func(progress float64) {
 		progressValues = append(progressValues, progress)
 	}
