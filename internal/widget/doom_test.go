@@ -401,20 +401,18 @@ func TestDoomWidget_DrawProgressBar(t *testing.T) {
 	}
 
 	// Check that right side is not filled (should be empty well after 50%)
-	// Check at 75% position to be sure
+	// Check at 75% position - should be empty for 50% progress
 	rightX := 11 + (128-20)*3/4
-	if rightX < 11+(128-20)-2 {
-		rightFilled := false
-		for x := rightX; x < 11+(128-20)-2; x++ {
-			if img.GrayAt(x, barY+1).Y == 255 {
-				rightFilled = true
-				break
-			}
+	rightFilled := false
+	for x := rightX; x < 11+(128-20)-2; x++ {
+		if img.GrayAt(x, barY+1).Y == 255 {
+			rightFilled = true
+			break
 		}
+	}
 
-		if rightFilled {
-			t.Error("Progress bar should not be filled beyond progress value")
-		}
+	if rightFilled {
+		t.Error("Progress bar should not be filled beyond progress value")
 	}
 }
 
