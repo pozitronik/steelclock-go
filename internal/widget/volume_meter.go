@@ -227,9 +227,6 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		stopChan:            make(chan struct{}),
 	}
 
-	log.Printf("[METER] Widget initialized: id=%s, mode=%s, dB=%v, clipping=%v, autoHide=%v, showPeakHold=%v, stereo=%v, border=%v",
-		cfg.ID, displayMode, w.useDBScale, w.showClipping, base.IsAutoHideEnabled(), w.showPeakHold, w.stereoMode, w.barBorder)
-
 	// Start background polling goroutine
 	w.wg.Add(1)
 	go w.pollMeterBackground()
@@ -244,17 +241,14 @@ func (w *VolumeMeterWidget) pollMeterBackground() {
 	// Panic recovery
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("[METER] PANIC in polling goroutine: %v\nStack: %s", r, debug.Stack())
+			log.Printf("PANIC in polling goroutine: %v\nStack: %s", r, debug.Stack())
 		}
 	}()
-
-	log.Printf("[METER] Background polling goroutine started")
 
 	// Initialize platform-specific meter reader
 	reader, err := newMeterReader()
 	if err != nil {
-		log.Printf("[METER] FATAL: Failed to initialize meter reader: %v", err)
-		log.Printf("[METER] Volume meter widget will not function")
+		log.Printf("FATAL: Failed to initialize meter reader: %v", err)
 		return
 	}
 	w.reader = reader
@@ -266,8 +260,6 @@ func (w *VolumeMeterWidget) pollMeterBackground() {
 		}
 	}()
 
-	log.Printf("[METER] Meter reader initialized successfully")
-
 	pollInterval := 100 * time.Millisecond // 10Hz default
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
@@ -275,7 +267,6 @@ func (w *VolumeMeterWidget) pollMeterBackground() {
 	for {
 		select {
 		case <-w.stopChan:
-			log.Printf("[METER] Polling goroutine stopping")
 			return
 		case <-ticker.C:
 			w.updateMeter()
@@ -305,7 +296,6 @@ func (w *VolumeMeterWidget) updateMeter() {
 	if err != nil {
 		w.failedCalls++
 		w.consecutiveErrors++
-		log.Printf("[METER] Read error (consecutive: %d): %v", w.consecutiveErrors, err)
 		return
 	}
 
@@ -378,11 +368,8 @@ func (w *VolumeMeterWidget) updateMeter() {
 
 // Render renders the volume meter widget
 func (w *VolumeMeterWidget) Render() (image.Image, error) {
-	log.Printf("[METER] Render() called")
-
 	// Check auto-hide
 	if w.ShouldHide() {
-		log.Printf("[METER] Widget is hidden (ShouldHide=true)")
 		return nil, nil
 	}
 
@@ -395,9 +382,6 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 	copy(peakHoldValues, w.peakHoldValues)
 	isClipping := w.isClipping
 	w.mu.RUnlock()
-
-	log.Printf("[METER] Render values: actualPeak=%.3f, displayPeak=%.3f, isClipping=%v, channels=%d",
-		actualPeak, displayPeak, isClipping, len(channelPeaks))
 
 	// Convert to dB if needed
 	if w.useDBScale {
@@ -688,9 +672,6 @@ func (w *VolumeMeterWidget) renderTextStereo(img *image.Gray, channelPeaks []flo
 // renderBarVerticalStereo renders vertical bars in stereo mode (left/right channels)
 func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeaks []float64, actualPeak float64, peakHoldValues []float64, isClipping bool) {
 	pos := w.GetPosition()
-
-	log.Printf("[METER] renderBarVerticalStereo: channelPeaks=[%.3f, %.3f], actualPeak=%.3f, peakHoldValues=%v",
-		channelPeaks[0], channelPeaks[1], actualPeak, peakHoldValues)
 
 	if len(channelPeaks) < 2 {
 		// Not stereo, fall back to mono display
