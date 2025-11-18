@@ -425,7 +425,7 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 		case "bar_vertical":
 			w.renderBarVerticalStereo(img, channelPeaks, actualPeak, peakHoldValues, isClipping)
 		case "gauge":
-			w.renderGaugeStereo(img, channelPeaks, isClipping)
+			w.renderGaugeStereo(img, channelPeaks, peakHoldValues, isClipping)
 		}
 	} else {
 		// Render mono version (use max peak hold from all channels)
@@ -445,7 +445,7 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 		case "bar_vertical":
 			w.renderBarVertical(img, displayPeak, actualPeak, monoPeakHold, isClipping)
 		case "gauge":
-			w.renderGauge(img, displayPeak, isClipping)
+			w.renderGauge(img, displayPeak, monoPeakHold, isClipping)
 		}
 	}
 
@@ -563,7 +563,7 @@ func (w *VolumeMeterWidget) renderBarVertical(img *image.Gray, displayPeak, actu
 }
 
 // renderGauge renders gauge display
-func (w *VolumeMeterWidget) renderGauge(img *image.Gray, peak float64, isClipping bool) {
+func (w *VolumeMeterWidget) renderGauge(img *image.Gray, peak, peakHold float64, isClipping bool) {
 	pos := w.GetPosition()
 
 	needleColor := w.gaugeNeedleColor
@@ -574,6 +574,11 @@ func (w *VolumeMeterWidget) renderGauge(img *image.Gray, peak float64, isClippin
 	// DrawGauge expects percentage as 0-100, not 0.0-1.0
 	percentage := peak * 100.0
 	bitmap.DrawGauge(img, pos, percentage, w.gaugeColor, needleColor)
+
+	// Draw peak hold mark if enabled
+	if w.showPeakHold && peakHold > 0 {
+		w.drawGaugePeakHoldMark(img, pos, peakHold)
+	}
 }
 
 // renderBarHorizontalStereo renders horizontal bars in stereo mode (left/right channels)
@@ -773,16 +778,20 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 }
 
 // renderGaugeStereo renders gauges in stereo mode (left/right channels)
-func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []float64, isClipping bool) {
+func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []float64, peakHoldValues []float64, isClipping bool) {
 	pos := w.GetPosition()
 
 	if len(channelPeaks) < 2 {
 		// Not stereo, fall back to mono display
 		peak := 0.0
+		peakHold := 0.0
 		if len(channelPeaks) > 0 {
 			peak = channelPeaks[0]
 		}
-		w.renderGauge(img, peak, isClipping)
+		if len(peakHoldValues) > 0 {
+			peakHold = peakHoldValues[0]
+		}
+		w.renderGauge(img, peak, peakHold, isClipping)
 		return
 	}
 
@@ -803,6 +812,11 @@ func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []fl
 		leftNeedleColor = w.clippingColor
 	}
 	bitmap.DrawGauge(leftImg, leftGaugePos, leftPercentage, w.gaugeColor, leftNeedleColor)
+
+	// Draw left channel peak hold mark
+	if w.showPeakHold && len(peakHoldValues) >= 1 && peakHoldValues[0] > 0 {
+		w.drawGaugePeakHoldMark(leftImg, leftGaugePos, peakHoldValues[0])
+	}
 
 	// Copy left gauge to main image
 	for y := 0; y < pos.H; y++ {
@@ -826,6 +840,11 @@ func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []fl
 	}
 	bitmap.DrawGauge(rightImg, rightGaugePos, rightPercentage, w.gaugeColor, rightNeedleColor)
 
+	// Draw right channel peak hold mark
+	if w.showPeakHold && len(peakHoldValues) >= 2 && peakHoldValues[1] > 0 {
+		w.drawGaugePeakHoldMark(rightImg, rightGaugePos, peakHoldValues[1])
+	}
+
 	// Copy right gauge to main image (offset by halfWidth + 1)
 	for y := 0; y < pos.H; y++ {
 		for x := 0; x < halfWidth-1; x++ {
@@ -837,6 +856,40 @@ func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []fl
 	for y := 0; y < pos.H; y++ {
 		img.SetGray(halfWidth, y, color.Gray{Y: 64})
 	}
+}
+
+// drawGaugePeakHoldMark draws a small mark on the gauge arc at the peak hold position
+func (w *VolumeMeterWidget) drawGaugePeakHoldMark(img *image.Gray, pos config.PositionConfig, peakHold float64) {
+	centerX := pos.W / 2
+	centerY := pos.H - 3
+
+	// Calculate radius (same as in DrawGauge)
+	radius := pos.H - 6
+	if pos.W/2 < radius {
+		radius = pos.W/2 - 3
+	}
+
+	if radius <= 0 {
+		return
+	}
+
+	// Calculate angle for peak hold position (180° to 0°)
+	angle := 180.0 - (peakHold * 180.0)
+	rad := angle * math.Pi / 180.0
+
+	// Draw a small mark extending outward from the gauge arc
+	markColor := color.Gray{Y: 180} // Same brightness as peak hold lines in bar modes
+	tickLen := 5
+
+	// Outer point (extended beyond arc)
+	x1 := centerX + int(float64(radius+tickLen)*math.Cos(rad))
+	y1 := centerY - int(float64(radius+tickLen)*math.Sin(rad))
+
+	// Inner point (on the arc)
+	x2 := centerX + int(float64(radius)*math.Cos(rad))
+	y2 := centerY - int(float64(radius)*math.Sin(rad))
+
+	bitmap.DrawLine(img, x1, y1, x2, y2, markColor)
 }
 
 // Update is called periodically but just returns immediately
