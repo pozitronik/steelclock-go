@@ -65,8 +65,8 @@ type VolumeMeterWidget struct {
 	channelCount   int
 	isClipping     bool
 	hasAudio       bool
-	peakHoldValue  float64   // Held peak value
-	peakHoldUntil  time.Time // When to release peak hold
+	peakHoldValues []float64   // Held peak values per channel
+	peakHoldUntils []time.Time // When to release peak hold per channel
 	lastUpdateTime time.Time
 
 	face font.Face
@@ -347,13 +347,22 @@ func (w *VolumeMeterWidget) updateMeter() {
 		}
 	}
 
-	// Peak hold
+	// Peak hold (per-channel)
 	if w.showPeakHold {
-		if w.peak > w.peakHoldValue {
-			w.peakHoldValue = w.peak
-			w.peakHoldUntil = now.Add(w.peakHoldTime)
-		} else if now.After(w.peakHoldUntil) {
-			w.peakHoldValue = 0
+		// Ensure arrays are sized correctly
+		if len(w.peakHoldValues) != len(w.channelPeaks) {
+			w.peakHoldValues = make([]float64, len(w.channelPeaks))
+			w.peakHoldUntils = make([]time.Time, len(w.channelPeaks))
+		}
+
+		// Update peak hold for each channel
+		for i, chPeak := range w.channelPeaks {
+			if chPeak > w.peakHoldValues[i] {
+				w.peakHoldValues[i] = chPeak
+				w.peakHoldUntils[i] = now.Add(w.peakHoldTime)
+			} else if now.After(w.peakHoldUntils[i]) {
+				w.peakHoldValues[i] = 0
+			}
 		}
 	}
 
@@ -378,8 +387,9 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 	displayPeak := w.displayPeak // Decayed peak (for main display)
 	channelPeaks := make([]float64, len(w.channelPeaks))
 	copy(channelPeaks, w.channelPeaks)
+	peakHoldValues := make([]float64, len(w.peakHoldValues))
+	copy(peakHoldValues, w.peakHoldValues)
 	isClipping := w.isClipping
-	peakHold := w.peakHoldValue
 	w.mu.RUnlock()
 
 	log.Printf("[METER] Render values: actualPeak=%.3f, displayPeak=%.3f, isClipping=%v, channels=%d",
@@ -389,9 +399,11 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 	if w.useDBScale {
 		actualPeak = w.linearToDBNormalized(actualPeak)
 		displayPeak = w.linearToDBNormalized(displayPeak)
-		peakHold = w.linearToDBNormalized(peakHold)
 		for i := range channelPeaks {
 			channelPeaks[i] = w.linearToDBNormalized(channelPeaks[i])
+		}
+		for i := range peakHoldValues {
+			peakHoldValues[i] = w.linearToDBNormalized(peakHoldValues[i])
 		}
 	}
 
@@ -400,26 +412,34 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 
 	// Check if we should render in stereo mode
 	if w.stereoMode && len(channelPeaks) >= 2 {
-		// Render stereo version of each mode
+		// Render stereo version of each mode (uses per-channel peak holds)
 		switch w.displayMode {
 		case "text":
 			w.renderTextStereo(img, channelPeaks, isClipping)
 		case "bar_horizontal":
-			w.renderBarHorizontalStereo(img, channelPeaks, actualPeak, peakHold, isClipping)
+			w.renderBarHorizontalStereo(img, channelPeaks, actualPeak, peakHoldValues, isClipping)
 		case "bar_vertical":
-			w.renderBarVerticalStereo(img, channelPeaks, actualPeak, peakHold, isClipping)
+			w.renderBarVerticalStereo(img, channelPeaks, actualPeak, peakHoldValues, isClipping)
 		case "gauge":
 			w.renderGaugeStereo(img, channelPeaks, isClipping)
 		}
 	} else {
-		// Render mono version
+		// Render mono version (use max peak hold from all channels)
+		monoPeakHold := 0.0
+		if len(peakHoldValues) > 0 {
+			for _, ph := range peakHoldValues {
+				if ph > monoPeakHold {
+					monoPeakHold = ph
+				}
+			}
+		}
 		switch w.displayMode {
 		case "text":
 			w.renderText(img, displayPeak, isClipping)
 		case "bar_horizontal":
-			w.renderBarHorizontal(img, displayPeak, actualPeak, peakHold, isClipping)
+			w.renderBarHorizontal(img, displayPeak, actualPeak, monoPeakHold, isClipping)
 		case "bar_vertical":
-			w.renderBarVertical(img, displayPeak, actualPeak, peakHold, isClipping)
+			w.renderBarVertical(img, displayPeak, actualPeak, monoPeakHold, isClipping)
 		case "gauge":
 			w.renderGauge(img, displayPeak, isClipping)
 		}
@@ -577,14 +597,18 @@ func (w *VolumeMeterWidget) renderGauge(img *image.Gray, peak float64, isClippin
 }
 
 // renderBarHorizontalStereo renders horizontal bars in stereo mode (left/right channels)
-func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPeaks []float64, actualPeak, peakHold float64, isClipping bool) {
+func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPeaks []float64, actualPeak float64, peakHoldValues []float64, isClipping bool) {
 	pos := w.GetPosition()
 
 	if len(channelPeaks) < 2 {
 		// Not stereo, fall back to mono display
 		peak := 0.0
+		peakHold := 0.0
 		if len(channelPeaks) > 0 {
 			peak = channelPeaks[0]
+		}
+		if len(peakHoldValues) > 0 {
+			peakHold = peakHoldValues[0]
 		}
 		w.renderBarHorizontal(img, peak, actualPeak, peakHold, isClipping)
 		return
@@ -619,12 +643,25 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 		}
 	}
 
-	// Draw peak hold line (slightly dimmer)
-	if w.showPeakHold && peakHold > 0 {
-		peakX := int(float64(pos.W) * peakHold)
-		if peakX < pos.W {
-			for y := 0; y < pos.H; y++ {
-				img.SetGray(peakX, y, color.Gray{Y: 180})
+	// Draw peak hold lines per channel (slightly dimmer)
+	if w.showPeakHold && len(peakHoldValues) >= 2 {
+		// Left channel peak hold (top half)
+		if peakHoldValues[0] > 0 {
+			leftPeakX := int(float64(pos.W) * peakHoldValues[0])
+			if leftPeakX < pos.W {
+				for y := 0; y < halfHeight; y++ {
+					img.SetGray(leftPeakX, y, color.Gray{Y: 180})
+				}
+			}
+		}
+
+		// Right channel peak hold (bottom half)
+		if peakHoldValues[1] > 0 {
+			rightPeakX := int(float64(pos.W) * peakHoldValues[1])
+			if rightPeakX < pos.W {
+				for y := halfHeight; y < pos.H; y++ {
+					img.SetGray(rightPeakX, y, color.Gray{Y: 180})
+				}
 			}
 		}
 	}
@@ -674,17 +711,21 @@ func (w *VolumeMeterWidget) renderTextStereo(img *image.Gray, channelPeaks []flo
 }
 
 // renderBarVerticalStereo renders vertical bars in stereo mode (left/right channels)
-func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeaks []float64, actualPeak, peakHold float64, isClipping bool) {
+func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeaks []float64, actualPeak float64, peakHoldValues []float64, isClipping bool) {
 	pos := w.GetPosition()
 
-	log.Printf("[METER] renderBarVerticalStereo: channelPeaks=[%.3f, %.3f], actualPeak=%.3f, peakHold=%.3f, showPeak=%v",
-		channelPeaks[0], channelPeaks[1], actualPeak, peakHold, w.showPeak)
+	log.Printf("[METER] renderBarVerticalStereo: channelPeaks=[%.3f, %.3f], actualPeak=%.3f, peakHoldValues=%v, showPeak=%v",
+		channelPeaks[0], channelPeaks[1], actualPeak, peakHoldValues, w.showPeak)
 
 	if len(channelPeaks) < 2 {
 		// Not stereo, fall back to mono display
 		peak := 0.0
+		peakHold := 0.0
 		if len(channelPeaks) > 0 {
 			peak = channelPeaks[0]
+		}
+		if len(peakHoldValues) > 0 {
+			peakHold = peakHoldValues[0]
 		}
 		w.renderBarVertical(img, peak, actualPeak, peakHold, isClipping)
 		return
@@ -720,12 +761,25 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 		}
 	}
 
-	// Draw peak hold line (slightly dimmer)
-	if w.showPeakHold && peakHold > 0 {
-		peakY := pos.H - int(float64(pos.H)*peakHold)
-		if peakY >= 0 && peakY < pos.H {
-			for x := 0; x < pos.W; x++ {
-				img.SetGray(x, peakY, color.Gray{Y: 180})
+	// Draw peak hold lines per channel (slightly dimmer)
+	if w.showPeakHold && len(peakHoldValues) >= 2 {
+		// Left channel peak hold (left half)
+		if peakHoldValues[0] > 0 {
+			leftPeakY := pos.H - int(float64(pos.H)*peakHoldValues[0])
+			if leftPeakY >= 0 && leftPeakY < pos.H {
+				for x := 0; x < halfWidth; x++ {
+					img.SetGray(x, leftPeakY, color.Gray{Y: 180})
+				}
+			}
+		}
+
+		// Right channel peak hold (right half)
+		if peakHoldValues[1] > 0 {
+			rightPeakY := pos.H - int(float64(pos.H)*peakHoldValues[1])
+			if rightPeakY >= 0 && rightPeakY < pos.H {
+				for x := halfWidth; x < pos.W; x++ {
+					img.SetGray(x, rightPeakY, color.Gray{Y: 180})
+				}
 			}
 		}
 	}
