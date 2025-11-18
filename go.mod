@@ -3,6 +3,7 @@ module github.com/pozitronik/steelclock-go
 go 1.25.4
 
 require (
+	github.com/AndreRenaud/gore v0.0.0-20251117080046-77cd91201682
 	github.com/getlantern/systray v1.2.2
 	github.com/go-ole/go-ole v1.3.0
 	github.com/moutend/go-wca v0.3.0
@@ -11,7 +12,6 @@ require (
 )
 
 require (
-	github.com/AndreRenaud/gore v0.0.0-20251117080046-77cd91201682 // indirect
 	github.com/ebitengine/purego v0.9.1 // indirect
 	github.com/getlantern/context v0.0.0-20190109183933-c447772a6520 // indirect
 	github.com/getlantern/errors v0.0.0-20190325191628-abdb3e3e36f7 // indirect
