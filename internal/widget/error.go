@@ -31,10 +31,9 @@ func NewErrorWidget(displayWidth, displayHeight int, message string) *ErrorWidge
 			H: displayHeight,
 		},
 		Style: config.StyleConfig{
-			BackgroundColor:   0,
-			BackgroundOpacity: 255,
-			Border:            false,
-			BorderColor:       255,
+			BackgroundColor: 0,
+			Border:          false,
+			BorderColor:     255,
 		},
 	}
 

@@ -214,10 +214,9 @@ func createDefaultConfig(widgetType string) config.WidgetConfig {
 			H: 40,
 		},
 		Style: config.StyleConfig{
-			BackgroundColor:   0,
-			BackgroundOpacity: 255,
-			Border:            false,
-			BorderColor:       255,
+			BackgroundColor: 0,
+			Border:          false,
+			BorderColor:     255,
 		},
 		Properties: config.WidgetProperties{
 			FontSize:          10,

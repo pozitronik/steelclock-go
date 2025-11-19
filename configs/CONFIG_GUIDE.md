@@ -220,18 +220,16 @@ All widgets share these common configuration sections:
 ```json
 "style": {
   "background_color": 0,
-  "background_opacity": 255,
   "border": false,
   "border_color": 255
 }
 ```
 
-| Property             | Type    | Range    | Default | Description                                         |
-|----------------------|---------|----------|---------|-----------------------------------------------------|
-| `background_color`   | integer | -1 to 255 | 0       | Background color (-1=transparent, 0=black, 255=white) |
-| `background_opacity` | integer | 0-255    | 255     | **Deprecated**: Has no effect on monochrome displays |
-| `border`             | boolean | -        | false   | Draw widget border                                  |
-| `border_color`       | integer | 0-255    | 255     | Border color                                        |
+| Property           | Type    | Range     | Default | Description                                           |
+|--------------------|---------|-----------|---------|-------------------------------------------------------|
+| `background_color` | integer | -1 to 255 | 0       | Background color (-1=transparent, 0=black, 255=white) |
+| `border`           | boolean | -         | false   | Draw widget border                                    |
+| `border_color`     | integer | 0-255     | 255     | Border color                                          |
 
 **Transparent Backgrounds**:
 
@@ -998,14 +996,14 @@ When `auto_hide_on_silence` is enabled:
       "type": "network",
       "id": "background",
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z_order": 0},
-      "style": {"background_color": 0, "background_opacity": 255},
+      "style": {"background_color": 0},
       "properties": {"display_mode": "graph"}
     },
     {
       "type": "clock",
       "id": "overlay",
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z_order": 10},
-      "style": {"background_color": 0, "background_opacity": 128},
+      "style": {"background_color": -1},
       "properties": {"format": "%H:%M", "font_size": 16}
     }
   ]
@@ -1153,10 +1151,10 @@ When `auto_hide_on_silence` is enabled:
    - Background widgets: z_order = 0
    - Overlay widgets: z_order = 10+
 
-3. **Transparency**: Use `background_opacity` for overlays
-   - Full opacity (255): Normal widgets
-   - Partial (128): Overlay text over graphs
-   - Transparent (0): Invisible background
+3. **Transparency**: Use `background_color: -1` for transparent overlays
+   - Opaque background (0-255): Normal widgets
+   - Transparent (-1): Overlay text/graphics over other widgets
+   - Background pixels (black/0) are skipped during compositing
 
 ### Performance
 

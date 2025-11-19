@@ -70,9 +70,8 @@ func CreateDefault() *Config {
 					UpdateInterval:  1.0,
 				},
 				Style: StyleConfig{
-					BackgroundColor:   0,
-					BackgroundOpacity: 255,
-					Border:            false,
+					BackgroundColor: 0,
+					Border:          false,
 				},
 			},
 		},
@@ -239,10 +238,6 @@ func applyCommonWidgetDefaults(w *WidgetConfig) {
 
 	if w.Properties.VerticalAlign == "" {
 		w.Properties.VerticalAlign = "center"
-	}
-
-	if w.Style.BackgroundOpacity == 0 {
-		w.Style.BackgroundOpacity = 255
 	}
 }
 

@@ -169,13 +169,6 @@
           "maximum": 255,
           "default": 0
         },
-        "background_opacity": {
-          "type": "integer",
-          "description": "Deprecated: Has no effect on monochrome displays. Use background_color=-1 for transparency.",
-          "minimum": 0,
-          "maximum": 255,
-          "default": 255
-        },
         "border": {
           "type": "boolean",
           "description": "Draw widget border",

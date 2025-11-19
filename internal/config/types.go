@@ -56,10 +56,9 @@ type PositionConfig struct {
 
 // StyleConfig represents widget styling
 type StyleConfig struct {
-	BackgroundColor   int  `json:"background_color"`
-	BackgroundOpacity int  `json:"background_opacity"`
-	Border            bool `json:"border"`
-	BorderColor       int  `json:"border_color"`
+	BackgroundColor int  `json:"background_color"`
+	Border          bool `json:"border"`
+	BorderColor     int  `json:"border_color"`
 }
 
 // WidgetProperties contains all possible widget properties

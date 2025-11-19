@@ -21,7 +21,6 @@
       },
       "style": {
         "background_color": 0,
-        "background_opacity": 255,
         "border": false,
         "border_color": 128
       },
