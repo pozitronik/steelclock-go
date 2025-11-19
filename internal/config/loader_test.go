@@ -341,7 +341,8 @@ func TestValidateConfig_NoWidgets(t *testing.T) {
 	}
 }
 
-// TestValidateConfig_NoEnabledWidgets tests validation when all widgets are disabled
+// TestValidateConfig_NoEnabledWidgets tests that configs with all widgets disabled are valid
+// (they will show "NO WIDGETS" error display at runtime)
 func TestValidateConfig_NoEnabledWidgets(t *testing.T) {
 	cfg := &Config{
 		GameName:        "TEST",
@@ -362,8 +363,8 @@ func TestValidateConfig_NoEnabledWidgets(t *testing.T) {
 	}
 
 	err := validateConfig(cfg)
-	if err == nil {
-		t.Error("validateConfig() should return error when all widgets are disabled")
+	if err != nil {
+		t.Errorf("validateConfig() should allow config with all widgets disabled (will show error at runtime), got error: %v", err)
 	}
 }
 

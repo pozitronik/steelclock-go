@@ -134,7 +134,6 @@ func validateConfig(cfg *Config) error {
 		return fmt.Errorf("at least one widget must be configured")
 	}
 
-	enabledCount := 0
 	validTypes := map[string]bool{
 		"clock": true, "cpu": true, "memory": true,
 		"network": true, "disk": true, "keyboard": true, "volume": true, "volume_meter": true, "doom": true,
@@ -154,9 +153,8 @@ func validateConfig(cfg *Config) error {
 			return fmt.Errorf("widget[%d] (%s): invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, volume, volume_meter, doom)", i, w.ID, w.Type)
 		}
 
+		// Only validate properties for enabled widgets
 		if w.IsEnabled() {
-			enabledCount++
-
 			// Type-specific validation (only required properties)
 			if err := validateWidgetProperties(i, &w); err != nil {
 				return err
@@ -164,9 +162,9 @@ func validateConfig(cfg *Config) error {
 		}
 	}
 
-	if enabledCount == 0 {
-		return fmt.Errorf("at least one widget must be enabled")
-	}
+	// Note: We don't validate that at least one widget is enabled here.
+	// A config with all widgets disabled is valid - it will be handled at runtime
+	// by showing the "NO WIDGETS" error display on the OLED screen.
 
 	return nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -27,6 +28,26 @@ var (
 	mu             sync.Mutex
 	lastGoodConfig *config.Config // Backup of last working config
 )
+
+// BackendUnavailableError indicates SteelSeries GG backend is not available
+type BackendUnavailableError struct {
+	Err error
+}
+
+func (e *BackendUnavailableError) Error() string {
+	return fmt.Sprintf("SteelSeries backend unavailable: %v", e.Err)
+}
+
+func (e *BackendUnavailableError) Unwrap() error {
+	return e.Err
+}
+
+// NoWidgetsError indicates that no widgets are enabled in the configuration
+type NoWidgetsError struct{}
+
+func (e *NoWidgetsError) Error() string {
+	return "no widgets enabled in configuration"
+}
 
 func main() {
 	// Parse command line flags
@@ -113,10 +134,39 @@ func startApp() error {
 	// Load configuration
 	cfg, err := config.Load(configPath)
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		log.Printf("ERROR: Failed to load config: %v", err)
+		log.Println("Displaying error on OLED screen...")
+		// Show error on display instead of exiting
+		return startWithErrorDisplay("CONFIG", 128, 40)
 	}
 
-	return startAppWithConfig(cfg)
+	err = startAppWithConfig(cfg)
+
+	// Handle specific error types
+	if err != nil {
+		// Check for backend unavailable error
+		var backendErr *BackendUnavailableError
+		if errors.As(err, &backendErr) {
+			// Backend unavailable - can't show error on OLED, just log and exit
+			log.Println("========================================")
+			log.Println("CRITICAL: SteelSeries GG is not running")
+			log.Println("Please start SteelSeries GG and try again")
+			log.Println("========================================")
+			return fmt.Errorf("SteelSeries GG backend not available")
+		}
+
+		// Check for no widgets error
+		var noWidgetsErr *NoWidgetsError
+		if errors.As(err, &noWidgetsErr) {
+			log.Println("Displaying error on OLED screen...")
+			return startWithErrorDisplay("NO WIDGETS", cfg.Display.Width, cfg.Display.Height)
+		}
+
+		// Other error - return as-is
+		return err
+	}
+
+	return nil
 }
 
 // startAppWithConfig initializes and starts all components with a provided config
@@ -144,19 +194,26 @@ func startAppWithConfig(cfg *config.Config) error {
 		// First time startup - create new client and register
 		client, err = gamesense.NewClient(cfg.GameName, cfg.GameDisplayName)
 		if err != nil {
-			return fmt.Errorf("failed to create GameSense client: %w", err)
+			log.Printf("ERROR: Failed to create GameSense client: %v", err)
+			log.Println("SteelSeries GG may not be running or GameSense API is unavailable")
+			// Return special error for backend unavailable
+			return &BackendUnavailableError{Err: err}
 		}
 
 		log.Println("GameSense client created")
 
 		// Register game
 		if err := client.RegisterGame("Custom"); err != nil {
-			return fmt.Errorf("failed to register game: %w", err)
+			log.Printf("ERROR: Failed to register game: %v", err)
+			client = nil // Clear client on registration failure
+			return &BackendUnavailableError{Err: err}
 		}
 
 		// Bind screen event
 		if err := client.BindScreenEvent("STEELCLOCK_DISPLAY", "screened-128x40"); err != nil {
-			return fmt.Errorf("failed to bind screen event: %w", err)
+			log.Printf("ERROR: Failed to bind screen event: %v", err)
+			client = nil // Clear client on bind failure
+			return &BackendUnavailableError{Err: err}
 		}
 	} else {
 		// Reload - client already exists and game is registered
@@ -167,6 +224,12 @@ func startAppWithConfig(cfg *config.Config) error {
 	widgets, err := widget.CreateWidgets(cfg.Widgets)
 	if err != nil {
 		return fmt.Errorf("failed to create widgets: %w", err)
+	}
+
+	// Check if we have any widgets
+	if len(widgets) == 0 {
+		log.Println("WARNING: No widgets enabled in configuration")
+		return &NoWidgetsError{}
 	}
 
 	log.Printf("Created %d widgets", len(widgets))
@@ -264,7 +327,25 @@ func reloadConfig() error {
 	newCfg, err := config.Load(configPath)
 	if err != nil {
 		log.Printf("ERROR: Config validation failed: %v", err)
-		log.Println("Keeping current configuration running")
+		log.Println("Stopping current instance and showing error...")
+
+		// Stop current app
+		stopApp()
+
+		// Show error display
+		displayWidth := 128
+		displayHeight := 40
+		if lastGoodConfig != nil {
+			displayWidth = lastGoodConfig.Display.Width
+			displayHeight = lastGoodConfig.Display.Height
+		}
+
+		time.Sleep(1 * time.Second) // Wait for cleanup
+
+		if dispErr := startWithErrorDisplay("CONFIG", displayWidth, displayHeight); dispErr != nil {
+			log.Printf("ERROR: Failed to show error display: %v", dispErr)
+		}
+
 		return fmt.Errorf("config validation failed: %w", err)
 	}
 
@@ -285,31 +366,105 @@ func reloadConfig() error {
 	if err := startAppWithConfig(newCfg); err != nil {
 		log.Printf("ERROR: Failed to start with new config: %v", err)
 
-		// Try to recover with last good config
-		if lastGoodConfig != nil {
-			log.Println("Attempting recovery with last good config...")
-			log.Println("Waiting before recovery attempt...")
-			time.Sleep(2 * time.Second)
-
-			// Try to restart with old config (without loading from file)
-			if recoverErr := startAppWithConfig(lastGoodConfig); recoverErr != nil {
-				log.Printf("CRITICAL: Recovery failed: %v", recoverErr)
-				log.Println("Application is stopped. Please check config and restart manually.")
-				return fmt.Errorf("reload failed and recovery failed: %w", recoverErr)
-			}
-
-			log.Println("Successfully recovered with previous config")
-			log.Println("Please fix config.json and try reload again")
-			return fmt.Errorf("new config failed, reverted to previous: %w", err)
+		// Check for backend unavailable error
+		var backendErr *BackendUnavailableError
+		if errors.As(err, &backendErr) {
+			// Backend unavailable - can't show error on OLED, just log and return
+			log.Println("========================================")
+			log.Println("CRITICAL: SteelSeries GG is not running")
+			log.Println("Please start SteelSeries GG and reload config")
+			log.Println("========================================")
+			return fmt.Errorf("SteelSeries GG backend not available")
 		}
 
-		log.Println("CRITICAL: No backup config available for recovery")
-		log.Println("Application is stopped. Please check config and restart manually.")
-		return fmt.Errorf("reload failed and no backup available: %w", err)
+		// Determine error message based on error type
+		log.Println("Showing error display...")
+		time.Sleep(1 * time.Second)
+
+		errorMsg := "CONFIG"
+		var noWidgetsErr *NoWidgetsError
+		if errors.As(err, &noWidgetsErr) {
+			errorMsg = "NO WIDGETS"
+		}
+
+		if dispErr := startWithErrorDisplay(errorMsg, newCfg.Display.Width, newCfg.Display.Height); dispErr != nil {
+			log.Printf("ERROR: Failed to show error display: %v", dispErr)
+			log.Println("Application is stopped. Please check config and restart manually.")
+			return fmt.Errorf("reload failed and error display failed: %w", dispErr)
+		}
+
+		return fmt.Errorf("new config failed: %w", err)
 	}
 
 	log.Println("Configuration reloaded successfully!")
 	log.Printf("Running with: %s (%s)", newCfg.GameName, newCfg.GameDisplayName)
 	log.Println("========================================")
+	return nil
+}
+
+// startWithErrorDisplay creates and runs an error display widget
+func startWithErrorDisplay(message string, width, height int) error {
+	mu.Lock()
+	defer mu.Unlock()
+
+	log.Printf("Starting error display: %s", message)
+
+	// Create or reuse GameSense client with default settings
+	var err error
+	if client == nil {
+		client, err = gamesense.NewClient("STEELCLOCK_ERROR", "SteelClock Error")
+		if err != nil {
+			log.Printf("ERROR: Failed to create GameSense client for error display: %v", err)
+			return fmt.Errorf("failed to create GameSense client: %w", err)
+		}
+
+		// Register game
+		if err := client.RegisterGame("Custom"); err != nil {
+			log.Printf("ERROR: Failed to register game for error display: %v", err)
+			return fmt.Errorf("failed to register game: %w", err)
+		}
+
+		// Bind screen event
+		if err := client.BindScreenEvent("STEELCLOCK_DISPLAY", "screened-128x40"); err != nil {
+			log.Printf("ERROR: Failed to bind screen event for error display: %v", err)
+			return fmt.Errorf("failed to bind screen event: %w", err)
+		}
+	}
+
+	// Create error widget
+	errorWidget := widget.NewErrorWidget(width, height, message)
+	widgets := []widget.Widget{errorWidget}
+
+	// Create simple display config
+	displayCfg := config.DisplayConfig{
+		Width:           width,
+		Height:          height,
+		BackgroundColor: 0,
+	}
+
+	// Create default config for compositor
+	errorCfg := &config.Config{
+		GameName:        "STEELCLOCK_ERROR",
+		GameDisplayName: "SteelClock Error",
+		RefreshRateMs:   500, // Flash at 500ms intervals
+		Display:         displayCfg,
+		Widgets:         []config.WidgetConfig{},
+	}
+
+	// Create layout manager
+	layoutMgr := layout.NewManager(displayCfg, widgets)
+
+	// Create compositor
+	comp = compositor.NewCompositor(client, layoutMgr, widgets, errorCfg)
+
+	// Start compositor
+	if err := comp.Start(); err != nil {
+		log.Printf("ERROR: Failed to start compositor for error display: %v", err)
+		return fmt.Errorf("failed to start compositor: %w", err)
+	}
+
+	log.Println("Error display started - screen will flash error message")
+	log.Println("Fix the configuration file and reload to continue")
+
 	return nil
 }
