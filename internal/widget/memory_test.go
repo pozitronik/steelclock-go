@@ -22,7 +22,7 @@ func TestNewMemoryWidget(t *testing.T) {
 			cfg := config.WidgetConfig{
 				Type:    "memory",
 				ID:      "test_memory",
-				Enabled: true,
+				Enabled: config.BoolPtr(true),
 				Position: config.PositionConfig{
 					X: 0,
 					Y: 0,
@@ -60,7 +60,7 @@ func TestMemoryWidgetUpdate(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "memory",
 		ID:      "test_memory",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -106,7 +106,7 @@ func TestMemoryWidgetRenderAllModes(t *testing.T) {
 			cfg := config.WidgetConfig{
 				Type:    "memory",
 				ID:      "test_memory",
-				Enabled: true,
+				Enabled: config.BoolPtr(true),
 				Position: config.PositionConfig{
 					X: 0,
 					Y: 0,
@@ -167,7 +167,7 @@ func TestMemoryWidget_GaugeDefaults(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "memory",
 		ID:      "test_memory_gauge_defaults",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,

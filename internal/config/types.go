@@ -31,10 +31,18 @@ type LayoutConfig struct {
 type WidgetConfig struct {
 	Type       string           `json:"type"`
 	ID         string           `json:"id"`
-	Enabled    bool             `json:"enabled"`
+	Enabled    *bool            `json:"enabled,omitempty"`
 	Position   PositionConfig   `json:"position"`
 	Style      StyleConfig      `json:"style"`
 	Properties WidgetProperties `json:"properties"`
+}
+
+// IsEnabled returns true if the widget is enabled (defaults to true if not specified)
+func (w *WidgetConfig) IsEnabled() bool {
+	if w.Enabled == nil {
+		return true // Default to enabled
+	}
+	return *w.Enabled
 }
 
 // PositionConfig represents widget position and size

@@ -12,7 +12,7 @@ func TestNewDiskWidget(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -46,7 +46,7 @@ func TestNewDiskWidget_AllDisks(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_all",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -71,7 +71,7 @@ func TestNewDiskWidget_Defaults(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_defaults",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -106,7 +106,7 @@ func TestDiskWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_update",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -147,7 +147,7 @@ func TestDiskWidget_RenderText(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_text",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -184,7 +184,7 @@ func TestDiskWidget_RenderBarHorizontal(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_bar_h",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -218,7 +218,7 @@ func TestDiskWidget_RenderBarVertical(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_bar_v",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -251,7 +251,7 @@ func TestDiskWidget_RenderGraph(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_graph",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -288,7 +288,7 @@ func TestDiskWidget_RenderGraph_InsufficientHistory(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_graph_nodata",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -322,7 +322,7 @@ func TestDiskWidget_AutoScale(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_autoscale",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -356,7 +356,7 @@ func TestDiskWidget_SpecificDisk(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_specific",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -383,7 +383,7 @@ func TestDiskWidget_ConcurrentAccess(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_concurrent",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},

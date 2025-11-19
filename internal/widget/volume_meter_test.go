@@ -40,7 +40,7 @@ func TestNewVolumeMeterWidget(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -69,7 +69,7 @@ func TestVolumeMeterWidget_InvalidDisplayMode(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -105,7 +105,7 @@ func TestVolumeMeterWidget_AllDisplayModes(t *testing.T) {
 			cfg := config.WidgetConfig{
 				Type:    "volume_meter",
 				ID:      "test_meter_" + mode,
-				Enabled: true,
+				Enabled: config.BoolPtr(true),
 				Position: config.PositionConfig{
 					X: 0, Y: 0, W: 128, H: 40,
 				},
@@ -148,7 +148,7 @@ func TestVolumeMeterWidget_DBScale(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_db",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -197,7 +197,7 @@ func TestVolumeMeterWidget_ClippingDetection(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_clip",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -230,7 +230,7 @@ func TestVolumeMeterWidget_DecayBehavior(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_decay",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -270,7 +270,7 @@ func TestVolumeMeterWidget_PeakHold(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_peak_hold",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -317,7 +317,7 @@ func TestVolumeMeterWidget_AutoHideConfig(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_autohide",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -352,7 +352,7 @@ func TestVolumeMeterWidget_Stop(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_stop",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -401,7 +401,7 @@ func TestVolumeMeterWidget_Render(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_render",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -442,7 +442,7 @@ func TestVolumeMeterWidget_HealthMetrics(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_health",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -503,7 +503,7 @@ func TestVolumeMeterWidget_StereoMode(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_stereo",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -551,7 +551,7 @@ func TestVolumeMeterWidget_StereoWithPeakHold(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_stereo_peak",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -610,7 +610,7 @@ func TestVolumeMeterWidget_BorderColor(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_border",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -645,7 +645,7 @@ func TestVolumeMeterWidget_GaugeWithPeakHold(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_gauge_peak",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 80, H: 60,
 		},
@@ -690,7 +690,7 @@ func TestVolumeMeterWidget_StereoGauge(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_stereo_gauge",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 160, H: 60,
 		},
@@ -741,7 +741,7 @@ func TestVolumeMeterWidget_Ballistics(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_ballistics",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},

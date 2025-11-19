@@ -9,7 +9,7 @@ import (
 
 // CreateWidget creates a widget from configuration
 func CreateWidget(cfg config.WidgetConfig) (Widget, error) {
-	if !cfg.Enabled {
+	if !cfg.IsEnabled() {
 		return nil, fmt.Errorf("widget %s is disabled", cfg.ID)
 	}
 
@@ -47,7 +47,7 @@ func CreateWidgets(cfgs []config.WidgetConfig) ([]Widget, error) {
 	enabledCount := 0
 
 	for _, cfg := range cfgs {
-		if !cfg.Enabled {
+		if !cfg.IsEnabled() {
 			continue
 		}
 

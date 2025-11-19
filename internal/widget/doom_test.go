@@ -27,7 +27,7 @@ func TestNewDoomWidget(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "doom",
 		ID:      "test_doom",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -78,7 +78,7 @@ func TestDoomWidgetRender_EmptyFrame(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "doom",
 		ID:      "test_doom",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -133,7 +133,7 @@ func TestDoomWidgetRender_DownloadProgress(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "doom",
 		ID:      "test_doom",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -208,7 +208,7 @@ func TestDoomWidgetRender_DownloadError(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "doom",
 		ID:      "test_doom",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -274,7 +274,7 @@ func TestDoomWidget_DrawText(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "doom",
 		ID:      "test_doom",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -318,7 +318,7 @@ func TestDoomWidget_DrawChar(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "doom",
 		ID:      "test_doom",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -384,7 +384,7 @@ func TestDoomWidget_DrawProgressBar(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "doom",
 		ID:      "test_doom",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -452,7 +452,7 @@ func TestDoomWidget_DrawFrame(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "doom",
 		ID:      "test_doom",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -533,7 +533,7 @@ func TestDoomWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "doom",
 		ID:      "test_doom",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,

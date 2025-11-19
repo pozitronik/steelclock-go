@@ -7,6 +7,11 @@ import (
 	"path/filepath"
 )
 
+// BoolPtr returns a pointer to a bool value
+func BoolPtr(b bool) *bool {
+	return &b
+}
+
 // Load reads and parses a configuration file
 // If the file doesn't exist, returns a default configuration
 func Load(path string) (*Config, error) {
@@ -50,7 +55,7 @@ func CreateDefault() *Config {
 			{
 				ID:      "clock",
 				Type:    "clock",
-				Enabled: true,
+				Enabled: BoolPtr(true),
 				Position: PositionConfig{
 					X: 0,
 					Y: 0,
@@ -149,7 +154,7 @@ func validateConfig(cfg *Config) error {
 			return fmt.Errorf("widget[%d] (%s): invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, volume, volume_meter, doom)", i, w.ID, w.Type)
 		}
 
-		if w.Enabled {
+		if w.IsEnabled() {
 			enabledCount++
 
 			// Type-specific validation (only required properties)
@@ -214,10 +219,7 @@ func applyDisplayDefaults(cfg *Config) {
 
 // applyWidgetDefaults sets default values for a widget
 func applyWidgetDefaults(w *WidgetConfig) {
-	// Default enabled to true if not specified
-	if !w.Enabled && w.Type != "" {
-		w.Enabled = true
-	}
+	// Enabled defaults to true via IsEnabled() method - no need to set it here
 
 	applyCommonWidgetDefaults(w)
 	applyTypeSpecificDefaults(w)

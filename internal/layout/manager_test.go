@@ -16,7 +16,7 @@ func TestNewManager(t *testing.T) {
 	clockCfg := config.WidgetConfig{
 		Type:    "clock",
 		ID:      "clock1",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -59,7 +59,7 @@ func TestManagerComposite(t *testing.T) {
 	clockCfg := config.WidgetConfig{
 		Type:    "clock",
 		ID:      "clock1",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -119,7 +119,7 @@ func TestManagerCompositeMultipleWidgets(t *testing.T) {
 	clock1Cfg := config.WidgetConfig{
 		Type:    "clock",
 		ID:      "clock1",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -142,7 +142,7 @@ func TestManagerCompositeMultipleWidgets(t *testing.T) {
 	clock2Cfg := config.WidgetConfig{
 		Type:    "clock",
 		ID:      "clock2",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 64,
 			Y: 0,

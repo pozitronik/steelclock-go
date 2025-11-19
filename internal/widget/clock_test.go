@@ -11,7 +11,7 @@ func TestNewClockWidget(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "clock",
 		ID:      "test_clock",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -49,7 +49,7 @@ func TestClockWidgetUpdate(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "clock",
 		ID:      "test_clock",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -89,7 +89,7 @@ func TestClockWidgetRender(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "clock",
 		ID:      "test_clock",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -143,7 +143,7 @@ func TestClockWidgetRender_ClockFace(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "clock",
 		ID:      "test_clock_face",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -221,7 +221,7 @@ func TestClockWidget_DefaultDisplayMode(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "clock",
 		ID:      "test_default_mode",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -336,7 +336,7 @@ func TestClockWidgetRender_ClockFaceAlignment(t *testing.T) {
 			cfg := config.WidgetConfig{
 				Type:    "clock",
 				ID:      "test_clock_alignment",
-				Enabled: true,
+				Enabled: config.BoolPtr(true),
 				Position: config.PositionConfig{
 					X: 0,
 					Y: 0,

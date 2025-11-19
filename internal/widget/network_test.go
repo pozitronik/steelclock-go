@@ -12,7 +12,7 @@ func TestNewNetworkWidget(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -46,7 +46,7 @@ func TestNewNetworkWidget_Defaults(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_defaults",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -83,7 +83,7 @@ func TestNetworkWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_update",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -124,7 +124,7 @@ func TestNetworkWidget_RenderText(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_text",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -157,7 +157,7 @@ func TestNetworkWidget_RenderBarHorizontal(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_bar_h",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -191,7 +191,7 @@ func TestNetworkWidget_RenderBarVertical(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_bar_v",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -224,7 +224,7 @@ func TestNetworkWidget_RenderGraph(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_graph",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -261,7 +261,7 @@ func TestNetworkWidget_AutoScale(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_autoscale",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -296,7 +296,7 @@ func TestNetworkWidget_SpecificInterface(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_specific",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -323,7 +323,7 @@ func TestNetworkWidget_RenderGauge(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_gauge",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -359,7 +359,7 @@ func TestNetworkWidget_GaugeDefaults(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_gauge_defaults",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 64, H: 40,
 		},
@@ -401,7 +401,7 @@ func TestNetworkWidget_GaugeAutoScale(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_gauge_autoscale",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 64, H: 40,
 		},
@@ -436,7 +436,7 @@ func TestNetworkWidget_ConcurrentAccess(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_concurrent",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
