@@ -290,12 +290,16 @@ All widgets support auto-hide functionality, which allows widgets to appear temp
 
 ### Clock Widget
 
-**Display Modes**: Text only
+**Display Modes**: text, clock_face
+
+#### Text Mode (Default)
+Displays time as formatted text.
 
 ```json
 {
   "type": "clock",
   "properties": {
+    "display_mode": "text",
     "format": "%H:%M:%S",
     "update_interval": 1.0,
     "font": "Arial",
@@ -309,16 +313,48 @@ All widgets support auto-hide functionality, which allows widgets to appear temp
 
 | Property          | Type   | Default    | Description                   |
 |-------------------|--------|------------|-------------------------------|
-| `format`          | string | "%H:%M:%S" | Time format (strftime syntax) |
+| `display_mode`    | string | "text"     | Display mode: text or clock_face |
+| `format`          | string | "%H:%M:%S" | Time format (strftime syntax, text mode only) |
 | `update_interval` | number | 1.0        | Update interval in seconds    |
 
-**Format Examples**:
+**Format Examples** (text mode):
 - `"%H:%M:%S"` → 15:43:27 (24-hour with seconds)
 - `"%H:%M"` → 15:43 (24-hour without seconds)
 - `"%I:%M %p"` → 03:43 PM (12-hour with AM/PM)
 - `"%Y-%m-%d %H:%M"` → 2025-11-14 15:43 (date and time)
 
 See [Python strftime](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes) for all format codes.
+
+#### Clock Face Mode
+Displays an analog clock face with hour, minute, and second hands.
+
+```json
+{
+  "type": "clock",
+  "properties": {
+    "display_mode": "clock_face"
+  }
+}
+```
+
+**Features**:
+- Circular clock face with border (using `border_color` from style)
+- 12 hour markers with longer ticks at 12, 3, 6, 9 o'clock positions
+- Hour hand (50% of radius) with fractional positioning based on minutes
+- Minute hand (75% of radius) with fractional positioning based on seconds
+- Second hand (90% of radius)
+- Center dot marker
+- Real-time updates
+
+**Recommendations for Clock Face Mode**:
+- Use square dimensions (e.g., 40x40, 60x60, 80x80) for best appearance
+- Set `refresh_rate_ms` to 1000 for smooth second hand movement
+- Use high contrast colors (e.g., `border_color: 255`, `background_color: 0`)
+- All clock elements use the `border_color` from the widget style
+- Alignment properties (`horizontal_align`, `vertical_align`, `padding`) work with clock face mode
+- For non-square widgets, use alignment to position the clock face within the widget bounds
+
+See `configs/examples/clock_face_example.json` and `configs/examples/CLOCK_FACE_README.md` for more details.
 
 ### CPU Widget
 

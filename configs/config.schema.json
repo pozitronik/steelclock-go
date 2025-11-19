@@ -250,9 +250,15 @@
             "properties": {
               "type": "object",
               "properties": {
+                "display_mode": {
+                  "type": "string",
+                  "description": "Display mode: text (digital) or clock_face (analog)",
+                  "enum": ["text", "clock_face"],
+                  "default": "text"
+                },
                 "format": {
                   "type": "string",
-                  "description": "Time format (strftime syntax: %H:%M:%S, %I:%M %p, etc.)",
+                  "description": "Time format for text mode (strftime syntax: %H:%M:%S, %I:%M %p, etc.)",
                   "default": "%H:%M:%S"
                 },
                 "update_interval": {

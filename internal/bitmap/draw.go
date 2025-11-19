@@ -349,6 +349,50 @@ func DrawLine(img *image.Gray, x0, y0, x1, y1 int, c color.Gray) {
 	}
 }
 
+// DrawCircle draws a circle with the given center and radius
+func DrawCircle(img *image.Gray, centerX, centerY, radius int, c color.Gray) {
+	// Bresenham's circle algorithm
+	x := 0
+	y := radius
+	d := 3 - 2*radius
+
+	drawCirclePoints(img, centerX, centerY, x, y, c)
+
+	for x <= y {
+		if d <= 0 {
+			d = d + 4*x + 6
+		} else {
+			d = d + 4*(x-y) + 10
+			y--
+		}
+		x++
+		drawCirclePoints(img, centerX, centerY, x, y, c)
+	}
+}
+
+// drawCirclePoints draws 8 symmetric points for a circle
+func drawCirclePoints(img *image.Gray, centerX, centerY, x, y int, c color.Gray) {
+	bounds := img.Bounds()
+
+	points := [][2]int{
+		{centerX + x, centerY + y},
+		{centerX - x, centerY + y},
+		{centerX + x, centerY - y},
+		{centerX - x, centerY - y},
+		{centerX + y, centerY + x},
+		{centerX - y, centerY + x},
+		{centerX + y, centerY - x},
+		{centerX - y, centerY - x},
+	}
+
+	for _, p := range points {
+		if p[0] >= bounds.Min.X && p[0] < bounds.Max.X &&
+			p[1] >= bounds.Min.Y && p[1] < bounds.Max.Y {
+			img.Set(p[0], p[1], c)
+		}
+	}
+}
+
 func abs(x int) int {
 	if x < 0 {
 		return -x
