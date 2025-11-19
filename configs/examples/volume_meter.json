@@ -34,7 +34,6 @@
         "stereo_mode": true,
         "left_channel_color": 255,
         "right_channel_color": 200,
-        "bar_border": false,
         "use_db_scale": false,
         "show_clipping": true,
         "clipping_threshold": 0.99,
