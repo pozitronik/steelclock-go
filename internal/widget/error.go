@@ -63,7 +63,7 @@ func (w *ErrorWidget) Render() (image.Image, error) {
 	style := w.GetStyle()
 
 	// Create image with background
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, uint8(style.BackgroundColor))
+	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 
 	// Only draw if flash state is on
 	if !w.flashState {

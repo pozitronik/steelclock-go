@@ -319,7 +319,7 @@ func (w *VolumeWidget) Render() (image.Image, error) {
 	}
 
 	// Create base image
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, uint8(style.BackgroundColor))
+	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 
 	// Draw border if enabled
 	if style.Border {
@@ -377,7 +377,7 @@ func (w *VolumeWidget) renderBarHorizontal(img *image.Gray, pos config.PositionC
 	}
 
 	// Draw bar background
-	barImg := bitmap.NewGrayscaleImage(width, height, uint8(style.BackgroundColor))
+	barImg := bitmap.NewGrayscaleImage(width, height, w.GetRenderBackgroundColor())
 
 	// Draw fill based on volume
 	fillColor := color.Gray{Y: w.fillColor}
@@ -425,7 +425,7 @@ func (w *VolumeWidget) renderBarVertical(img *image.Gray, pos config.PositionCon
 	}
 
 	// Draw bar background
-	barImg := bitmap.NewGrayscaleImage(width, height, uint8(style.BackgroundColor))
+	barImg := bitmap.NewGrayscaleImage(width, height, w.GetRenderBackgroundColor())
 
 	// Draw fill based on volume (from bottom)
 	fillColor := color.Gray{Y: w.fillColor}

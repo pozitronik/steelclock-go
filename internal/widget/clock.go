@@ -103,9 +103,9 @@ func (w *ClockWidget) Render() (image.Image, error) {
 	var img *image.Gray
 	if style.BackgroundOpacity < 255 {
 		// TODO: Support alpha channel for transparency
-		img = bitmap.NewGrayscaleImage(pos.W, pos.H, uint8(style.BackgroundColor))
+		img = bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 	} else {
-		img = bitmap.NewGrayscaleImage(pos.W, pos.H, uint8(style.BackgroundColor))
+		img = bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 	}
 
 	// Draw border if enabled
@@ -164,7 +164,7 @@ func (w *ClockWidget) renderClockFace(img *image.Gray) {
 	}
 
 	faceColor := uint8(style.BorderColor)
-	if faceColor == uint8(style.BackgroundColor) {
+	if faceColor == w.GetRenderBackgroundColor() {
 		faceColor = 255 // Default to white if same as background
 	}
 

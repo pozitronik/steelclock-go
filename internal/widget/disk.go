@@ -174,7 +174,7 @@ func (w *DiskWidget) Render() (image.Image, error) {
 	pos := w.GetPosition()
 	style := w.GetStyle()
 
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, uint8(style.BackgroundColor))
+	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 
 	if style.Border {
 		bitmap.DrawBorder(img, uint8(style.BorderColor))

@@ -187,7 +187,7 @@ func (w *CPUWidget) Render() (image.Image, error) {
 	style := w.GetStyle()
 
 	// Create image with background
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, uint8(style.BackgroundColor))
+	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 
 	// Draw border if enabled
 	if style.Border {

@@ -126,3 +126,13 @@ func (b *BaseWidget) IsAutoHideEnabled() bool {
 func (b *BaseWidget) GetAutoHideTimeout() time.Duration {
 	return b.autoHideTimeout
 }
+
+// GetRenderBackgroundColor returns the background color to use when rendering
+// Handles the special case of -1 (transparent) by returning 0 (black)
+// The compositor will skip black pixels for transparent widgets
+func (b *BaseWidget) GetRenderBackgroundColor() uint8 {
+	if b.style.BackgroundColor == -1 {
+		return 0 // Use black as background for transparent widgets
+	}
+	return uint8(b.style.BackgroundColor)
+}

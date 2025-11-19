@@ -43,6 +43,12 @@ func (m *Manager) Composite() (image.Image, error) {
 
 	// Render and composite each widget
 	for _, w := range sortedWidgets {
+		// Update widget state
+		if err := w.Update(); err != nil {
+			return nil, fmt.Errorf("failed to update widget %s: %w", w.Name(), err)
+		}
+
+		// Render widget
 		widgetImg, err := w.Render()
 		if err != nil {
 			return nil, fmt.Errorf("failed to render widget %s: %w", w.Name(), err)
@@ -53,13 +59,63 @@ func (m *Manager) Composite() (image.Image, error) {
 			continue
 		}
 
-		// Get widget position
+		// Get widget style and position
+		style := w.GetStyle()
 		pos := w.GetPosition()
 
-		// Draw widget on canvas at its position
-		destRect := image.Rect(pos.X, pos.Y, pos.X+pos.W, pos.Y+pos.H)
-		draw.Draw(canvas, destRect, widgetImg, image.Point{}, draw.Over)
+		// Check if widget has transparent background (background_color = -1)
+		transparentBg := style.BackgroundColor == -1
+
+		// Composite widget onto canvas
+		if transparentBg {
+			// Transparent background: only copy non-background pixels
+			compositeWithTransparency(canvas, widgetImg, pos, style.BackgroundColor)
+		} else {
+			// Opaque background: draw all pixels
+			destRect := image.Rect(pos.X, pos.Y, pos.X+pos.W, pos.Y+pos.H)
+			draw.Draw(canvas, destRect, widgetImg, image.Point{}, draw.Over)
+		}
 	}
 
 	return canvas, nil
+}
+
+// compositeWithTransparency composites a widget image onto canvas, skipping background pixels
+func compositeWithTransparency(canvas *image.Gray, widgetImg image.Image, pos config.PositionConfig, bgColor int) {
+	// Convert widget image to Gray if needed
+	grayWidget, ok := widgetImg.(*image.Gray)
+	if !ok {
+		return
+	}
+
+	// Determine which color value to treat as transparent
+	// If bgColor is -1, we skip black (0) pixels
+	transparentValue := uint8(0)
+	if bgColor >= 0 && bgColor <= 255 {
+		transparentValue = uint8(bgColor)
+	}
+
+	// Copy only non-transparent pixels
+	bounds := grayWidget.Bounds()
+	for y := 0; y < bounds.Dy(); y++ {
+		for x := 0; x < bounds.Dx(); x++ {
+			pixelValue := grayWidget.GrayAt(x, y).Y
+
+			// Skip transparent pixels
+			if pixelValue == transparentValue {
+				continue
+			}
+
+			// Calculate destination coordinates
+			destX := pos.X + x
+			destY := pos.Y + y
+
+			// Check bounds
+			canvasBounds := canvas.Bounds()
+			if destX >= canvasBounds.Min.X && destX < canvasBounds.Max.X &&
+				destY >= canvasBounds.Min.Y && destY < canvasBounds.Max.Y {
+				canvas.SetGray(destX, destY, grayWidget.GrayAt(x, y))
+			}
+		}
+	}
 }

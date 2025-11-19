@@ -226,12 +226,47 @@ All widgets share these common configuration sections:
 }
 ```
 
-| Property             | Type    | Range | Default | Description                                         |
-|----------------------|---------|-------|---------|-----------------------------------------------------|
-| `background_color`   | integer | 0-255 | 0       | Background color                                    |
-| `background_opacity` | integer | 0-255 | 255     | Background transparency (0=transparent, 255=opaque) |
-| `border`             | boolean | -     | false   | Draw widget border                                  |
-| `border_color`       | integer | 0-255 | 255     | Border color                                        |
+| Property             | Type    | Range    | Default | Description                                         |
+|----------------------|---------|----------|---------|-----------------------------------------------------|
+| `background_color`   | integer | -1 to 255 | 0       | Background color (-1=transparent, 0=black, 255=white) |
+| `background_opacity` | integer | 0-255    | 255     | **Deprecated**: Has no effect on monochrome displays |
+| `border`             | boolean | -        | false   | Draw widget border                                  |
+| `border_color`       | integer | 0-255    | 255     | Border color                                        |
+
+**Transparent Backgrounds**:
+
+Set `background_color: -1` to make a widget's background transparent, allowing underlying widgets to show through. This is useful for overlaying text or indicators on top of graphs, gauges, or other widgets.
+
+**How transparency works**:
+- Widgets with `background_color: -1` only render their foreground pixels (text, shapes, etc.)
+- Background pixels (value 0 = black) are skipped during compositing
+- Widgets are layered according to their `z_order` (higher values on top)
+
+**Example - Text overlay on graph**:
+```json
+{
+  "widgets": [
+    {
+      "type": "cpu",
+      "id": "cpu_graph",
+      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z_order": 0},
+      "style": {"background_color": 0},
+      "properties": {"display_mode": "graph"}
+    },
+    {
+      "type": "cpu",
+      "id": "cpu_text",
+      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z_order": 1},
+      "style": {"background_color": -1},
+      "properties": {
+        "display_mode": "text",
+        "horizontal_align": "left",
+        "vertical_align": "top"
+      }
+    }
+  ]
+}
+```
 
 ### Text Properties
 
