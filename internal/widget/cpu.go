@@ -3,6 +3,7 @@ package widget
 import (
 	"fmt"
 	"image"
+	"math"
 	"sync"
 	"time"
 
@@ -227,17 +228,43 @@ func (w *CPUWidget) renderText(img *image.Gray) {
 
 	if w.perCore {
 		cores := w.currentUsage.([]float64)
-		avg := 0.0
-		for _, c := range cores {
-			avg += c
-		}
-		avg /= float64(len(cores))
-		text := fmt.Sprintf("%.0f", avg)
-		bitmap.DrawAlignedText(img, text, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+		w.renderTextGrid(img, cores)
 	} else {
 		usage := w.currentUsage.(float64)
 		text := fmt.Sprintf("%.0f", usage)
 		bitmap.DrawAlignedText(img, text, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+	}
+}
+
+func (w *CPUWidget) renderTextGrid(img *image.Gray, cores []float64) {
+	pos := w.GetPosition()
+	numCores := len(cores)
+	if numCores == 0 {
+		return
+	}
+
+	// Calculate grid dimensions
+	// Try to make it roughly square, preferring more columns than rows
+	cols := int(math.Ceil(math.Sqrt(float64(numCores))))
+	rows := int(math.Ceil(float64(numCores) / float64(cols)))
+
+	// Calculate cell dimensions
+	cellWidth := pos.W / cols
+	cellHeight := pos.H / rows
+
+	// Draw each core value in its grid cell
+	for i, usage := range cores {
+		row := i / cols
+		col := i % cols
+
+		cellX := col * cellWidth
+		cellY := row * cellHeight
+
+		// Format: just the percentage value
+		text := fmt.Sprintf("%.0f", usage)
+
+		// Draw text centered in the cell using explicit coordinates
+		bitmap.DrawTextInRect(img, text, w.fontFace, cellX, cellY, cellWidth, cellHeight, "center", "center", 0)
 	}
 }
 
