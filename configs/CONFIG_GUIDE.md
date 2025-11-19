@@ -346,11 +346,11 @@ Displays time as formatted text.
 }
 ```
 
-| Property          | Type   | Default    | Description                   |
-|-------------------|--------|------------|-------------------------------|
-| `display_mode`    | string | "text"     | Display mode: text or clock_face |
+| Property          | Type   | Default    | Description                                   |
+|-------------------|--------|------------|-----------------------------------------------|
+| `display_mode`    | string | "text"     | Display mode: text or clock_face              |
 | `format`          | string | "%H:%M:%S" | Time format (strftime syntax, text mode only) |
-| `update_interval` | number | 1.0        | Update interval in seconds    |
+| `update_interval` | number | 1.0        | Update interval in seconds                    |
 
 **Format Examples** (text mode):
 - `"%H:%M:%S"` → 15:43:27 (24-hour with seconds)
@@ -403,8 +403,8 @@ See `configs/examples/clock_face_example.json` and `configs/examples/CLOCK_FACE_
     "per_core": false,
     "update_interval": 1.0,
     "history_length": 30,
-    "bar_border": false,
-    "bar_margin": 0,
+    "core_border": false,
+    "core_margin": 0,
     "fill_color": 255,
     "gauge_color": 200,
     "gauge_needle_color": 255,
@@ -417,17 +417,17 @@ See `configs/examples/clock_face_example.json` and `configs/examples/CLOCK_FACE_
 }
 ```
 
-| Property             | Type    | Range                                              | Default          | Description                         |
-|----------------------|---------|----------------------------------------------------|------------------|-------------------------------------|
-| `display_mode`       | string  | text, bar_horizontal, bar_vertical, graph, gauge   | "bar_horizontal" | Display mode                        |
-| `per_core`           | boolean | -                                                  | false            | Show per-core usage                 |
-| `update_interval`    | number  | ≥0.1                                               | 1.0              | Update interval (seconds)           |
-| `history_length`     | integer | ≥2                                                 | 30               | Samples for graph mode              |
-| `bar_border`         | boolean | -                                                  | false            | Draw border around bars             |
-| `bar_margin`         | integer | ≥0                                                 | 0                | Margin between bars (per-core mode) |
-| `fill_color`         | integer | 0-255                                              | 255              | Bar/graph fill color                |
-| `gauge_color`        | integer | 0-255                                              | 200              | Gauge arc and tick marks color      |
-| `gauge_needle_color` | integer | 0-255                                              | 255              | Gauge needle color                  |
+| Property             | Type    | Range                                            | Default          | Description                         |
+|----------------------|---------|--------------------------------------------------|------------------|-------------------------------------|
+| `display_mode`       | string  | text, bar_horizontal, bar_vertical, graph, gauge | "bar_horizontal" | Display mode                        |
+| `per_core`           | boolean | -                                                | false            | Show per-core usage                 |
+| `update_interval`    | number  | ≥0.1                                             | 1.0              | Update interval (seconds)           |
+| `history_length`     | integer | ≥2                                               | 30               | Samples for graph mode              |
+| `core_border`        | boolean | -                                                | false            | Draw border around bar              |
+| `core_margin`        | integer | ≥0                                               | 0                | Margin between bars (per-core mode) |
+| `fill_color`         | integer | 0-255                                            | 255              | Bar/graph fill color                |
+| `gauge_color`        | integer | 0-255                                            | 200              | Gauge arc and tick marks color      |
+| `gauge_needle_color` | integer | 0-255                                            | 255              | Gauge needle color                  |
 
 **Gauge Mode**:
 
@@ -497,7 +497,7 @@ The Memory widget displays RAM usage as a semicircular gauge:
     "max_speed_mbps": 100.0,
     "speed_unit": "kbps",
     "bar_border": false,
-    "bar_margin": 1,
+    
     "rx_color": 255,
     "tx_color": 128,
     "rx_needle_color": 255,
@@ -511,20 +511,19 @@ The Memory widget displays RAM usage as a semicircular gauge:
 }
 ```
 
-| Property           | Type           | Range                                              | Default          | Description                            |
-|--------------------|----------------|----------------------------------------------------|------------------|----------------------------------------|
-| `interface`        | string or null | -                                                  | "eth0"           | Network interface name (null=auto)     |
-| `display_mode`     | string         | text, bar_horizontal, bar_vertical, graph, gauge   | "bar_horizontal" | Display mode                           |
-| `update_interval`  | number         | ≥0.1                                               | 1.0              | Update interval (seconds)              |
-| `history_length`   | integer        | ≥2                                                 | 30               | Samples for graph mode                 |
-| `max_speed_mbps`   | number         | -                                                  | 100.0            | Max speed for scaling (-1=auto)        |
-| `speed_unit`       | string         | bps, kbps, mbps                                    | "kbps"           | Speed unit (text mode)                 |
-| `bar_border`       | boolean        | -                                                  | false            | Draw border around bars                |
-| `bar_margin`       | integer        | ≥0                                                 | 1                | Margin between RX/TX bars              |
-| `rx_color`         | integer        | 0-255                                              | 255              | RX (download) arc color (gauge mode)   |
-| `tx_color`         | integer        | 0-255                                              | 128              | TX (upload) arc color (gauge mode)     |
-| `rx_needle_color`  | integer        | 0-255                                              | 255              | RX needle color (gauge mode)           |
-| `tx_needle_color`  | integer        | 0-255                                              | 200              | TX needle color (gauge mode)           |
+| Property          | Type           | Range                                            | Default          | Description                          |
+|-------------------|----------------|--------------------------------------------------|------------------|--------------------------------------|
+| `interface`       | string or null | -                                                | "eth0"           | Network interface name (null=auto)   |
+| `display_mode`    | string         | text, bar_horizontal, bar_vertical, graph, gauge | "bar_horizontal" | Display mode                         |
+| `update_interval` | number         | ≥0.1                                             | 1.0              | Update interval (seconds)            |
+| `history_length`  | integer        | ≥2                                               | 30               | Samples for graph mode               |
+| `max_speed_mbps`  | number         | -                                                | 100.0            | Max speed for scaling (-1=auto)      |
+| `speed_unit`      | string         | bps, kbps, mbps                                  | "kbps"           | Speed unit (text mode)               |
+| `bar_border`      | boolean        | -                                                | false            | Draw border around bar               |
+| `rx_color`        | integer        | 0-255                                            | 255              | RX (download) arc color (gauge mode) |
+| `tx_color`        | integer        | 0-255                                            | 128              | TX (upload) arc color (gauge mode)   |
+| `rx_needle_color` | integer        | 0-255                                            | 255              | RX needle color (gauge mode)         |
+| `tx_needle_color` | integer        | 0-255                                            | 200              | TX needle color (gauge mode)         |
 
 **Interface Names**:
 - `"Ethernet"`, `"Wi-Fi"`, etc. (from Network Connections)
@@ -578,7 +577,7 @@ The Network widget features a unique **dual/concentric gauge** display that show
 | `update_interval` | number         | ≥0.1                                      | 1.0              | Update interval (seconds)               |
 | `history_length`  | integer        | ≥2                                        | 30               | Samples for graph mode                  |
 | `max_speed_mbps`  | number         | -                                         | -1               | Max speed for scaling in MB/s (-1=auto) |
-| `bar_border`      | boolean        | -                                         | false            | Draw border around bars                 |
+| `bar_border`      | boolean        | -                                         | false            | Draw border around bar                  |
 | `read_color`      | integer        | 0-255                                     | 255              | Read color                              |
 | `write_color`     | integer        | 0-255                                     | 200              | Write color                             |
 
@@ -665,16 +664,16 @@ Available disks: PhysicalDrive0, PhysicalDrive1
 }
 ```
 
-| Property              | Type    | Range                                                  | Default          | Description                                  |
-|-----------------------|---------|--------------------------------------------------------|------------------|----------------------------------------------|
-| `display_mode`        | string  | text, bar_horizontal, bar_vertical, gauge, triangle    | "bar_horizontal" | Display mode                                 |
-| `update_interval`     | number  | ≥0.1                                                   | 0.1              | Update interval (seconds)                    |
-| `fill_color`          | integer | 0-255                                                  | 255              | Bar/triangle fill color                      |
-| `bar_border`          | boolean | -                                                      | false            | Draw border around bars                      |
-| `gauge_color`         | integer | 0-255                                                  | 200              | Gauge arc and tick marks color               |
-| `gauge_needle_color`  | integer | 0-255                                                  | 255              | Gauge needle color                           |
-| `triangle_fill_color` | integer | 0-255                                                  | 255              | Triangle fill color                          |
-| `triangle_border`     | boolean | -                                                      | false            | Draw border around triangle                  |
+| Property              | Type    | Range                                               | Default          | Description                    |
+|-----------------------|---------|-----------------------------------------------------|------------------|--------------------------------|
+| `display_mode`        | string  | text, bar_horizontal, bar_vertical, gauge, triangle | "bar_horizontal" | Display mode                   |
+| `update_interval`     | number  | ≥0.1                                                | 0.1              | Update interval (seconds)      |
+| `fill_color`          | integer | 0-255                                               | 255              | Bar/triangle fill color        |
+| `bar_border`          | boolean | -                                                   | false            | Draw border around bar         |
+| `gauge_color`         | integer | 0-255                                               | 200              | Gauge arc and tick marks color |
+| `gauge_needle_color`  | integer | 0-255                                               | 255              | Gauge needle color             |
+| `triangle_fill_color` | integer | 0-255                                               | 255              | Triangle fill color            |
+| `triangle_border`     | boolean | -                                                   | false            | Draw border around triangle    |
 
 **Note**: The volume widget also supports `auto_hide` and `auto_hide_timeout` properties (see [Auto-Hide Properties](#auto-hide-properties)). When auto-hide is enabled, the widget triggers visibility on volume or mute state changes.
 
@@ -745,27 +744,27 @@ When system audio is muted, all display modes show an X pattern (diagonal lines)
 }
 ```
 
-| Property                 | Type    | Range                                                                         | Default          | Description                                            |
-|--------------------------|---------|-------------------------------------------------------------------------------|------------------|--------------------------------------------------------|
-| `display_mode`           | string  | text, bar_horizontal, bar_vertical, gauge                                     | "bar_horizontal" | Display mode                                           |
-| `update_interval`        | number  | ≥0.03                                                                         | 0.1              | Meter update interval (seconds)                        |
-| `fill_color`             | integer | 0-255                                                                         | 255              | Main meter fill color                                  |
-| `clipping_color`         | integer | 0-255                                                                         | 200              | Color when clipping detected                           |
-| `left_channel_color`     | integer | 0-255                                                                         | 255              | Left channel color (when stereo_mode enabled)          |
-| `right_channel_color`    | integer | 0-255                                                                         | 200              | Right channel color (when stereo_mode enabled)         |
-| `stereo_mode`            | boolean | -                                                                             | false            | Display left and right channels separately             |
-| `bar_border`             | boolean | -                                                                             | false            | Draw border around bars                                |
-| `gauge_color`            | integer | 0-255                                                                         | 200              | Gauge arc and tick marks color                         |
-| `gauge_needle_color`     | integer | 0-255                                                                         | 255              | Gauge needle color                                     |
-| `use_db_scale`           | boolean | -                                                                             | false            | Use logarithmic dB scale (-60dB to 0dB)                |
-| `show_clipping`          | boolean | -                                                                             | true             | Show clipping indicator (all modes)                    |
-| `clipping_threshold`     | number  | 0.0-1.0                                                                       | 0.99             | Peak level that triggers clipping (0.0=0%, 1.0=100%)   |
-| `silence_threshold`      | number  | 0.0-1.0                                                                       | 0.01             | Peak level below which is considered silence           |
-| `decay_rate`             | number  | ≥0.1                                                                          | 2.0              | Peak decay rate (units/second, VU meter ballistics)    |
-| `show_peak_hold`         | boolean | -                                                                             | true             | Show peak hold line (held maximum peak)                |
-| `peak_hold_time`         | number  | ≥0.1                                                                          | 1.0              | How long to hold peak indicator (seconds)              |
-| `auto_hide_on_silence`   | boolean | -                                                                             | false            | Auto-hide when no audio detected                       |
-| `auto_hide_silence_time` | number  | ≥0.5                                                                          | 2.0              | Time after last audio before hiding (seconds)          |
+| Property                 | Type    | Range                                     | Default          | Description                                          |
+|--------------------------|---------|-------------------------------------------|------------------|------------------------------------------------------|
+| `display_mode`           | string  | text, bar_horizontal, bar_vertical, gauge | "bar_horizontal" | Display mode                                         |
+| `update_interval`        | number  | ≥0.03                                     | 0.1              | Meter update interval (seconds)                      |
+| `fill_color`             | integer | 0-255                                     | 255              | Main meter fill color                                |
+| `clipping_color`         | integer | 0-255                                     | 200              | Color when clipping detected                         |
+| `left_channel_color`     | integer | 0-255                                     | 255              | Left channel color (when stereo_mode enabled)        |
+| `right_channel_color`    | integer | 0-255                                     | 200              | Right channel color (when stereo_mode enabled)       |
+| `stereo_mode`            | boolean | -                                         | false            | Display left and right channels separately           |
+| `bar_border`             | boolean | -                                         | false            | Draw border around bar                               |
+| `gauge_color`            | integer | 0-255                                     | 200              | Gauge arc and tick marks color                       |
+| `gauge_needle_color`     | integer | 0-255                                     | 255              | Gauge needle color                                   |
+| `use_db_scale`           | boolean | -                                         | false            | Use logarithmic dB scale (-60dB to 0dB)              |
+| `show_clipping`          | boolean | -                                         | true             | Show clipping indicator (all modes)                  |
+| `clipping_threshold`     | number  | 0.0-1.0                                   | 0.99             | Peak level that triggers clipping (0.0=0%, 1.0=100%) |
+| `silence_threshold`      | number  | 0.0-1.0                                   | 0.01             | Peak level below which is considered silence         |
+| `decay_rate`             | number  | ≥0.1                                      | 2.0              | Peak decay rate (units/second, VU meter ballistics)  |
+| `show_peak_hold`         | boolean | -                                         | true             | Show peak hold line (held maximum peak)              |
+| `peak_hold_time`         | number  | ≥0.1                                      | 1.0              | How long to hold peak indicator (seconds)            |
+| `auto_hide_on_silence`   | boolean | -                                         | false            | Auto-hide when no audio detected                     |
+| `auto_hide_silence_time` | number  | ≥0.5                                      | 2.0              | Time after last audio before hiding (seconds)        |
 
 **Note**: The volume meter widget also supports `auto_hide` and `auto_hide_timeout` properties (see [Auto-Hide Properties](#auto-hide-properties)). When `auto_hide_on_silence` is enabled, the widget triggers visibility when audio is detected above the `silence_threshold`.
 
@@ -1028,7 +1027,7 @@ When `auto_hide_on_silence` is enabled:
         "display_mode": "graph",
         "per_core": true,
         "history_length": 30,
-        "bar_margin": 1,
+        "core_margin": 1,
         "padding": 2
       }
     }

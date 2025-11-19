@@ -23,8 +23,8 @@ type CPUWidget struct {
 	horizAlign       string
 	vertAlign        string
 	padding          int
-	barBorder        bool
-	barMargin        int
+	coreBorder       bool
+	coreMargin       int
 	fillColor        uint8
 	gaugeColor       uint8
 	gaugeNeedleColor uint8
@@ -104,8 +104,8 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 		horizAlign:       horizAlign,
 		vertAlign:        vertAlign,
 		padding:          cfg.Properties.Padding,
-		barBorder:        cfg.Properties.BarBorder,
-		barMargin:        cfg.Properties.BarMargin,
+		coreBorder:       cfg.Properties.CoreBorder,
+		coreMargin:       cfg.Properties.CoreMargin,
 		fillColor:        uint8(fillColor),
 		gaugeColor:       uint8(gaugeColor),
 		gaugeNeedleColor: uint8(gaugeNeedleColor),
@@ -248,17 +248,24 @@ func (w *CPUWidget) renderTextGrid(img *image.Gray, cores []float64) {
 	cols := int(math.Ceil(math.Sqrt(float64(numCores))))
 	rows := int(math.Ceil(float64(numCores) / float64(cols)))
 
-	// Calculate cell dimensions
-	cellWidth := pos.W / cols
-	cellHeight := pos.H / rows
+	// Calculate cell dimensions with margins
+	totalMarginWidth := (cols - 1) * w.coreMargin
+	totalMarginHeight := (rows - 1) * w.coreMargin
+	cellWidth := (pos.W - totalMarginWidth) / cols
+	cellHeight := (pos.H - totalMarginHeight) / rows
 
 	// Draw each core value in its grid cell
 	for i, usage := range cores {
 		row := i / cols
 		col := i % cols
 
-		cellX := col * cellWidth
-		cellY := row * cellHeight
+		cellX := col * (cellWidth + w.coreMargin)
+		cellY := row * (cellHeight + w.coreMargin)
+
+		// Draw border if enabled
+		if w.coreBorder {
+			bitmap.DrawRectangle(img, cellX, cellY, cellWidth, cellHeight, w.fillColor)
+		}
 
 		// Format: just the percentage value
 		text := fmt.Sprintf("%.0f", usage)
@@ -278,15 +285,15 @@ func (w *CPUWidget) renderBarHorizontal(img *image.Gray, x, y, width, height int
 
 	if w.perCore {
 		cores := w.currentUsage.([]float64)
-		coreHeight := (height - (len(cores)-1)*w.barMargin) / len(cores)
+		coreHeight := (height - (len(cores)-1)*w.coreMargin) / len(cores)
 
 		for i, usage := range cores {
-			coreY := y + i*(coreHeight+w.barMargin)
-			bitmap.DrawHorizontalBar(img, x, coreY, width, coreHeight, usage, w.fillColor, w.barBorder)
+			coreY := y + i*(coreHeight+w.coreMargin)
+			bitmap.DrawHorizontalBar(img, x, coreY, width, coreHeight, usage, w.fillColor, w.coreBorder)
 		}
 	} else {
 		usage := w.currentUsage.(float64)
-		bitmap.DrawHorizontalBar(img, x, y, width, height, usage, w.fillColor, w.barBorder)
+		bitmap.DrawHorizontalBar(img, x, y, width, height, usage, w.fillColor, w.coreBorder)
 	}
 }
 
@@ -300,15 +307,15 @@ func (w *CPUWidget) renderBarVertical(img *image.Gray, x, y, width, height int) 
 
 	if w.perCore {
 		cores := w.currentUsage.([]float64)
-		coreWidth := (width - (len(cores)-1)*w.barMargin) / len(cores)
+		coreWidth := (width - (len(cores)-1)*w.coreMargin) / len(cores)
 
 		for i, usage := range cores {
-			coreX := x + i*(coreWidth+w.barMargin)
-			bitmap.DrawVerticalBar(img, coreX, y, coreWidth, height, usage, w.fillColor, w.barBorder)
+			coreX := x + i*(coreWidth+w.coreMargin)
+			bitmap.DrawVerticalBar(img, coreX, y, coreWidth, height, usage, w.fillColor, w.coreBorder)
 		}
 	} else {
 		usage := w.currentUsage.(float64)
-		bitmap.DrawVerticalBar(img, x, y, width, height, usage, w.fillColor, w.barBorder)
+		bitmap.DrawVerticalBar(img, x, y, width, height, usage, w.fillColor, w.coreBorder)
 	}
 }
 
@@ -321,17 +328,47 @@ func (w *CPUWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 	}
 
 	if w.perCore {
-		// For per-core, we'll show average for simplicity
-		avgHistory := make([]float64, len(w.history))
-		for i, item := range w.history {
-			cores := item.([]float64)
-			avg := 0.0
-			for _, c := range cores {
-				avg += c
+		// Get core count from first history entry
+		firstEntry := w.history[0].([]float64)
+		numCores := len(firstEntry)
+
+		// Calculate grid dimensions
+		cols := int(math.Ceil(math.Sqrt(float64(numCores))))
+		rows := int(math.Ceil(float64(numCores) / float64(cols)))
+
+		// Calculate cell dimensions with margins
+		totalMarginWidth := (cols - 1) * w.coreMargin
+		totalMarginHeight := (rows - 1) * w.coreMargin
+		cellWidth := (width - totalMarginWidth) / cols
+		cellHeight := (height - totalMarginHeight) / rows
+
+		// Transpose history: convert from [time][core] to [core][time]
+		coreHistories := make([][]float64, numCores)
+		for i := 0; i < numCores; i++ {
+			coreHistories[i] = make([]float64, len(w.history))
+			for t, item := range w.history {
+				cores := item.([]float64)
+				if i < len(cores) {
+					coreHistories[i][t] = cores[i]
+				}
 			}
-			avgHistory[i] = avg / float64(len(cores))
 		}
-		bitmap.DrawGraph(img, x, y, width, height, avgHistory, w.historyLen, w.fillColor)
+
+		// Draw a graph for each core
+		for i := 0; i < numCores; i++ {
+			row := i / cols
+			col := i % cols
+
+			cellX := x + col*(cellWidth+w.coreMargin)
+			cellY := y + row*(cellHeight+w.coreMargin)
+
+			// Draw border if enabled
+			if w.coreBorder {
+				bitmap.DrawRectangle(img, cellX, cellY, cellWidth, cellHeight, w.fillColor)
+			}
+
+			bitmap.DrawGraph(img, cellX, cellY, cellWidth, cellHeight, coreHistories[i], w.historyLen, w.fillColor)
+		}
 	} else {
 		// Single value history
 		history := make([]float64, len(w.history))
@@ -350,18 +387,37 @@ func (w *CPUWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
 		return
 	}
 
-	// Calculate usage value (average if per-core)
-	var usage float64
 	if w.perCore {
 		cores := w.currentUsage.([]float64)
-		for _, c := range cores {
-			usage += c
-		}
-		usage /= float64(len(cores))
-	} else {
-		usage = w.currentUsage.(float64)
-	}
+		numCores := len(cores)
 
-	// Use shared gauge drawing function
-	bitmap.DrawGauge(img, pos, usage, w.gaugeColor, w.gaugeNeedleColor)
+		// Calculate grid dimensions
+		cols := int(math.Ceil(math.Sqrt(float64(numCores))))
+		rows := int(math.Ceil(float64(numCores) / float64(cols)))
+
+		// Calculate cell dimensions with margins
+		totalMarginWidth := (cols - 1) * w.coreMargin
+		totalMarginHeight := (rows - 1) * w.coreMargin
+		cellWidth := (pos.W - totalMarginWidth) / cols
+		cellHeight := (pos.H - totalMarginHeight) / rows
+
+		// Draw a gauge for each core
+		for i, usage := range cores {
+			row := i / cols
+			col := i % cols
+
+			cellX := col * (cellWidth + w.coreMargin)
+			cellY := row * (cellHeight + w.coreMargin)
+
+			// Draw border if enabled
+			if w.coreBorder {
+				bitmap.DrawRectangle(img, cellX, cellY, cellWidth, cellHeight, w.fillColor)
+			}
+
+			bitmap.DrawGaugeAt(img, cellX, cellY, cellWidth, cellHeight, usage, w.gaugeColor, w.gaugeNeedleColor)
+		}
+	} else {
+		usage := w.currentUsage.(float64)
+		bitmap.DrawGauge(img, pos, usage, w.gaugeColor, w.gaugeNeedleColor)
+	}
 }

@@ -81,12 +81,13 @@ type WidgetProperties struct {
 	DisplayMode   string `json:"display_mode,omitempty"`
 	FillColor     int    `json:"fill_color,omitempty"`
 	BarBorder     bool   `json:"bar_border,omitempty"`
-	BarMargin     int    `json:"bar_margin,omitempty"`
 	HistoryLength int    `json:"history_length,omitempty"`
 
-	// CPU widget
-	PerCore  bool `json:"per_core,omitempty"`
-	MaxCores int  `json:"max_cores,omitempty"`
+	// CPU widget specific
+	PerCore    bool `json:"per_core,omitempty"`
+	MaxCores   int  `json:"max_cores,omitempty"`
+	CoreBorder bool `json:"core_border,omitempty"`
+	CoreMargin int  `json:"core_margin,omitempty"`
 
 	// Network widget
 	Interface      *string `json:"interface"`

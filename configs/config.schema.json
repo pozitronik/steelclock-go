@@ -305,14 +305,14 @@
                   "minimum": 2,
                   "default": 30
                 },
-                "bar_border": {
+                "core_border": {
                   "type": "boolean",
-                  "description": "Draw border around bars",
+                  "description": "Draw border around each core cell (text grid/graph grid/gauge grid) or bar",
                   "default": false
                 },
-                "bar_margin": {
+                "core_margin": {
                   "type": "integer",
-                  "description": "Margin between bars (for per-core mode)",
+                  "description": "Margin between core cells or bars when per_core is enabled",
                   "minimum": 0,
                   "default": 0
                 },
@@ -379,7 +379,7 @@
                 },
                 "bar_border": {
                   "type": "boolean",
-                  "description": "Draw border around bar",
+                  "description": "Draw border around the bar",
                   "default": false
                 },
                 "fill_color": {
@@ -463,12 +463,6 @@
                   "type": "boolean",
                   "description": "Draw border around bars",
                   "default": false
-                },
-                "bar_margin": {
-                  "type": "integer",
-                  "description": "Margin between RX/TX bars",
-                  "minimum": 0,
-                  "default": 1
                 },
                 "rx_color": {
                   "type": "integer",
