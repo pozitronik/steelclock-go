@@ -32,15 +32,16 @@ func SetBundledFontURL(url string) {
 
 // LoadFont loads a TrueType font
 func LoadFont(fontName string, size int) (font.Face, error) {
-	if fontName == "" {
-		// Use basic font as fallback
-		return basicfont.Face7x13, nil
+	var fontPath string
+
+	// Try to resolve font path if font name is specified
+	if fontName != "" {
+		fontPath = resolveFontPath(fontName)
 	}
 
-	// Try to load system font or bundled font
-	fontPath := resolveFontPath(fontName)
+	// If no font path found (either fontName was empty or not resolved),
+	// try to download bundled font
 	if fontPath == "" {
-		// Try to download bundled font
 		bundledPath, err := downloadBundledFont()
 		if err == nil {
 			fontPath = bundledPath

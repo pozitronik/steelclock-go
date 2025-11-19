@@ -100,8 +100,10 @@ This option allows you to specify a custom URL for downloading the bundled TrueT
    - An absolute path to a TTF file
    - A system font name (e.g., "Arial", "Consolas")
    - A mapped Windows font name
-2. If the font is not found, SteelClock downloads the bundled font from `bundled_font_url`
+2. If the `font` property is omitted or the specified font is not found, SteelClock downloads the bundled font from `bundled_font_url`
 3. If the download fails, SteelClock falls back to the built-in basic font (7x13 bitmap font)
+
+**Recommendation**: Omit the `font` property (or set it to `null`) to use the default bundled font, which provides good readability on small OLED displays.
 
 **Example**:
 ```json
