@@ -1,0 +1,44 @@
+{
+  "$schema": "../config.schema.json",
+  "game_name": "STEELCLOCK_CPU",
+  "game_display_name": "SteelClock - CPU Monitor",
+  "refresh_rate_ms": 1000,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background_color": 0
+  },
+  "layout": {
+    "type": "basic"
+  },
+  "widgets": [
+    {
+      "type": "cpu",
+      "id": "cpu_gauge",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40,
+        "z_order": 0
+      },
+      "style": {
+        "background_color": 0,
+        "background_opacity": 255,
+        "border": false,
+        "border_color": 255
+      },
+      "properties": {
+        "display_mode": "gauge",
+        "per_core": false,
+        "update_interval": 1.0,
+        "gauge_color": 200,
+        "gauge_needle_color": 255,
+        "horizontal_align": "center",
+        "vertical_align": "center",
+        "padding": 2
+      }
+    }
+  ]
+}
