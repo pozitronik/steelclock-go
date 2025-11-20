@@ -614,6 +614,8 @@ func TestDoomWidget_StopCleansUpGoroutines(t *testing.T) {
 	acquired := make(chan bool, 1)
 	go func() {
 		widget.mu.Lock()
+		// Empty critical section is intentional - just testing mutex can be acquired
+		_ = widget.started // Access field to avoid empty critical section warning
 		widget.mu.Unlock()
 		acquired <- true
 	}()
