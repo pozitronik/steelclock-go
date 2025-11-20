@@ -1,0 +1,52 @@
+{
+  "$schema": "../config.schema.json",
+  "game_name": "STEELCLOCK_VOLUME_METER",
+  "game_display_name": "SteelClock - VU Meter",
+  "refresh_rate_ms": 100,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background_color": 0
+  },
+  "layout": {
+    "type": "basic"
+  },
+  "widgets": [
+    {
+      "type": "volume_meter",
+      "id": "vu_meter",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40,
+        "z_order": 0
+      },
+      "style": {
+        "background_color": 0,
+        "border": true,
+        "border_color": 255
+      },
+      "properties": {
+        "display_mode": "bar_vertical",
+        "update_interval": 0.05,
+        "stereo_mode": true,
+        "left_channel_color": 255,
+        "right_channel_color": 200,
+        "use_db_scale": false,
+        "show_clipping": true,
+        "clipping_threshold": 0.99,
+        "clipping_color": 200,
+        "silence_threshold": 0.01,
+        "decay_rate": 2.0,
+        "show_peak_hold": true,
+        "peak_hold_time": 1.0,
+        "horizontal_align": "center",
+        "vertical_align": "center",
+        "padding": 2,
+        "auto_hide_on_silence": false
+      }
+    }
+  ]
+}

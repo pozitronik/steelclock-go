@@ -16,7 +16,7 @@ func TestVolumeWidget_BackgroundPolling(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume",
 		ID:      "test_volume_polling",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -63,7 +63,7 @@ func TestVolumeWidget_StopCleanup(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume",
 		ID:      "test_volume_cleanup",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -99,7 +99,7 @@ func TestVolumeWidget_LongRunning(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume",
 		ID:      "test_volume_longrun",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -173,7 +173,7 @@ func TestVolumeWidget_HealthMetrics(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume",
 		ID:      "test_volume_health",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -240,7 +240,7 @@ func TestVolumeWidget_NoMemoryLeak(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume",
 		ID:      "test_volume_memleak",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -277,7 +277,7 @@ func TestVolumeWidget_VolumeChange(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume",
 		ID:      "test_volume_change",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},

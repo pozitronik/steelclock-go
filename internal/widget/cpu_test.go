@@ -11,7 +11,7 @@ func TestNewCPUWidget(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -44,7 +44,7 @@ func TestNewCPUWidget_PerCore(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_per_core",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -70,7 +70,7 @@ func TestNewCPUWidget_Defaults(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_defaults",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -107,7 +107,7 @@ func TestCPUWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_update",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -142,7 +142,7 @@ func TestCPUWidget_Update_PerCore(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_per_core",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -177,7 +177,7 @@ func TestCPUWidget_RenderText(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_render_text",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -219,7 +219,7 @@ func TestCPUWidget_RenderBarHorizontal(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_bar_h",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -254,7 +254,7 @@ func TestCPUWidget_RenderBarVertical(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_bar_v",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -290,7 +290,7 @@ func TestCPUWidget_RenderGraph(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_graph",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -329,7 +329,7 @@ func TestCPUWidget_RenderGraph_InsufficientHistory(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_graph_nodata",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -367,7 +367,7 @@ func TestCPUWidget_RenderGauge(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_gauge",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 64, H: 40,
 		},
@@ -403,7 +403,7 @@ func TestCPUWidget_RenderGauge_PerCore(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_gauge_percore",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 64, H: 40,
 		},
@@ -440,7 +440,7 @@ func TestCPUWidget_GaugeDefaults(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_gauge_defaults",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 64, H: 40,
 		},
@@ -484,7 +484,7 @@ func TestCPUWidget_ConcurrentAccess(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_concurrent",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},

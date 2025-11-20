@@ -7,6 +7,7 @@ type Config struct {
 	RefreshRateMs    int            `json:"refresh_rate_ms"`
 	UnregisterOnExit bool           `json:"unregister_on_exit,omitempty"`
 	BundledFontURL   string         `json:"bundled_font_url,omitempty"`
+	BundledWadURL    string         `json:"bundled_wad_url,omitempty"`
 	Display          DisplayConfig  `json:"display"`
 	Layout           *LayoutConfig  `json:"layout,omitempty"`
 	Widgets          []WidgetConfig `json:"widgets"`
@@ -30,10 +31,18 @@ type LayoutConfig struct {
 type WidgetConfig struct {
 	Type       string           `json:"type"`
 	ID         string           `json:"id"`
-	Enabled    bool             `json:"enabled"`
+	Enabled    *bool            `json:"enabled,omitempty"`
 	Position   PositionConfig   `json:"position"`
 	Style      StyleConfig      `json:"style"`
 	Properties WidgetProperties `json:"properties"`
+}
+
+// IsEnabled returns true if the widget is enabled (defaults to true if not specified)
+func (w *WidgetConfig) IsEnabled() bool {
+	if w.Enabled == nil {
+		return true // Default to enabled
+	}
+	return *w.Enabled
 }
 
 // PositionConfig represents widget position and size
@@ -47,10 +56,9 @@ type PositionConfig struct {
 
 // StyleConfig represents widget styling
 type StyleConfig struct {
-	BackgroundColor   int  `json:"background_color"`
-	BackgroundOpacity int  `json:"background_opacity"`
-	Border            bool `json:"border"`
-	BorderColor       int  `json:"border_color"`
+	BackgroundColor int  `json:"background_color"`
+	Border          bool `json:"border"`
+	BorderColor     int  `json:"border_color"`
 }
 
 // WidgetProperties contains all possible widget properties
@@ -73,12 +81,13 @@ type WidgetProperties struct {
 	DisplayMode   string `json:"display_mode,omitempty"`
 	FillColor     int    `json:"fill_color,omitempty"`
 	BarBorder     bool   `json:"bar_border,omitempty"`
-	BarMargin     int    `json:"bar_margin,omitempty"`
 	HistoryLength int    `json:"history_length,omitempty"`
 
-	// CPU widget
-	PerCore  bool `json:"per_core,omitempty"`
-	MaxCores int  `json:"max_cores,omitempty"`
+	// CPU widget specific
+	PerCore    bool `json:"per_core,omitempty"`
+	MaxCores   int  `json:"max_cores,omitempty"`
+	CoreBorder bool `json:"core_border,omitempty"`
+	CoreMargin int  `json:"core_margin,omitempty"`
 
 	// Network widget
 	Interface      *string `json:"interface"`
@@ -126,4 +135,7 @@ type WidgetProperties struct {
 	PeakHoldTime        float64 `json:"peak_hold_time,omitempty"`
 	AutoHideOnSilence   bool    `json:"auto_hide_on_silence,omitempty"`
 	AutoHideSilenceTime float64 `json:"auto_hide_silence_time,omitempty"`
+
+	// DOOM widget
+	WadName string `json:"wad_name,omitempty"`
 }

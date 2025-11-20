@@ -67,7 +67,7 @@ func TestCreateWidget_InvalidType(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "invalid_type",
 		ID:      "test",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -120,7 +120,7 @@ func TestCreateWidgets_DisabledWidget(t *testing.T) {
 		{
 			Type:    "memory",
 			ID:      "disabled_widget",
-			Enabled: false, // This widget is disabled
+			Enabled: config.BoolPtr(false), // This widget is disabled
 			Position: config.PositionConfig{
 				X: 0, Y: 0, W: 128, H: 40,
 			},
@@ -146,7 +146,7 @@ func TestCreateWidgets_PartialFailure(t *testing.T) {
 		{
 			Type:    "invalid_type",
 			ID:      "bad_widget",
-			Enabled: true,
+			Enabled: config.BoolPtr(true),
 			Position: config.PositionConfig{
 				X: 0, Y: 0, W: 128, H: 40,
 			},
@@ -173,7 +173,7 @@ func TestCreateWidgets_AllFailed(t *testing.T) {
 		{
 			Type:    "invalid_type_1",
 			ID:      "bad_widget_1",
-			Enabled: true,
+			Enabled: config.BoolPtr(true),
 			Position: config.PositionConfig{
 				X: 0, Y: 0, W: 128, H: 40,
 			},
@@ -181,7 +181,7 @@ func TestCreateWidgets_AllFailed(t *testing.T) {
 		{
 			Type:    "invalid_type_2",
 			ID:      "bad_widget_2",
-			Enabled: true,
+			Enabled: config.BoolPtr(true),
 			Position: config.PositionConfig{
 				X: 0, Y: 0, W: 128, H: 40,
 			},
@@ -206,7 +206,7 @@ func createDefaultConfig(widgetType string) config.WidgetConfig {
 	cfg := config.WidgetConfig{
 		Type:    widgetType,
 		ID:      "test_" + widgetType,
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
@@ -214,10 +214,9 @@ func createDefaultConfig(widgetType string) config.WidgetConfig {
 			H: 40,
 		},
 		Style: config.StyleConfig{
-			BackgroundColor:   0,
-			BackgroundOpacity: 255,
-			Border:            false,
-			BorderColor:       255,
+			BackgroundColor: 0,
+			Border:          false,
+			BorderColor:     255,
 		},
 		Properties: config.WidgetProperties{
 			FontSize:          10,
@@ -251,4 +250,106 @@ func createDefaultConfig(widgetType string) config.WidgetConfig {
 	}
 
 	return cfg
+}
+
+// TestCreateWidget_Disabled tests that explicitly disabled widgets return error
+func TestCreateWidget_Disabled(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "clock",
+		ID:      "test_disabled",
+		Enabled: config.BoolPtr(false),
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Style: config.StyleConfig{
+			BackgroundColor: 0,
+			Border:          false,
+			BorderColor:     255,
+		},
+		Properties: config.WidgetProperties{
+			Format:   "15:04",
+			FontSize: 12,
+		},
+	}
+
+	// Disabled widget should return error
+	widget, err := CreateWidget(cfg)
+	if err == nil {
+		t.Error("CreateWidget() should return error for disabled widget")
+	}
+
+	if widget != nil {
+		t.Error("CreateWidget() should return nil widget when disabled")
+	}
+}
+
+// TestCreateWidget_EnabledByDefault tests that widgets are enabled by default when field is omitted
+func TestCreateWidget_EnabledByDefault(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type: "clock",
+		ID:   "test_default_enabled",
+		// Enabled field not set - should default to true
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Style: config.StyleConfig{
+			BackgroundColor: 0,
+			Border:          false,
+			BorderColor:     255,
+		},
+		Properties: config.WidgetProperties{
+			Format:   "15:04",
+			FontSize: 12,
+		},
+	}
+
+	// Widget without explicit enabled field should be enabled by default
+	widget, err := CreateWidget(cfg)
+	if err != nil {
+		t.Errorf("CreateWidget() error = %v, widget should be enabled by default", err)
+	}
+
+	if widget == nil {
+		t.Error("CreateWidget() should return widget when enabled by default")
+	}
+}
+
+// TestCreateWidget_ExplicitlyEnabled tests that explicitly enabled widgets work
+func TestCreateWidget_ExplicitlyEnabled(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "clock",
+		ID:      "test_explicitly_enabled",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Style: config.StyleConfig{
+			BackgroundColor: 0,
+			Border:          false,
+			BorderColor:     255,
+		},
+		Properties: config.WidgetProperties{
+			Format:   "15:04",
+			FontSize: 12,
+		},
+	}
+
+	// Explicitly enabled widget should work
+	widget, err := CreateWidget(cfg)
+	if err != nil {
+		t.Errorf("CreateWidget() error = %v, widget should be enabled", err)
+	}
+
+	if widget == nil {
+		t.Error("CreateWidget() should return widget when explicitly enabled")
+	}
 }

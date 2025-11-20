@@ -16,7 +16,7 @@ func TestVolumeMeterWidget_BackgroundPolling(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_polling",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -69,7 +69,7 @@ func TestVolumeMeterWidget_StopCleanup(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_cleanup",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -105,7 +105,7 @@ func TestVolumeMeterWidget_LongRunning(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_longrun",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -179,7 +179,7 @@ func TestVolumeMeterWidget_StereoChannels(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_stereo",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -237,7 +237,7 @@ func TestVolumeMeterWidget_ClippingIndicator(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_clipping",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -281,7 +281,7 @@ func TestVolumeMeterWidget_DBScaleDisplay(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_db_display",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -328,7 +328,7 @@ func TestVolumeMeterWidget_NoMemoryLeak(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_memleak",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
@@ -365,7 +365,7 @@ func TestVolumeMeterWidget_AutoHideOnSilence(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
 		ID:      "test_meter_autohide_silence",
-		Enabled: true,
+		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},

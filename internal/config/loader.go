@@ -7,6 +7,11 @@ import (
 	"path/filepath"
 )
 
+// BoolPtr returns a pointer to a bool value
+func BoolPtr(b bool) *bool {
+	return &b
+}
+
 // Load reads and parses a configuration file
 // If the file doesn't exist, returns a default configuration
 func Load(path string) (*Config, error) {
@@ -50,7 +55,7 @@ func CreateDefault() *Config {
 			{
 				ID:      "clock",
 				Type:    "clock",
-				Enabled: true,
+				Enabled: BoolPtr(true),
 				Position: PositionConfig{
 					X: 0,
 					Y: 0,
@@ -65,9 +70,8 @@ func CreateDefault() *Config {
 					UpdateInterval:  1.0,
 				},
 				Style: StyleConfig{
-					BackgroundColor:   0,
-					BackgroundOpacity: 255,
-					Border:            false,
+					BackgroundColor: 0,
+					Border:          false,
 				},
 			},
 		},
@@ -129,10 +133,9 @@ func validateConfig(cfg *Config) error {
 		return fmt.Errorf("at least one widget must be configured")
 	}
 
-	enabledCount := 0
 	validTypes := map[string]bool{
 		"clock": true, "cpu": true, "memory": true,
-		"network": true, "disk": true, "keyboard": true, "volume": true, "volume_meter": true,
+		"network": true, "disk": true, "keyboard": true, "volume": true, "volume_meter": true, "doom": true,
 	}
 
 	for i, w := range cfg.Widgets {
@@ -146,12 +149,11 @@ func validateConfig(cfg *Config) error {
 			return fmt.Errorf("widget[%d] (%s): type is required", i, w.ID)
 		}
 		if !validTypes[w.Type] {
-			return fmt.Errorf("widget[%d] (%s): invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, volume, volume_meter)", i, w.ID, w.Type)
+			return fmt.Errorf("widget[%d] (%s): invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, volume, volume_meter, doom)", i, w.ID, w.Type)
 		}
 
-		if w.Enabled {
-			enabledCount++
-
+		// Only validate properties for enabled widgets
+		if w.IsEnabled() {
 			// Type-specific validation (only required properties)
 			if err := validateWidgetProperties(i, &w); err != nil {
 				return err
@@ -159,9 +161,9 @@ func validateConfig(cfg *Config) error {
 		}
 	}
 
-	if enabledCount == 0 {
-		return fmt.Errorf("at least one widget must be enabled")
-	}
+	// Note: We don't validate that at least one widget is enabled here.
+	// A config with all widgets disabled is valid - it will be handled at runtime
+	// by showing the "NO WIDGETS" error display on the OLED screen.
 
 	return nil
 }
@@ -214,10 +216,7 @@ func applyDisplayDefaults(cfg *Config) {
 
 // applyWidgetDefaults sets default values for a widget
 func applyWidgetDefaults(w *WidgetConfig) {
-	// Default enabled to true if not specified
-	if !w.Enabled && w.Type != "" {
-		w.Enabled = true
-	}
+	// Enabled defaults to true via IsEnabled() method - no need to set it here
 
 	applyCommonWidgetDefaults(w)
 	applyTypeSpecificDefaults(w)
@@ -239,10 +238,6 @@ func applyCommonWidgetDefaults(w *WidgetConfig) {
 
 	if w.Properties.VerticalAlign == "" {
 		w.Properties.VerticalAlign = "center"
-	}
-
-	if w.Style.BackgroundOpacity == 0 {
-		w.Style.BackgroundOpacity = 255
 	}
 }
 

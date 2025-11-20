@@ -1,0 +1,553 @@
+package widget
+
+import (
+	"fmt"
+	"image"
+	"image/color"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/pozitronik/steelclock-go/internal/config"
+)
+
+func TestNewDoomWidget(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
+	}
+
+	// Create a temporary WAD file to avoid download during test
+	tmpFile := "test_doom.wad"
+	defer func() { _ = os.Remove(tmpFile) }()
+
+	if err := os.WriteFile(tmpFile, []byte("test wad content"), 0644); err != nil {
+		t.Fatalf("Failed to create test WAD file: %v", err)
+	}
+
+	cfg := config.WidgetConfig{
+		Type:    "doom",
+		ID:      "test_doom",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Style: config.StyleConfig{
+			BackgroundColor: 0,
+			Border:          false,
+			BorderColor:     255,
+		},
+		Properties: config.WidgetProperties{
+			WadName: tmpFile,
+		},
+	}
+
+	widget, err := NewDoomWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewDoomWidget() error = %v", err)
+	}
+
+	if widget == nil {
+		t.Fatal("NewDoomWidget() returned nil")
+	}
+
+	if widget.Name() != "test_doom" {
+		t.Errorf("Name() = %s, want test_doom", widget.Name())
+	}
+
+	// Clean up
+	widget.Stop()
+	time.Sleep(10 * time.Millisecond) // Let goroutines finish
+}
+
+func TestDoomWidgetRender_EmptyFrame(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
+	}
+
+	// Create a temporary WAD to avoid download
+	tmpFile := "test_empty_frame.wad"
+	defer func() { _ = os.Remove(tmpFile) }()
+
+	if err := os.WriteFile(tmpFile, []byte("test wad"), 0644); err != nil {
+		t.Fatalf("Failed to create test WAD: %v", err)
+	}
+
+	cfg := config.WidgetConfig{
+		Type:    "doom",
+		ID:      "test_doom",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Style: config.StyleConfig{
+			BackgroundColor: 0,
+			Border:          false,
+			BorderColor:     255,
+		},
+		Properties: config.WidgetProperties{
+			WadName: tmpFile,
+		},
+	}
+
+	widget, _ := NewDoomWidget(cfg)
+	defer widget.Stop()
+
+	// Render before any frames - should return empty image
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+
+	if img.Bounds().Dx() != 128 {
+		t.Errorf("image width = %d, want 128", img.Bounds().Dx())
+	}
+
+	if img.Bounds().Dy() != 40 {
+		t.Errorf("image height = %d, want 40", img.Bounds().Dy())
+	}
+}
+
+func TestDoomWidgetRender_DownloadProgress(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
+	}
+
+	// Create a temporary WAD to avoid actual download
+	tmpFile := "test_progress_render.wad"
+	defer func() { _ = os.Remove(tmpFile) }()
+
+	if err := os.WriteFile(tmpFile, []byte("test wad"), 0644); err != nil {
+		t.Fatalf("Failed to create test WAD: %v", err)
+	}
+
+	cfg := config.WidgetConfig{
+		Type:    "doom",
+		ID:      "test_doom",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Style: config.StyleConfig{
+			BackgroundColor: 0,
+			Border:          false,
+			BorderColor:     255,
+		},
+		Properties: config.WidgetProperties{
+			WadName: tmpFile,
+		},
+	}
+
+	widget, _ := NewDoomWidget(cfg)
+	defer widget.Stop()
+
+	// Simulate download in progress
+	widget.mu.Lock()
+	widget.isDownloading = true
+	widget.downloadProgress = 0.5 // 50%
+	widget.mu.Unlock()
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+
+	// Check that the image is not empty (has some pixels set)
+	grayImg, ok := img.(*image.Gray)
+	if !ok {
+		t.Fatal("Render() did not return *image.Gray")
+	}
+
+	hasPixels := false
+	for y := 0; y < grayImg.Bounds().Dy(); y++ {
+		for x := 0; x < grayImg.Bounds().Dx(); x++ {
+			if grayImg.GrayAt(x, y).Y > 0 {
+				hasPixels = true
+				break
+			}
+		}
+		if hasPixels {
+			break
+		}
+	}
+
+	if !hasPixels {
+		t.Error("Progress bar should have visible pixels")
+	}
+}
+
+func TestDoomWidgetRender_DownloadError(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
+	}
+
+	// Create a temporary WAD to avoid actual download
+	tmpFile := "test_error_render.wad"
+	defer func() { _ = os.Remove(tmpFile) }()
+
+	if err := os.WriteFile(tmpFile, []byte("test wad"), 0644); err != nil {
+		t.Fatalf("Failed to create test WAD: %v", err)
+	}
+
+	cfg := config.WidgetConfig{
+		Type:    "doom",
+		ID:      "test_doom",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Style: config.StyleConfig{
+			BackgroundColor: 0,
+			Border:          false,
+			BorderColor:     255,
+		},
+		Properties: config.WidgetProperties{
+			WadName: tmpFile,
+		},
+	}
+
+	widget, _ := NewDoomWidget(cfg)
+	defer widget.Stop()
+
+	// Simulate download error
+	widget.mu.Lock()
+	widget.downloadError = fmt.Errorf("test error")
+	widget.mu.Unlock()
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+
+	// Should show error message (has pixels)
+	grayImg, ok := img.(*image.Gray)
+	if !ok {
+		t.Fatal("Render() did not return *image.Gray")
+	}
+
+	hasPixels := false
+	for y := 0; y < grayImg.Bounds().Dy(); y++ {
+		for x := 0; x < grayImg.Bounds().Dx(); x++ {
+			if grayImg.GrayAt(x, y).Y > 0 {
+				hasPixels = true
+				break
+			}
+		}
+		if hasPixels {
+			break
+		}
+	}
+
+	if !hasPixels {
+		t.Error("Error message should have visible pixels")
+	}
+}
+
+func TestDoomWidget_DrawText(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
+	}
+
+	cfg := config.WidgetConfig{
+		Type:    "doom",
+		ID:      "test_doom",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+	}
+
+	widget, _ := NewDoomWidget(cfg)
+	defer widget.Stop()
+
+	img := image.NewGray(image.Rect(0, 0, 128, 40))
+
+	// Test drawing text
+	widget.drawText(img, "DOOM", 64, 10)
+
+	// Check that some pixels were set
+	hasPixels := false
+	for y := 10; y < 15; y++ {
+		for x := 50; x < 78; x++ {
+			if img.GrayAt(x, y).Y > 0 {
+				hasPixels = true
+				break
+			}
+		}
+		if hasPixels {
+			break
+		}
+	}
+
+	if !hasPixels {
+		t.Error("drawText should render visible characters")
+	}
+}
+
+func TestDoomWidget_DrawChar(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
+	}
+
+	cfg := config.WidgetConfig{
+		Type:    "doom",
+		ID:      "test_doom",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+	}
+
+	widget, _ := NewDoomWidget(cfg)
+	defer widget.Stop()
+
+	img := image.NewGray(image.Rect(0, 0, 128, 40))
+
+	// Test drawing known character
+	widget.drawChar(img, 'D', 10, 10)
+
+	// Check that pixels were set for the character
+	hasPixels := false
+	for y := 10; y < 15; y++ {
+		for x := 10; x < 13; x++ {
+			if img.GrayAt(x, y).Y > 0 {
+				hasPixels = true
+				break
+			}
+		}
+		if hasPixels {
+			break
+		}
+	}
+
+	if !hasPixels {
+		t.Error("drawChar should render visible pixels for 'D'")
+	}
+
+	// Test unknown character (should not crash)
+	img2 := image.NewGray(image.Rect(0, 0, 128, 40))
+	widget.drawChar(img2, '€', 10, 10) // Unknown character
+
+	// Should be all black (no pixels set)
+	allBlack := true
+	for y := 10; y < 15; y++ {
+		for x := 10; x < 13; x++ {
+			if img2.GrayAt(x, y).Y > 0 {
+				allBlack = false
+				break
+			}
+		}
+		if !allBlack {
+			break
+		}
+	}
+
+	if !allBlack {
+		t.Error("Unknown character should not render anything")
+	}
+}
+
+func TestDoomWidget_DrawProgressBar(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
+	}
+
+	cfg := config.WidgetConfig{
+		Type:    "doom",
+		ID:      "test_doom",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+	}
+
+	widget, _ := NewDoomWidget(cfg)
+	defer widget.Stop()
+
+	img := image.NewGray(image.Rect(0, 0, 128, 40))
+
+	// Test progress bar at 50%
+	widget.drawProgressBar(img, 0.5, 128, 40)
+
+	// Check for border pixels (top border)
+	hasBorder := false
+	barY := 40/2 - 8/2
+	for x := 10; x < 10+128-20; x++ {
+		if img.GrayAt(x, barY).Y == 255 {
+			hasBorder = true
+			break
+		}
+	}
+
+	if !hasBorder {
+		t.Error("Progress bar should have visible border")
+	}
+
+	// Check for filled pixels (should be filled up to ~50%)
+	hasFill := false
+	for x := 11; x < 11+(128-20)/2; x++ {
+		if img.GrayAt(x, barY+1).Y == 255 {
+			hasFill = true
+			break
+		}
+	}
+
+	if !hasFill {
+		t.Error("Progress bar should have filled portion")
+	}
+
+	// Check that right side is not filled (should be empty well after 50%)
+	// Check at 75% position - should be empty for 50% progress
+	rightX := 11 + (128-20)*3/4
+	rightFilled := false
+	for x := rightX; x < 11+(128-20)-2; x++ {
+		if img.GrayAt(x, barY+1).Y == 255 {
+			rightFilled = true
+			break
+		}
+	}
+
+	if rightFilled {
+		t.Error("Progress bar should not be filled beyond progress value")
+	}
+}
+
+func TestDoomWidget_DrawFrame(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
+	}
+
+	cfg := config.WidgetConfig{
+		Type:    "doom",
+		ID:      "test_doom",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+	}
+
+	widget, _ := NewDoomWidget(cfg)
+	defer widget.Stop()
+
+	// Create a test RGBA image (320x200)
+	srcImg := image.NewRGBA(image.Rect(0, 0, 320, 200))
+
+	// Fill with some colors
+	for y := 0; y < 200; y++ {
+		for x := 0; x < 320; x++ {
+			srcImg.Set(x, y, color.RGBA{R: 128, G: 64, B: 32, A: 255})
+		}
+	}
+
+	// Call DrawFrame
+	widget.DrawFrame(srcImg)
+
+	// Check that currentImg was set
+	widget.mu.RLock()
+	hasFrame := widget.currentImg != nil
+	widget.mu.RUnlock()
+
+	if !hasFrame {
+		t.Error("DrawFrame should set currentImg")
+	}
+
+	// Render should now return the converted frame
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil after DrawFrame")
+	}
+
+	// Check dimensions
+	if img.Bounds().Dx() != 128 || img.Bounds().Dy() != 40 {
+		t.Errorf("Rendered image size = %dx%d, want 128x40", img.Bounds().Dx(), img.Bounds().Dy())
+	}
+
+	// Check that image has some non-zero pixels (grayscale conversion)
+	grayImg, ok := img.(*image.Gray)
+	if !ok {
+		t.Fatal("Render() did not return *image.Gray")
+	}
+
+	hasGray := false
+	for y := 0; y < 40; y++ {
+		for x := 0; x < 128; x++ {
+			if grayImg.GrayAt(x, y).Y > 0 {
+				hasGray = true
+				break
+			}
+		}
+		if hasGray {
+			break
+		}
+	}
+
+	if !hasGray {
+		t.Error("Converted frame should have visible pixels")
+	}
+}
+
+func TestDoomWidget_Update(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
+	}
+
+	cfg := config.WidgetConfig{
+		Type:    "doom",
+		ID:      "test_doom",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+	}
+
+	widget, _ := NewDoomWidget(cfg)
+	defer widget.Stop()
+
+	// Update should not return error (DOOM updates in background)
+	err := widget.Update()
+	if err != nil {
+		t.Errorf("Update() error = %v", err)
+	}
+}

@@ -1,0 +1,32 @@
+{
+  "game_name": "STEELCLOCK_DOOM",
+  "game_display_name": "SteelClock DOOM Demo",
+  "refresh_rate_ms": 50,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background_color": 0
+  },
+  "widgets": [
+    {
+      "type": "doom",
+      "id": "doom_demo",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40,
+        "z_order": 1
+      },
+      "style": {
+        "background_color": 0,
+        "border": false,
+        "border_color": 128
+      },
+      "properties": {
+        "wad_name": "doom1.wad"
+      }
+    }
+  ]
+}

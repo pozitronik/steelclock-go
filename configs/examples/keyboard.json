@@ -1,0 +1,49 @@
+{
+  "$schema": "../config.schema.json",
+  "game_name": "STEELCLOCK_KEYBOARD",
+  "game_display_name": "SteelClock - Keyboard Indicators",
+  "refresh_rate_ms": 200,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background_color": 0
+  },
+  "layout": {
+    "type": "basic"
+  },
+  "widgets": [
+    {
+      "type": "keyboard",
+      "id": "keyboard_indicators",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40,
+        "z_order": 0
+      },
+      "style": {
+        "background_color": 0,
+        "border": false,
+        "border_color": 255
+      },
+      "properties": {
+        "update_interval": 0.2,
+        "spacing": 3,
+        "caps_lock_on": "CAPS",
+        "caps_lock_off": "",
+        "num_lock_on": "NUM",
+        "num_lock_off": "",
+        "scroll_lock_on": "SCR",
+        "scroll_lock_off": "",
+        "indicator_color_on": 255,
+        "indicator_color_off": 100,
+        "font_size": 10,
+        "horizontal_align": "center",
+        "vertical_align": "center",
+        "padding": 2
+      }
+    }
+  ]
+}

@@ -249,13 +249,18 @@ func DrawDualGauge(img *image.Gray, pos config.PositionConfig, outerPercentage, 
 
 // DrawGauge draws a semicircular gauge with needle
 func DrawGauge(img *image.Gray, pos config.PositionConfig, percentage float64, gaugeColor, needleColor uint8) {
-	centerX := pos.W / 2
-	centerY := pos.H - 3 // Near bottom
+	DrawGaugeAt(img, 0, 0, pos.W, pos.H, percentage, gaugeColor, needleColor)
+}
+
+// DrawGaugeAt draws a gauge at a specific position with offset
+func DrawGaugeAt(img *image.Gray, x, y, width, height int, percentage float64, gaugeColor, needleColor uint8) {
+	centerX := x + width/2
+	centerY := y + height - 3 // Near bottom
 
 	// Radius of the gauge arc
-	radius := pos.H - 6
-	if pos.W/2 < radius {
-		radius = pos.W/2 - 3
+	radius := height - 6
+	if width/2 < radius {
+		radius = width/2 - 3
 	}
 
 	if radius <= 0 {
@@ -265,14 +270,16 @@ func DrawGauge(img *image.Gray, pos config.PositionConfig, percentage float64, g
 	gColor := color.Gray{Y: gaugeColor}
 	nColor := color.Gray{Y: needleColor}
 
+	bounds := img.Bounds()
+
 	// Draw gauge arc (semicircle from 180° to 0°)
 	for angle := 180.0; angle >= 0; angle -= 2.0 {
 		rad := angle * math.Pi / 180.0
-		x := centerX + int(float64(radius)*math.Cos(rad))
-		y := centerY - int(float64(radius)*math.Sin(rad))
+		px := centerX + int(float64(radius)*math.Cos(rad))
+		py := centerY - int(float64(radius)*math.Sin(rad))
 
-		if x >= 0 && x < pos.W && y >= 0 && y < pos.H {
-			img.Set(x, y, gColor)
+		if px >= bounds.Min.X && px < bounds.Max.X && py >= bounds.Min.Y && py < bounds.Max.Y {
+			img.Set(px, py, gColor)
 		}
 	}
 
@@ -309,8 +316,10 @@ func DrawGauge(img *image.Gray, pos config.PositionConfig, percentage float64, g
 	// Draw center point
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
-			if centerX+dx >= 0 && centerX+dx < pos.W && centerY+dy >= 0 && centerY+dy < pos.H {
-				img.Set(centerX+dx, centerY+dy, nColor)
+			px := centerX + dx
+			py := centerY + dy
+			if px >= bounds.Min.X && px < bounds.Max.X && py >= bounds.Min.Y && py < bounds.Max.Y {
+				img.Set(px, py, nColor)
 			}
 		}
 	}
@@ -345,6 +354,127 @@ func DrawLine(img *image.Gray, x0, y0, x1, y1 int, c color.Gray) {
 		if e2 < dx {
 			err += dx
 			y0 += sy
+		}
+	}
+}
+
+// DrawCircle draws a circle with the given center and radius
+func DrawCircle(img *image.Gray, centerX, centerY, radius int, c color.Gray) {
+	// Bresenham's circle algorithm
+	x := 0
+	y := radius
+	d := 3 - 2*radius
+
+	drawCirclePoints(img, centerX, centerY, x, y, c)
+
+	for x <= y {
+		if d <= 0 {
+			d = d + 4*x + 6
+		} else {
+			d = d + 4*(x-y) + 10
+			y--
+		}
+		x++
+		drawCirclePoints(img, centerX, centerY, x, y, c)
+	}
+}
+
+// drawCirclePoints draws 8 symmetric points for a circle
+func drawCirclePoints(img *image.Gray, centerX, centerY, x, y int, c color.Gray) {
+	bounds := img.Bounds()
+
+	points := [][2]int{
+		{centerX + x, centerY + y},
+		{centerX - x, centerY + y},
+		{centerX + x, centerY - y},
+		{centerX - x, centerY - y},
+		{centerX + y, centerY + x},
+		{centerX - y, centerY + x},
+		{centerX + y, centerY - x},
+		{centerX - y, centerY - x},
+	}
+
+	for _, p := range points {
+		if p[0] >= bounds.Min.X && p[0] < bounds.Max.X &&
+			p[1] >= bounds.Min.Y && p[1] < bounds.Max.Y {
+			img.Set(p[0], p[1], c)
+		}
+	}
+}
+
+// DrawWarningTriangle draws a warning triangle (!) symbol
+func DrawWarningTriangle(img *image.Gray, x, y, size int, c color.Gray) {
+	bounds := img.Bounds()
+
+	// Draw triangle outline
+	// Top vertex
+	topX := x + size/2
+	topY := y - size/2
+
+	// Bottom left vertex
+	leftX := x
+	leftY := y + size/2
+
+	// Bottom right vertex
+	rightX := x + size
+	rightY := y + size/2
+
+	// Draw triangle edges
+	DrawLine(img, topX, topY, leftX, leftY, c)
+	DrawLine(img, leftX, leftY, rightX, rightY, c)
+	DrawLine(img, rightX, rightY, topX, topY, c)
+
+	// Draw exclamation mark inside
+	// Vertical line of !
+	exclamX := x + size/2
+	exclamTopY := y - size/4
+	exclamBottomY := y + size/6
+
+	for py := exclamTopY; py <= exclamBottomY; py++ {
+		if py >= bounds.Min.Y && py < bounds.Max.Y &&
+			exclamX >= bounds.Min.X && exclamX < bounds.Max.X {
+			img.Set(exclamX, py, c)
+		}
+	}
+
+	// Dot of !
+	dotY := y + size/3
+	if dotY >= bounds.Min.Y && dotY < bounds.Max.Y &&
+		exclamX >= bounds.Min.X && exclamX < bounds.Max.X {
+		img.Set(exclamX, dotY, c)
+	}
+}
+
+// DrawRectangle draws a rectangle border at the specified position
+func DrawRectangle(img *image.Gray, x, y, w, h int, borderColor uint8) {
+	if img == nil || w <= 0 || h <= 0 {
+		return
+	}
+
+	bounds := img.Bounds()
+	c := color.Gray{Y: borderColor}
+
+	// Top and bottom borders
+	for px := x; px < x+w; px++ {
+		if px >= bounds.Min.X && px < bounds.Max.X {
+			if y >= bounds.Min.Y && y < bounds.Max.Y {
+				img.Set(px, y, c)
+			}
+			if y+h-1 >= bounds.Min.Y && y+h-1 < bounds.Max.Y {
+				img.Set(px, y+h-1, c)
+			}
+		}
+	}
+
+	// Left and right borders
+	for py := y; py < y+h; py++ {
+		if py >= bounds.Min.Y && py < bounds.Max.Y {
+			if x >= bounds.Min.X && x < bounds.Max.X {
+				img.Set(x, py, c)
+			}
+			if x+w-1 >= bounds.Min.X && x+w-1 < bounds.Max.X {
+				img.Set(x+w-1, py, c)
+			}
 		}
 	}
 }
