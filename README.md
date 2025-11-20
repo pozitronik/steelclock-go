@@ -8,19 +8,29 @@
 
 High-performance display manager for SteelSeries devices written in Go.
 
+## Requirements
+
+- **Windows OS** (Windows 10/11)
+- **SteelSeries Engine** or **SteelSeries GG** installed and running
+- **Go 1.21+** (for building from source)
+
 ## Features
 
 - **System Tray Integration**: Runs in background with system tray icon
 - **Live Configuration Reload**: Edit and reload config without restarting
 - **Multiple Widgets**: Clock, CPU, Memory, Network, Disk, Keyboard indicators, Volume control
-- **Display Modes**: Text, horizontal/vertical bars, graphs, analog gauges, and triangle indicators
+- **Display Modes**: Text, horizontal/vertical bars, graphs, analog gauges, etc
+- **Per-Core CPU Monitoring**: Grid layouts showing individual core usage for all display modes
+- **Widget Transparency**: Overlay widgets using `background_color: -1` for layered displays
 - **Gauge Displays**: Semicircular analog gauges with needles for CPU/Memory/Volume, dual concentric gauges for Network (RX/TX)
 - **Auto-Hide Widgets**: Widgets can appear temporarily and hide automatically (ideal for notifications and volume indicators)
 - **Volume Control**: Real-time Windows system volume monitoring via Core Audio API
 - **Low Resource Usage**: Minimal CPU and memory footprint (~0.5% CPU, ~15MB RAM)
-- **Single Executable**: ~10MB, no dependencies, no DLLs required
+- **Single Executable**: ~8-9MB, no dependencies, no DLLs required
 - **Automatic Logging**: All output logged to `steelclock.log` with timestamps
 - **JSON Schema Support**: Full IDE autocomplete and validation via included schema file
+
+And it also runs [DOOM](configs/examples/DOOM_README.md).
 
 ## Quick Start
 
@@ -32,8 +42,6 @@ High-performance display manager for SteelSeries devices written in Go.
    # On Linux/WSL
    ./build.sh
    ```
-
-   The build script automatically handles icon resources if configured.
 
 2. Run the application:
    ```bash
@@ -61,6 +69,43 @@ GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H windowsgui" -o steelclock.
     Path to configuration file (default "config.json")
 ```
 
+## Configuration
+
+Edit `config.json` to customize widgets. The application supports live reload via the tray menu.
+
+**For complete configuration documentation**, see:
+- **[CONFIG_GUIDE.md](configs/CONFIG_GUIDE.md)** - Comprehensive guide with all properties and examples
+- **[config.schema.json](configs/config.schema.json)** - JSON schema for IDE autocomplete and validation
+- **[configs/examples/](configs/examples/)** - Example configurations for each widget type
+
+### Supported Widgets
+
+| Widget           | Description                       | Modes                                                           |
+|------------------|-----------------------------------|-----------------------------------------------------------------|
+| **clock**        | Current time display              | text, clock_face                                                |
+| **cpu**          | CPU usage (per-core support)      | text, bar_horizontal, bar_vertical, graph, gauge                |
+| **memory**       | RAM usage                         | text, bar_horizontal, bar_vertical, graph, gauge                |
+| **network**      | Network I/O (RX/TX)               | text, bar_horizontal, bar_vertical, graph, gauge                |
+| **disk**         | Disk I/O (read/write)             | text, bar_horizontal, bar_vertical, graph                       |
+| **keyboard**     | Lock indicators (Caps/Num/Scroll) | text                                                            |
+| **volume**       | System volume level and mute      | text, bar_horizontal, bar_vertical, gauge, triangle             |
+| **volume_meter** | Realtime audio peak meter         | text, bar_horizontal, bar_vertical, gauge (stereo & VU support) |
+| **doom**         | Interactive DOOM game display     | game                                                            |
+
+See [CONFIG_GUIDE.md](configs/CONFIG_GUIDE.md) for detailed widget properties and configuration examples.
+
+## Troubleshooting
+
+### Application won't start
+- Verify SteelSeries Engine/GG is installed and running
+- Check if config file exists and is valid JSON
+- Review `steelclock.log` for initialization errors and stack traces
+
+### Config reload fails
+- Check `config.json` syntax (must be valid JSON)
+- Verify widget configurations are correct
+- Check `steelclock.log` for specific validation errors
+
 ### Logging
 
 All application output is logged to `steelclock.log` in the same directory as the executable. The log includes:
@@ -72,90 +117,14 @@ All application output is logged to `steelclock.log` in the same directory as th
 
 Check this file if you encounter any issues or unexpected behavior.
 
-## Configuration
-
-Edit `config.json` to customize widgets. The application supports live reload via the tray menu.
-
-For detailed configuration documentation with all widget properties and examples, see [CONFIG_GUIDE.md](configs/CONFIG_GUIDE.md) and [config.schema.json](configs/config.schema.json).
-
-### Example Configuration
-
-```json
-{
-  "game_name": "STEELCLOCK",
-  "game_display_name": "Steel Clock",
-  "refresh_rate_ms": 100,
-  "display": {
-    "width": 128,
-    "height": 40,
-    "background_color": 0
-  },
-  "widgets": [
-    {
-      "type": "clock",
-      "id": "main_clock",
-      "enabled": true,
-      "position": {"x": 0, "y": 0, "w": 128, "h": 40},
-      "style": {
-        "background_color": 0,
-        "border": false,
-        "border_color": 255
-      },
-      "properties": {
-        "format": "15:04:05",
-        "font_size": 16,
-        "horizontal_align": "center",
-        "vertical_align": "center"
-      }
-    }
-  ]
-}
-```
-
-### Supported Widgets
-
-| Widget           | Description                       | Modes                                                           |
-|------------------|-----------------------------------|-----------------------------------------------------------------|
-| **clock**        | Current time display              | text                                                            |
-| **cpu**          | CPU usage                         | text, bar_horizontal, bar_vertical, graph, gauge                |
-| **memory**       | RAM usage                         | text, bar_horizontal, bar_vertical, graph, gauge                |
-| **network**      | Network I/O (RX/TX)               | text, bar_horizontal, bar_vertical, graph, gauge                |
-| **disk**         | Disk I/O (read/write)             | text, bar_horizontal, bar_vertical, graph                       |
-| **keyboard**     | Lock indicators (Caps/Num/Scroll) | text                                                            |
-| **volume**       | System volume level and mute      | text, bar_horizontal, bar_vertical, gauge, triangle             |
-| **volume_meter** | Realtime audio peak meter         | text, bar_horizontal, bar_vertical, gauge (stereo & VU support) |
-
-### Time Format
-
-Go uses reference time format: `Mon Jan 2 15:04:05 MST 2006`
-
-Common formats:
-- `15:04:05` - HH:MM:SS (24-hour)
-- `15:04` - HH:MM
-- `03:04 PM` - hh:mm AM/PM (12-hour)
-- `2006-01-02 15:04` - YYYY-MM-DD HH:MM
-
-Or use common Python-style formats (auto-converted):
-- `%H:%M:%S` → `15:04:05`
-- `%H:%M` → `15:04`
-
-## Troubleshooting
-
-### Application won't start
-- Verify SteelSeries Engine/GG is installed and running
-- Check if config file exists and is valid
-- Review `steelclock.log` for initialization errors and stack traces
-
-### Config reload fails
-- Check `config.json` syntax (must be valid JSON)
-- Verify widget configurations are correct
-- Check `steelclock.log` for specific validation errors
-
 ## Testing
 
 ```bash
 # Run all tests
 go test ./... -cover
+
+# Run with race detection
+go test -race ./...
 
 # Run with verbose output
 go test ./... -v
