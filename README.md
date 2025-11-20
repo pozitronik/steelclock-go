@@ -8,7 +8,7 @@
 
 High-performance display manager for SteelSeries devices written in Go.
 
-https://github.com/user-attachments/assets/7fc75aeb-26da-4163-a56e-977dc3da9ee0
+https://github.com/user-attachments/assets/58f607cb-be31-4af4-bb3d-6e0628f0748c
 
 ## Requirements
 
