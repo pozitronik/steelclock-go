@@ -46,8 +46,6 @@ type VolumeWidget struct {
 	successfulCalls   int64
 	failedCalls       int64
 	lastSuccessTime   time.Time
-	maxCallDuration   time.Duration
-	totalCallDuration time.Duration // for calculating average
 	consecutiveErrors int
 
 	// Platform-specific volume reader (managed by polling goroutine)
