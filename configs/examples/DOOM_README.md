@@ -2,6 +2,8 @@
 
 Yes, you can run DOOM on your SteelSeries OLED display! This widget uses the [Gore](https://github.com/AndreRenaud/gore) pure Go DOOM engine port.
 
+https://github.com/user-attachments/assets/37cbdbb5-6179-4a45-ab52-74192a529420
+
 ## Features
 
 - Runs DOOM shareware (doom1.wad) or full version
