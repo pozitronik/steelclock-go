@@ -20,6 +20,7 @@ const (
 
 var (
 	fontCache      = make(map[string]*opentype.Font)
+	fontCacheMutex sync.RWMutex            // Protects fontCache map access
 	bundledFontURL = DefaultBundledFontURL // Can be overridden via SetBundledFontURL
 	// fontMutex protects concurrent access to font.Face operations
 	// font.Face from golang.org/x/image/font is not thread-safe
@@ -77,11 +78,15 @@ func LoadFont(fontName string, size int) (font.Face, error) {
 
 // loadTTF loads a TrueType font file
 func loadTTF(path string) (*opentype.Font, error) {
-	// Check cache
+	// Check cache with read lock
+	fontCacheMutex.RLock()
 	if cached, ok := fontCache[path]; ok {
+		fontCacheMutex.RUnlock()
 		return cached, nil
 	}
+	fontCacheMutex.RUnlock()
 
+	// Font not in cache, load it
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -92,7 +97,11 @@ func loadTTF(path string) (*opentype.Font, error) {
 		return nil, err
 	}
 
+	// Store in cache with write lock
+	fontCacheMutex.Lock()
 	fontCache[path] = ttf
+	fontCacheMutex.Unlock()
+
 	return ttf, nil
 }
 

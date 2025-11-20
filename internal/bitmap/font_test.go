@@ -239,3 +239,68 @@ func TestLoadFont_MultipleLoads(t *testing.T) {
 		<-done
 	}
 }
+
+// TestFontCacheConcurrentAccess tests that fontCache map is safe for concurrent access
+// This test specifically exposes the race condition in loadTTF() where fontCache
+// is accessed without synchronization.
+func TestFontCacheConcurrentAccess(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping race condition test in short mode")
+	}
+
+	// This test triggers concurrent access to the fontCache map
+	// by having multiple goroutines load the same font simultaneously
+	const numGoroutines = 50
+	const numIterations = 10
+
+	done := make(chan bool, numGoroutines)
+	errors := make(chan error, numGoroutines*numIterations)
+
+	// Launch multiple goroutines that will all try to load the same font
+	// This will cause concurrent reads and writes to fontCache map
+	for i := 0; i < numGoroutines; i++ {
+		go func(id int) {
+			defer func() { done <- true }()
+
+			for j := 0; j < numIterations; j++ {
+				// Load the same font path from all goroutines
+				// This creates concurrent map access:
+				// - Some goroutines read from cache (ok = fontCache[path])
+				// - Some goroutines write to cache (fontCache[path] = ttf)
+				_, err := LoadFont("", 12)
+				if err != nil {
+					errors <- err
+				}
+
+				// Also try to trigger loadTTF directly through measure
+				// This increases the chance of concurrent cache access
+				face, _ := LoadFont("", 14)
+				if face != nil {
+					_, _ = MeasureText("test", face)
+				}
+			}
+		}(i)
+	}
+
+	// Wait for all goroutines to complete
+	for i := 0; i < numGoroutines; i++ {
+		<-done
+	}
+	close(errors)
+
+	// Check for errors
+	var errCount int
+	for err := range errors {
+		errCount++
+		t.Logf("Error during concurrent access: %v", err)
+	}
+
+	if errCount > 0 {
+		t.Errorf("Got %d errors during concurrent font loading", errCount)
+	}
+
+	// NOTE: This test should be run with -race flag to detect the race condition
+	// go test -race ./internal/bitmap -run TestFontCacheConcurrentAccess
+	// Without proper synchronization, this will fail with:
+	// "WARNING: DATA RACE - concurrent map read and map write"
+}
