@@ -384,3 +384,90 @@ func TestClockWidgetRender_ClockFaceAlignment(t *testing.T) {
 		})
 	}
 }
+
+// TestClockWidget_ConcurrentAccess tests that concurrent calls to Update() and Render()
+// do not cause data races on the currentTime string field.
+// This test should be run with -race flag to detect concurrent access violations.
+func TestClockWidget_ConcurrentAccess(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "clock",
+		ID:      "test_clock_concurrent",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Style: config.StyleConfig{
+			BackgroundColor: 0,
+			Border:          false,
+			BorderColor:     255,
+		},
+		Properties: config.WidgetProperties{
+			Format:          "15:04:05",
+			FontSize:        12,
+			HorizontalAlign: "center",
+			VerticalAlign:   "center",
+		},
+	}
+
+	widget, err := NewClockWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewClockWidget() error = %v", err)
+	}
+
+	// Number of concurrent goroutines
+	const numUpdaters = 20
+	const numRenderers = 20
+	const numIterations = 50
+
+	done := make(chan bool, numUpdaters+numRenderers)
+	errors := make(chan error, (numUpdaters+numRenderers)*numIterations)
+
+	// Launch updater goroutines
+	for i := 0; i < numUpdaters; i++ {
+		go func(id int) {
+			defer func() { done <- true }()
+			for j := 0; j < numIterations; j++ {
+				if err := widget.Update(); err != nil {
+					errors <- err
+				}
+			}
+		}(i)
+	}
+
+	// Launch renderer goroutines
+	for i := 0; i < numRenderers; i++ {
+		go func(id int) {
+			defer func() { done <- true }()
+			for j := 0; j < numIterations; j++ {
+				_, err := widget.Render()
+				if err != nil {
+					errors <- err
+				}
+			}
+		}(i)
+	}
+
+	// Wait for all goroutines to complete
+	for i := 0; i < numUpdaters+numRenderers; i++ {
+		<-done
+	}
+	close(errors)
+
+	// Check for any errors during execution
+	var errCount int
+	for err := range errors {
+		t.Errorf("Error during concurrent access: %v", err)
+		errCount++
+		if errCount > 5 {
+			t.Log("(truncating error list...)")
+			break
+		}
+	}
+
+	// Note: The race detector will catch concurrent string access
+	// even if no errors are returned. Run with: go test -race
+	t.Log("Concurrent access test completed. Run with -race flag to detect data races.")
+}

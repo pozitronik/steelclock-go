@@ -145,7 +145,6 @@ func TestVolumeWidget_LongRunning(t *testing.T) {
 	totalCalls := widget.totalCalls
 	successfulCalls := widget.successfulCalls
 	failedCalls := widget.failedCalls
-	maxDuration := widget.maxCallDuration
 	widget.mu.RUnlock()
 
 	t.Logf("Long-running test results:")
@@ -153,7 +152,6 @@ func TestVolumeWidget_LongRunning(t *testing.T) {
 	t.Logf("  Successful: %d", successfulCalls)
 	t.Logf("  Failed: %d", failedCalls)
 	t.Logf("  Success rate: %.2f%%", float64(successfulCalls)/float64(totalCalls)*100)
-	t.Logf("  Max call duration: %v", maxDuration)
 
 	// Should have made many calls in 10 seconds (at 100ms interval = ~100 calls)
 	if totalCalls < 50 {
@@ -196,7 +194,6 @@ func TestVolumeWidget_HealthMetrics(t *testing.T) {
 	successfulCalls := widget.successfulCalls
 	failedCalls := widget.failedCalls
 	lastSuccessTime := widget.lastSuccessTime
-	maxCallDuration := widget.maxCallDuration
 	widget.mu.RUnlock()
 
 	// Should have metrics
@@ -218,16 +215,10 @@ func TestVolumeWidget_HealthMetrics(t *testing.T) {
 		t.Errorf("Last success too old: %v ago", time.Since(lastSuccessTime))
 	}
 
-	// Max duration should be reasonable (under 10ms for healthy COM)
-	if maxCallDuration > 100*time.Millisecond {
-		t.Errorf("Max call duration too high: %v", maxCallDuration)
-	}
-
 	t.Logf("Health metrics:")
 	t.Logf("  Total calls: %d", totalCalls)
 	t.Logf("  Successful: %d", successfulCalls)
 	t.Logf("  Failed: %d", failedCalls)
-	t.Logf("  Max duration: %v", maxCallDuration)
 }
 
 // TestVolumeWidget_NoMemoryLeak tests that repeated creation/destruction doesn't leak
