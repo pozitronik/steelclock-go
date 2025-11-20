@@ -10,12 +10,16 @@ import (
 
 // DrawAlignedText draws text on an image with alignment and padding
 func DrawAlignedText(img *image.Gray, text string, face font.Face, horizAlign, vertAlign string, padding int) {
+	// Protect font face access - font.Face is not thread-safe
+	fontMutex.Lock()
+	defer fontMutex.Unlock()
+
 	bounds := img.Bounds()
 	width := bounds.Dx()
 	height := bounds.Dy()
 
 	// Measure text
-	textWidth, textHeight := MeasureText(text, face)
+	textWidth, textHeight := measureTextUnsafe(text, face)
 
 	// Calculate available space
 	contentX := padding
@@ -66,8 +70,12 @@ func DrawAlignedText(img *image.Gray, text string, face font.Face, horizAlign, v
 
 // DrawTextInRect draws text within a specific rectangle with alignment and padding
 func DrawTextInRect(img *image.Gray, text string, face font.Face, x, y, width, height int, horizAlign, vertAlign string, padding int) {
+	// Protect font face access - font.Face is not thread-safe
+	fontMutex.Lock()
+	defer fontMutex.Unlock()
+
 	// Measure text
-	textWidth, textHeight := MeasureText(text, face)
+	textWidth, textHeight := measureTextUnsafe(text, face)
 
 	// Calculate available space
 	contentX := x + padding

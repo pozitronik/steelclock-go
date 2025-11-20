@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
@@ -20,6 +21,9 @@ const (
 var (
 	fontCache      = make(map[string]*opentype.Font)
 	bundledFontURL = DefaultBundledFontURL // Can be overridden via SetBundledFontURL
+	// fontMutex protects concurrent access to font.Face operations
+	// font.Face from golang.org/x/image/font is not thread-safe
+	fontMutex sync.Mutex
 )
 
 // SetBundledFontURL sets the URL for downloading the bundled font
@@ -172,8 +176,9 @@ func downloadBundledFont() (string, error) {
 	return fontPath, nil
 }
 
-// MeasureText measures the width and height of text
-func MeasureText(text string, face font.Face) (int, int) {
+// measureTextUnsafe measures the width and height of text without locking
+// Internal use only - caller must hold fontMutex
+func measureTextUnsafe(text string, face font.Face) (int, int) {
 	drawer := &font.Drawer{
 		Face: face,
 	}
@@ -185,4 +190,13 @@ func MeasureText(text string, face font.Face) (int, int) {
 	height := (metrics.Ascent + metrics.Descent).Ceil()
 
 	return width, height
+}
+
+// MeasureText measures the width and height of text
+func MeasureText(text string, face font.Face) (int, int) {
+	// Protect font face access - font.Face is not thread-safe
+	fontMutex.Lock()
+	defer fontMutex.Unlock()
+
+	return measureTextUnsafe(text, face)
 }
