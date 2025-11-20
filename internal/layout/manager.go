@@ -43,12 +43,10 @@ func (m *Manager) Composite() (image.Image, error) {
 
 	// Render and composite each widget
 	for _, w := range sortedWidgets {
-		// Update widget state
-		if err := w.Update(); err != nil {
-			return nil, fmt.Errorf("failed to update widget %s: %w", w.Name(), err)
-		}
-
 		// Render widget
+		// NOTE: We do NOT call Update() here because widgets have dedicated
+		// update loops running in background goroutines (see compositor.widgetUpdateLoop).
+		// Calling Update() here would create a race condition.
 		widgetImg, err := w.Render()
 		if err != nil {
 			return nil, fmt.Errorf("failed to render widget %s: %w", w.Name(), err)
