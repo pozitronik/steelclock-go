@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/AndreRenaud/gore"
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -115,9 +116,21 @@ func (w *DoomWidget) runDoom() {
 	// Wait for either completion or stop signal
 	select {
 	case <-done:
-		log.Printf("[DOOM] Engine stopped")
+		log.Printf("[DOOM] Engine stopped normally")
 	case <-w.stopChan:
-		log.Printf("[DOOM] Stop requested")
+		log.Printf("[DOOM] Stop requested, terminating engine...")
+		// Signal DOOM engine to quit
+		gore.Stop()
+
+		// Wait for goroutine to exit with timeout
+		select {
+		case <-done:
+			log.Printf("[DOOM] Engine stopped cleanly")
+		case <-time.After(2 * time.Second):
+			log.Printf("[DOOM] WARNING: Engine did not stop within 2 seconds")
+			// Goroutine may still be running, but we'll exit anyway
+			// The GetEvent() callback will prevent further processing
+		}
 	}
 }
 
@@ -326,14 +339,11 @@ func (w *DoomWidget) Update() error {
 
 // Stop stops the DOOM engine
 func (w *DoomWidget) Stop() {
-	w.mu.Lock()
-	started := w.started
-	w.mu.Unlock()
-
-	if started {
-		gore.Stop()
-	}
-
+	// Close stop channel to signal runDoom to exit
+	// runDoom() will call gore.Stop() and wait for cleanup
 	close(w.stopChan)
+
+	// Wait for runDoom goroutine to complete
+	// This ensures gore.Run() goroutine has exited
 	w.wg.Wait()
 }
