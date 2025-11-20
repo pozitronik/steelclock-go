@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"sync"
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
@@ -23,6 +24,7 @@ type ClockWidget struct {
 	padding     int
 	displayMode string
 	currentTime string
+	mu          sync.RWMutex // Protects currentTime field
 	fontFace    font.Face
 }
 
@@ -83,14 +85,21 @@ func NewClockWidget(cfg config.WidgetConfig) (*ClockWidget, error) {
 
 // Update updates the current time
 func (w *ClockWidget) Update() error {
+	w.mu.Lock()
 	w.currentTime = time.Now().Format(w.format)
+	w.mu.Unlock()
 	return nil
 }
 
 // Render creates an image of the clock
 func (w *ClockWidget) Render() (image.Image, error) {
+	// Check if time needs to be updated
+	w.mu.RLock()
+	isEmpty := w.currentTime == ""
+	w.mu.RUnlock()
+
 	// Update time if not set
-	if w.currentTime == "" {
+	if isEmpty {
 		if err := w.Update(); err != nil {
 			return nil, fmt.Errorf("failed to update clock: %w", err)
 		}
@@ -112,7 +121,11 @@ func (w *ClockWidget) Render() (image.Image, error) {
 	case "clock_face":
 		w.renderClockFace(img)
 	default: // "text"
-		bitmap.DrawAlignedText(img, w.currentTime, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+		// Get current time with read lock and copy to local variable
+		w.mu.RLock()
+		timeStr := w.currentTime
+		w.mu.RUnlock()
+		bitmap.DrawAlignedText(img, timeStr, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
 	}
 
 	return img, nil
