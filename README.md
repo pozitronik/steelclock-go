@@ -8,7 +8,7 @@
 
 High-performance display manager for SteelSeries devices written in Go.
 
-[![Demo Video](img/sound_meter.mp4)](img/sound_meter.mp4)
+https://raw.githubusercontent.com/pozitronik/steelclock-go/master/img/sound_meter.mp4
 
 ## Requirements
 
