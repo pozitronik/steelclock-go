@@ -362,12 +362,11 @@ func TestCompositeDoesNotCallUpdate(t *testing.T) {
 
 // mockWidgetSimple is a simple mock widget for testing
 type mockWidgetSimple struct {
-	name      string
-	position  config.PositionConfig
-	style     config.StyleConfig
-	img       image.Image
-	err       error
-	hideCount int
+	name     string
+	position config.PositionConfig
+	style    config.StyleConfig
+	img      image.Image
+	err      error
 }
 
 func newMockWidgetSimple(name string, x, y, w, h, zOrder int) *mockWidgetSimple {
