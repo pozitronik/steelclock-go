@@ -17,7 +17,7 @@ import (
 
 // Compositor manages the rendering loop and API updates
 type Compositor struct {
-	client        *gamesense.Client
+	client        gamesense.API
 	layoutManager *layout.Manager
 	refreshRate   time.Duration
 	eventName     string
@@ -27,7 +27,7 @@ type Compositor struct {
 }
 
 // NewCompositor creates a new compositor
-func NewCompositor(client *gamesense.Client, layoutMgr *layout.Manager, widgets []widget.Widget, cfg *config.Config) *Compositor {
+func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []widget.Widget, cfg *config.Config) *Compositor {
 	refreshRate := time.Duration(cfg.RefreshRateMs) * time.Millisecond
 
 	return &Compositor{
