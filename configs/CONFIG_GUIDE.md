@@ -637,6 +637,69 @@ Available disks: PhysicalDrive0, PhysicalDrive1
 - Text: "CAPS", "NUM", "SCR"
 - Letters: "C", "N", "S"
 
+### Keyboard Layout Widget
+
+**Display Modes**: Text only (shows current keyboard layout)
+
+```json
+{
+  "type": "keyboard_layout",
+  "properties": {
+    "update_interval": 0.5,
+    "display_format": "iso639-1",
+    "font": null,
+    "font_size": 10,
+    "horizontal_align": "center",
+    "vertical_align": "center",
+    "padding": 2
+  }
+}
+```
+
+| Property          | Type   | Values                          | Default     | Description                      |
+|-------------------|--------|---------------------------------|-------------|----------------------------------|
+| `update_interval` | number | ≥0.1                            | 0.5         | Update interval (seconds)        |
+| `display_format`  | string | iso639-1, iso639-2, full        | "iso639-1"  | Language code display format     |
+| `font`            | string | -                               | null        | Font name (null = default)       |
+| `font_size`       | int    | ≥6                              | 10          | Font size in points              |
+
+**Display Format Options**:
+- `iso639-1`: 2-letter codes (EN, RU, DE, FR, ES, IT, etc.)
+- `iso639-2`: 3-letter codes (ENG, RUS, DEU, FRA, SPA, ITA, etc.)
+- `full`: Full language names (English, Русский, Deutsch, Français, etc.)
+
+**Supported Languages**:
+- English (US, UK, AU, CA)
+- Russian (Русский)
+- German (Deutsch)
+- French (Français)
+- Spanish (Español)
+- Italian (Italiano)
+- Polish (Polski)
+- Portuguese (Português)
+- Dutch (Nederlands)
+- Norwegian (Norsk)
+- Swedish (Svenska)
+- Finnish (Suomi)
+- Danish (Dansk)
+- Czech (Čeština)
+- Hungarian (Magyar)
+- Romanian (Română)
+- Slovenian (Slovenščina)
+- Slovak (Slovenčina)
+- Greek (Ελληνικά)
+- Turkish (Türkçe)
+- Japanese (日本語)
+- Korean (한국어)
+- Chinese (中文)
+- Hebrew (עברית)
+- Arabic (العربية)
+- Thai (ไทย)
+- Vietnamese (Tiếng Việt)
+- And more...
+
+**Note**: For unknown layouts, displays LCID in hex format (e.g., "0x0419"). Windows only - shows "N/A" on Linux.
+
 ### Volume Widget
 
 **Display Modes**: text, bar_horizontal, bar_vertical, gauge, triangle

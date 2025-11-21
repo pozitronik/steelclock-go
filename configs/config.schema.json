@@ -97,6 +97,7 @@
           {"$ref": "#/definitions/networkWidget"},
           {"$ref": "#/definitions/diskWidget"},
           {"$ref": "#/definitions/keyboardWidget"},
+          {"$ref": "#/definitions/keyboardLayoutWidget"},
           {"$ref": "#/definitions/volumeWidget"},
           {"$ref": "#/definitions/volumeMeterWidget"},
           {"$ref": "#/definitions/doomWidget"}
@@ -646,6 +647,38 @@
                 "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
                 "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
                 "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "keyboardLayoutWidget": {
+      "allOf": [
+        {"$ref": "#/definitions/widgetBase"},
+        {
+          "properties": {
+            "type": {"const": "keyboard_layout"},
+            "properties": {
+              "type": "object",
+              "properties": {
+                "update_interval": {
+                  "type": "number",
+                  "description": "Update interval in seconds",
+                  "minimum": 0.1,
+                  "default": 0.5
+                },
+                "display_format": {
+                  "type": "string",
+                  "description": "Language code display format",
+                  "enum": ["iso639-1", "iso639-2", "full"],
+                  "default": "iso639-1"
+                },
+                "font": {"$ref": "#/definitions/textProperties/properties/font"},
+                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
+                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
+                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
+                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
               }
             }
           }

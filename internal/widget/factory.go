@@ -26,6 +26,8 @@ func CreateWidget(cfg config.WidgetConfig) (Widget, error) {
 		return NewDiskWidget(cfg)
 	case "keyboard":
 		return NewKeyboardWidget(cfg)
+	case "keyboard_layout":
+		return NewKeyboardLayoutWidget(cfg)
 	case "volume":
 		return NewVolumeWidget(cfg)
 	case "volume_meter":
