@@ -365,6 +365,8 @@ func (w *VolumeWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
 
 // renderTriangle renders volume as a right-angled triangle that fills from left to right
 // Right angle at bottom-right, hypotenuse from bottom-left to top-right
+//
+//nolint:gocyclo // Geometric calculations for triangle rendering
 func (w *VolumeWidget) renderTriangle(img *image.Gray, pos config.PositionConfig, style config.StyleConfig) {
 	padding := 2
 	if style.Border {

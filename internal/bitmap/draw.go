@@ -132,6 +132,7 @@ func DrawGraph(img *image.Gray, x, y, w, h int, history []float64, maxHistory in
 
 // DrawDualGauge draws a nested/concentric double gauge with two needles
 // Outer gauge (larger radius) for primary value, inner gauge (smaller radius) for secondary value
+//nolint:gocyclo // Complex geometric calculations for dual gauge rendering
 func DrawDualGauge(img *image.Gray, pos config.PositionConfig, outerPercentage, innerPercentage float64, outerGaugeColor, outerNeedleColor, innerGaugeColor, innerNeedleColor uint8) {
 	centerX := pos.W / 2
 	centerY := pos.H - 3 // Near bottom
@@ -253,6 +254,7 @@ func DrawGauge(img *image.Gray, pos config.PositionConfig, percentage float64, g
 }
 
 // DrawGaugeAt draws a gauge at a specific position with offset
+//nolint:gocyclo // Complex geometric calculations for gauge rendering
 func DrawGaugeAt(img *image.Gray, x, y, width, height int, percentage float64, gaugeColor, needleColor uint8) {
 	centerX := x + width/2
 	centerY := y + height - 3 // Near bottom
@@ -446,6 +448,7 @@ func DrawWarningTriangle(img *image.Gray, x, y, size int, c color.Gray) {
 }
 
 // DrawRectangle draws a rectangle border at the specified position
+//nolint:gocyclo // Edge and corner handling requires multiple conditions
 func DrawRectangle(img *image.Gray, x, y, w, h int, borderColor uint8) {
 	if img == nil || w <= 0 || h <= 0 {
 		return
