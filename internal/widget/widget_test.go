@@ -235,3 +235,120 @@ func TestBaseWidget_Name(t *testing.T) {
 		})
 	}
 }
+
+// TestBaseWidget_IsAutoHideEnabled tests auto-hide enabled flag
+func TestBaseWidget_IsAutoHideEnabled(t *testing.T) {
+	tests := []struct {
+		name     string
+		autoHide bool
+	}{
+		{"auto-hide enabled", true},
+		{"auto-hide disabled", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			base := NewBaseWidget(config.WidgetConfig{
+				ID: "test",
+				Properties: config.WidgetProperties{
+					AutoHide: tt.autoHide,
+				},
+			})
+
+			result := base.IsAutoHideEnabled()
+			if result != tt.autoHide {
+				t.Errorf("IsAutoHideEnabled() = %v, want %v", result, tt.autoHide)
+			}
+		})
+	}
+}
+
+// TestBaseWidget_GetRenderBackgroundColor tests background color getter
+func TestBaseWidget_GetRenderBackgroundColor(t *testing.T) {
+	tests := []struct {
+		name     string
+		bgColor  int
+		expected uint8
+	}{
+		{"black background", 0, 0},
+		{"white background", 255, 255},
+		{"mid gray", 128, 128},
+		{"transparent (-1)", -1, 0}, // Transparent becomes black
+		{"dark gray", 64, 64},
+		{"light gray", 192, 192},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			base := NewBaseWidget(config.WidgetConfig{
+				ID: "test",
+				Style: config.StyleConfig{
+					BackgroundColor: tt.bgColor,
+				},
+			})
+
+			result := base.GetRenderBackgroundColor()
+			if result != tt.expected {
+				t.Errorf("GetRenderBackgroundColor() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestBaseWidget_GetStyle tests style getter
+func TestBaseWidget_GetStyle(t *testing.T) {
+	style := config.StyleConfig{
+		BackgroundColor: 128,
+		Border:          true,
+		BorderColor:     255,
+	}
+
+	base := NewBaseWidget(config.WidgetConfig{
+		ID:    "test",
+		Style: style,
+	})
+
+	result := base.GetStyle()
+	if result.BackgroundColor != style.BackgroundColor {
+		t.Errorf("GetStyle().BackgroundColor = %v, want %v", result.BackgroundColor, style.BackgroundColor)
+	}
+	if result.Border != style.Border {
+		t.Errorf("GetStyle().Border = %v, want %v", result.Border, style.Border)
+	}
+	if result.BorderColor != style.BorderColor {
+		t.Errorf("GetStyle().BorderColor = %v, want %v", result.BorderColor, style.BorderColor)
+	}
+}
+
+// TestNewBaseWidget_DefaultInterval tests default update interval
+func TestNewBaseWidget_DefaultInterval(t *testing.T) {
+	base := NewBaseWidget(config.WidgetConfig{
+		ID: "test",
+		Properties: config.WidgetProperties{
+			UpdateInterval: 0, // Not specified
+		},
+	})
+
+	expected := 1 * time.Second // Default is 1.0 second
+	result := base.GetUpdateInterval()
+	if result != expected {
+		t.Errorf("Default GetUpdateInterval() = %v, want %v", result, expected)
+	}
+}
+
+// TestNewBaseWidget_DefaultAutoHideTimeout tests default auto-hide timeout
+func TestNewBaseWidget_DefaultAutoHideTimeout(t *testing.T) {
+	base := NewBaseWidget(config.WidgetConfig{
+		ID: "test",
+		Properties: config.WidgetProperties{
+			AutoHide:        true,
+			AutoHideTimeout: 0, // Not specified
+		},
+	})
+
+	expected := 2 * time.Second // Default is 2.0 seconds
+	result := base.GetAutoHideTimeout()
+	if result != expected {
+		t.Errorf("Default GetAutoHideTimeout() = %v, want %v", result, expected)
+	}
+}

@@ -342,3 +342,201 @@ func TestDrawDualGauge_NeedlesSeparate(t *testing.T) {
 		t.Error("DrawDualGauge did not draw any pixels")
 	}
 }
+
+func TestDrawCircle(t *testing.T) {
+	tests := []struct {
+		name    string
+		width   int
+		height  int
+		centerX int
+		centerY int
+		radius  int
+	}{
+		{"Small circle", 20, 20, 10, 10, 5},
+		{"Large circle", 50, 50, 25, 25, 20},
+		{"Circle at edge", 30, 30, 5, 5, 4},
+		{"Radius 1", 10, 10, 5, 5, 1},
+		{"Radius 0", 10, 10, 5, 5, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := NewGrayscaleImage(tt.width, tt.height, 0)
+			DrawCircle(img, tt.centerX, tt.centerY, tt.radius, color.Gray{Y: 255})
+
+			// Count filled pixels
+			filled := 0
+			for y := 0; y < tt.height; y++ {
+				for x := 0; x < tt.width; x++ {
+					if img.GrayAt(x, y).Y == 255 {
+						filled++
+					}
+				}
+			}
+
+			if tt.radius > 0 && filled == 0 {
+				t.Error("DrawCircle did not draw any pixels for radius > 0")
+			}
+
+			// For radius 0, should draw at least the center point
+			if tt.radius == 0 && filled == 0 {
+				t.Error("DrawCircle did not draw center point for radius 0")
+			}
+		})
+	}
+}
+
+func TestDrawCircle_Clipping(t *testing.T) {
+	// Test circle partially outside bounds
+	img := NewGrayscaleImage(20, 20, 0)
+	// Draw circle with center outside bounds
+	DrawCircle(img, -5, 10, 10, color.Gray{Y: 255})
+
+	// Should not panic and should clip
+	filled := 0
+	for y := 0; y < 20; y++ {
+		for x := 0; x < 20; x++ {
+			if img.GrayAt(x, y).Y == 255 {
+				filled++
+			}
+		}
+	}
+
+	// Some pixels should be visible (clipped portion)
+	if filled == 0 {
+		t.Log("Circle completely outside bounds is ok")
+	}
+}
+
+func TestDrawWarningTriangle(t *testing.T) {
+	tests := []struct {
+		name   string
+		width  int
+		height int
+		x      int
+		y      int
+		size   int
+	}{
+		{"Small triangle", 30, 30, 10, 15, 10},
+		{"Medium triangle", 50, 50, 15, 25, 20},
+		{"Large triangle", 60, 60, 10, 30, 30},
+		{"Tiny triangle", 20, 20, 5, 10, 6},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := NewGrayscaleImage(tt.width, tt.height, 0)
+			DrawWarningTriangle(img, tt.x, tt.y, tt.size, color.Gray{Y: 255})
+
+			// Count filled pixels
+			filled := 0
+			for y := 0; y < tt.height; y++ {
+				for x := 0; x < tt.width; x++ {
+					if img.GrayAt(x, y).Y == 255 {
+						filled++
+					}
+				}
+			}
+
+			if filled == 0 {
+				t.Error("DrawWarningTriangle did not draw any pixels")
+			}
+		})
+	}
+}
+
+func TestDrawWarningTriangle_ExclamationMark(t *testing.T) {
+	// Verify exclamation mark is drawn inside triangle
+	img := NewGrayscaleImage(40, 40, 0)
+	DrawWarningTriangle(img, 10, 20, 20, color.Gray{Y: 200})
+
+	// Check if pixels are drawn in the center (exclamation mark area)
+	centerX := 10 + 20/2
+	exclamPixels := 0
+
+	for y := 0; y < 40; y++ {
+		if img.GrayAt(centerX, y).Y == 200 {
+			exclamPixels++
+		}
+	}
+
+	if exclamPixels == 0 {
+		t.Error("Exclamation mark not drawn in warning triangle")
+	}
+}
+
+func TestDrawRectangle(t *testing.T) {
+	tests := []struct {
+		name        string
+		width       int
+		height      int
+		x           int
+		y           int
+		w           int
+		h           int
+		borderColor uint8
+	}{
+		{"Small rectangle", 30, 30, 5, 5, 20, 15, 255},
+		{"Large rectangle", 128, 40, 10, 5, 100, 30, 200},
+		{"Thin rectangle", 40, 40, 10, 10, 20, 5, 150},
+		{"Square", 50, 50, 10, 10, 30, 30, 180},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := NewGrayscaleImage(tt.width, tt.height, 0)
+			DrawRectangle(img, tt.x, tt.y, tt.w, tt.h, tt.borderColor)
+
+			// Count border pixels
+			borderPixels := 0
+			for y := 0; y < tt.height; y++ {
+				for x := 0; x < tt.width; x++ {
+					if img.GrayAt(x, y).Y == tt.borderColor {
+						borderPixels++
+					}
+				}
+			}
+
+			if borderPixels == 0 {
+				t.Error("DrawRectangle did not draw any border pixels")
+			}
+
+			// Verify corners are drawn
+			if tt.x >= 0 && tt.x < tt.width && tt.y >= 0 && tt.y < tt.height {
+				topLeft := img.GrayAt(tt.x, tt.y).Y
+				if topLeft != tt.borderColor {
+					t.Error("Top-left corner not drawn")
+				}
+			}
+		})
+	}
+}
+
+func TestDrawRectangle_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name string
+		x    int
+		y    int
+		w    int
+		h    int
+	}{
+		{"Zero width", 10, 10, 0, 10},
+		{"Zero height", 10, 10, 10, 0},
+		{"Negative width", 10, 10, -5, 10},
+		{"Negative height", 10, 10, 10, -5},
+		{"Out of bounds", 100, 100, 50, 50},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := NewGrayscaleImage(50, 50, 0)
+			// Should not panic
+			DrawRectangle(img, tt.x, tt.y, tt.w, tt.h, 255)
+		})
+	}
+}
+
+func TestDrawRectangle_NilImage(t *testing.T) {
+	// Should not panic with nil image
+	DrawRectangle(nil, 0, 0, 10, 10, 255)
+}

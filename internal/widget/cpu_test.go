@@ -528,3 +528,285 @@ func TestCPUWidget_ConcurrentAccess(t *testing.T) {
 
 	// Should not panic or race
 }
+
+// TestCPUWidget_RenderTextGrid tests text mode with per-core (grid layout)
+func TestCPUWidget_RenderTextGrid(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "cpu",
+		ID:      "test_cpu_text_grid",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 64,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "text",
+			PerCore:     true, // This triggers renderTextGrid
+			FontSize:    8,
+		},
+	}
+
+	widget, err := NewCPUWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewCPUWidget() error = %v", err)
+	}
+
+	err = widget.Update()
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+}
+
+// TestCPUWidget_RenderBarHorizontal_PerCore tests horizontal bar with per-core
+func TestCPUWidget_RenderBarHorizontal_PerCore(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "cpu",
+		ID:      "test_cpu_bar_h_percore",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "bar_horizontal",
+			PerCore:     true, // Test per-core bars
+			FillColor:   255,
+		},
+	}
+
+	widget, err := NewCPUWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewCPUWidget() error = %v", err)
+	}
+
+	err = widget.Update()
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+}
+
+// TestCPUWidget_RenderGraph_PerCore tests graph mode with per-core
+func TestCPUWidget_RenderGraph_PerCore(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "cpu",
+		ID:      "test_cpu_graph_percore",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode:   "graph",
+			PerCore:       true,
+			FillColor:     255,
+			HistoryLength: 30,
+		},
+	}
+
+	widget, err := NewCPUWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewCPUWidget() error = %v", err)
+	}
+
+	// Need multiple updates to build history for graph
+	for i := 0; i < 10; i++ {
+		err = widget.Update()
+		if err != nil {
+			t.Fatalf("Update() error = %v", err)
+		}
+	}
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+}
+
+// TestCPUWidget_RenderGraph_EmptyHistory tests graph with no history
+func TestCPUWidget_RenderGraph_EmptyHistory(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "cpu",
+		ID:      "test_cpu_graph_empty",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode:   "graph",
+			FillColor:     255,
+			HistoryLength: 30,
+		},
+	}
+
+	widget, err := NewCPUWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewCPUWidget() error = %v", err)
+	}
+
+	// Don't update - render with no data
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() with no data should not error, got: %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil image")
+	}
+}
+
+// TestCPUWidget_SmallSize tests rendering with very small dimensions
+func TestCPUWidget_SmallSize(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "cpu",
+		ID:      "test_cpu_small",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 10, H: 10,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "bar_horizontal",
+			FillColor:   255,
+		},
+	}
+
+	widget, err := NewCPUWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewCPUWidget() error = %v", err)
+	}
+
+	err = widget.Update()
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	// Should not crash with small size
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() with small size error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() with small size returned nil image")
+	}
+}
+
+// TestCPUWidget_ZeroSize tests rendering with zero dimensions
+func TestCPUWidget_ZeroSize(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "cpu",
+		ID:      "test_cpu_zero",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 0, H: 0,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "text",
+		},
+	}
+
+	widget, err := NewCPUWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewCPUWidget() error = %v", err)
+	}
+
+	err = widget.Update()
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	// Should handle zero size gracefully
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() with zero size error = %v", err)
+	}
+
+	// Image should be created even if size is zero
+	if img == nil {
+		t.Error("Render() with zero size returned nil image")
+	}
+}
+
+// TestCPUWidget_InvalidDisplayMode tests handling of invalid display mode
+func TestCPUWidget_InvalidDisplayMode(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "cpu",
+		ID:      "test_cpu_invalid_mode",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "invalid_mode",
+		},
+	}
+
+	widget, err := NewCPUWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewCPUWidget() error = %v", err)
+	}
+
+	err = widget.Update()
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	// Render should handle invalid mode gracefully (likely defaults to text)
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() with invalid mode error = %v", err)
+	}
+
+	if img == nil {
+		t.Error("Render() with invalid mode returned nil image")
+	}
+}
+
+// TestCPUWidget_BeforeFirstUpdate tests rendering before any update
+func TestCPUWidget_BeforeFirstUpdate(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "cpu",
+		ID:      "test_cpu_no_update",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Properties: config.WidgetProperties{
+			DisplayMode: "text",
+			FontSize:    10,
+		},
+	}
+
+	widget, err := NewCPUWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewCPUWidget() error = %v", err)
+	}
+
+	// Render without calling Update first
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() before Update() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() before Update() returned nil image")
+	}
+}

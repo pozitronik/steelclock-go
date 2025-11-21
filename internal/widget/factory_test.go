@@ -353,3 +353,117 @@ func TestCreateWidget_ExplicitlyEnabled(t *testing.T) {
 		t.Error("CreateWidget() should return widget when explicitly enabled")
 	}
 }
+
+// TestCreateWidgets_MixedEnabledDisabled tests mix of enabled and disabled widgets
+func TestCreateWidgets_MixedEnabledDisabled(t *testing.T) {
+	configs := []config.WidgetConfig{
+		createDefaultConfig("clock"),
+		{
+			Type:    "memory",
+			ID:      "disabled1",
+			Enabled: config.BoolPtr(false),
+			Position: config.PositionConfig{
+				X: 0, Y: 0, W: 128, H: 40,
+			},
+		},
+		createDefaultConfig("cpu"),
+		{
+			Type:    "network",
+			ID:      "disabled2",
+			Enabled: config.BoolPtr(false),
+			Position: config.PositionConfig{
+				X: 0, Y: 0, W: 128, H: 40,
+			},
+		},
+		createDefaultConfig("disk"),
+	}
+
+	widgets, err := CreateWidgets(configs)
+	if err != nil {
+		t.Fatalf("CreateWidgets() error = %v", err)
+	}
+
+	// Should only create 3 widgets (clock, cpu, disk)
+	if len(widgets) != 3 {
+		t.Errorf("CreateWidgets() returned %d widgets, want 3", len(widgets))
+	}
+}
+
+// TestCreateWidgets_AllDisabled tests when all widgets are disabled
+func TestCreateWidgets_AllDisabled(t *testing.T) {
+	configs := []config.WidgetConfig{
+		{
+			Type:    "clock",
+			ID:      "disabled1",
+			Enabled: config.BoolPtr(false),
+			Position: config.PositionConfig{
+				X: 0, Y: 0, W: 128, H: 40,
+			},
+		},
+		{
+			Type:    "memory",
+			ID:      "disabled2",
+			Enabled: config.BoolPtr(false),
+			Position: config.PositionConfig{
+				X: 0, Y: 0, W: 128, H: 40,
+			},
+		},
+	}
+
+	widgets, err := CreateWidgets(configs)
+
+	// Should not error when all are disabled (no enabled widgets to create)
+	if err != nil {
+		t.Errorf("CreateWidgets() with all disabled should not error, got: %v", err)
+	}
+
+	// Should return empty list
+	if len(widgets) != 0 {
+		t.Errorf("CreateWidgets() returned %d widgets, want 0", len(widgets))
+	}
+}
+
+// TestCreateWidget_ErrorMessage tests error message format
+func TestCreateWidget_ErrorMessage(t *testing.T) {
+	t.Run("unknown type error message", func(t *testing.T) {
+		cfg := config.WidgetConfig{
+			Type:    "nonexistent",
+			ID:      "test",
+			Enabled: config.BoolPtr(true),
+			Position: config.PositionConfig{
+				X: 0, Y: 0, W: 128, H: 40,
+			},
+		}
+
+		_, err := CreateWidget(cfg)
+		if err == nil {
+			t.Fatal("CreateWidget() should return error for unknown type")
+		}
+
+		expectedMsg := "unknown widget type: nonexistent"
+		if err.Error() != expectedMsg {
+			t.Errorf("Error message = %q, want %q", err.Error(), expectedMsg)
+		}
+	})
+
+	t.Run("disabled widget error message", func(t *testing.T) {
+		cfg := config.WidgetConfig{
+			Type:    "clock",
+			ID:      "my_clock",
+			Enabled: config.BoolPtr(false),
+			Position: config.PositionConfig{
+				X: 0, Y: 0, W: 128, H: 40,
+			},
+		}
+
+		_, err := CreateWidget(cfg)
+		if err == nil {
+			t.Fatal("CreateWidget() should return error for disabled widget")
+		}
+
+		expectedMsg := "widget my_clock is disabled"
+		if err.Error() != expectedMsg {
+			t.Errorf("Error message = %q, want %q", err.Error(), expectedMsg)
+		}
+	})
+}

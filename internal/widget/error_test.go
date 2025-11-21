@@ -187,3 +187,125 @@ func TestErrorWidget_DifferentSizes(t *testing.T) {
 		})
 	}
 }
+
+// TestErrorWidget_AllCharacters tests rendering of various characters
+func TestErrorWidget_AllCharacters(t *testing.T) {
+	messages := []string{
+		"ABCDEFGHI",
+		"NO WIDGETS",
+		"CONFIG FAILED",
+		"0123456789",
+		"TESTING",
+	}
+
+	for _, msg := range messages {
+		t.Run(msg, func(t *testing.T) {
+			widget := NewErrorWidget(128, 40, msg)
+			widget.flashState = true
+
+			img, err := widget.Render()
+			if err != nil {
+				t.Fatalf("Render() error = %v", err)
+			}
+
+			if img == nil {
+				t.Fatal("Render() returned nil")
+			}
+		})
+	}
+}
+
+// TestErrorWidget_SmallSize tests with very small dimensions
+func TestErrorWidget_SmallSize(t *testing.T) {
+	widget := NewErrorWidget(10, 10, "X")
+	widget.flashState = true
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil for small size")
+	}
+}
+
+// TestErrorWidget_EmptyMessage tests with empty message
+func TestErrorWidget_EmptyMessage(t *testing.T) {
+	widget := NewErrorWidget(128, 40, "")
+	widget.flashState = true
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil for empty message")
+	}
+}
+
+// TestErrorWidget_LongMessage tests with very long message
+func TestErrorWidget_LongMessage(t *testing.T) {
+	widget := NewErrorWidget(128, 40, "VERYLONGMESSAGETHATEXCEEDSWIDTH")
+	widget.flashState = true
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Render() returned nil for long message")
+	}
+}
+
+// TestErrorWidget_UpdateCycle tests multiple update cycles
+func TestErrorWidget_UpdateCycle(t *testing.T) {
+	widget := NewErrorWidget(128, 40, "TEST")
+	initialState := widget.flashState
+
+	// Update multiple times quickly - should not toggle
+	for i := 0; i < 5; i++ {
+		_ = widget.Update()
+	}
+
+	if widget.flashState != initialState {
+		t.Error("flashState should not toggle on rapid updates")
+	}
+}
+
+// TestErrorWidget_GetPosition tests position getter
+func TestErrorWidget_GetPosition(t *testing.T) {
+	widget := NewErrorWidget(128, 40, "TEST")
+	pos := widget.GetPosition()
+
+	if pos.W != 128 {
+		t.Errorf("GetPosition().W = %d, want 128", pos.W)
+	}
+
+	if pos.H != 40 {
+		t.Errorf("GetPosition().H = %d, want 40", pos.H)
+	}
+}
+
+// TestErrorWidget_GetUpdateInterval tests update interval
+func TestErrorWidget_GetUpdateInterval(t *testing.T) {
+	widget := NewErrorWidget(128, 40, "TEST")
+	interval := widget.GetUpdateInterval()
+
+	// Default update interval from BaseWidget is 1 second
+	if interval != 1*time.Second {
+		t.Errorf("GetUpdateInterval() = %v, want 1s", interval)
+	}
+}
+
+// TestErrorWidget_GetStyle tests style getter
+func TestErrorWidget_GetStyle(t *testing.T) {
+	widget := NewErrorWidget(128, 40, "TEST")
+	style := widget.GetStyle()
+
+	if style.BackgroundColor != 0 {
+		t.Errorf("GetStyle().BackgroundColor = %d, want 0", style.BackgroundColor)
+	}
+}
