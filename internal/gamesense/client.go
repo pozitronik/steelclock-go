@@ -9,6 +9,15 @@ import (
 	"time"
 )
 
+// API defines the interface for GameSense API operations
+type API interface {
+	RegisterGame(developer string) error
+	BindScreenEvent(eventName, deviceType string) error
+	SendScreenData(eventName string, bitmapData []int) error
+	SendHeartbeat() error
+	RemoveGame() error
+}
+
 // Client is a GameSense API client
 type Client struct {
 	baseURL         string
@@ -16,6 +25,9 @@ type Client struct {
 	gameDisplayName string
 	httpClient      *http.Client
 }
+
+// Ensure Client implements API
+var _ API = (*Client)(nil)
 
 // NewClient creates a new GameSense API client
 func NewClient(gameName, gameDisplayName string) (*Client, error) {

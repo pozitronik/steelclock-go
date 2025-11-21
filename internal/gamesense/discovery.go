@@ -9,9 +9,12 @@ import (
 	"strings"
 )
 
+// findCorePropsPathFunc is a variable for dependency injection in tests
+var findCorePropsPathFunc = findCorePropsPath
+
 // DiscoverServer finds the SteelSeries GameSense server address
 func DiscoverServer() (string, error) {
-	corePropsPath, err := findCorePropsPath()
+	corePropsPath, err := findCorePropsPathFunc()
 	if err != nil {
 		return "", err
 	}
