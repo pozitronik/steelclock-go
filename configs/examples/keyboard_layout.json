@@ -1,0 +1,86 @@
+{
+  "game": {
+    "name": "STEELCLOCK",
+    "developer": "steelclock"
+  },
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background_color": 0
+  },
+  "refresh_rate_ms": 100,
+  "widgets": [
+    {
+      "id": "layout_iso1",
+      "type": "keyboard_layout",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 13,
+        "z_order": 0
+      },
+      "style": {
+        "background_color": 0,
+        "border": true,
+        "border_color": 255
+      },
+      "properties": {
+        "update_interval": 0.2,
+        "display_format": "iso639-1",
+        "font_size": 10,
+        "horizontal_align": "center",
+        "vertical_align": "center"
+      }
+    },
+    {
+      "id": "layout_iso2",
+      "type": "keyboard_layout",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 13,
+        "w": 128,
+        "h": 13,
+        "z_order": 0
+      },
+      "style": {
+        "background_color": 0,
+        "border": true,
+        "border_color": 255
+      },
+      "properties": {
+        "update_interval": 0.2,
+        "display_format": "iso639-2",
+        "font_size": 10,
+        "horizontal_align": "center",
+        "vertical_align": "center"
+      }
+    },
+    {
+      "id": "layout_full",
+      "type": "keyboard_layout",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 26,
+        "w": 128,
+        "h": 14,
+        "z_order": 0
+      },
+      "style": {
+        "background_color": 0,
+        "border": true,
+        "border_color": 255
+      },
+      "properties": {
+        "update_interval": 0.2,
+        "display_format": "full",
+        "font_size": 8,
+        "horizontal_align": "center",
+        "vertical_align": "center"
+      }
+    }
+  ]
+}

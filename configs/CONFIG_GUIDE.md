@@ -645,8 +645,8 @@ Available disks: PhysicalDrive0, PhysicalDrive1
 {
   "type": "keyboard_layout",
   "properties": {
-    "update_interval": 0.5,
     "display_format": "iso639-1",
+    "update_interval": 0.2,
     "font": null,
     "font_size": 10,
     "horizontal_align": "center",
@@ -656,12 +656,14 @@ Available disks: PhysicalDrive0, PhysicalDrive1
 }
 ```
 
-| Property          | Type   | Values                          | Default     | Description                      |
-|-------------------|--------|---------------------------------|-------------|----------------------------------|
-| `update_interval` | number | ≥0.1                            | 0.5         | Update interval (seconds)        |
-| `display_format`  | string | iso639-1, iso639-2, full        | "iso639-1"  | Language code display format     |
-| `font`            | string | -                               | null        | Font name (null = default)       |
-| `font_size`       | int    | ≥6                              | 10          | Font size in points              |
+| Property          | Type   | Values                          | Default        | Description                                      |
+|-------------------|--------|---------------------------------|----------------|--------------------------------------------------|
+| `update_interval` | number | ≥0.1                            | 0.2            | Check interval (seconds)                         |
+| `display_format`  | string | iso639-1, iso639-2, full        | "iso639-1"     | Language code display format                     |
+| `font`            | string | -                               | null           | Font name (null = default)                       |
+| `font_size`       | int    | ≥6                              | 10             | Font size in points                              |
+
+**Note**: Uses efficient polling with caching - only updates display when layout actually changes. Low CPU usage even at 0.1-0.2s intervals.
 
 **Display Format Options**:
 - `iso639-1`: 2-letter codes (EN, RU, DE, FR, ES, IT, etc.)

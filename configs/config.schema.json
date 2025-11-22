@@ -666,7 +666,7 @@
                   "type": "number",
                   "description": "Update interval in seconds",
                   "minimum": 0.1,
-                  "default": 0.5
+                  "default": 0.2
                 },
                 "display_format": {
                   "type": "string",
