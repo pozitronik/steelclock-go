@@ -36,8 +36,6 @@ const (
 	eventName          = "STEELCLOCK_DISPLAY"
 	deviceType         = "screened-128x40"
 	developerName      = "Pozitronik"
-	errorGameName      = "STEELCLOCK_ERROR"
-	errorGameDisplay   = "SteelClock Error"
 )
 
 // BackendUnavailableError indicates SteelSeries GG backend is not available
@@ -411,8 +409,8 @@ func startWithErrorDisplay(message string, width, height int) error {
 	log.Printf("Starting error display: %s", message)
 
 	// Create temporary GameSense client for error display
-	// DO NOT reuse the global client to avoid polluting it with error state
-	errorClient, err := gamesense.NewClient(errorGameName, errorGameDisplay)
+	// Use same game name to avoid creating another registration
+	errorClient, err := gamesense.NewClient(defaultGameName, defaultGameDisplay)
 	if err != nil {
 		log.Printf("ERROR: Failed to create GameSense client for error display: %v", err)
 		return fmt.Errorf("failed to create GameSense client: %w", err)
@@ -443,8 +441,8 @@ func startWithErrorDisplay(message string, width, height int) error {
 
 	// Create default config for compositor
 	errorCfg := &config.Config{
-		GameName:        errorGameName,
-		GameDisplayName: errorGameDisplay,
+		GameName:        defaultGameName,
+		GameDisplayName: defaultGameDisplay,
 		RefreshRateMs:   500, // Flash at 500ms intervals
 		Display:         displayCfg,
 		Widgets:         []config.WidgetConfig{},
