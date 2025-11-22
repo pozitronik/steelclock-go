@@ -365,8 +365,8 @@ var defaultCharBitmap = [7][5]bool{
 
 // getCharBitmap returns a 5x7 bitmap for common characters
 func getCharBitmap(ch rune) [7][5]bool {
-	if bitmap, ok := charBitmaps[ch]; ok {
-		return bitmap
+	if btmp, ok := charBitmaps[ch]; ok {
+		return btmp
 	}
 	return defaultCharBitmap
 }
