@@ -122,6 +122,13 @@ func validateConfig(cfg *Config) error {
 		return fmt.Errorf("refresh_rate_ms must be positive (got %d)", cfg.RefreshRateMs)
 	}
 
+	// Check deinitialize_timer_length_ms if specified
+	if cfg.DeinitializeTimerMs != 0 {
+		if cfg.DeinitializeTimerMs < 1000 || cfg.DeinitializeTimerMs > 60000 {
+			return fmt.Errorf("deinitialize_timer_length_ms must be between 1000 and 60000 (got %d)", cfg.DeinitializeTimerMs)
+		}
+	}
+
 	// Check widgets
 	if len(cfg.Widgets) == 0 {
 		return fmt.Errorf("at least one widget must be configured")

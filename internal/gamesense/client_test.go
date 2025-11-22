@@ -48,7 +48,7 @@ func TestRegisterGame(t *testing.T) {
 		httpClient:      &http.Client{},
 	}
 
-	err := client.RegisterGame("Test Developer")
+	err := client.RegisterGame("Test Developer", 0)
 	if err != nil {
 		t.Errorf("RegisterGame() error = %v", err)
 	}
@@ -215,7 +215,7 @@ func TestRegisterGame_HTTPError(t *testing.T) {
 		httpClient:      &http.Client{},
 	}
 
-	err := client.RegisterGame("Test Developer")
+	err := client.RegisterGame("Test Developer", 0)
 	if err == nil {
 		t.Error("RegisterGame() with HTTP 500 should return error")
 	}
@@ -350,7 +350,7 @@ func TestPost_ValidatesStatusCode(t *testing.T) {
 				httpClient:      &http.Client{},
 			}
 
-			err := client.RegisterGame("Developer")
+			err := client.RegisterGame("Developer", 0)
 			if (err != nil) != tc.wantError {
 				t.Errorf("RegisterGame() error = %v, wantError %v", err, tc.wantError)
 			}
@@ -411,7 +411,7 @@ func TestRegisterGame_ValidatesPayload(t *testing.T) {
 		httpClient:      &http.Client{},
 	}
 
-	err := client.RegisterGame("My Developer")
+	err := client.RegisterGame("My Developer", 0)
 	if err != nil {
 		t.Fatalf("RegisterGame() error = %v", err)
 	}
@@ -444,7 +444,7 @@ func TestPost_ContentTypeHeader(t *testing.T) {
 		httpClient:      &http.Client{},
 	}
 
-	_ = client.RegisterGame("Developer")
+	_ = client.RegisterGame("Developer", 0)
 
 	if contentType != "application/json" {
 		t.Errorf("Content-Type = %s, want application/json", contentType)
@@ -517,7 +517,7 @@ func TestPost_EmptyResponse(t *testing.T) {
 		httpClient:      &http.Client{},
 	}
 
-	err := client.RegisterGame("Developer")
+	err := client.RegisterGame("Developer", 0)
 	// Should still succeed even with empty body
 	if err != nil {
 		t.Errorf("RegisterGame() with empty response should not error, got: %v", err)

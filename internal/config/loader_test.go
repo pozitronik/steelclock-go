@@ -346,6 +346,57 @@ func TestValidateConfig_InvalidRefreshRate(t *testing.T) {
 	}
 }
 
+// TestValidateConfig_DeinitializeTimer tests validation of deinitialize_timer_length_ms
+func TestValidateConfig_DeinitializeTimer(t *testing.T) {
+	tests := []struct {
+		name      string
+		timerMs   int
+		shouldErr bool
+	}{
+		{"valid minimum", 1000, false},
+		{"valid middle", 30000, false},
+		{"valid maximum", 60000, false},
+		{"omitted (zero)", 0, false},
+		{"too low", 999, true},
+		{"too high", 60001, true},
+		{"negative", -1000, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{
+				GameName:            "TEST",
+				GameDisplayName:     "Test",
+				DeinitializeTimerMs: tt.timerMs,
+				Display: DisplayConfig{
+					Width:  128,
+					Height: 40,
+				},
+				RefreshRateMs: 100,
+				Widgets: []WidgetConfig{
+					{
+						Type:     "clock",
+						ID:       "test",
+						Enabled:  BoolPtr(true),
+						Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+						Properties: WidgetProperties{
+							Format: "%H:%M:%S",
+						},
+					},
+				},
+			}
+
+			err := validateConfig(cfg)
+			if tt.shouldErr && err == nil {
+				t.Errorf("validateConfig() should return error for deinitialize_timer_length_ms=%d", tt.timerMs)
+			}
+			if !tt.shouldErr && err != nil {
+				t.Errorf("validateConfig() should not return error for deinitialize_timer_length_ms=%d, got: %v", tt.timerMs, err)
+			}
+		})
+	}
+}
+
 // TestValidateConfig_NoWidgets tests validation when no widgets are configured
 func TestValidateConfig_NoWidgets(t *testing.T) {
 	cfg := &Config{

@@ -106,7 +106,7 @@ func newMockGameSenseAPI() *mockGameSenseAPI {
 	return &mockGameSenseAPI{}
 }
 
-func (m *mockGameSenseAPI) RegisterGame(_ string) error {
+func (m *mockGameSenseAPI) RegisterGame(_ string, _ int) error {
 	return m.registerGameErr
 }
 

@@ -51,6 +51,7 @@ Supported IDEs: VS Code, JetBrains IDEs (IntelliJ, PyCharm, WebStorm), Visual St
   "$schema": "./config.schema.json",
   "refresh_rate_ms": 100,
   "unregister_on_exit": false,
+  "deinitialize_timer_length_ms": 15000,
   "bundled_font_url": "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf",
   "display": { ... },
   "layout": { ... },
@@ -60,11 +61,12 @@ Supported IDEs: VS Code, JetBrains IDEs (IntelliJ, PyCharm, WebStorm), Visual St
 
 ### Global Settings
 
-| Property             | Type    | Default                                                                             | Description                                             |
-|----------------------|---------|-------------------------------------------------------------------------------------|---------------------------------------------------------|
-| `refresh_rate_ms`    | integer | 100                                                                                 | Display refresh rate (min 100ms = 10Hz)                 |
-| `unregister_on_exit` | boolean | false                                                                               | Unregister from GameSense API on exit (see notes below) |
-| `bundled_font_url`   | string  | "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf" (optional) | URL for downloading bundled font (see notes below)      |
+| Property                       | Type    | Default                                                                             | Description                                                 |
+|--------------------------------|---------|-------------------------------------------------------------------------------------|-------------------------------------------------------------|
+| `refresh_rate_ms`              | integer | 100                                                                                 | Display refresh rate (min 100ms = 10Hz)                     |
+| `unregister_on_exit`           | boolean | false                                                                               | Unregister from GameSense API on exit (see notes below)     |
+| `deinitialize_timer_length_ms` | integer | 15000 (optional)                                                                    | Game deactivation timeout in milliseconds (see notes below) |
+| `bundled_font_url`             | string  | "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf" (optional) | URL for downloading bundled font (see notes below)          |
 
 **About `unregister_on_exit`**:
 
@@ -81,6 +83,24 @@ This option controls whether SteelClock calls the GameSense API `/remove_game` e
 - During configuration reload, the game is never unregistered regardless of this setting (to avoid disruption)
 - Only affects final application shutdown (via tray menu "Quit")
 - The `/remove_game` endpoint can be slow or timeout, which is why the default is false
+
+**About `deinitialize_timer_length_ms`**:
+
+This option controls how long the GameSense API keeps the application active after the last event is sent (in milliseconds).
+
+- **Default**: 15000ms (15 seconds) - used by GameSense if not specified
+- **Valid range**: 1000-60000 (1-60 seconds)
+- **Optional**: This field can be omitted to use the default behavior
+
+**When to use**:
+- **Increase the value** (e.g., 30000-60000) if you want the display to stay active longer after SteelClock stops sending events
+- **Decrease the value** (e.g., 1000-5000) if you want the display to clear quickly after the application exits or becomes inactive
+- **Omit the field** to use GameSense's default 15-second timeout
+
+**Technical notes**:
+- This setting is sent to the GameSense API during game registration
+- It affects when the OLED display automatically clears after the last frame is sent
+- Useful for customizing the user experience when SteelClock is paused or exits unexpectedly
 
 **About `bundled_font_url`**:
 

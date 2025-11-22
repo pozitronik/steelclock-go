@@ -17,6 +17,12 @@
       "description": "Whether to unregister from GameSense API on exit. Set to false to avoid timeout issues. Default: false",
       "default": false
     },
+    "deinitialize_timer_length_ms": {
+      "type": "integer",
+      "description": "Custom timeout for game deactivation after last event in milliseconds. Valid range: 1000-60000 (1-60 seconds). If not specified, GameSense uses 15000ms (15 seconds).",
+      "minimum": 1000,
+      "maximum": 60000
+    },
     "bundled_font_url": {
       "type": "string",
       "description": "URL to download the bundled font if no system font is available. Default: https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf",

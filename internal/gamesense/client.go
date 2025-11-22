@@ -11,7 +11,7 @@ import (
 
 // API defines the interface for GameSense API operations
 type API interface {
-	RegisterGame(developer string) error
+	RegisterGame(developer string, deinitializeTimerMs int) error
 	BindScreenEvent(eventName, deviceType string) error
 	SendScreenData(eventName string, bitmapData []int) error
 	SendHeartbeat() error
@@ -48,11 +48,16 @@ func NewClient(gameName, gameDisplayName string) (*Client, error) {
 }
 
 // RegisterGame registers the application with SteelSeries Engine
-func (c *Client) RegisterGame(developer string) error {
-	payload := map[string]string{
+func (c *Client) RegisterGame(developer string, deinitializeTimerMs int) error {
+	payload := map[string]interface{}{
 		"game":              c.gameName,
 		"game_display_name": c.gameDisplayName,
 		"developer":         developer,
+	}
+
+	// Add deinitialize_timer_length_ms if specified (optional field)
+	if deinitializeTimerMs > 0 {
+		payload["deinitialize_timer_length_ms"] = deinitializeTimerMs
 	}
 
 	if err := c.post("/game_metadata", payload); err != nil {

@@ -195,7 +195,7 @@ func startAppWithConfig(cfg *config.Config) error {
 		log.Println("GameSense client created")
 
 		// Register game
-		if err := client.RegisterGame(developerName); err != nil {
+		if err := client.RegisterGame(developerName, cfg.DeinitializeTimerMs); err != nil {
 			log.Printf("ERROR: Failed to register game: %v", err)
 			client = nil // Clear client on registration failure
 			return &BackendUnavailableError{Err: err}
@@ -416,8 +416,8 @@ func startWithErrorDisplay(message string, width, height int) error {
 		return fmt.Errorf("failed to create GameSense client: %w", err)
 	}
 
-	// Register game
-	if err := errorClient.RegisterGame(developerName); err != nil {
+	// Register game (use 0 for default timeout in error display)
+	if err := errorClient.RegisterGame(developerName, 0); err != nil {
 		log.Printf("ERROR: Failed to register game for error display: %v", err)
 		return fmt.Errorf("failed to register game: %w", err)
 	}
