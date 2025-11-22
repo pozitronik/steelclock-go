@@ -44,6 +44,7 @@ type VolumeMeterWidget struct {
 	gaugeNeedleColor  uint8
 	horizontalAlign   string
 	verticalAlign     string
+	padding           int
 
 	// Meter configuration
 	stereoMode          bool
@@ -87,6 +88,8 @@ type VolumeMeterWidget struct {
 }
 
 // NewVolumeMeterWidget creates a new volume meter widget
+//
+//nolint:gocyclo // Complex initialization logic for different display modes
 func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	base := NewBaseWidget(cfg)
 
@@ -189,6 +192,8 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		verticalAlign = "center"
 	}
 
+	padding := cfg.Properties.Padding
+
 	// Check for border in both properties and style
 	barBorder := cfg.Properties.BarBorder || cfg.Style.Border
 
@@ -211,6 +216,7 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		gaugeNeedleColor:    uint8(gaugeNeedleColor),
 		horizontalAlign:     horizontalAlign,
 		verticalAlign:       verticalAlign,
+		padding:             padding,
 		stereoMode:          cfg.Properties.StereoMode,
 		useDBScale:          cfg.Properties.UseDBScale,
 		showClipping:        cfg.Properties.ShowClipping,
@@ -275,6 +281,8 @@ func (w *VolumeMeterWidget) pollMeterBackground() {
 }
 
 // updateMeter reads meter data and updates widget state
+//
+//nolint:gocyclo // Complex state management for stereo/mono channels
 func (w *VolumeMeterWidget) updateMeter() {
 	startTime := time.Now()
 	w.mu.Lock()
@@ -367,6 +375,8 @@ func (w *VolumeMeterWidget) updateMeter() {
 }
 
 // Render renders the volume meter widget
+//
+//nolint:gocyclo // Multiple display modes require branching logic
 func (w *VolumeMeterWidget) Render() (image.Image, error) {
 	// Check auto-hide
 	if w.ShouldHide() {
@@ -474,7 +484,7 @@ func (w *VolumeMeterWidget) renderText(img *image.Gray, peak float64, isClipping
 		text += " CLIP"
 	}
 
-	bitmap.DrawAlignedText(img, text, w.face, w.horizontalAlign, w.verticalAlign, 0)
+	bitmap.DrawAlignedText(img, text, w.face, w.horizontalAlign, w.verticalAlign, w.padding)
 }
 
 // renderBarHorizontal renders horizontal bar display
@@ -564,6 +574,8 @@ func (w *VolumeMeterWidget) renderGauge(img *image.Gray, peak, peakHold float64,
 }
 
 // renderBarHorizontalStereo renders horizontal bars in stereo mode (left/right channels)
+//
+//nolint:gocyclo // Geometric calculations for stereo bar rendering
 func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPeaks []float64, peakHoldValues []float64, isClipping bool) {
 	pos := w.GetPosition()
 
@@ -664,10 +676,12 @@ func (w *VolumeMeterWidget) renderTextStereo(img *image.Gray, channelPeaks []flo
 		text += " CLIP"
 	}
 
-	bitmap.DrawAlignedText(img, text, w.face, w.horizontalAlign, w.verticalAlign, 0)
+	bitmap.DrawAlignedText(img, text, w.face, w.horizontalAlign, w.verticalAlign, w.padding)
 }
 
 // renderBarVerticalStereo renders vertical bars in stereo mode (left/right channels)
+//
+//nolint:gocyclo // Geometric calculations for stereo bar rendering
 func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeaks []float64, peakHoldValues []float64, isClipping bool) {
 	pos := w.GetPosition()
 
@@ -757,6 +771,8 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 }
 
 // renderGaugeStereo renders gauges in stereo mode (left/right channels)
+//
+//nolint:gocyclo // Geometric calculations for stereo gauge rendering
 func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []float64, peakHoldValues []float64, isClipping bool) {
 	pos := w.GetPosition()
 

@@ -132,260 +132,241 @@ func drawErrorText(img *image.Gray, text string, x, y int, c color.Gray) {
 	}
 }
 
+// charBitmaps is a map of character bitmaps for the 5x7 font
+var charBitmaps = map[rune][7][5]bool{
+	'A': {
+		{false, true, true, true, false},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, true, true, true, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+	},
+	'B': {
+		{true, true, true, true, false},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, true, true, true, false},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, true, true, true, false},
+	},
+	'C': {
+		{false, true, true, true, false},
+		{true, false, false, false, true},
+		{true, false, false, false, false},
+		{true, false, false, false, false},
+		{true, false, false, false, false},
+		{true, false, false, false, true},
+		{false, true, true, true, false},
+	},
+	'D': {
+		{true, true, true, true, false},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, true, true, true, false},
+	},
+	'E': {
+		{true, true, true, true, true},
+		{true, false, false, false, false},
+		{true, false, false, false, false},
+		{true, true, true, true, false},
+		{true, false, false, false, false},
+		{true, false, false, false, false},
+		{true, true, true, true, true},
+	},
+	'F': {
+		{true, true, true, true, true},
+		{true, false, false, false, false},
+		{true, false, false, false, false},
+		{true, true, true, true, false},
+		{true, false, false, false, false},
+		{true, false, false, false, false},
+		{true, false, false, false, false},
+	},
+	'G': {
+		{false, true, true, true, false},
+		{true, false, false, false, true},
+		{true, false, false, false, false},
+		{true, false, true, true, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{false, true, true, true, true},
+	},
+	'H': {
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, true, true, true, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+	},
+	'I': {
+		{false, true, true, true, false},
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+		{false, true, true, true, false},
+	},
+	'K': {
+		{true, false, false, false, true},
+		{true, false, false, true, false},
+		{true, false, true, false, false},
+		{true, true, false, false, false},
+		{true, false, true, false, false},
+		{true, false, false, true, false},
+		{true, false, false, false, true},
+	},
+	'L': {
+		{true, false, false, false, false},
+		{true, false, false, false, false},
+		{true, false, false, false, false},
+		{true, false, false, false, false},
+		{true, false, false, false, false},
+		{true, false, false, false, false},
+		{true, true, true, true, true},
+	},
+	'M': {
+		{true, false, false, false, true},
+		{true, true, false, true, true},
+		{true, false, true, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+	},
+	'N': {
+		{true, false, false, false, true},
+		{true, true, false, false, true},
+		{true, false, true, false, true},
+		{true, false, false, true, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+	},
+	'O': {
+		{false, true, true, true, false},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{false, true, true, true, false},
+	},
+	'P': {
+		{true, true, true, true, false},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, true, true, true, false},
+		{true, false, false, false, false},
+		{true, false, false, false, false},
+		{true, false, false, false, false},
+	},
+	'R': {
+		{true, true, true, true, false},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, true, true, true, false},
+		{true, false, true, false, false},
+		{true, false, false, true, false},
+		{true, false, false, false, true},
+	},
+	'S': {
+		{false, true, true, true, false},
+		{true, false, false, false, true},
+		{true, false, false, false, false},
+		{false, true, true, true, false},
+		{false, false, false, false, true},
+		{true, false, false, false, true},
+		{false, true, true, true, false},
+	},
+	'T': {
+		{true, true, true, true, true},
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+	},
+	'U': {
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{false, true, true, true, false},
+	},
+	'V': {
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{false, true, false, true, false},
+		{false, true, false, true, false},
+		{false, false, true, false, false},
+	},
+	'W': {
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{true, false, true, false, true},
+		{true, false, true, false, true},
+		{true, true, false, true, true},
+		{true, false, false, false, true},
+	},
+	'Y': {
+		{true, false, false, false, true},
+		{true, false, false, false, true},
+		{false, true, false, true, false},
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+	},
+	' ': {
+		{false, false, false, false, false},
+		{false, false, false, false, false},
+		{false, false, false, false, false},
+		{false, false, false, false, false},
+		{false, false, false, false, false},
+		{false, false, false, false, false},
+		{false, false, false, false, false},
+	},
+	'!': {
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+		{false, false, true, false, false},
+		{false, false, false, false, false},
+		{false, false, true, false, false},
+	},
+}
+
+// defaultCharBitmap is used for unknown characters
+var defaultCharBitmap = [7][5]bool{
+	{true, true, true, true, true},
+	{true, false, false, false, true},
+	{true, false, false, false, true},
+	{true, false, false, false, true},
+	{true, false, false, false, true},
+	{true, false, false, false, true},
+	{true, true, true, true, true},
+}
+
 // getCharBitmap returns a 5x7 bitmap for common characters
 func getCharBitmap(ch rune) [7][5]bool {
-	// Simple 5x7 font for uppercase letters, numbers, and symbols
-	switch ch {
-	case 'A':
-		return [7][5]bool{
-			{false, true, true, true, false},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, true, true, true, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-		}
-	case 'C':
-		return [7][5]bool{
-			{false, true, true, true, false},
-			{true, false, false, false, true},
-			{true, false, false, false, false},
-			{true, false, false, false, false},
-			{true, false, false, false, false},
-			{true, false, false, false, true},
-			{false, true, true, true, false},
-		}
-	case 'D':
-		return [7][5]bool{
-			{true, true, true, true, false},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, true, true, true, false},
-		}
-	case 'E':
-		return [7][5]bool{
-			{true, true, true, true, true},
-			{true, false, false, false, false},
-			{true, false, false, false, false},
-			{true, true, true, true, false},
-			{true, false, false, false, false},
-			{true, false, false, false, false},
-			{true, true, true, true, true},
-		}
-	case 'F':
-		return [7][5]bool{
-			{true, true, true, true, true},
-			{true, false, false, false, false},
-			{true, false, false, false, false},
-			{true, true, true, true, false},
-			{true, false, false, false, false},
-			{true, false, false, false, false},
-			{true, false, false, false, false},
-		}
-	case 'G':
-		return [7][5]bool{
-			{false, true, true, true, false},
-			{true, false, false, false, true},
-			{true, false, false, false, false},
-			{true, false, true, true, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{false, true, true, true, true},
-		}
-	case 'I':
-		return [7][5]bool{
-			{false, true, true, true, false},
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-			{false, true, true, true, false},
-		}
-	case 'N':
-		return [7][5]bool{
-			{true, false, false, false, true},
-			{true, true, false, false, true},
-			{true, false, true, false, true},
-			{true, false, false, true, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-		}
-	case 'O':
-		return [7][5]bool{
-			{false, true, true, true, false},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{false, true, true, true, false},
-		}
-	case 'S':
-		return [7][5]bool{
-			{false, true, true, true, false},
-			{true, false, false, false, true},
-			{true, false, false, false, false},
-			{false, true, true, true, false},
-			{false, false, false, false, true},
-			{true, false, false, false, true},
-			{false, true, true, true, false},
-		}
-	case 'T':
-		return [7][5]bool{
-			{true, true, true, true, true},
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-		}
-	case 'W':
-		return [7][5]bool{
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, true, false, true},
-			{true, false, true, false, true},
-			{true, true, false, true, true},
-			{true, false, false, false, true},
-		}
-	case 'R':
-		return [7][5]bool{
-			{true, true, true, true, false},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, true, true, true, false},
-			{true, false, true, false, false},
-			{true, false, false, true, false},
-			{true, false, false, false, true},
-		}
-	case 'L':
-		return [7][5]bool{
-			{true, false, false, false, false},
-			{true, false, false, false, false},
-			{true, false, false, false, false},
-			{true, false, false, false, false},
-			{true, false, false, false, false},
-			{true, false, false, false, false},
-			{true, true, true, true, true},
-		}
-	case 'V':
-		return [7][5]bool{
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{false, true, false, true, false},
-			{false, true, false, true, false},
-			{false, false, true, false, false},
-		}
-	case ' ':
-		return [7][5]bool{
-			{false, false, false, false, false},
-			{false, false, false, false, false},
-			{false, false, false, false, false},
-			{false, false, false, false, false},
-			{false, false, false, false, false},
-			{false, false, false, false, false},
-			{false, false, false, false, false},
-		}
-	case '!':
-		return [7][5]bool{
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-			{false, false, false, false, false},
-			{false, false, true, false, false},
-		}
-	case 'B':
-		return [7][5]bool{
-			{true, true, true, true, false},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, true, true, true, false},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, true, true, true, false},
-		}
-	case 'H':
-		return [7][5]bool{
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, true, true, true, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-		}
-	case 'K':
-		return [7][5]bool{
-			{true, false, false, false, true},
-			{true, false, false, true, false},
-			{true, false, true, false, false},
-			{true, true, false, false, false},
-			{true, false, true, false, false},
-			{true, false, false, true, false},
-			{true, false, false, false, true},
-		}
-	case 'M':
-		return [7][5]bool{
-			{true, false, false, false, true},
-			{true, true, false, true, true},
-			{true, false, true, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-		}
-	case 'P':
-		return [7][5]bool{
-			{true, true, true, true, false},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, true, true, true, false},
-			{true, false, false, false, false},
-			{true, false, false, false, false},
-			{true, false, false, false, false},
-		}
-	case 'U':
-		return [7][5]bool{
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{false, true, true, true, false},
-		}
-	case 'Y':
-		return [7][5]bool{
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{false, true, false, true, false},
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-			{false, false, true, false, false},
-		}
-	default:
-		// Unknown character - draw a box
-		return [7][5]bool{
-			{true, true, true, true, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, false, false, false, true},
-			{true, true, true, true, true},
-		}
+	if btmp, ok := charBitmaps[ch]; ok {
+		return btmp
 	}
+	return defaultCharBitmap
 }

@@ -135,7 +135,8 @@ func validateConfig(cfg *Config) error {
 
 	validTypes := map[string]bool{
 		"clock": true, "cpu": true, "memory": true,
-		"network": true, "disk": true, "keyboard": true, "volume": true, "volume_meter": true, "doom": true,
+		"network": true, "disk": true, "keyboard": true, "keyboard_layout": true,
+		"volume": true, "volume_meter": true, "doom": true,
 	}
 
 	for i, w := range cfg.Widgets {
@@ -149,7 +150,7 @@ func validateConfig(cfg *Config) error {
 			return fmt.Errorf("widget[%d] (%s): type is required", i, w.ID)
 		}
 		if !validTypes[w.Type] {
-			return fmt.Errorf("widget[%d] (%s): invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, volume, volume_meter, doom)", i, w.ID, w.Type)
+			return fmt.Errorf("widget[%d] (%s): invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, keyboard_layout, volume, volume_meter, doom)", i, w.ID, w.Type)
 		}
 
 		// Only validate properties for enabled widgets

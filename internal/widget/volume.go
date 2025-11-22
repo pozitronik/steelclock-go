@@ -30,6 +30,9 @@ type VolumeWidget struct {
 	gaugeNeedleColor  uint8
 	triangleFillColor uint8
 	triangleBorder    bool
+	horizAlign        string
+	vertAlign         string
+	padding           int
 
 	mu         sync.RWMutex
 	volume     float64 // 0-100
@@ -81,6 +84,16 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		triangleFillColor = 255
 	}
 
+	horizAlign := cfg.Properties.HorizontalAlign
+	if horizAlign == "" {
+		horizAlign = "center"
+	}
+
+	vertAlign := cfg.Properties.VerticalAlign
+	if vertAlign == "" {
+		vertAlign = "center"
+	}
+
 	// Load font for text mode
 	var fontFace font.Face
 	if displayMode == "text" {
@@ -103,6 +116,9 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		gaugeNeedleColor:  uint8(gaugeNeedleColor),
 		triangleFillColor: uint8(triangleFillColor),
 		triangleBorder:    cfg.Properties.TriangleBorder,
+		horizAlign:        horizAlign,
+		vertAlign:         vertAlign,
+		padding:           cfg.Properties.Padding,
 		lastSuccessTime:   time.Now(), // Initialize to prevent false "stuck" detection
 		face:              fontFace,
 		stopChan:          make(chan struct{}),
@@ -250,8 +266,8 @@ func (w *VolumeWidget) renderText(img *image.Gray) {
 		text = "MUTE"
 	}
 
-	// Center the text (draws in white by default)
-	bitmap.DrawAlignedText(img, text, w.face, "center", "center", 0)
+	// Draw text with configured alignment
+	bitmap.DrawAlignedText(img, text, w.face, w.horizAlign, w.vertAlign, w.padding)
 }
 
 // renderBarHorizontal renders volume as horizontal bar
@@ -365,6 +381,8 @@ func (w *VolumeWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
 
 // renderTriangle renders volume as a right-angled triangle that fills from left to right
 // Right angle at bottom-right, hypotenuse from bottom-left to top-right
+//
+//nolint:gocyclo // Geometric calculations for triangle rendering
 func (w *VolumeWidget) renderTriangle(img *image.Gray, pos config.PositionConfig, style config.StyleConfig) {
 	padding := 2
 	if style.Border {

@@ -135,35 +135,12 @@ func startApp() error {
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		log.Printf("ERROR: Failed to load config: %v", err)
-		log.Println("Displaying error on OLED screen...")
-		// Show error on display instead of exiting
-		return startWithErrorDisplay("CONFIG", 128, 40)
+		return handleStartupError(err, nil)
 	}
 
-	err = startAppWithConfig(cfg)
-
-	// Handle specific error types
-	if err != nil {
-		// Check for backend unavailable error
-		var backendErr *BackendUnavailableError
-		if errors.As(err, &backendErr) {
-			// Backend unavailable - can't show error on OLED, just log and exit
-			log.Println("========================================")
-			log.Println("CRITICAL: SteelSeries GG is not running")
-			log.Println("Please start SteelSeries GG and try again")
-			log.Println("========================================")
-			return fmt.Errorf("SteelSeries GG backend not available")
-		}
-
-		// Check for no widgets error
-		var noWidgetsErr *NoWidgetsError
-		if errors.As(err, &noWidgetsErr) {
-			log.Println("Displaying error on OLED screen...")
-			return startWithErrorDisplay("NO WIDGETS", cfg.Display.Width, cfg.Display.Height)
-		}
-
-		// Other error - return as-is
-		return err
+	// Start with loaded config
+	if err := startAppWithConfig(cfg); err != nil {
+		return handleStartupError(err, cfg)
 	}
 
 	return nil
@@ -267,6 +244,47 @@ func stopAppAndWait() {
 	stopAppInternal(true)
 }
 
+// handleStartupError handles errors during startup/reload and shows error display if appropriate
+// Returns the original error or a wrapped error if error display fails
+func handleStartupError(err error, cfg *config.Config) error {
+	// Check for backend unavailable error
+	var backendErr *BackendUnavailableError
+	if errors.As(err, &backendErr) {
+		log.Println("========================================")
+		log.Println("CRITICAL: SteelSeries GG is not running")
+		log.Println("Please start SteelSeries GG and try again")
+		log.Println("========================================")
+		return backendErr
+	}
+
+	// Determine display dimensions
+	displayWidth := 128
+	displayHeight := 40
+	if cfg != nil {
+		displayWidth = cfg.Display.Width
+		displayHeight = cfg.Display.Height
+	} else if lastGoodConfig != nil {
+		displayWidth = lastGoodConfig.Display.Width
+		displayHeight = lastGoodConfig.Display.Height
+	}
+
+	// Determine error message based on error type
+	errorMsg := "CONFIG"
+	var noWidgetsErr *NoWidgetsError
+	if errors.As(err, &noWidgetsErr) {
+		errorMsg = "NO WIDGETS"
+	}
+
+	// Show error display
+	log.Println("Displaying error on OLED screen...")
+	if dispErr := startWithErrorDisplay(errorMsg, displayWidth, displayHeight); dispErr != nil {
+		log.Printf("ERROR: Failed to show error display: %v", dispErr)
+		return fmt.Errorf("startup failed and error display failed: %w", dispErr)
+	}
+
+	return err
+}
+
 // stopAppInternal stops all components
 func stopAppInternal(isFinalShutdown bool) {
 	mu.Lock()
@@ -331,22 +349,10 @@ func reloadConfig() error {
 
 		// Stop current app
 		stopApp()
-
-		// Show error display
-		displayWidth := 128
-		displayHeight := 40
-		if lastGoodConfig != nil {
-			displayWidth = lastGoodConfig.Display.Width
-			displayHeight = lastGoodConfig.Display.Height
-		}
-
 		time.Sleep(1 * time.Second) // Wait for cleanup
 
-		if dispErr := startWithErrorDisplay("CONFIG", displayWidth, displayHeight); dispErr != nil {
-			log.Printf("ERROR: Failed to show error display: %v", dispErr)
-		}
-
-		return fmt.Errorf("config validation failed: %w", err)
+		// Show error display using common handler
+		return handleStartupError(err, nil)
 	}
 
 	log.Println("New config validated successfully")
@@ -365,35 +371,8 @@ func reloadConfig() error {
 	log.Println("Starting with new config...")
 	if err := startAppWithConfig(newCfg); err != nil {
 		log.Printf("ERROR: Failed to start with new config: %v", err)
-
-		// Check for backend unavailable error
-		var backendErr *BackendUnavailableError
-		if errors.As(err, &backendErr) {
-			// Backend unavailable - can't show error on OLED, just log and return
-			log.Println("========================================")
-			log.Println("CRITICAL: SteelSeries GG is not running")
-			log.Println("Please start SteelSeries GG and reload config")
-			log.Println("========================================")
-			return fmt.Errorf("SteelSeries GG backend not available")
-		}
-
-		// Determine error message based on error type
-		log.Println("Showing error display...")
 		time.Sleep(1 * time.Second)
-
-		errorMsg := "CONFIG"
-		var noWidgetsErr *NoWidgetsError
-		if errors.As(err, &noWidgetsErr) {
-			errorMsg = "NO WIDGETS"
-		}
-
-		if dispErr := startWithErrorDisplay(errorMsg, newCfg.Display.Width, newCfg.Display.Height); dispErr != nil {
-			log.Printf("ERROR: Failed to show error display: %v", dispErr)
-			log.Println("Application is stopped. Please check config and restart manually.")
-			return fmt.Errorf("reload failed and error display failed: %w", dispErr)
-		}
-
-		return fmt.Errorf("new config failed: %w", err)
+		return handleStartupError(err, newCfg)
 	}
 
 	log.Println("Configuration reloaded successfully!")

@@ -132,6 +132,8 @@ func (w *ClockWidget) Render() (image.Image, error) {
 }
 
 // renderClockFace draws an analog clock face with hour, minute, and second hands
+//
+//nolint:gocyclo // Complex geometric calculations for clock face rendering
 func (w *ClockWidget) renderClockFace(img *image.Gray) {
 	pos := w.GetPosition()
 	style := w.GetStyle()

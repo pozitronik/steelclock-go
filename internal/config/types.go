@@ -115,6 +115,9 @@ type WidgetProperties struct {
 	IndicatorColorOn  int    `json:"indicator_color_on,omitempty"`
 	IndicatorColorOff int    `json:"indicator_color_off,omitempty"`
 
+	// Keyboard layout widget
+	DisplayFormat string `json:"display_format,omitempty"` // "iso639-1", "iso639-2", "full"
+
 	// Volume widget
 	GaugeColor        int  `json:"gauge_color,omitempty"`
 	GaugeNeedleColor  int  `json:"gauge_needle_color,omitempty"`

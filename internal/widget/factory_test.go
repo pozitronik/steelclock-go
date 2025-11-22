@@ -43,6 +43,11 @@ func TestCreateWidget_AllTypes(t *testing.T) {
 			widgetType: "keyboard",
 			wantErr:    false,
 		},
+		{
+			name:       "create keyboard_layout widget",
+			widgetType: "keyboard_layout",
+			wantErr:    false,
+		},
 	}
 
 	for _, tt := range tests {
