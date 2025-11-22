@@ -20,7 +20,7 @@ https://github.com/user-attachments/assets/58f607cb-be31-4af4-bb3d-6e0628f0748c
 
 - **System Tray Integration**: Runs in background with system tray icon
 - **Live Configuration Reload**: Edit and reload config without restarting
-- **Multiple Widgets**: Clock, CPU, Memory, Network, Disk, Keyboard indicators, Volume control
+- **Multiple Widgets**: Clock, CPU, Memory, Network, Disk, Keyboard indicators, Keyboard layout, Volume control
 - **Display Modes**: Text, horizontal/vertical bars, graphs, analog gauges, etc
 - **Per-Core CPU Monitoring**: Grid layouts showing individual core usage for all display modes
 - **Widget Transparency**: Overlay widgets using `background_color: -1` for layered displays
@@ -82,17 +82,18 @@ Edit `config.json` to customize widgets. The application supports live reload vi
 
 ### Supported Widgets
 
-| Widget           | Description                       | Modes                                                           |
-|------------------|-----------------------------------|-----------------------------------------------------------------|
-| **clock**        | Current time display              | text, clock_face                                                |
-| **cpu**          | CPU usage (per-core support)      | text, bar_horizontal, bar_vertical, graph, gauge                |
-| **memory**       | RAM usage                         | text, bar_horizontal, bar_vertical, graph, gauge                |
-| **network**      | Network I/O (RX/TX)               | text, bar_horizontal, bar_vertical, graph, gauge                |
-| **disk**         | Disk I/O (read/write)             | text, bar_horizontal, bar_vertical, graph                       |
-| **keyboard**     | Lock indicators (Caps/Num/Scroll) | text                                                            |
-| **volume**       | System volume level and mute      | text, bar_horizontal, bar_vertical, gauge, triangle             |
-| **volume_meter** | Realtime audio peak meter         | text, bar_horizontal, bar_vertical, gauge (stereo & VU support) |
-| **doom**         | Interactive DOOM game display     | game                                                            |
+| Widget              | Description                          | Modes                                                           |
+|---------------------|--------------------------------------|-----------------------------------------------------------------|
+| **clock**           | Current time display                 | text, clock_face                                                |
+| **cpu**             | CPU usage (per-core support)         | text, bar_horizontal, bar_vertical, graph, gauge                |
+| **memory**          | RAM usage                            | text, bar_horizontal, bar_vertical, graph, gauge                |
+| **network**         | Network I/O (RX/TX)                  | text, bar_horizontal, bar_vertical, graph, gauge                |
+| **disk**            | Disk I/O (read/write)                | text, bar_horizontal, bar_vertical, graph                       |
+| **keyboard**        | Lock indicators (Caps/Num/Scroll)    | text                                                            |
+| **keyboard_layout** | Current keyboard input language      | text (ISO 639-1, ISO 639-2, full name)                          |
+| **volume**          | System volume level and mute         | text, bar_horizontal, bar_vertical, gauge, triangle             |
+| **volume_meter**    | Realtime audio peak meter            | text, bar_horizontal, bar_vertical, gauge (stereo & VU support) |
+| **doom**            | Interactive DOOM game display        | game                                                            |
 
 See [CONFIG_GUIDE.md](configs/CONFIG_GUIDE.md) for detailed widget properties and configuration examples.
 
