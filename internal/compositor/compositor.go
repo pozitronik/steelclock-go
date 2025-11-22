@@ -17,27 +17,53 @@ import (
 
 // Compositor manages the rendering loop and API updates
 type Compositor struct {
-	client        gamesense.API
-	layoutManager *layout.Manager
-	refreshRate   time.Duration
-	eventName     string
-	widgets       []widget.Widget
-	stopChan      chan struct{}
-	wg            sync.WaitGroup
+	client          gamesense.API
+	layoutManager   *layout.Manager
+	refreshRate     time.Duration
+	eventName       string
+	widgets         []widget.Widget
+	stopChan        chan struct{}
+	wg              sync.WaitGroup
+	batchingEnabled bool
+	batchSize       int
+	batchSupported  bool
+	frameBuffer     [][]int
+	bufferMu        sync.Mutex
 }
 
 // NewCompositor creates a new compositor
 func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []widget.Widget, cfg *config.Config) *Compositor {
 	refreshRate := time.Duration(cfg.RefreshRateMs) * time.Millisecond
 
-	return &Compositor{
-		client:        client,
-		layoutManager: layoutMgr,
-		refreshRate:   refreshRate,
-		eventName:     "STEELCLOCK_DISPLAY",
-		widgets:       widgets,
-		stopChan:      make(chan struct{}),
+	comp := &Compositor{
+		client:          client,
+		layoutManager:   layoutMgr,
+		refreshRate:     refreshRate,
+		eventName:       "STEELCLOCK_DISPLAY",
+		widgets:         widgets,
+		stopChan:        make(chan struct{}),
+		batchingEnabled: cfg.EventBatchingEnabled,
+		batchSize:       cfg.EventBatchSize,
+		frameBuffer:     make([][]int, 0, cfg.EventBatchSize),
 	}
+
+	// Check if batching is supported by API (only if enabled in config)
+	if comp.batchingEnabled {
+		if gsClient, ok := client.(*gamesense.Client); ok {
+			comp.batchSupported = gsClient.SupportsMultipleEvents()
+			if !comp.batchSupported {
+				log.Println("Event batching disabled: not supported by GameSense API")
+				comp.batchingEnabled = false
+			} else {
+				log.Printf("Event batching enabled with batch size: %d", comp.batchSize)
+			}
+		} else {
+			log.Println("Event batching disabled: client does not support feature detection")
+			comp.batchingEnabled = false
+		}
+	}
+
+	return comp
 }
 
 // Start begins the rendering loop
@@ -67,6 +93,14 @@ func (c *Compositor) Stop() {
 	log.Println("Compositor stopping...")
 	close(c.stopChan)
 	c.wg.Wait()
+
+	// Flush any remaining buffered frames
+	if c.batchingEnabled {
+		if err := c.flushBatch(); err != nil {
+			log.Printf("Error flushing batch on stop: %v", err)
+		}
+	}
+
 	log.Println("Compositor stopped")
 }
 
@@ -153,9 +187,47 @@ func (c *Compositor) renderFrame() error {
 		return fmt.Errorf("image conversion failed: %w", err)
 	}
 
-	// Send to display
+	// If batching is enabled, buffer the frame
+	if c.batchingEnabled {
+		c.bufferMu.Lock()
+		c.frameBuffer = append(c.frameBuffer, bitmapData)
+		shouldFlush := len(c.frameBuffer) >= c.batchSize
+		c.bufferMu.Unlock()
+
+		// Flush if buffer is full
+		if shouldFlush {
+			return c.flushBatch()
+		}
+		return nil
+	}
+
+	// Send immediately if batching disabled
 	if err := c.client.SendScreenData(c.eventName, bitmapData); err != nil {
 		return fmt.Errorf("send failed: %w", err)
+	}
+
+	return nil
+}
+
+// flushBatch sends all buffered frames in a single request
+func (c *Compositor) flushBatch() error {
+	c.bufferMu.Lock()
+	if len(c.frameBuffer) == 0 {
+		c.bufferMu.Unlock()
+		return nil
+	}
+
+	// Copy buffer to send
+	framesToSend := make([][]int, len(c.frameBuffer))
+	copy(framesToSend, c.frameBuffer)
+	c.frameBuffer = c.frameBuffer[:0] // Clear buffer
+	c.bufferMu.Unlock()
+
+	// Send batch
+	if gsClient, ok := c.client.(*gamesense.Client); ok {
+		if err := gsClient.SendMultipleScreenData(c.eventName, framesToSend); err != nil {
+			return fmt.Errorf("batch send failed: %w", err)
+		}
 	}
 
 	return nil

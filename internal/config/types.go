@@ -2,16 +2,18 @@ package config
 
 // Config represents the complete SteelClock configuration
 type Config struct {
-	GameName            string         `json:"game_name"`
-	GameDisplayName     string         `json:"game_display_name"`
-	RefreshRateMs       int            `json:"refresh_rate_ms"`
-	UnregisterOnExit    bool           `json:"unregister_on_exit,omitempty"`
-	DeinitializeTimerMs int            `json:"deinitialize_timer_length_ms,omitempty"`
-	BundledFontURL      string         `json:"bundled_font_url,omitempty"`
-	BundledWadURL       string         `json:"bundled_wad_url,omitempty"`
-	Display             DisplayConfig  `json:"display"`
-	Layout              *LayoutConfig  `json:"layout,omitempty"`
-	Widgets             []WidgetConfig `json:"widgets"`
+	GameName             string         `json:"game_name"`
+	GameDisplayName      string         `json:"game_display_name"`
+	RefreshRateMs        int            `json:"refresh_rate_ms"`
+	UnregisterOnExit     bool           `json:"unregister_on_exit,omitempty"`
+	DeinitializeTimerMs  int            `json:"deinitialize_timer_length_ms,omitempty"`
+	EventBatchingEnabled bool           `json:"event_batching_enabled,omitempty"`
+	EventBatchSize       int            `json:"event_batch_size,omitempty"`
+	BundledFontURL       string         `json:"bundled_font_url,omitempty"`
+	BundledWadURL        string         `json:"bundled_wad_url,omitempty"`
+	Display              DisplayConfig  `json:"display"`
+	Layout               *LayoutConfig  `json:"layout,omitempty"`
+	Widgets              []WidgetConfig `json:"widgets"`
 }
 
 // DisplayConfig represents display settings

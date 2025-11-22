@@ -397,6 +397,57 @@ func TestValidateConfig_DeinitializeTimer(t *testing.T) {
 	}
 }
 
+// TestValidateConfig_EventBatchSize tests validation of event_batch_size
+func TestValidateConfig_EventBatchSize(t *testing.T) {
+	tests := []struct {
+		name      string
+		batchSize int
+		shouldErr bool
+	}{
+		{"valid minimum", 1, false},
+		{"valid middle", 50, false},
+		{"valid maximum", 100, false},
+		{"omitted (zero)", 0, false},
+		{"too low", 0, false}, // 0 is treated as omitted
+		{"negative", -1, true},
+		{"too high", 101, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{
+				GameName:        "TEST",
+				GameDisplayName: "Test",
+				EventBatchSize:  tt.batchSize,
+				Display: DisplayConfig{
+					Width:  128,
+					Height: 40,
+				},
+				RefreshRateMs: 100,
+				Widgets: []WidgetConfig{
+					{
+						Type:     "clock",
+						ID:       "test",
+						Enabled:  BoolPtr(true),
+						Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+						Properties: WidgetProperties{
+							Format: "%H:%M:%S",
+						},
+					},
+				},
+			}
+
+			err := validateConfig(cfg)
+			if tt.shouldErr && err == nil {
+				t.Errorf("validateConfig() should return error for event_batch_size=%d", tt.batchSize)
+			}
+			if !tt.shouldErr && err != nil {
+				t.Errorf("validateConfig() should not return error for event_batch_size=%d, got: %v", tt.batchSize, err)
+			}
+		})
+	}
+}
+
 // TestValidateConfig_NoWidgets tests validation when no widgets are configured
 func TestValidateConfig_NoWidgets(t *testing.T) {
 	cfg := &Config{

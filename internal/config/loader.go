@@ -129,6 +129,13 @@ func validateConfig(cfg *Config) error {
 		}
 	}
 
+	// Check event_batch_size if specified
+	if cfg.EventBatchSize != 0 {
+		if cfg.EventBatchSize < 1 || cfg.EventBatchSize > 100 {
+			return fmt.Errorf("event_batch_size must be between 1 and 100 (got %d)", cfg.EventBatchSize)
+		}
+	}
+
 	// Check widgets
 	if len(cfg.Widgets) == 0 {
 		return fmt.Errorf("at least one widget must be configured")
@@ -221,6 +228,11 @@ func applyDisplayDefaults(cfg *Config) {
 
 	if cfg.Display.Height == 0 {
 		cfg.Display.Height = 40
+	}
+
+	// Apply default for event_batch_size if not specified
+	if cfg.EventBatchingEnabled && cfg.EventBatchSize == 0 {
+		cfg.EventBatchSize = 10
 	}
 }
 

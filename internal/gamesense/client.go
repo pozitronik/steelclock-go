@@ -134,6 +134,71 @@ func (c *Client) SendHeartbeat() error {
 	return nil
 }
 
+// SupportsMultipleEvents checks if the GameSense API supports multiple event batching
+// Returns true if supported (200 OK), false if not supported (404) or error
+func (c *Client) SupportsMultipleEvents() bool {
+	req, err := http.NewRequest("GET", c.baseURL+"/supports_multiple_game_events", nil)
+	if err != nil {
+		return false
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return false
+	}
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Printf("Failed to close response body: %v", closeErr)
+		}
+	}()
+
+	supported := resp.StatusCode == http.StatusOK
+	if supported {
+		log.Println("Multiple event batching supported by GameSense API")
+	} else {
+		log.Println("Multiple event batching NOT supported by GameSense API (will use single-frame mode)")
+	}
+
+	return supported
+}
+
+// SendMultipleScreenData sends multiple bitmap frames in a single request
+// This reduces HTTP overhead when supported by the GameSense API
+func (c *Client) SendMultipleScreenData(eventName string, bitmaps [][]int) error {
+	if len(bitmaps) == 0 {
+		return nil
+	}
+
+	// Validate all bitmaps
+	for i, bitmap := range bitmaps {
+		if len(bitmap) != 640 {
+			return fmt.Errorf("invalid bitmap %d size: expected 640 bytes, got %d", i, len(bitmap))
+		}
+	}
+
+	// Build events array
+	events := make([]map[string]interface{}, len(bitmaps))
+	for i, bitmap := range bitmaps {
+		events[i] = map[string]interface{}{
+			"event": eventName,
+			"data": map[string]interface{}{
+				"frame": map[string]interface{}{
+					"image-data-128x40": bitmap,
+				},
+			},
+		}
+	}
+
+	payload := map[string]interface{}{
+		"game":   c.gameName,
+		"events": events,
+	}
+
+	// Fire and forget pattern - don't check response
+	_ = c.post("/multiple_game_events", payload)
+	return nil
+}
+
 // RemoveGame unregisters the game from SteelSeries Engine
 func (c *Client) RemoveGame() error {
 	payload := map[string]string{

@@ -23,6 +23,18 @@
       "minimum": 1000,
       "maximum": 60000
     },
+    "event_batching_enabled": {
+      "type": "boolean",
+      "description": "Enable multiple event batching to reduce HTTP request overhead. Automatically falls back to single-frame mode if not supported by GameSense API. Default: false",
+      "default": false
+    },
+    "event_batch_size": {
+      "type": "integer",
+      "description": "Maximum number of frames to batch in a single request when event_batching_enabled is true. Valid range: 1-100. Default: 10",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 10
+    },
     "bundled_font_url": {
       "type": "string",
       "description": "URL to download the bundled font if no system font is available. Default: https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf",
