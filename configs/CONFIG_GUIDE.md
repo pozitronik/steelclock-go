@@ -52,6 +52,10 @@ Supported IDEs: VS Code, JetBrains IDEs (IntelliJ, PyCharm, WebStorm), Visual St
   "refresh_rate_ms": 100,
   "unregister_on_exit": false,
   "deinitialize_timer_length_ms": 15000,
+  "supported_resolutions": [
+    {"width": 128, "height": 36},
+    {"width": 128, "height": 48}
+  ],
   "bundled_font_url": "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf",
   "display": { ... },
   "layout": { ... },
@@ -61,12 +65,13 @@ Supported IDEs: VS Code, JetBrains IDEs (IntelliJ, PyCharm, WebStorm), Visual St
 
 ### Global Settings
 
-| Property                       | Type    | Default                                                                             | Description                                                 |
-|--------------------------------|---------|-------------------------------------------------------------------------------------|-------------------------------------------------------------|
-| `refresh_rate_ms`              | integer | 100                                                                                 | Display refresh rate (min 100ms = 10Hz)                     |
-| `unregister_on_exit`           | boolean | false                                                                               | Unregister from GameSense API on exit (see notes below)     |
-| `deinitialize_timer_length_ms` | integer | 15000 (optional)                                                                    | Game deactivation timeout in milliseconds (see notes below) |
-| `bundled_font_url`             | string  | "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf" (optional) | URL for downloading bundled font (see notes below)          |
+| Property                       | Type    | Default                                                                             | Description                                                               |
+|--------------------------------|---------|-------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
+| `refresh_rate_ms`              | integer | 100                                                                                 | Display refresh rate (min 100ms = 10Hz)                                   |
+| `unregister_on_exit`           | boolean | false                                                                               | Unregister from GameSense API on exit (see notes below)                   |
+| `deinitialize_timer_length_ms` | integer | 15000 (optional)                                                                    | Game deactivation timeout in milliseconds (see notes below)               |
+| `supported_resolutions`        | array   | [] (optional)                                                                       | Additional display resolutions for multi-device support (see notes below) |
+| `bundled_font_url`             | string  | "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf" (optional) | URL for downloading bundled font (see notes below)                        |
 
 **About `unregister_on_exit`**:
 
@@ -101,6 +106,70 @@ This option controls how long the GameSense API keeps the application active aft
 - This setting is sent to the GameSense API during game registration
 - It affects when the OLED display automatically clears after the last frame is sent
 - Useful for customizing the user experience when SteelClock is paused or exits unexpectedly
+
+**About `supported_resolutions`**:
+
+This option enables multi-device support by rendering frames at multiple resolutions simultaneously. All resolution variants are sent in a single frame update.
+
+- **Default**: Empty array (only main `display` resolution is used)
+- **Format**: Array of objects with `width` and `height` properties
+- **Example**:
+```json
+"supported_resolutions": [
+  {"width": 128, "height": 36},
+  {"width": 128, "height": 48},
+  {"width": 128, "height": 52}
+]
+```
+
+**Known SteelSeries Device Resolutions**:
+
+| Resolution | Devices                                                  |
+|------------|----------------------------------------------------------|
+| **128x36** | SteelSeries Rival 700, Rival 710 (mouse)                 |
+| **128x40** | SteelSeries APEX 7 (keyboard)                            |
+| **128x48** | SteelSeries Arctis Pro Wireless (headset)                |
+| **128x52** | SteelSeries GameDAC, Arctis Pro + GameDAC (audio device) |
+
+**How it works**:
+- SteelClock renders the widget canvas at the main `display` resolution
+- The same canvas is then scaled/rendered at each `supported_resolutions` entry
+- All resolution variants are sent in a single GameSense API frame update
+- Connected devices will display the appropriate resolution for their screen
+
+**When to use**:
+- **Use this** if you have multiple SteelSeries OLED devices (e.g., APEX 7 + Arctis Pro)
+- **Skip this** if you only have one device (just configure `display.width` and `display.height`)
+
+**Example configurations**:
+
+*For APEX 7 keyboard + Arctis Pro headset:*
+```json
+{
+  "display": {"width": 128, "height": 40},  // Main resolution (APEX 7)
+  "supported_resolutions": [
+    {"width": 128, "height": 48}  // Arctis Pro Wireless
+  ]
+}
+```
+
+*For all SteelSeries OLED devices:*
+```json
+{
+  "display": {"width": 128, "height": 40},
+  "supported_resolutions": [
+    {"width": 128, "height": 36},  // Rival 700/710
+    {"width": 128, "height": 48},  // Arctis Pro Wireless
+    {"width": 128, "height": 52}   // GameDAC
+  ]
+}
+```
+
+**Technical notes**:
+- Each resolution is independently rendered from the same widget canvas
+- Rendering overhead scales linearly with number of resolutions
+- GameSense API automatically routes each resolution to matching devices
+- No device detection required - the API handles device matching
 
 **About `bundled_font_url`**:
 

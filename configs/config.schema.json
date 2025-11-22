@@ -35,6 +35,26 @@
       "maximum": 100,
       "default": 10
     },
+    "supported_resolutions": {
+      "type": "array",
+      "description": "Additional display resolutions to render for multi-device support. Each resolution is rendered and sent in the same frame. If not specified, only the main display resolution is used.",
+      "items": {
+        "type": "object",
+        "required": ["width", "height"],
+        "properties": {
+          "width": {
+            "type": "integer",
+            "description": "Display width in pixels",
+            "minimum": 1
+          },
+          "height": {
+            "type": "integer",
+            "description": "Display height in pixels",
+            "minimum": 1
+          }
+        }
+      }
+    },
     "bundled_font_url": {
       "type": "string",
       "description": "URL to download the bundled font if no system font is available. Default: https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf",

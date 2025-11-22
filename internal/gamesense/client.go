@@ -121,6 +121,32 @@ func (c *Client) SendScreenData(eventName string, bitmapData []int) error {
 	return nil
 }
 
+// SendScreenDataMultiRes sends bitmap data for multiple resolutions in a single frame
+// resolutionData maps resolution keys (e.g., "image-data-128x40") to bitmap data
+func (c *Client) SendScreenDataMultiRes(eventName string, resolutionData map[string][]int) error {
+	if len(resolutionData) == 0 {
+		return fmt.Errorf("no resolution data provided")
+	}
+
+	// Build frame with all resolutions
+	frameData := make(map[string]interface{})
+	for key, bitmapData := range resolutionData {
+		frameData[key] = bitmapData
+	}
+
+	payload := map[string]interface{}{
+		"game":  c.gameName,
+		"event": eventName,
+		"data": map[string]interface{}{
+			"frame": frameData,
+		},
+	}
+
+	// Fire and forget pattern - don't check response
+	_ = c.post("/game_event", payload)
+	return nil
+}
+
 // SendHeartbeat sends a heartbeat to keep the game alive
 func (c *Client) SendHeartbeat() error {
 	payload := map[string]string{

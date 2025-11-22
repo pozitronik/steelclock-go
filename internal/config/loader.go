@@ -136,6 +136,16 @@ func validateConfig(cfg *Config) error {
 		}
 	}
 
+	// Check supported_resolutions if specified
+	for i, res := range cfg.SupportedResolutions {
+		if res.Width <= 0 {
+			return fmt.Errorf("supported_resolutions[%d]: width must be positive (got %d)", i, res.Width)
+		}
+		if res.Height <= 0 {
+			return fmt.Errorf("supported_resolutions[%d]: height must be positive (got %d)", i, res.Height)
+		}
+	}
+
 	// Check widgets
 	if len(cfg.Widgets) == 0 {
 		return fmt.Errorf("at least one widget must be configured")

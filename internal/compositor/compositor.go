@@ -15,6 +15,12 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/widget"
 )
 
+// Resolution represents a display resolution
+type Resolution struct {
+	Width  int
+	Height int
+}
+
 // Compositor manages the rendering loop and API updates
 type Compositor struct {
 	client          gamesense.API
@@ -29,11 +35,20 @@ type Compositor struct {
 	batchSupported  bool
 	frameBuffer     [][]int
 	bufferMu        sync.Mutex
+	resolutions     []Resolution // All resolutions to render (main + supported)
 }
 
 // NewCompositor creates a new compositor
 func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []widget.Widget, cfg *config.Config) *Compositor {
 	refreshRate := time.Duration(cfg.RefreshRateMs) * time.Millisecond
+
+	// Build list of resolutions (main display + supported resolutions)
+	resolutions := []Resolution{
+		{Width: cfg.Display.Width, Height: cfg.Display.Height}, // Main display resolution
+	}
+	for _, res := range cfg.SupportedResolutions {
+		resolutions = append(resolutions, Resolution{Width: res.Width, Height: res.Height})
+	}
 
 	comp := &Compositor{
 		client:          client,
@@ -45,6 +60,12 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 		batchingEnabled: cfg.EventBatchingEnabled,
 		batchSize:       cfg.EventBatchSize,
 		frameBuffer:     make([][]int, 0, cfg.EventBatchSize),
+		resolutions:     resolutions,
+	}
+
+	log.Printf("Rendering for %d resolution(s):", len(resolutions))
+	for _, res := range resolutions {
+		log.Printf("  - %dx%d", res.Width, res.Height)
 	}
 
 	// Check if batching is supported by API (only if enabled in config)
@@ -181,16 +202,22 @@ func (c *Compositor) renderFrame() error {
 		return fmt.Errorf("composite failed: %w", err)
 	}
 
-	// Convert to bytes
-	bitmapData, err := bitmap.ImageToBytes(canvas, 128, 40)
-	if err != nil {
-		return fmt.Errorf("image conversion failed: %w", err)
+	// Render at all resolutions
+	resolutionData := make(map[string][]int)
+	for _, res := range c.resolutions {
+		bitmapData, err := bitmap.ImageToBytes(canvas, res.Width, res.Height)
+		if err != nil {
+			return fmt.Errorf("image conversion failed for %dx%d: %w", res.Width, res.Height, err)
+		}
+		key := fmt.Sprintf("image-data-%dx%d", res.Width, res.Height)
+		resolutionData[key] = bitmapData
 	}
 
-	// If batching is enabled, buffer the frame
+	// If batching is enabled, buffer the frame (only main resolution for now)
 	if c.batchingEnabled {
+		mainKey := fmt.Sprintf("image-data-%dx%d", c.resolutions[0].Width, c.resolutions[0].Height)
 		c.bufferMu.Lock()
-		c.frameBuffer = append(c.frameBuffer, bitmapData)
+		c.frameBuffer = append(c.frameBuffer, resolutionData[mainKey])
 		shouldFlush := len(c.frameBuffer) >= c.batchSize
 		c.bufferMu.Unlock()
 
@@ -202,8 +229,16 @@ func (c *Compositor) renderFrame() error {
 	}
 
 	// Send immediately if batching disabled
-	if err := c.client.SendScreenData(c.eventName, bitmapData); err != nil {
-		return fmt.Errorf("send failed: %w", err)
+	if gsClient, ok := c.client.(*gamesense.Client); ok {
+		if err := gsClient.SendScreenDataMultiRes(c.eventName, resolutionData); err != nil {
+			return fmt.Errorf("send failed: %w", err)
+		}
+	} else {
+		// Fallback to single resolution for non-Client implementations
+		mainKey := fmt.Sprintf("image-data-%dx%d", c.resolutions[0].Width, c.resolutions[0].Height)
+		if err := c.client.SendScreenData(c.eventName, resolutionData[mainKey]); err != nil {
+			return fmt.Errorf("send failed: %w", err)
+		}
 	}
 
 	return nil

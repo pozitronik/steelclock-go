@@ -175,6 +175,10 @@ func TestNewCompositor(t *testing.T) {
 	layoutMgr := layout.NewManager(displayCfg, widgets)
 	cfg := &config.Config{
 		RefreshRateMs: 100,
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
 	}
 
 	comp := NewCompositor(client, layoutMgr, widgets, cfg)
@@ -213,6 +217,10 @@ func TestCompositor_StartStop(t *testing.T) {
 	layoutMgr := createLayoutManager(widgets)
 	cfg := &config.Config{
 		RefreshRateMs: 50, // Fast for testing
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
 	}
 
 	comp := NewCompositor(client, layoutMgr, widgets, cfg)
@@ -256,6 +264,10 @@ func TestCompositor_RenderFrame(t *testing.T) {
 	layoutMgr := createLayoutManager(widgets)
 	cfg := &config.Config{
 		RefreshRateMs: 100,
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
 	}
 
 	comp := NewCompositor(client, layoutMgr, widgets, cfg)
@@ -293,6 +305,10 @@ func TestCompositor_RenderFrame_SendError(t *testing.T) {
 	layoutMgr := createLayoutManager(widgets)
 	cfg := &config.Config{
 		RefreshRateMs: 100,
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
 	}
 
 	comp := NewCompositor(client, layoutMgr, widgets, cfg)
@@ -317,6 +333,10 @@ func TestCompositor_MultipleWidgets(t *testing.T) {
 
 	cfg := &config.Config{
 		RefreshRateMs: 50,
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
 	}
 
 	comp := NewCompositor(client, layoutMgr, widgets, cfg)
@@ -356,6 +376,10 @@ func TestCompositor_WidgetUpdateError(t *testing.T) {
 	layoutMgr := createLayoutManager(widgets)
 	cfg := &config.Config{
 		RefreshRateMs: 50,
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
 	}
 
 	comp := NewCompositor(client, layoutMgr, widgets, cfg)
@@ -386,6 +410,10 @@ func TestCompositor_Heartbeat(t *testing.T) {
 
 	cfg := &config.Config{
 		RefreshRateMs: 100,
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
 	}
 
 	comp := NewCompositor(client, layoutMgr, widgets, cfg)
@@ -416,6 +444,10 @@ func TestCompositor_FastRefreshRate(t *testing.T) {
 	layoutMgr := createLayoutManager(widgets)
 	cfg := &config.Config{
 		RefreshRateMs: 10, // Very fast - 10ms
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
 	}
 
 	comp := NewCompositor(client, layoutMgr, widgets, cfg)
@@ -446,6 +478,10 @@ func TestCompositor_SlowRefreshRate(t *testing.T) {
 	layoutMgr := createLayoutManager(widgets)
 	cfg := &config.Config{
 		RefreshRateMs: 200, // Slow - 200ms
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
 	}
 
 	comp := NewCompositor(client, layoutMgr, widgets, cfg)
@@ -475,6 +511,10 @@ func TestCompositor_NoWidgets(t *testing.T) {
 	layoutMgr := createLayoutManager(widgets)
 	cfg := &config.Config{
 		RefreshRateMs: 50,
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
 	}
 
 	comp := NewCompositor(client, layoutMgr, widgets, cfg)
@@ -503,6 +543,10 @@ func TestCompositor_StopWithoutStart(t *testing.T) {
 
 	cfg := &config.Config{
 		RefreshRateMs: 100,
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
 	}
 
 	comp := NewCompositor(client, layoutMgr, widgets, cfg)
@@ -520,6 +564,10 @@ func TestCompositor_MultipleStartStop(t *testing.T) {
 	layoutMgr := createLayoutManager(widgets)
 	cfg := &config.Config{
 		RefreshRateMs: 50,
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
 	}
 
 	comp := NewCompositor(client, layoutMgr, widgets, cfg)
@@ -552,6 +600,10 @@ func TestCompositor_WidgetDifferentUpdateIntervals(t *testing.T) {
 
 	cfg := &config.Config{
 		RefreshRateMs: 50,
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
 	}
 
 	comp := NewCompositor(client, layoutMgr, widgets, cfg)
