@@ -11,6 +11,7 @@ import (
 func TestNewKeyboardLayoutWidget(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
+		ID:   "keyboard_layout",
 		Position: config.PositionConfig{
 			W: 128,
 			H: 40,
@@ -52,6 +53,7 @@ func TestNewKeyboardLayoutWidget_WithDisplayFormat(t *testing.T) {
 		t.Run(format, func(t *testing.T) {
 			cfg := config.WidgetConfig{
 				Type: "keyboard_layout",
+				ID:   "keyboard_layout",
 				Position: config.PositionConfig{
 					W: 128,
 					H: 40,
@@ -79,6 +81,7 @@ func TestNewKeyboardLayoutWidget_WithDisplayFormat(t *testing.T) {
 func TestNewKeyboardLayoutWidget_InvalidFormat(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
+		ID:   "keyboard_layout",
 		Position: config.PositionConfig{
 			W: 128,
 			H: 40,
@@ -100,6 +103,7 @@ func TestNewKeyboardLayoutWidget_InvalidFormat(t *testing.T) {
 func TestKeyboardLayoutWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
+		ID:   "keyboard_layout",
 		Position: config.PositionConfig{
 			W: 128,
 			H: 40,
@@ -129,6 +133,7 @@ func TestKeyboardLayoutWidget_Update(t *testing.T) {
 func TestKeyboardLayoutWidget_Render(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
+		ID:   "keyboard_layout",
 		Position: config.PositionConfig{
 			W: 128,
 			H: 40,
@@ -165,6 +170,7 @@ func TestKeyboardLayoutWidget_Render(t *testing.T) {
 func TestKeyboardLayoutWidget_FormatLayout_ISO639_1(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
+		ID:   "keyboard_layout",
 		Position: config.PositionConfig{
 			W: 128,
 			H: 40,
@@ -199,6 +205,7 @@ func TestKeyboardLayoutWidget_FormatLayout_ISO639_1(t *testing.T) {
 func TestKeyboardLayoutWidget_FormatLayout_ISO639_2(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
+		ID:   "keyboard_layout",
 		Position: config.PositionConfig{
 			W: 128,
 			H: 40,
@@ -232,6 +239,7 @@ func TestKeyboardLayoutWidget_FormatLayout_ISO639_2(t *testing.T) {
 func TestKeyboardLayoutWidget_FormatLayout_Full(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
+		ID:   "keyboard_layout",
 		Position: config.PositionConfig{
 			W: 128,
 			H: 40,
@@ -265,6 +273,7 @@ func TestKeyboardLayoutWidget_FormatLayout_Full(t *testing.T) {
 func TestKeyboardLayoutWidget_GetUpdateInterval(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
+		ID:   "keyboard_layout",
 		Position: config.PositionConfig{
 			W: 128,
 			H: 40,
@@ -283,6 +292,7 @@ func TestKeyboardLayoutWidget_GetUpdateInterval(t *testing.T) {
 func TestKeyboardLayoutWidget_GetPosition(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
+		ID:   "keyboard_layout",
 		Position: config.PositionConfig{
 			X: 10,
 			Y: 20,
