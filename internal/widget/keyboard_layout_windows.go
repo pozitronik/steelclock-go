@@ -5,6 +5,7 @@ package widget
 import (
 	"fmt"
 	"image"
+	"sync"
 	"unsafe"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
@@ -89,6 +90,8 @@ type KeyboardLayoutWidget struct {
 	displayFormat string // "iso639-1", "iso639-2", "full"
 	currentLayout string
 	fontFace      font.Face
+	lastLCID      uint16 // Cache last LCID to avoid unnecessary updates
+	mu            sync.RWMutex
 }
 
 // NewKeyboardLayoutWidget creates a new keyboard layout widget
@@ -126,7 +129,7 @@ func NewKeyboardLayoutWidget(cfg config.WidgetConfig) (*KeyboardLayoutWidget, er
 		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
 
-	return &KeyboardLayoutWidget{
+	widget := &KeyboardLayoutWidget{
 		BaseWidget:    base,
 		fontSize:      fontSize,
 		horizAlign:    horizAlign,
@@ -134,13 +137,28 @@ func NewKeyboardLayoutWidget(cfg config.WidgetConfig) (*KeyboardLayoutWidget, er
 		padding:       cfg.Properties.Padding,
 		displayFormat: displayFormat,
 		fontFace:      fontFace,
-	}, nil
+	}
+
+	// Get initial layout
+	layout := getCurrentKeyboardLayout()
+	widget.lastLCID = layout
+	widget.currentLayout = widget.formatLayout(layout)
+
+	return widget, nil
 }
 
-// Update updates the keyboard layout state
+// Update checks for keyboard layout changes
 func (w *KeyboardLayoutWidget) Update() error {
 	layout := getCurrentKeyboardLayout()
-	w.currentLayout = w.formatLayout(layout)
+
+	// Only update if layout actually changed
+	w.mu.Lock()
+	if layout != w.lastLCID {
+		w.lastLCID = layout
+		w.currentLayout = w.formatLayout(layout)
+	}
+	w.mu.Unlock()
+
 	return nil
 }
 
@@ -155,8 +173,12 @@ func (w *KeyboardLayoutWidget) Render() (image.Image, error) {
 		bitmap.DrawBorder(img, uint8(style.BorderColor))
 	}
 
-	// Draw layout text
-	bitmap.DrawAlignedText(img, w.currentLayout, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+	// Draw layout text (thread-safe read)
+	w.mu.RLock()
+	layout := w.currentLayout
+	w.mu.RUnlock()
+
+	bitmap.DrawAlignedText(img, layout, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
 
 	return img, nil
 }
