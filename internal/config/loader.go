@@ -44,7 +44,7 @@ func Load(path string) (*Config, error) {
 // CreateDefault creates a configuration with sensible defaults
 func CreateDefault() *Config {
 	cfg := &Config{
-		GameName:        "STEELCLOCK",
+		GameName:        "SteelClock",
 		GameDisplayName: "SteelClock",
 		RefreshRateMs:   100,
 		Display: DisplayConfig{
@@ -107,13 +107,7 @@ func SaveDefault(path string) error {
 
 // validateConfig checks that required fields are present and valid
 func validateConfig(cfg *Config) error {
-	// Check required game info
-	if cfg.GameName == "" {
-		return fmt.Errorf("game_name is required")
-	}
-	if cfg.GameDisplayName == "" {
-		return fmt.Errorf("game_display_name is required")
-	}
+	// Note: game_name and game_display_name are optional - defaults applied in applyDefaults()
 
 	// Check display dimensions are positive
 	if cfg.Display.Width <= 0 {
@@ -193,6 +187,14 @@ func validateWidgetProperties(index int, w *WidgetConfig) error {
 
 // applyDefaults fills in default values for optional fields
 func applyDefaults(cfg *Config) {
+	// Apply default game name if not specified
+	if cfg.GameName == "" {
+		cfg.GameName = "SteelClock"
+	}
+	if cfg.GameDisplayName == "" {
+		cfg.GameDisplayName = "SteelClock"
+	}
+
 	applyDisplayDefaults(cfg)
 
 	for i := range cfg.Widgets {

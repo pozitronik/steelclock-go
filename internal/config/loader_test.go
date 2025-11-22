@@ -109,8 +109,8 @@ func TestLoadNonexistentFile(t *testing.T) {
 		t.Fatal("Load() returned nil config")
 	}
 
-	if cfg.GameName != "STEELCLOCK" {
-		t.Errorf("Default GameName = %s, want STEELCLOCK", cfg.GameName)
+	if cfg.GameName != "SteelClock" {
+		t.Errorf("Default GameName = %s, want SteelClock", cfg.GameName)
 	}
 
 	if cfg.GameDisplayName != "SteelClock" {
@@ -158,8 +158,8 @@ func TestSaveDefault(t *testing.T) {
 		t.Fatalf("Failed to load saved default config: %v", err)
 	}
 
-	if cfg.GameName != "STEELCLOCK" {
-		t.Errorf("SavedDefault GameName = %s, want STEELCLOCK", cfg.GameName)
+	if cfg.GameName != "SteelClock" {
+		t.Errorf("SavedDefault GameName = %s, want SteelClock", cfg.GameName)
 	}
 
 	if len(cfg.Widgets) == 0 {
@@ -220,17 +220,29 @@ func TestValidateConfig_MissingGameName(t *testing.T) {
 				ID:       "test",
 				Enabled:  BoolPtr(true),
 				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+				Properties: WidgetProperties{
+					Format: "%H:%M:%S",
+				},
 			},
 		},
 	}
 
+	// Apply defaults before validation
+	applyDefaults(cfg)
+
+	// Validation should now succeed since defaults are applied
 	err := validateConfig(cfg)
-	if err == nil {
-		t.Error("validateConfig() should return error for missing game_name")
+	if err != nil {
+		t.Errorf("validateConfig() should succeed after applying defaults, got error: %v", err)
+	}
+
+	// Verify default was applied
+	if cfg.GameName != "SteelClock" {
+		t.Errorf("Default GameName = %s, want SteelClock", cfg.GameName)
 	}
 }
 
-// TestValidateConfig_MissingGameDisplayName tests validation of missing game_display_name
+// TestValidateConfig_MissingGameDisplayName tests that missing game_display_name gets default
 func TestValidateConfig_MissingGameDisplayName(t *testing.T) {
 	cfg := &Config{
 		GameName: "TEST",
@@ -245,13 +257,25 @@ func TestValidateConfig_MissingGameDisplayName(t *testing.T) {
 				ID:       "test",
 				Enabled:  BoolPtr(true),
 				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+				Properties: WidgetProperties{
+					Format: "%H:%M:%S",
+				},
 			},
 		},
 	}
 
+	// Apply defaults before validation
+	applyDefaults(cfg)
+
+	// Validation should now succeed since defaults are applied
 	err := validateConfig(cfg)
-	if err == nil {
-		t.Error("validateConfig() should return error for missing game_display_name")
+	if err != nil {
+		t.Errorf("validateConfig() should succeed after applying defaults, got error: %v", err)
+	}
+
+	// Verify default was applied
+	if cfg.GameDisplayName != "SteelClock" {
+		t.Errorf("Default GameDisplayName = %s, want SteelClock", cfg.GameDisplayName)
 	}
 }
 

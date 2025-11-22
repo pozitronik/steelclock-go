@@ -36,7 +36,6 @@ Add this line at the top of your configuration file:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
   ...
 }
 ```
@@ -50,8 +49,6 @@ Supported IDEs: VS Code, JetBrains IDEs (IntelliJ, PyCharm, WebStorm), Visual St
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
-  "game_display_name": "SteelClock",
   "refresh_rate_ms": 100,
   "unregister_on_exit": false,
   "bundled_font_url": "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf",
@@ -65,8 +62,6 @@ Supported IDEs: VS Code, JetBrains IDEs (IntelliJ, PyCharm, WebStorm), Visual St
 
 | Property             | Type    | Default                                                                             | Description                                             |
 |----------------------|---------|-------------------------------------------------------------------------------------|---------------------------------------------------------|
-| `game_name`          | string  | "STEELCLOCK"                                                                        | Game identifier (A-Z, 0-9, -, _ only)                   |
-| `game_display_name`  | string  | "SteelClock"                                                                        | Human-readable name                                     |
 | `refresh_rate_ms`    | integer | 100                                                                                 | Display refresh rate (min 100ms = 10Hz)                 |
 | `unregister_on_exit` | boolean | false                                                                               | Unregister from GameSense API on exit (see notes below) |
 | `bundled_font_url`   | string  | "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf" (optional) | URL for downloading bundled font (see notes below)      |
@@ -888,8 +883,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
-  "game_display_name": "SteelClock",
   "refresh_rate_ms": 100,
   "display": {
     "width": 128,
@@ -921,7 +914,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
   "widgets": [
@@ -955,7 +947,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
   "widgets": [
@@ -983,8 +974,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
-  "game_display_name": "System Monitor",
   "refresh_rate_ms": 100,
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
@@ -1052,7 +1041,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
   "widgets": [
@@ -1079,7 +1067,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
   "widgets": [
@@ -1105,7 +1092,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
   "widgets": [
@@ -1140,8 +1126,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
-  "game_display_name": "System Gauges",
   "refresh_rate_ms": 100,
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
@@ -1179,7 +1163,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
   "widgets": [

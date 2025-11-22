@@ -143,6 +143,11 @@ func (c *Client) RemoveGame() error {
 	return nil
 }
 
+// GameName returns the game name used by this client
+func (c *Client) GameName() string {
+	return c.gameName
+}
+
 // post sends a POST request to the GameSense API
 func (c *Client) post(endpoint string, payload interface{}) error {
 	data, err := json.Marshal(payload)

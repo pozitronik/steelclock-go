@@ -29,6 +29,17 @@ var (
 	lastGoodConfig *config.Config // Backup of last working config
 )
 
+const (
+	// GameSense API constants
+	defaultGameName    = "SteelClock"
+	defaultGameDisplay = "SteelClock"
+	eventName          = "STEELCLOCK_DISPLAY"
+	deviceType         = "screened-128x40"
+	developerName      = "Pozitronik"
+	errorGameName      = "STEELCLOCK_ERROR"
+	errorGameDisplay   = "SteelClock Error"
+)
+
 // BackendUnavailableError indicates SteelSeries GG backend is not available
 type BackendUnavailableError struct {
 	Err error
@@ -165,6 +176,12 @@ func startAppWithConfig(cfg *config.Config) error {
 		log.Printf("Using custom bundled WAD URL: %s", cfg.BundledWadURL)
 	}
 
+	// Check if we need to recreate the client due to GameName change
+	if client != nil && client.GameName() != cfg.GameName {
+		log.Printf("GameName changed from %s to %s, recreating client...", client.GameName(), cfg.GameName)
+		client = nil // Force recreation with new game name
+	}
+
 	// Create or reuse GameSense client
 	var err error
 	if client == nil {
@@ -180,14 +197,14 @@ func startAppWithConfig(cfg *config.Config) error {
 		log.Println("GameSense client created")
 
 		// Register game
-		if err := client.RegisterGame("Custom"); err != nil {
+		if err := client.RegisterGame(developerName); err != nil {
 			log.Printf("ERROR: Failed to register game: %v", err)
 			client = nil // Clear client on registration failure
 			return &BackendUnavailableError{Err: err}
 		}
 
 		// Bind screen event
-		if err := client.BindScreenEvent("STEELCLOCK_DISPLAY", "screened-128x40"); err != nil {
+		if err := client.BindScreenEvent(eventName, deviceType); err != nil {
 			log.Printf("ERROR: Failed to bind screen event: %v", err)
 			client = nil // Clear client on bind failure
 			return &BackendUnavailableError{Err: err}
@@ -263,9 +280,14 @@ func handleStartupError(err error, cfg *config.Config) error {
 	if cfg != nil {
 		displayWidth = cfg.Display.Width
 		displayHeight = cfg.Display.Height
-	} else if lastGoodConfig != nil {
-		displayWidth = lastGoodConfig.Display.Width
-		displayHeight = lastGoodConfig.Display.Height
+	} else {
+		// Read lastGoodConfig under lock to avoid data race
+		mu.Lock()
+		if lastGoodConfig != nil {
+			displayWidth = lastGoodConfig.Display.Width
+			displayHeight = lastGoodConfig.Display.Height
+		}
+		mu.Unlock()
 	}
 
 	// Determine error message based on error type
@@ -388,26 +410,24 @@ func startWithErrorDisplay(message string, width, height int) error {
 
 	log.Printf("Starting error display: %s", message)
 
-	// Create or reuse GameSense client with default settings
-	var err error
-	if client == nil {
-		client, err = gamesense.NewClient("STEELCLOCK_ERROR", "SteelClock Error")
-		if err != nil {
-			log.Printf("ERROR: Failed to create GameSense client for error display: %v", err)
-			return fmt.Errorf("failed to create GameSense client: %w", err)
-		}
+	// Create temporary GameSense client for error display
+	// DO NOT reuse the global client to avoid polluting it with error state
+	errorClient, err := gamesense.NewClient(errorGameName, errorGameDisplay)
+	if err != nil {
+		log.Printf("ERROR: Failed to create GameSense client for error display: %v", err)
+		return fmt.Errorf("failed to create GameSense client: %w", err)
+	}
 
-		// Register game
-		if err := client.RegisterGame("Custom"); err != nil {
-			log.Printf("ERROR: Failed to register game for error display: %v", err)
-			return fmt.Errorf("failed to register game: %w", err)
-		}
+	// Register game
+	if err := errorClient.RegisterGame(developerName); err != nil {
+		log.Printf("ERROR: Failed to register game for error display: %v", err)
+		return fmt.Errorf("failed to register game: %w", err)
+	}
 
-		// Bind screen event
-		if err := client.BindScreenEvent("STEELCLOCK_DISPLAY", "screened-128x40"); err != nil {
-			log.Printf("ERROR: Failed to bind screen event for error display: %v", err)
-			return fmt.Errorf("failed to bind screen event: %w", err)
-		}
+	// Bind screen event
+	if err := errorClient.BindScreenEvent(eventName, deviceType); err != nil {
+		log.Printf("ERROR: Failed to bind screen event for error display: %v", err)
+		return fmt.Errorf("failed to bind screen event: %w", err)
 	}
 
 	// Create error widget
@@ -423,8 +443,8 @@ func startWithErrorDisplay(message string, width, height int) error {
 
 	// Create default config for compositor
 	errorCfg := &config.Config{
-		GameName:        "STEELCLOCK_ERROR",
-		GameDisplayName: "SteelClock Error",
+		GameName:        errorGameName,
+		GameDisplayName: errorGameDisplay,
 		RefreshRateMs:   500, // Flash at 500ms intervals
 		Display:         displayCfg,
 		Widgets:         []config.WidgetConfig{},
@@ -433,8 +453,8 @@ func startWithErrorDisplay(message string, width, height int) error {
 	// Create layout manager
 	layoutMgr := layout.NewManager(displayCfg, widgets)
 
-	// Create compositor
-	comp = compositor.NewCompositor(client, layoutMgr, widgets, errorCfg)
+	// Create compositor with temporary error client
+	comp = compositor.NewCompositor(errorClient, layoutMgr, widgets, errorCfg)
 
 	// Start compositor
 	if err := comp.Start(); err != nil {
