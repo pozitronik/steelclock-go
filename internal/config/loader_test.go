@@ -759,6 +759,8 @@ func TestLoad_PartialConfig(t *testing.T) {
 
 // TestDefaultConstants_AreDifferent tests that DefaultGameName and DefaultGameDisplay are different
 // This is critical because GameSense API returns 400 error if they're the same
+//
+//goland:noinspection GoBoolExpressions
 func TestDefaultConstants_AreDifferent(t *testing.T) {
 	if DefaultGameName == DefaultGameDisplay {
 		t.Errorf("DefaultGameName and DefaultGameDisplay must be different to avoid GameSense API 400 error. Both are: %s", DefaultGameName)
