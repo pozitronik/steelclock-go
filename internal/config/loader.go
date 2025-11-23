@@ -7,6 +7,13 @@ import (
 	"path/filepath"
 )
 
+const (
+	// DefaultGameName Default game registration values
+	// Note: game_name and game_display_name MUST be different or GameSense API returns 400 error
+	DefaultGameName    = "STEELCLOCK"
+	DefaultGameDisplay = "SteelClock"
+)
+
 // BoolPtr returns a pointer to a bool value
 func BoolPtr(b bool) *bool {
 	return &b
@@ -44,8 +51,8 @@ func Load(path string) (*Config, error) {
 // CreateDefault creates a configuration with sensible defaults
 func CreateDefault() *Config {
 	cfg := &Config{
-		GameName:        "SteelClock",
-		GameDisplayName: "SteelClock",
+		GameName:        DefaultGameName,
+		GameDisplayName: DefaultGameDisplay,
 		RefreshRateMs:   100,
 		Display: DisplayConfig{
 			Width:  128,
@@ -213,10 +220,10 @@ func validateWidgetProperties(index int, w *WidgetConfig) error {
 func applyDefaults(cfg *Config) {
 	// Apply default game name if not specified
 	if cfg.GameName == "" {
-		cfg.GameName = "SteelClock"
+		cfg.GameName = DefaultGameName
 	}
 	if cfg.GameDisplayName == "" {
-		cfg.GameDisplayName = "SteelClock"
+		cfg.GameDisplayName = DefaultGameDisplay
 	}
 
 	applyDisplayDefaults(cfg)

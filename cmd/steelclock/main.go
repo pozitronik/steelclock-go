@@ -31,11 +31,9 @@ var (
 
 const (
 	// GameSense API constants
-	defaultGameName    = "SteelClock"
-	defaultGameDisplay = "SteelClock"
-	eventName          = "STEELCLOCK_DISPLAY"
-	deviceType         = "screened-128x40"
-	developerName      = "Pozitronik"
+	eventName     = "STEELCLOCK_DISPLAY"
+	deviceType    = "screened-128x40"
+	developerName = "Pozitronik"
 )
 
 // BackendUnavailableError indicates SteelSeries GG backend is not available
