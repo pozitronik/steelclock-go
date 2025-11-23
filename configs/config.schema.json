@@ -1000,6 +1000,11 @@
                   "maximum": 512,
                   "default": 128
                 },
+                "frequency_compensation": {
+                  "type": "boolean",
+                  "description": "Apply frequency-dependent gain to balance spectrum (attenuates bass, boosts highs like Winamp)",
+                  "default": false
+                },
                 "fill_color": {
                   "type": "integer",
                   "description": "Main visualization color (0-255)",

@@ -31,6 +31,7 @@
         "smoothing": 0.7,
         "peak_hold": true,
         "peak_hold_time": 1.0,
+        "frequency_compensation": true,
         "fill_color": 255
       }
     }
