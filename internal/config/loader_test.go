@@ -109,8 +109,8 @@ func TestLoadNonexistentFile(t *testing.T) {
 		t.Fatal("Load() returned nil config")
 	}
 
-	if cfg.GameName != "SteelClock" {
-		t.Errorf("Default GameName = %s, want SteelClock", cfg.GameName)
+	if cfg.GameName != "STEELCLOCK" {
+		t.Errorf("Default GameName = %s, want STEELCLOCK", cfg.GameName)
 	}
 
 	if cfg.GameDisplayName != "SteelClock" {
@@ -158,8 +158,8 @@ func TestSaveDefault(t *testing.T) {
 		t.Fatalf("Failed to load saved default config: %v", err)
 	}
 
-	if cfg.GameName != "SteelClock" {
-		t.Errorf("SavedDefault GameName = %s, want SteelClock", cfg.GameName)
+	if cfg.GameName != "STEELCLOCK" {
+		t.Errorf("SavedDefault GameName = %s, want STEELCLOCK", cfg.GameName)
 	}
 
 	if len(cfg.Widgets) == 0 {
@@ -237,8 +237,8 @@ func TestValidateConfig_MissingGameName(t *testing.T) {
 	}
 
 	// Verify default was applied
-	if cfg.GameName != "SteelClock" {
-		t.Errorf("Default GameName = %s, want SteelClock", cfg.GameName)
+	if cfg.GameName != "STEELCLOCK" {
+		t.Errorf("Default GameName = %s, want STEELCLOCK", cfg.GameName)
 	}
 }
 
