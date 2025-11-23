@@ -756,3 +756,200 @@ func TestLoad_PartialConfig(t *testing.T) {
 		t.Error("Widget UpdateInterval default was not applied")
 	}
 }
+
+// TestDefaultConstants_AreDifferent tests that DefaultGameName and DefaultGameDisplay are different
+// This is critical because GameSense API returns 400 error if they're the same
+func TestDefaultConstants_AreDifferent(t *testing.T) {
+	if DefaultGameName == DefaultGameDisplay {
+		t.Errorf("DefaultGameName and DefaultGameDisplay must be different to avoid GameSense API 400 error. Both are: %s", DefaultGameName)
+	}
+
+	if DefaultGameName == "" {
+		t.Error("DefaultGameName is empty")
+	}
+
+	if DefaultGameDisplay == "" {
+		t.Error("DefaultGameDisplay is empty")
+	}
+}
+
+// TestCreateDefault_GameNamesAreDifferent tests that CreateDefault returns different game names
+func TestCreateDefault_GameNamesAreDifferent(t *testing.T) {
+	cfg := CreateDefault()
+
+	if cfg.GameName == cfg.GameDisplayName {
+		t.Errorf("CreateDefault() GameName and GameDisplayName must be different. Both are: %s", cfg.GameName)
+	}
+
+	if cfg.GameName != DefaultGameName {
+		t.Errorf("CreateDefault() GameName = %s, want %s", cfg.GameName, DefaultGameName)
+	}
+
+	if cfg.GameDisplayName != DefaultGameDisplay {
+		t.Errorf("CreateDefault() GameDisplayName = %s, want %s", cfg.GameDisplayName, DefaultGameDisplay)
+	}
+}
+
+// TestApplyDefaults_GameNamesAreDifferent tests that applyDefaults creates different names
+func TestApplyDefaults_GameNamesAreDifferent(t *testing.T) {
+	cfg := &Config{
+		Display: DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
+		RefreshRateMs: 100,
+		Widgets: []WidgetConfig{
+			{
+				Type:     "clock",
+				ID:       "test",
+				Enabled:  BoolPtr(true),
+				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+				Properties: WidgetProperties{
+					Format: "%H:%M:%S",
+				},
+			},
+		},
+	}
+
+	applyDefaults(cfg)
+
+	if cfg.GameName == cfg.GameDisplayName {
+		t.Errorf("applyDefaults() must create different GameName and GameDisplayName. Both are: %s", cfg.GameName)
+	}
+
+	if cfg.GameName != DefaultGameName {
+		t.Errorf("applyDefaults() GameName = %s, want %s", cfg.GameName, DefaultGameName)
+	}
+
+	if cfg.GameDisplayName != DefaultGameDisplay {
+		t.Errorf("applyDefaults() GameDisplayName = %s, want %s", cfg.GameDisplayName, DefaultGameDisplay)
+	}
+}
+
+// TestLoad_WithBothFieldsMissing tests that Load handles missing game_name and game_display_name
+func TestLoad_WithBothFieldsMissing(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "no_game_names.json")
+
+	configJSON := `{
+		"refresh_rate_ms": 100,
+		"display": {"width": 128, "height": 40, "background_color": 0},
+		"widgets": [
+			{
+				"type": "clock",
+				"id": "test",
+				"position": {"x": 0, "y": 0, "w": 128, "h": 40}
+			}
+		]
+	}`
+
+	err := os.WriteFile(configPath, []byte(configJSON), 0644)
+	if err != nil {
+		t.Fatalf("failed to write test config: %v", err)
+	}
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	// Verify different defaults were applied
+	if cfg.GameName == cfg.GameDisplayName {
+		t.Errorf("Load() must apply different defaults. Both are: %s", cfg.GameName)
+	}
+
+	if cfg.GameName != DefaultGameName {
+		t.Errorf("Load() GameName = %s, want %s", cfg.GameName, DefaultGameName)
+	}
+
+	if cfg.GameDisplayName != DefaultGameDisplay {
+		t.Errorf("Load() GameDisplayName = %s, want %s", cfg.GameDisplayName, DefaultGameDisplay)
+	}
+}
+
+// TestLoad_WithEmptyStrings tests that Load handles empty string game names
+func TestLoad_WithEmptyStrings(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "empty_game_names.json")
+
+	configJSON := `{
+		"game_name": "",
+		"game_display_name": "",
+		"refresh_rate_ms": 100,
+		"display": {"width": 128, "height": 40, "background_color": 0},
+		"widgets": [
+			{
+				"type": "clock",
+				"id": "test",
+				"position": {"x": 0, "y": 0, "w": 128, "h": 40}
+			}
+		]
+	}`
+
+	err := os.WriteFile(configPath, []byte(configJSON), 0644)
+	if err != nil {
+		t.Fatalf("failed to write test config: %v", err)
+	}
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	// Verify different defaults were applied for empty strings
+	if cfg.GameName == cfg.GameDisplayName {
+		t.Errorf("Load() must apply different defaults for empty strings. Both are: %s", cfg.GameName)
+	}
+
+	if cfg.GameName != DefaultGameName {
+		t.Errorf("Load() GameName = %s, want %s", cfg.GameName, DefaultGameName)
+	}
+
+	if cfg.GameDisplayName != DefaultGameDisplay {
+		t.Errorf("Load() GameDisplayName = %s, want %s", cfg.GameDisplayName, DefaultGameDisplay)
+	}
+}
+
+// TestLoad_WithOnlyGameName tests partial defaults application
+func TestLoad_WithOnlyGameName(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "only_game_name.json")
+
+	configJSON := `{
+		"game_name": "CUSTOM_GAME",
+		"refresh_rate_ms": 100,
+		"display": {"width": 128, "height": 40, "background_color": 0},
+		"widgets": [
+			{
+				"type": "clock",
+				"id": "test",
+				"position": {"x": 0, "y": 0, "w": 128, "h": 40}
+			}
+		]
+	}`
+
+	err := os.WriteFile(configPath, []byte(configJSON), 0644)
+	if err != nil {
+		t.Fatalf("failed to write test config: %v", err)
+	}
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	// Verify custom game_name is preserved
+	if cfg.GameName != "CUSTOM_GAME" {
+		t.Errorf("Load() GameName = %s, want CUSTOM_GAME", cfg.GameName)
+	}
+
+	// Verify default game_display_name was applied
+	if cfg.GameDisplayName != DefaultGameDisplay {
+		t.Errorf("Load() GameDisplayName = %s, want %s", cfg.GameDisplayName, DefaultGameDisplay)
+	}
+
+	// Most importantly: they should be different
+	if cfg.GameName == cfg.GameDisplayName {
+		t.Error("Load() should create different GameName and GameDisplayName")
+	}
+}
