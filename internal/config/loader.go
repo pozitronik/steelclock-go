@@ -154,7 +154,7 @@ func validateConfig(cfg *Config) error {
 	validTypes := map[string]bool{
 		"clock": true, "cpu": true, "memory": true,
 		"network": true, "disk": true, "keyboard": true, "keyboard_layout": true,
-		"volume": true, "volume_meter": true, "doom": true,
+		"volume": true, "volume_meter": true, "audio_visualizer": true, "doom": true,
 	}
 
 	for i, w := range cfg.Widgets {
@@ -168,7 +168,7 @@ func validateConfig(cfg *Config) error {
 			return fmt.Errorf("widget[%d] (%s): type is required", i, w.ID)
 		}
 		if !validTypes[w.Type] {
-			return fmt.Errorf("widget[%d] (%s): invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, keyboard_layout, volume, volume_meter, doom)", i, w.ID, w.Type)
+			return fmt.Errorf("widget[%d] (%s): invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, keyboard_layout, volume, volume_meter, audio_visualizer, doom)", i, w.ID, w.Type)
 		}
 
 		// Only validate properties for enabled widgets
@@ -286,6 +286,8 @@ func applyTypeSpecificDefaults(w *WidgetConfig) {
 		applyDiskDefaults(w)
 	case "keyboard":
 		applyKeyboardDefaults(w)
+	case "audio_visualizer":
+		applyAudioVisualizerDefaults(w)
 	}
 }
 
@@ -354,5 +356,45 @@ func applyKeyboardDefaults(w *WidgetConfig) {
 	}
 	if w.Properties.IndicatorColorOff == 0 {
 		w.Properties.IndicatorColorOff = 100
+	}
+}
+
+// applyAudioVisualizerDefaults sets default values for audio visualizer widgets
+func applyAudioVisualizerDefaults(w *WidgetConfig) {
+	if w.Properties.DisplayMode == "" {
+		w.Properties.DisplayMode = "spectrum"
+	}
+	if w.Properties.BarCount == 0 {
+		w.Properties.BarCount = 32
+	}
+	if w.Properties.FrequencyScale == "" {
+		w.Properties.FrequencyScale = "logarithmic"
+	}
+	if w.Properties.BarStyle == "" {
+		w.Properties.BarStyle = "bars"
+	}
+	if w.Properties.Smoothing == 0 {
+		w.Properties.Smoothing = 0.7
+	}
+	if w.Properties.PeakHoldTime == 0 {
+		w.Properties.PeakHoldTime = 1.0
+	}
+	if w.Properties.WaveformStyle == "" {
+		w.Properties.WaveformStyle = "line"
+	}
+	if w.Properties.ChannelMode == "" {
+		w.Properties.ChannelMode = "stereo_combined"
+	}
+	if w.Properties.SampleCount == 0 {
+		w.Properties.SampleCount = 128
+	}
+	if w.Properties.FillColor == 0 {
+		w.Properties.FillColor = 255
+	}
+	if w.Properties.LeftChannelColor == 0 {
+		w.Properties.LeftChannelColor = 255
+	}
+	if w.Properties.RightChannelColor == 0 {
+		w.Properties.RightChannelColor = 200
 	}
 }

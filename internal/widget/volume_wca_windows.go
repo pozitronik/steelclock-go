@@ -12,6 +12,31 @@ import (
 	"github.com/moutend/go-wca/pkg/wca"
 )
 
+// Shared volume reader instance (singleton)
+var (
+	sharedVolumeReader     *VolumeReaderWCA
+	sharedVolumeReaderOnce sync.Once
+	sharedVolumeReaderErr  error
+)
+
+// GetSharedVolumeReader returns the shared VolumeReaderWCA instance
+func GetSharedVolumeReader() (*VolumeReaderWCA, error) {
+	sharedVolumeReaderOnce.Do(func() {
+		vr := &VolumeReaderWCA{}
+		if err := vr.initialize(); err != nil {
+			sharedVolumeReaderErr = fmt.Errorf("failed to initialize: %w", err)
+			return
+		}
+		sharedVolumeReader = vr
+	})
+
+	if sharedVolumeReaderErr != nil {
+		return nil, sharedVolumeReaderErr
+	}
+
+	return sharedVolumeReader, nil
+}
+
 // VolumeReaderWCA manages Windows Core Audio using go-wca library
 // with proper COM lifecycle (initialize once, not per call)
 type VolumeReaderWCA struct {
@@ -193,5 +218,5 @@ func (vr *VolumeReaderWCA) Close() {
 
 // newVolumeReader creates a platform-specific volume reader (Windows implementation using go-wca)
 func newVolumeReader() (volumeReader, error) {
-	return NewVolumeReaderWCA()
+	return GetSharedVolumeReader()
 }

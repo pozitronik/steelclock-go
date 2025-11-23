@@ -127,6 +127,7 @@
           {"$ref": "#/definitions/keyboardLayoutWidget"},
           {"$ref": "#/definitions/volumeWidget"},
           {"$ref": "#/definitions/volumeMeterWidget"},
+          {"$ref": "#/definitions/audioVisualizerWidget"},
           {"$ref": "#/definitions/doomWidget"}
         ]
       }
@@ -914,6 +915,112 @@
                 "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
                 "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
                 "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
+                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
+                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "audioVisualizerWidget": {
+      "allOf": [
+        {"$ref": "#/definitions/widgetBase"},
+        {
+          "properties": {
+            "type": {"const": "audio_visualizer"},
+            "properties": {
+              "type": "object",
+              "properties": {
+                "display_mode": {
+                  "type": "string",
+                  "description": "Visualization mode: spectrum (frequency bars) or oscilloscope (waveform)",
+                  "enum": ["spectrum", "oscilloscope"],
+                  "default": "spectrum"
+                },
+                "update_interval": {
+                  "type": "number",
+                  "description": "Update interval in seconds (0.033 = ~30 FPS, 0.02 = ~50 FPS)",
+                  "minimum": 0.016,
+                  "default": 0.033
+                },
+                "bar_count": {
+                  "type": "integer",
+                  "description": "Number of frequency bars for spectrum mode",
+                  "minimum": 8,
+                  "maximum": 128,
+                  "default": 32
+                },
+                "frequency_scale": {
+                  "type": "string",
+                  "description": "Frequency scaling: logarithmic (like Winamp) or linear",
+                  "enum": ["logarithmic", "linear"],
+                  "default": "logarithmic"
+                },
+                "bar_style": {
+                  "type": "string",
+                  "description": "Bar rendering style: bars or line graph",
+                  "enum": ["bars", "line"],
+                  "default": "bars"
+                },
+                "smoothing": {
+                  "type": "number",
+                  "description": "Bar fall smoothing (0.0=instant drop, 1.0=very smooth)",
+                  "minimum": 0.0,
+                  "maximum": 1.0,
+                  "default": 0.7
+                },
+                "peak_hold": {
+                  "type": "boolean",
+                  "description": "Show peak indicators on top of bars",
+                  "default": true
+                },
+                "peak_hold_time": {
+                  "type": "number",
+                  "description": "How long to hold peak indicators in seconds",
+                  "minimum": 0.1,
+                  "default": 1.0
+                },
+                "waveform_style": {
+                  "type": "string",
+                  "description": "Oscilloscope waveform style: line or filled",
+                  "enum": ["line", "filled"],
+                  "default": "line"
+                },
+                "channel_mode": {
+                  "type": "string",
+                  "description": "Audio channel mode: mono, stereo_combined (overlay), or stereo_separated (split view)",
+                  "enum": ["mono", "stereo_combined", "stereo_separated"],
+                  "default": "stereo_combined"
+                },
+                "sample_count": {
+                  "type": "integer",
+                  "description": "Number of samples to display in oscilloscope mode",
+                  "minimum": 32,
+                  "maximum": 512,
+                  "default": 128
+                },
+                "fill_color": {
+                  "type": "integer",
+                  "description": "Main visualization color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "left_channel_color": {
+                  "type": "integer",
+                  "description": "Left channel color for stereo modes (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "right_channel_color": {
+                  "type": "integer",
+                  "description": "Right channel color for stereo modes (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 200
+                },
                 "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
                 "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
               }

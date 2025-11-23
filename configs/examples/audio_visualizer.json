@@ -1,0 +1,38 @@
+{
+  "game_name": "SteelClock",
+  "game_display_name": "SteelClock - Audio Visualizer",
+  "refresh_rate_ms": 33,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background_color": 0
+  },
+  "widgets": [
+    {
+      "id": "spectrum_analyzer",
+      "type": "audio_visualizer",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40
+      },
+      "style": {
+        "background_color": 0,
+        "border": false
+      },
+      "properties": {
+        "display_mode": "spectrum",
+        "update_interval": 0.033,
+        "bar_count": 32,
+        "frequency_scale": "logarithmic",
+        "bar_style": "bars",
+        "smoothing": 0.7,
+        "peak_hold": true,
+        "peak_hold_time": 1.0,
+        "fill_color": 255
+      }
+    }
+  ]
+}

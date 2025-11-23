@@ -7,6 +7,14 @@ import (
 	"fmt"
 )
 
+// VolumeReaderWCA stub for non-Windows platforms
+type VolumeReaderWCA struct{}
+
+// GetSharedVolumeReader returns an error on Unix platforms
+func GetSharedVolumeReader() (*VolumeReaderWCA, error) {
+	return nil, fmt.Errorf("volume reader is not supported on this platform (Unix/Linux/macOS)")
+}
+
 // unixVolumeReader is a stub implementation for Unix systems
 // Volume widget is currently only supported on Windows
 type unixVolumeReader struct{}

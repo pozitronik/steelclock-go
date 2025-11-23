@@ -31,6 +31,8 @@ github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 h1:6E+4a0GO5zZEnZ
 github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0/go.mod h1:zJYVVT2jmtg6P3p1VtQj7WsuWi/y4VnjVBn7F8KPB3I=
 github.com/lxn/walk v0.0.0-20210112085537-c389da54e794/go.mod h1:E23UucZGqpuUANJooIbHWCufXvOcT6E7Stq81gU+CSQ=
 github.com/lxn/win v0.0.0-20210218163916-a377121e959e/go.mod h1:KxxjdtRkfNoYDCUP5ryK7XJJNTnpC8atvtmTheChOtk=
+github.com/mjibson/go-dsp v0.0.0-20180508042940-11479a337f12 h1:dd7vnTDfjtwCETZDrRe+GPYNLA1jBtbZeyfyE8eZCyk=
+github.com/mjibson/go-dsp v0.0.0-20180508042940-11479a337f12/go.mod h1:i/KKcxEWEO8Yyl11DYafRPKOPVYTrhxiTRigjtEEXZU=
 github.com/moutend/go-wca v0.3.0 h1:IzhsQ44zBzMdT42xlBjiLSVya9cPYOoKx9E+yXVhFo8=
 github.com/moutend/go-wca v0.3.0/go.mod h1:7VrPO512jnjFGJ6rr+zOoCfiYjOHRPNfbttJuxAurcw=
 github.com/olegfedoseev/image-diff v0.0.0-20171116094004-897a4e73dfd6 h1:a/kynVgbdXJQDq3WWTgwL0bHyg4hu4/oIK9UB+Ugvfo=

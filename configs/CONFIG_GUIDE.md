@@ -965,6 +965,106 @@ When `auto_hide_on_silence` is enabled:
 - Perfect for temporary audio level indicators
 - Works with standard `auto_hide` and `auto_hide_timeout` properties
 
+### Audio Visualizer Widget
+
+**Platform**: Windows only (uses Windows Core Audio API)
+
+**Display Modes**: spectrum (frequency bars), oscilloscope (waveform)
+
+```json
+{
+  "type": "audio_visualizer",
+  "properties": {
+    "display_mode": "spectrum",
+    "update_interval": 0.033,
+    "bar_count": 32,
+    "frequency_scale": "logarithmic",
+    "bar_style": "bars",
+    "smoothing": 0.7,
+    "peak_hold": true,
+    "peak_hold_time": 1.0,
+    "waveform_style": "line",
+    "channel_mode": "stereo_combined",
+    "sample_count": 128,
+    "fill_color": 255,
+    "left_channel_color": 255,
+    "right_channel_color": 200,
+    "auto_hide": false,
+    "auto_hide_timeout": 2.0
+  }
+}
+```
+
+**Common Properties**:
+
+| Property | Type | Range | Default | Description |
+|----------|------|-------|---------|-------------|
+| `display_mode` | string | spectrum, oscilloscope | "spectrum" | Visualization mode |
+| `update_interval` | number | ≥0.016 | 0.033 | Update interval in seconds (~30 FPS) |
+| `fill_color` | integer | 0-255 | 255 | Main visualization color |
+
+**Spectrum Analyzer Properties** (when `display_mode: "spectrum"`):
+
+| Property | Type | Range | Default | Description |
+|----------|------|-------|---------|-------------|
+| `bar_count` | integer | 8-128 | 32 | Number of frequency bars |
+| `frequency_scale` | string | logarithmic, linear | "logarithmic" | Frequency distribution (logarithmic = Winamp-style) |
+| `bar_style` | string | bars, line | "bars" | Bar rendering: filled bars or line graph |
+| `smoothing` | number | 0.0-1.0 | 0.7 | Bar fall smoothing (0.0 = instant, 1.0 = very smooth) |
+| `peak_hold` | boolean | - | true | Show peak indicators on top of bars |
+| `peak_hold_time` | number | ≥0.1 | 1.0 | Peak hold duration in seconds |
+
+**Oscilloscope Properties** (when `display_mode: "oscilloscope"`):
+
+| Property | Type | Range | Default | Description |
+|----------|------|-------|---------|-------------|
+| `waveform_style` | string | line, filled | "line" | Waveform rendering style |
+| `channel_mode` | string | mono, stereo_combined, stereo_separated | "stereo_combined" | Audio channel display mode |
+| `sample_count` | integer | 32-512 | 128 | Number of audio samples to display |
+| `left_channel_color` | integer | 0-255 | 255 | Left channel color (stereo modes) |
+| `right_channel_color` | integer | 0-255 | 200 | Right channel color (stereo modes) |
+
+**Display Mode Details**:
+
+**spectrum**: Classic spectrum analyzer with frequency bars (like Winamp, Windows Media Player).
+- Captures system audio via WASAPI loopback
+- Performs FFT (Fast Fourier Transform) to analyze frequencies
+- Displays frequency magnitude as vertical bars
+- **logarithmic scale**: More bars for bass/mid frequencies, fewer for high (natural hearing perception)
+- **linear scale**: Equal frequency distribution across all bars
+- **peak_hold**: Shows peak dots that slowly decay after peaks
+- **smoothing**: Controls how fast bars fall after audio quiets
+
+**oscilloscope**: Real-time audio waveform display.
+- Shows raw audio signal as time-domain waveform
+- **line style**: Single line connecting sample points
+- **filled style**: Filled area from center to waveform
+- **mono**: Single waveform (left channel only)
+- **stereo_combined**: Left and right channels overlaid on same waveform
+- **stereo_separated**: Left channel top half, right channel bottom half
+
+**Performance Considerations**:
+
+- **Update rate**: 0.033 (~30 FPS) recommended. Faster rates (0.02 = 50 FPS) use more CPU.
+- **Bar count**: More bars (64+) require more FFT processing. 16-32 bars optimal for 128px width.
+- **Smoothing**: Higher values (0.8-0.9) create fluid animations but may feel less responsive.
+
+**Audio Source**:
+
+The widget captures audio from the system's default output device in loopback mode. This means:
+- It visualizes whatever is currently playing on your system
+- Works with any audio source (music players, games, browsers, etc.)
+- Requires Windows Core Audio API (Vista and later)
+- No special audio device configuration needed
+
+**Platform Support**:
+
+This widget only works on Windows due to Windows Core Audio API dependency. On Linux/Unix systems, the widget will display an error message.
+
+**Example Configurations**:
+
+See `configs/examples/audio_visualizer.json` for spectrum analyzer example and `configs/examples/audio_visualizer_oscilloscope.json` for oscilloscope example.
+
 ## Examples
 
 ### Example 1: Simple Clock
