@@ -21,6 +21,22 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
+// frequencyCompensationCurve defines frequency-dependent gain to balance spectrum display
+// Each entry: max frequency (Hz) and gain multiplier
+var frequencyCompensationCurve = []struct {
+	maxFreq float64
+	gain    float64
+}{
+	{100, 0.5},    // Sub-bass: attenuate
+	{250, 0.8},    // Bass: slight attenuation
+	{500, 1.0},    // Low-mids: neutral
+	{1000, 2.0},   // Mids: moderate boost
+	{2000, 3.5},   // Upper mids: strong boost
+	{4000, 5.0},   // Highs: very strong boost
+	{8000, 7.0},   // Upper highs: extreme boost
+	{99999, 10.0}, // Very high frequencies: maximum boost
+}
+
 // AudioVisualizerWidget displays real-time spectrum analyzer or oscilloscope
 type AudioVisualizerWidget struct {
 	id             string
@@ -207,18 +223,6 @@ func (w *AudioVisualizerWidget) updateSpectrum(samples []float32) {
 		w.mapFrequenciesLinear(magnitudes, barCount)
 	}
 
-	// Debug: Log spectrum data for all bars
-	if barCount > 0 {
-		var barValues string
-		for i := 0; i < barCount; i++ {
-			if i > 0 {
-				barValues += ", "
-			}
-			barValues += fmt.Sprintf("%.4f", w.spectrumData[i])
-		}
-		log.Printf("[SPECTRUM-DEBUG] All %d bars: [%s]", barCount, barValues)
-	}
-
 	// Apply smoothing
 	smoothing := w.properties.Smoothing
 	dt := time.Since(w.lastUpdateTime).Seconds()
@@ -246,7 +250,7 @@ func (w *AudioVisualizerWidget) updateSpectrum(samples []float32) {
 					// Faster decay - drop at ~30% per second
 					decayRate := 0.3 // 30% decay per second
 					dt := time.Since(w.lastUpdateTime).Seconds()
-					w.peakValues[i] *= (1.0 - decayRate*dt)
+					w.peakValues[i] *= 1.0 - decayRate*dt
 
 					// Clamp to smoothed value (peak should never go below current value)
 					if w.peakValues[i] < w.smoothedValues[i] {
@@ -282,13 +286,6 @@ func (w *AudioVisualizerWidget) mapFrequenciesLogarithmic(magnitudes []float64, 
 	}
 	freqPerBin := sampleRate / float64(len(magnitudes)*2)
 
-	// Log actual sample rate and frequency resolution
-	log.Printf("[FFT-INFO] Sample rate: %.0f Hz, FFT size: %d, Freq per bin: %.3f Hz",
-		sampleRate, len(magnitudes)*2, freqPerBin)
-
-	// Debug: log frequency mapping for first 5 bars (only once per update)
-	debugLogged := false
-
 	for i := 0; i < barCount; i++ {
 		// Calculate frequency range for this bar (logarithmic)
 		ratio := float64(i) / float64(barCount)
@@ -305,12 +302,6 @@ func (w *AudioVisualizerWidget) mapFrequenciesLogarithmic(magnitudes []float64, 
 			binStart = len(magnitudes) - 1
 		}
 
-		// Debug: log mapping for first 5 bars
-		if !debugLogged && i < 5 {
-			log.Printf("[FREQ-MAP] Bar %d: %.1f-%.1f Hz → bins %d-%d (count: %d)",
-				i, freqStart, freqEnd, binStart, binEnd, binEnd-binStart+1)
-		}
-
 		// Find peak magnitude in this frequency range (not average)
 		// Spectrum analyzers should show the strongest frequency component, not the average
 		peakValue := 0.0
@@ -325,68 +316,20 @@ func (w *AudioVisualizerWidget) mapFrequenciesLogarithmic(magnitudes []float64, 
 		}
 
 		if count > 0 {
-			avgValue := sum / float64(count)
-			rawPeakValue := peakValue
-
 			// Apply frequency-dependent gain to compensate for natural bass-heavy energy distribution
-			// This makes the spectrum look balanced like Winamp (configurable)
-			centerFreq := (freqStart + freqEnd) / 2.0
-			frequencyGain := 1.0
 			if w.properties.FrequencyCompensation {
-				if centerFreq < 100 {
-					// Attenuate sub-bass
-					frequencyGain = 0.5
-				} else if centerFreq < 250 {
-					// Slight attenuation for bass
-					frequencyGain = 0.8
-				} else if centerFreq < 500 {
-					// Neutral low-mids
-					frequencyGain = 1.0
-				} else if centerFreq < 1000 {
-					// Moderate boost for mids
-					frequencyGain = 2.0
-				} else if centerFreq < 2000 {
-					// Strong boost for upper mids
-					frequencyGain = 3.5
-				} else if centerFreq < 4000 {
-					// Very strong boost for highs
-					frequencyGain = 5.0
-				} else if centerFreq < 8000 {
-					// Extreme boost for upper highs
-					frequencyGain = 7.0
-				} else {
-					// Maximum boost for very high frequencies
-					frequencyGain = 10.0
-				}
-				peakValue = math.Min(1.0, peakValue*frequencyGain)
-			}
-
-			// Debug logging for first 10 bars to see raw values
-			if !debugLogged && i < 10 {
-				binValues := ""
-				for j := binStart; j <= binEnd && j < len(magnitudes); j++ {
-					if j > binStart {
-						binValues += ", "
+				centerFreq := (freqStart + freqEnd) / 2.0
+				for _, curve := range frequencyCompensationCurve {
+					if centerFreq < curve.maxFreq {
+						peakValue = math.Min(1.0, peakValue*curve.gain)
+						break
 					}
-					binValues += fmt.Sprintf("%.4f", magnitudes[j])
-				}
-				if w.properties.FrequencyCompensation {
-					log.Printf("[BAR-DEBUG] Bar %d (%.0f Hz): bins %d-%d [%s] peak=%.4f×%.1f=%.4f avg=%.4f",
-						i, centerFreq, binStart, binEnd, binValues, rawPeakValue, frequencyGain, peakValue, avgValue)
-				} else {
-					log.Printf("[BAR-DEBUG] Bar %d (%.0f Hz): bins %d-%d [%s] peak=%.4f avg=%.4f",
-						i, centerFreq, binStart, binEnd, binValues, peakValue, avgValue)
 				}
 			}
 
-			// No threshold - show all frequencies
 			w.spectrumData[i] = peakValue
 		} else {
 			w.spectrumData[i] = 0
-		}
-
-		if i == 9 {
-			debugLogged = true
 		}
 	}
 }
@@ -425,28 +368,14 @@ func (w *AudioVisualizerWidget) mapFrequenciesLinear(magnitudes []float64, barCo
 		// Apply frequency-dependent gain (configurable)
 		if w.properties.FrequencyCompensation {
 			centerFreq := (float64(start) + float64(end)) / 2.0 * freqPerBin
-			frequencyGain := 1.0
-			if centerFreq < 100 {
-				frequencyGain = 0.5
-			} else if centerFreq < 250 {
-				frequencyGain = 0.8
-			} else if centerFreq < 500 {
-				frequencyGain = 1.0
-			} else if centerFreq < 1000 {
-				frequencyGain = 2.0
-			} else if centerFreq < 2000 {
-				frequencyGain = 3.5
-			} else if centerFreq < 4000 {
-				frequencyGain = 5.0
-			} else if centerFreq < 8000 {
-				frequencyGain = 7.0
-			} else {
-				frequencyGain = 10.0
+			for _, curve := range frequencyCompensationCurve {
+				if centerFreq < curve.maxFreq {
+					peakValue = math.Min(1.0, peakValue*curve.gain)
+					break
+				}
 			}
-			peakValue = math.Min(1.0, peakValue*frequencyGain)
 		}
 
-		// No threshold - show all frequencies
 		w.spectrumData[i] = peakValue
 	}
 }
@@ -663,15 +592,6 @@ type AudioCaptureWCA struct {
 	sampleRate     uint32
 }
 
-// NewAudioCaptureWCA creates a new audio capture instance
-func NewAudioCaptureWCA() (*AudioCaptureWCA, error) {
-	ac := &AudioCaptureWCA{}
-	if err := ac.initialize(); err != nil {
-		return nil, fmt.Errorf("failed to initialize: %w", err)
-	}
-	return ac, nil
-}
-
 // initialize sets up WASAPI loopback capture
 func (ac *AudioCaptureWCA) initialize() error {
 	ac.mu.Lock()
@@ -738,14 +658,14 @@ func (ac *AudioCaptureWCA) initialize() error {
 		wfx.NSamplesPerSec, wfx.NChannels, wfx.WBitsPerSample, wfx.WFormatTag)
 
 	// Initialize audio client in loopback mode
-	// AUDCLNT_STREAMFLAGS_LOOPBACK = 0x00020000
-	const AUDCLNT_STREAMFLAGS_LOOPBACK = 0x00020000
+	// AudclntStreamflagsLoopback = 0x00020000
+	const AudclntStreamflagsLoopback = 0x00020000
 	const refTimesPerSec = 10000000                           // 100ns units
 	bufferDuration := wca.REFERENCE_TIME(refTimesPerSec / 50) // 20ms buffer
 
 	if err := audioClientInterface.Initialize(
 		wca.AUDCLNT_SHAREMODE_SHARED,
-		AUDCLNT_STREAMFLAGS_LOOPBACK,
+		AudclntStreamflagsLoopback,
 		bufferDuration,
 		0,
 		wfx,
@@ -808,7 +728,7 @@ func (ac *AudioCaptureWCA) ReadSamples() ([]float32, error) {
 		}
 
 		if numFramesToRead == 0 {
-			ac.captureClient.ReleaseBuffer(numFramesToRead)
+			_ = ac.captureClient.ReleaseBuffer(numFramesToRead)
 			break
 		}
 
@@ -821,7 +741,7 @@ func (ac *AudioCaptureWCA) ReadSamples() ([]float32, error) {
 			samples = append(samples, dataSlice[i*2]) // Left channel
 		}
 
-		ac.captureClient.ReleaseBuffer(numFramesToRead)
+		_ = ac.captureClient.ReleaseBuffer(numFramesToRead)
 	}
 
 	// Debug: Log sample info periodically
@@ -842,23 +762,23 @@ func (ac *AudioCaptureWCA) ReadSamples() ([]float32, error) {
 
 // maxAbs returns the maximum absolute value in a slice
 func maxAbs(samples []float32) float32 {
-	var max float32
+	var CurrentMax float32
 	for _, s := range samples {
 		abs := s
 		if abs < 0 {
 			abs = -abs
 		}
-		if abs > max {
-			max = abs
+		if abs > CurrentMax {
+			CurrentMax = abs
 		}
 	}
-	return max
+	return CurrentMax
 }
 
 // cleanup releases COM resources
 func (ac *AudioCaptureWCA) cleanup() {
 	if ac.audioClient != nil {
-		ac.audioClient.Stop()
+		_ = ac.audioClient.Stop()
 		ac.audioClient.Release()
 	}
 	if ac.captureClient != nil {
