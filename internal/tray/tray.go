@@ -17,12 +17,14 @@ var iconData []byte
 
 // Manager handles system tray icon and menu
 type Manager struct {
-	configPath string
-	onReload   func() error
-	onExit     func()
-	menuEdit   *systray.MenuItem
-	menuReload *systray.MenuItem
-	menuExit   *systray.MenuItem
+	configPath      string
+	onReload        func() error
+	onExit          func()
+	menuEdit        *systray.MenuItem
+	menuReload      *systray.MenuItem
+	menuExit        *systray.MenuItem
+	readyChan       chan struct{} // Signals when tray is initialized
+	onReadyCallback func()        // Called when tray is ready
 }
 
 // NewManager creates a new tray manager
@@ -31,6 +33,7 @@ func NewManager(configPath string, onReload func() error, onExit func()) *Manage
 		configPath: configPath,
 		onReload:   onReload,
 		onExit:     onExit,
+		readyChan:  make(chan struct{}),
 	}
 }
 
@@ -51,6 +54,14 @@ func (m *Manager) onReady() {
 	m.menuReload = systray.AddMenuItem("Reload Config", "Reload configuration from config.json")
 	systray.AddSeparator()
 	m.menuExit = systray.AddMenuItem("Exit", "Exit SteelClock")
+
+	// Signal that tray is ready
+	close(m.readyChan)
+
+	// Call ready callback if set
+	if m.onReadyCallback != nil {
+		go m.onReadyCallback()
+	}
 
 	// Handle menu clicks
 	go m.handleMenuClicks()
@@ -130,6 +141,16 @@ func (m *Manager) handleReloadConfig() {
 // Quit stops the system tray
 func (m *Manager) Quit() {
 	systray.Quit()
+}
+
+// OnReady sets a callback to be called when the tray is ready
+func (m *Manager) OnReady(callback func()) {
+	m.onReadyCallback = callback
+}
+
+// WaitReady blocks until the tray is ready
+func (m *Manager) WaitReady() {
+	<-m.readyChan
 }
 
 // getIcon returns the tray icon bytes
