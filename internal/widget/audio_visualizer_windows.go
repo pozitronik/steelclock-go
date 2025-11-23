@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"log"
 	"math"
 	"math/cmplx"
 	"runtime"
@@ -133,14 +132,6 @@ func (w *AudioVisualizerWidget) Update() error {
 		// Example: at 30% volume, multiply by 100/30 = 3.33x
 		gainFactor := float32(100.0 / volumePercent)
 
-		// Calculate RMS before and after for debugging
-		var rmsBefore, rmsAfter float64
-		var sumSquares float64
-		for _, sample := range samples {
-			sumSquares += float64(sample * sample)
-		}
-		rmsBefore = math.Sqrt(sumSquares / float64(len(samples)))
-
 		// Apply gain to all samples
 		for i := range samples {
 			samples[i] *= gainFactor
@@ -152,16 +143,6 @@ func (w *AudioVisualizerWidget) Update() error {
 				samples[i] = -1.0
 			}
 		}
-
-		// Calculate RMS after compensation
-		sumSquares = 0
-		for _, sample := range samples {
-			sumSquares += float64(sample * sample)
-		}
-		rmsAfter = math.Sqrt(sumSquares / float64(len(samples)))
-
-		log.Printf("[VOLUME-COMP] Volume: %.1f%%, Gain: %.2fx, RMS before: %.4f, RMS after: %.4f",
-			volumePercent, gainFactor, rmsBefore, rmsAfter)
 	}
 
 	// Accumulate samples into buffer (keep last 8192 samples for FFT)
@@ -606,7 +587,7 @@ func (ac *AudioCaptureWCA) initialize() error {
 	if err != nil {
 		errMsg := err.Error()
 		if errMsg == "Incorrect function." || errMsg == "Cannot change thread mode after it is set." {
-			log.Printf("[AUDIO-CAPTURE] COM already initialized on this thread")
+			// COM already initialized on this thread
 		} else {
 			runtime.UnlockOSThread()
 			ac.threadLocked = false
@@ -654,9 +635,6 @@ func (ac *AudioCaptureWCA) initialize() error {
 	}
 	ac.sampleRate = wfx.NSamplesPerSec
 
-	log.Printf("[AUDIO-CAPTURE] Format: %d Hz, %d channels, %d bits/sample, format tag: %d",
-		wfx.NSamplesPerSec, wfx.NChannels, wfx.WBitsPerSample, wfx.WFormatTag)
-
 	// Initialize audio client in loopback mode
 	// AudclntStreamflagsLoopback = 0x00020000
 	const AudclntStreamflagsLoopback = 0x00020000
@@ -699,7 +677,6 @@ func (ac *AudioCaptureWCA) initialize() error {
 	}
 
 	ac.initialized = true
-	log.Printf("[AUDIO-CAPTURE] Initialized successfully (sample rate: %d Hz, buffer: %d frames)", ac.sampleRate, ac.bufferSize)
 	return nil
 }
 
@@ -744,35 +721,7 @@ func (ac *AudioCaptureWCA) ReadSamples() ([]float32, error) {
 		_ = ac.captureClient.ReleaseBuffer(numFramesToRead)
 	}
 
-	// Debug: Log sample info periodically
-	if len(samples) > 0 && totalFrames > 0 {
-		// Calculate RMS to see if there's actual audio
-		var sumSquares float64
-		for _, s := range samples {
-			sumSquares += float64(s * s)
-		}
-		rms := math.Sqrt(sumSquares / float64(len(samples)))
-		if rms > 0.001 { // Only log if there's non-trivial audio
-			log.Printf("[AUDIO-CAPTURE] Read %d frames, RMS: %.4f, peak: %.4f", totalFrames, rms, maxAbs(samples))
-		}
-	}
-
 	return samples, nil
-}
-
-// maxAbs returns the maximum absolute value in a slice
-func maxAbs(samples []float32) float32 {
-	var CurrentMax float32
-	for _, s := range samples {
-		abs := s
-		if abs < 0 {
-			abs = -abs
-		}
-		if abs > CurrentMax {
-			CurrentMax = abs
-		}
-	}
-	return CurrentMax
 }
 
 // cleanup releases COM resources
