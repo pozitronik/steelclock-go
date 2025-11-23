@@ -46,7 +46,9 @@ type AudioVisualizerWidget struct {
 	audioCapture   *AudioCaptureWCA
 	volumeReader   *VolumeReaderWCA
 	mu             sync.Mutex
-	audioData      []float32 // Latest audio samples
+	audioData      []float32 // Latest audio samples (mixed for spectrum)
+	audioDataLeft  []float32 // Left channel samples (for oscilloscope)
+	audioDataRight []float32 // Right channel samples (for oscilloscope)
 	spectrumData   []float64 // Spectrum magnitudes
 	peakValues     []float64 // Peak hold values
 	peakTimestamps []time.Time
@@ -112,18 +114,19 @@ func (w *AudioVisualizerWidget) Update() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	// Capture audio samples
-	samples, err := w.audioCapture.ReadSamples()
+	// Capture audio samples (both channels)
+	leftSamples, rightSamples, err := w.audioCapture.ReadSamples()
 	if err != nil {
 		return fmt.Errorf("failed to read audio samples: %w", err)
 	}
 
-	// If no samples, create silent buffer to allow peaks to decay
-	if len(samples) == 0 {
-		samples = make([]float32, 1024) // Silent buffer (all zeros)
+	// If no samples, create silent buffers to allow peaks to decay
+	if len(leftSamples) == 0 {
+		leftSamples = make([]float32, 1024)  // Silent buffer (all zeros)
+		rightSamples = make([]float32, 1024) // Silent buffer (all zeros)
 	}
 
-	// Apply volume compensation
+	// Apply volume compensation to both channels
 	// WASAPI loopback captures audio AFTER system volume is applied,
 	// so we need to compensate to show visualization independent of volume level
 	volumePercent, _, err := w.volumeReader.GetVolume()
@@ -132,22 +135,48 @@ func (w *AudioVisualizerWidget) Update() error {
 		// Example: at 30% volume, multiply by 100/30 = 3.33x
 		gainFactor := float32(100.0 / volumePercent)
 
-		// Apply gain to all samples
-		for i := range samples {
-			samples[i] *= gainFactor
+		// Apply gain to left channel
+		for i := range leftSamples {
+			leftSamples[i] *= gainFactor
 			// Clamp to -1.0 to +1.0 range
-			if samples[i] > 1.0 {
-				samples[i] = 1.0
+			if leftSamples[i] > 1.0 {
+				leftSamples[i] = 1.0
 			}
-			if samples[i] < -1.0 {
-				samples[i] = -1.0
+			if leftSamples[i] < -1.0 {
+				leftSamples[i] = -1.0
+			}
+		}
+
+		// Apply gain to right channel
+		for i := range rightSamples {
+			rightSamples[i] *= gainFactor
+			// Clamp to -1.0 to +1.0 range
+			if rightSamples[i] > 1.0 {
+				rightSamples[i] = 1.0
+			}
+			if rightSamples[i] < -1.0 {
+				rightSamples[i] = -1.0
 			}
 		}
 	}
 
-	// Accumulate samples into buffer (keep last 8192 samples for FFT)
+	// Store left and right channels separately for oscilloscope mode
 	maxSamples := 8192
-	w.audioData = append(w.audioData, samples...)
+	w.audioDataLeft = append(w.audioDataLeft, leftSamples...)
+	if len(w.audioDataLeft) > maxSamples {
+		w.audioDataLeft = w.audioDataLeft[len(w.audioDataLeft)-maxSamples:]
+	}
+	w.audioDataRight = append(w.audioDataRight, rightSamples...)
+	if len(w.audioDataRight) > maxSamples {
+		w.audioDataRight = w.audioDataRight[len(w.audioDataRight)-maxSamples:]
+	}
+
+	// Mix both channels for spectrum analysis (average of left and right)
+	mixedSamples := make([]float32, len(leftSamples))
+	for i := range leftSamples {
+		mixedSamples[i] = (leftSamples[i] + rightSamples[i]) / 2.0
+	}
+	w.audioData = append(w.audioData, mixedSamples...)
 	if len(w.audioData) > maxSamples {
 		w.audioData = w.audioData[len(w.audioData)-maxSamples:]
 	}
@@ -453,33 +482,48 @@ func (w *AudioVisualizerWidget) renderSpectrum(img *image.Gray) {
 
 // renderOscilloscope draws waveform
 func (w *AudioVisualizerWidget) renderOscilloscope(img *image.Gray) {
-	if len(w.audioData) == 0 {
-		return
-	}
-
 	height := w.position.H
 	sampleCount := w.properties.SampleCount
-	if sampleCount > len(w.audioData) {
-		sampleCount = len(w.audioData)
-	}
-
-	centerY := height / 2
-	samples := w.audioData[len(w.audioData)-sampleCount:]
 
 	if w.properties.ChannelMode == "mono" || w.properties.ChannelMode == "stereo_combined" {
-		// Draw single waveform (center)
+		// Use mixed channels for mono/combined modes
+		if len(w.audioData) == 0 {
+			return
+		}
+		if sampleCount > len(w.audioData) {
+			sampleCount = len(w.audioData)
+		}
+		centerY := height / 2
+		samples := w.audioData[len(w.audioData)-sampleCount:]
 		fillColor := uint8(w.properties.FillColor)
 		w.drawWaveform(img, samples, 0, height, centerY, fillColor)
 	} else if w.properties.ChannelMode == "stereo_separated" {
-		// Draw two waveforms (split)
+		// Use separate left and right channels for stereo_separated mode
+		if len(w.audioDataLeft) == 0 || len(w.audioDataRight) == 0 {
+			return
+		}
+
+		// Get sample count based on available data
+		leftSampleCount := sampleCount
+		rightSampleCount := sampleCount
+		if leftSampleCount > len(w.audioDataLeft) {
+			leftSampleCount = len(w.audioDataLeft)
+		}
+		if rightSampleCount > len(w.audioDataRight) {
+			rightSampleCount = len(w.audioDataRight)
+		}
+
+		leftSamples := w.audioDataLeft[len(w.audioDataLeft)-leftSampleCount:]
+		rightSamples := w.audioDataRight[len(w.audioDataRight)-rightSampleCount:]
+
 		leftColor := uint8(w.properties.LeftChannelColor)
 		rightColor := uint8(w.properties.RightChannelColor)
 
-		// Top half - left channel
-		w.drawWaveform(img, samples, 0, height/2, height/4, leftColor)
+		// Top half - actual left channel
+		w.drawWaveform(img, leftSamples, 0, height/2, height/4, leftColor)
 
-		// Bottom half - right channel
-		w.drawWaveform(img, samples, height/2, height, height*3/4, rightColor)
+		// Bottom half - actual right channel
+		w.drawWaveform(img, rightSamples, height/2, height, height*3/4, rightColor)
 	}
 }
 
@@ -680,16 +724,18 @@ func (ac *AudioCaptureWCA) initialize() error {
 	return nil
 }
 
-// ReadSamples reads available audio samples (mono float32)
-func (ac *AudioCaptureWCA) ReadSamples() ([]float32, error) {
+// ReadSamples reads available audio samples (stereo float32)
+// Returns (leftChannel, rightChannel, error)
+func (ac *AudioCaptureWCA) ReadSamples() ([]float32, []float32, error) {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
 	if !ac.initialized {
-		return nil, fmt.Errorf("not initialized")
+		return nil, nil, fmt.Errorf("not initialized")
 	}
 
-	samples := make([]float32, 0, 4096)
+	leftSamples := make([]float32, 0, 4096)
+	rightSamples := make([]float32, 0, 4096)
 	totalFrames := 0
 
 	// Read all available packets
@@ -711,17 +757,18 @@ func (ac *AudioCaptureWCA) ReadSamples() ([]float32, error) {
 
 		totalFrames += int(numFramesToRead)
 
-		// Convert samples to float32 (assuming format is float32 stereo)
-		// Take left channel only for mono
+		// Convert samples to float32 (assuming format is float32 stereo interleaved: L-R-L-R)
+		// Extract both left and right channels
 		dataSlice := (*[1 << 30]float32)(unsafe.Pointer(pData))[:numFramesToRead*2]
 		for i := uint32(0); i < numFramesToRead; i++ {
-			samples = append(samples, dataSlice[i*2]) // Left channel
+			leftSamples = append(leftSamples, dataSlice[i*2])     // Left channel
+			rightSamples = append(rightSamples, dataSlice[i*2+1]) // Right channel
 		}
 
 		_ = ac.captureClient.ReleaseBuffer(numFramesToRead)
 	}
 
-	return samples, nil
+	return leftSamples, rightSamples, nil
 }
 
 // cleanup releases COM resources
