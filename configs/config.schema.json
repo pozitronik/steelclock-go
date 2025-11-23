@@ -1005,6 +1005,20 @@
                   "description": "Apply frequency-dependent gain to balance spectrum (attenuates bass, boosts highs like Winamp)",
                   "default": false
                 },
+                "spectrum_dynamic_scaling": {
+                  "type": "number",
+                  "description": "Per-bar dynamic gain strength to balance energy across frequency spectrum (0.0 = disabled, 1.0 = moderate, 2.0 = strong)",
+                  "minimum": 0.0,
+                  "maximum": 2.0,
+                  "default": 0.0
+                },
+                "spectrum_dynamic_scaling_window": {
+                  "type": "number",
+                  "description": "Time window in seconds for energy averaging (advanced tuning, smaller = more responsive)",
+                  "minimum": 0.1,
+                  "maximum": 5.0,
+                  "default": 0.5
+                },
                 "fill_color": {
                   "type": "integer",
                   "description": "Main visualization color (0-255)",

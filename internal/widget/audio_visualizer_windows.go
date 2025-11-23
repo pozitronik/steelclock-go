@@ -26,34 +26,37 @@ var frequencyCompensationCurve = []struct {
 	maxFreq float64
 	gain    float64
 }{
-	{100, 0.5},    // Sub-bass: attenuate
-	{250, 0.8},    // Bass: slight attenuation
-	{500, 1.0},    // Low-mids: neutral
-	{1000, 2.0},   // Mids: moderate boost
-	{2000, 3.5},   // Upper mids: strong boost
-	{4000, 5.0},   // Highs: very strong boost
-	{8000, 7.0},   // Upper highs: extreme boost
-	{99999, 10.0}, // Very high frequencies: maximum boost
+	{100, 0.6},   // Sub-bass: attenuate
+	{250, 0.85},  // Bass: slight attenuation
+	{500, 1.0},   // Low-mids: neutral
+	{1000, 1.5},  // Mids: moderate boost
+	{2000, 2.0},  // Upper mids: moderate boost
+	{4000, 3.0},  // Highs: strong boost
+	{8000, 4.0},  // Upper highs: strong boost
+	{99999, 5.0}, // Very high frequencies: maximum boost
 }
 
 // AudioVisualizerWidget displays real-time spectrum analyzer or oscilloscope
 type AudioVisualizerWidget struct {
-	id             string
-	position       config.PositionConfig
-	style          config.StyleConfig
-	properties     config.WidgetProperties
-	updateInterval time.Duration
-	audioCapture   *AudioCaptureWCA
-	volumeReader   *VolumeReaderWCA
-	mu             sync.Mutex
-	audioData      []float32 // Latest audio samples (mixed for spectrum)
-	audioDataLeft  []float32 // Left channel samples (for oscilloscope)
-	audioDataRight []float32 // Right channel samples (for oscilloscope)
-	spectrumData   []float64 // Spectrum magnitudes
-	peakValues     []float64 // Peak hold values
-	peakTimestamps []time.Time
-	smoothedValues []float64 // Smoothed spectrum values
-	lastUpdateTime time.Time
+	id                  string
+	position            config.PositionConfig
+	style               config.StyleConfig
+	properties          config.WidgetProperties
+	updateInterval      time.Duration
+	audioCapture        *AudioCaptureWCA
+	volumeReader        *VolumeReaderWCA
+	mu                  sync.Mutex
+	audioData           []float32 // Latest audio samples (mixed for spectrum)
+	audioDataLeft       []float32 // Left channel samples (for oscilloscope)
+	audioDataRight      []float32 // Right channel samples (for oscilloscope)
+	spectrumData        []float64 // Spectrum magnitudes
+	peakValues          []float64 // Peak hold values
+	peakTimestamps      []time.Time
+	smoothedValues      []float64   // Smoothed spectrum values
+	barEnergyHistory    [][]float64 // Rolling window of bar energies for dynamic scaling
+	barEnergyIndex      int         // Circular buffer index for energy history
+	barEnergyWindowSize int         // Number of history samples for rolling average
+	lastUpdateTime      time.Time
 }
 
 // NewAudioVisualizerWidget creates a new audio visualizer widget
@@ -75,19 +78,43 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 		barCount = 32
 	}
 
+	// Calculate energy history window size for dynamic scaling
+	// Default to 0.5 seconds, or use configured value
+	dynamicScalingWindow := 0.5 // Default: 0.5 seconds
+	if cfg.Properties.SpectrumDynamicScalingWindow > 0 {
+		dynamicScalingWindow = cfg.Properties.SpectrumDynamicScalingWindow
+	}
+	updateInterval := cfg.Properties.UpdateInterval
+	if updateInterval <= 0 {
+		updateInterval = 0.033 // Default 33ms if not set
+	}
+	windowSize := int(dynamicScalingWindow/updateInterval) + 1
+	if windowSize < 2 {
+		windowSize = 2 // Minimum 2 samples
+	}
+
+	// Initialize energy history (2D array: [barCount][windowSize])
+	energyHistory := make([][]float64, barCount)
+	for i := range energyHistory {
+		energyHistory[i] = make([]float64, windowSize)
+	}
+
 	w := &AudioVisualizerWidget{
-		id:             cfg.ID,
-		position:       cfg.Position,
-		style:          cfg.Style,
-		properties:     cfg.Properties,
-		updateInterval: time.Duration(cfg.Properties.UpdateInterval * float64(time.Second)),
-		audioCapture:   capture,
-		volumeReader:   volumeReader,
-		spectrumData:   make([]float64, barCount),
-		peakValues:     make([]float64, barCount),
-		peakTimestamps: make([]time.Time, barCount),
-		smoothedValues: make([]float64, barCount),
-		audioData:      make([]float32, 0, 4096),
+		id:                  cfg.ID,
+		position:            cfg.Position,
+		style:               cfg.Style,
+		properties:          cfg.Properties,
+		updateInterval:      time.Duration(cfg.Properties.UpdateInterval * float64(time.Second)),
+		audioCapture:        capture,
+		volumeReader:        volumeReader,
+		spectrumData:        make([]float64, barCount),
+		peakValues:          make([]float64, barCount),
+		peakTimestamps:      make([]time.Time, barCount),
+		smoothedValues:      make([]float64, barCount),
+		barEnergyHistory:    energyHistory,
+		barEnergyIndex:      0,
+		barEnergyWindowSize: windowSize,
+		audioData:           make([]float32, 0, 4096),
 	}
 
 	return w, nil
@@ -194,19 +221,29 @@ func (w *AudioVisualizerWidget) Update() error {
 // updateSpectrum performs FFT and updates spectrum data
 func (w *AudioVisualizerWidget) updateSpectrum(samples []float32) {
 	// Need power of 2 samples for FFT
-	// Use 8192 for better low-frequency resolution (5.86 Hz per bin at 48kHz)
+	// Use 8192 for better low-frequency resolution
 	fftSize := 8192
 	if len(samples) < fftSize {
 		return
 	}
 
-	// Take last fftSize samples and convert to complex
+	// Take last fftSize samples
 	fftSamples := samples[len(samples)-fftSize:]
+
+	// Remove DC offset (mean) to avoid DC component in FFT
+	var mean float32
+	for _, s := range fftSamples {
+		mean += s
+	}
+	mean /= float32(len(fftSamples))
+
+	// Convert to complex and apply window
 	input := make([]complex128, fftSize)
 	for i := 0; i < fftSize; i++ {
-		// Apply Hann window
+		// Remove DC offset and apply Hann window
+		sample := float64(fftSamples[i] - mean)
 		window := 0.5 * (1 - math.Cos(2*math.Pi*float64(i)/float64(fftSize-1)))
-		input[i] = complex(float64(fftSamples[i])*window, 0)
+		input[i] = complex(sample*window, 0)
 	}
 
 	// Perform FFT
@@ -215,13 +252,31 @@ func (w *AudioVisualizerWidget) updateSpectrum(samples []float32) {
 	// Calculate magnitudes for first half (positive frequencies)
 	halfSize := fftSize / 2
 	magnitudes := make([]float64, halfSize)
-	// Sensitivity multiplier for visualization
-	// Balanced for music playback - not too high (clipping on loud parts) or too low (weak display)
-	sensitivity := 70.0
+
+	// Calculate raw magnitudes
 	for i := 0; i < halfSize; i++ {
-		// Calculate magnitude and apply sensitivity
-		mag := cmplx.Abs(output[i]) / float64(fftSize)
-		magnitudes[i] = math.Min(1.0, mag*sensitivity)
+		magnitudes[i] = cmplx.Abs(output[i]) / float64(fftSize)
+	}
+
+	// Zero out DC component (bin 0) to avoid lighting up all low frequency bars
+	magnitudes[0] = 0.0
+
+	// Find the maximum magnitude for normalization
+	maxRawMag := 0.0
+	for i := 1; i < halfSize; i++ {
+		if magnitudes[i] > maxRawMag {
+			maxRawMag = magnitudes[i]
+		}
+	}
+
+	// Normalize to 0-1 range based on actual signal strength
+	// Target: strongest frequency should reach 0.7-0.8 (leaving headroom)
+	if maxRawMag > 0.0001 {
+		targetMax := 0.75
+		normFactor := targetMax / maxRawMag
+		for i := 0; i < halfSize; i++ {
+			magnitudes[i] = math.Min(1.0, magnitudes[i]*normFactor)
+		}
 	}
 
 	// Map frequencies to bars
@@ -231,6 +286,27 @@ func (w *AudioVisualizerWidget) updateSpectrum(samples []float32) {
 		w.mapFrequenciesLogarithmic(magnitudes, barCount)
 	} else {
 		w.mapFrequenciesLinear(magnitudes, barCount)
+	}
+
+	// Store current spectrum data in energy history for dynamic scaling
+	for i := 0; i < barCount; i++ {
+		w.barEnergyHistory[i][w.barEnergyIndex] = w.spectrumData[i]
+	}
+	w.barEnergyIndex = (w.barEnergyIndex + 1) % w.barEnergyWindowSize
+
+	// Apply dynamic scaling if enabled (strength > 0)
+	if w.properties.SpectrumDynamicScaling > 0 {
+		dynamicGains := w.calculateDynamicGain(barCount)
+		for i := 0; i < barCount; i++ {
+			w.spectrumData[i] *= dynamicGains[i]
+			// Clamp to 0.0-1.0 range
+			if w.spectrumData[i] > 1.0 {
+				w.spectrumData[i] = 1.0
+			}
+			if w.spectrumData[i] < 0.0 {
+				w.spectrumData[i] = 0.0
+			}
+		}
 	}
 
 	// Apply smoothing
@@ -388,6 +464,81 @@ func (w *AudioVisualizerWidget) mapFrequenciesLinear(magnitudes []float64, barCo
 
 		w.spectrumData[i] = peakValue
 	}
+}
+
+// calculateDynamicGain computes per-bar dynamic gain to balance frequency energy
+// Returns gain multipliers (1.0-4.0) for each bar based on their rolling average energy
+func (w *AudioVisualizerWidget) calculateDynamicGain(barCount int) []float64 {
+	gains := make([]float64, barCount)
+
+	// Calculate rolling average energy for each bar
+	avgEnergies := make([]float64, barCount)
+	for i := 0; i < barCount; i++ {
+		sum := 0.0
+		count := 0
+		for j := 0; j < w.barEnergyWindowSize; j++ {
+			sum += w.barEnergyHistory[i][j]
+			count++
+		}
+		if count > 0 {
+			avgEnergies[i] = sum / float64(count)
+		}
+	}
+
+	// Calculate global median/mean energy across all bars
+	// Use median to be robust against outliers
+	sortedEnergies := make([]float64, barCount)
+	copy(sortedEnergies, avgEnergies)
+	// Simple bubble sort for median (small array, performance not critical)
+	for i := 0; i < len(sortedEnergies); i++ {
+		for j := i + 1; j < len(sortedEnergies); j++ {
+			if sortedEnergies[i] > sortedEnergies[j] {
+				sortedEnergies[i], sortedEnergies[j] = sortedEnergies[j], sortedEnergies[i]
+			}
+		}
+	}
+	globalMedian := sortedEnergies[len(sortedEnergies)/2]
+
+	// Avoid division by zero
+	if globalMedian < 0.001 {
+		// If median is very low, use mean instead
+		sum := 0.0
+		for _, e := range avgEnergies {
+			sum += e
+		}
+		globalMedian = sum / float64(barCount)
+		if globalMedian < 0.001 {
+			globalMedian = 0.001
+		}
+	}
+
+	// Get strength multiplier from config (default 1.0 if not set)
+	strength := w.properties.SpectrumDynamicScaling
+	if strength <= 0 {
+		strength = 1.0
+	}
+
+	// Calculate per-bar gain
+	for i := 0; i < barCount; i++ {
+		if avgEnergies[i] < globalMedian && avgEnergies[i] > 0.001 {
+			// Bar is below median, apply boost.
+			// boost = 1.0 + (globalMedian / avgEnergy - 1.0) * strength
+			boost := 1.0 + (globalMedian/avgEnergies[i]-1.0)*strength
+			// Clamp to reasonable range: 1.0x to 4.0x
+			if boost < 1.0 {
+				boost = 1.0
+			}
+			if boost > 4.0 {
+				boost = 4.0
+			}
+			gains[i] = boost
+		} else {
+			// Bar is at or above median, no boost needed
+			gains[i] = 1.0
+		}
+	}
+
+	return gains
 }
 
 // Render draws the visualization

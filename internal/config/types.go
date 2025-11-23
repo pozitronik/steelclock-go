@@ -150,15 +150,17 @@ type WidgetProperties struct {
 	AutoHideSilenceTime float64 `json:"auto_hide_silence_time,omitempty"`
 
 	// Audio visualizer widget
-	BarCount              int     `json:"bar_count,omitempty"`
-	FrequencyScale        string  `json:"frequency_scale,omitempty"`
-	BarStyle              string  `json:"bar_style,omitempty"`
-	Smoothing             float64 `json:"smoothing,omitempty"`
-	PeakHold              bool    `json:"peak_hold,omitempty"`
-	WaveformStyle         string  `json:"waveform_style,omitempty"`
-	ChannelMode           string  `json:"channel_mode,omitempty"`
-	SampleCount           int     `json:"sample_count,omitempty"`
-	FrequencyCompensation bool    `json:"frequency_compensation,omitempty"`
+	BarCount                     int     `json:"bar_count,omitempty"`
+	FrequencyScale               string  `json:"frequency_scale,omitempty"`
+	BarStyle                     string  `json:"bar_style,omitempty"`
+	Smoothing                    float64 `json:"smoothing,omitempty"`
+	PeakHold                     bool    `json:"peak_hold,omitempty"`
+	WaveformStyle                string  `json:"waveform_style,omitempty"`
+	ChannelMode                  string  `json:"channel_mode,omitempty"`
+	SampleCount                  int     `json:"sample_count,omitempty"`
+	FrequencyCompensation        bool    `json:"frequency_compensation,omitempty"`
+	SpectrumDynamicScaling       float64 `json:"spectrum_dynamic_scaling,omitempty"`
+	SpectrumDynamicScalingWindow float64 `json:"spectrum_dynamic_scaling_window,omitempty"`
 
 	// DOOM widget
 	WadName string `json:"wad_name,omitempty"`

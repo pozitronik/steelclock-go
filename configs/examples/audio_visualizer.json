@@ -32,6 +32,7 @@
         "peak_hold": true,
         "peak_hold_time": 1.0,
         "frequency_compensation": true,
+        "spectrum_dynamic_scaling": 1.0,
         "fill_color": 255
       }
     }
