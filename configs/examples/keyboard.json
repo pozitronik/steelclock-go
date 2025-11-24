@@ -31,6 +31,7 @@
       "properties": {
         "update_interval": 0.2,
         "spacing": 3,
+        "separator": " ",
         "caps_lock_on": "CAPS",
         "caps_lock_off": "",
         "num_lock_on": "NUM",

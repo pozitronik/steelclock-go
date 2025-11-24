@@ -624,35 +624,40 @@
                   "minimum": 0,
                   "default": 3
                 },
+                "separator": {
+                  "type": "string",
+                  "description": "Separator between indicators (default: empty string for condensed output 'cns'). Examples: ' ' for 'c n s', '|' for 'c|n|s'",
+                  "default": ""
+                },
                 "caps_lock_on": {
                   "type": "string",
-                  "description": "Symbol for Caps Lock ON state",
-                  "default": "⬆"
+                  "description": "Symbol for Caps Lock ON state. Omit for default 'C', set to empty string to hide",
+                  "default": "C"
                 },
                 "caps_lock_off": {
                   "type": "string",
-                  "description": "Symbol for Caps Lock OFF state (empty=hide)",
-                  "default": ""
+                  "description": "Symbol for Caps Lock OFF state. Omit for default 'c', set to empty string to hide",
+                  "default": "c"
                 },
                 "num_lock_on": {
                   "type": "string",
-                  "description": "Symbol for Num Lock ON state",
-                  "default": "🔒"
+                  "description": "Symbol for Num Lock ON state. Omit for default 'N', set to empty string to hide",
+                  "default": "N"
                 },
                 "num_lock_off": {
                   "type": "string",
-                  "description": "Symbol for Num Lock OFF state (empty=hide)",
-                  "default": ""
+                  "description": "Symbol for Num Lock OFF state. Omit for default 'n', set to empty string to hide",
+                  "default": "n"
                 },
                 "scroll_lock_on": {
                   "type": "string",
-                  "description": "Symbol for Scroll Lock ON state",
-                  "default": "⬇"
+                  "description": "Symbol for Scroll Lock ON state. Omit for default 'S', set to empty string to hide",
+                  "default": "S"
                 },
                 "scroll_lock_off": {
                   "type": "string",
-                  "description": "Symbol for Scroll Lock OFF state (empty=hide)",
-                  "default": ""
+                  "description": "Symbol for Scroll Lock OFF state. Omit for default 's', set to empty string to hide",
+                  "default": "s"
                 },
                 "indicator_color_on": {
                   "type": "integer",

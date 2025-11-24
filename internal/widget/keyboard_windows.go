@@ -31,6 +31,7 @@ type KeyboardWidget struct {
 	vertAlign     string
 	padding       int
 	spacing       int
+	separator     string
 	capsLockOn    string
 	capsLockOff   string
 	numLockOn     string
@@ -74,35 +75,42 @@ func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
 		colorOff = 100
 	}
 
-	// Default symbols
-	capsOn := cfg.Properties.CapsLockOn
-	if capsOn == "" {
-		capsOn = "C"
+	// Separator between indicators (defaults to empty string for condensed output)
+	separator := ""
+	if cfg.Properties.Separator != nil {
+		separator = *cfg.Properties.Separator
 	}
 
-	capsOff := cfg.Properties.CapsLockOff
-	if capsOff == "" {
-		capsOff = "c"
+	// Lock indicator symbols - only apply defaults when config key is omitted (nil)
+	// Empty string ("") is respected as intentional empty value
+	capsOn := "C"
+	if cfg.Properties.CapsLockOn != nil {
+		capsOn = *cfg.Properties.CapsLockOn
 	}
 
-	numOn := cfg.Properties.NumLockOn
-	if numOn == "" {
-		numOn = "N"
+	capsOff := "c"
+	if cfg.Properties.CapsLockOff != nil {
+		capsOff = *cfg.Properties.CapsLockOff
 	}
 
-	numOff := cfg.Properties.NumLockOff
-	if numOff == "" {
-		numOff = "n"
+	numOn := "N"
+	if cfg.Properties.NumLockOn != nil {
+		numOn = *cfg.Properties.NumLockOn
 	}
 
-	scrollOn := cfg.Properties.ScrollLockOn
-	if scrollOn == "" {
-		scrollOn = "S"
+	numOff := "n"
+	if cfg.Properties.NumLockOff != nil {
+		numOff = *cfg.Properties.NumLockOff
 	}
 
-	scrollOff := cfg.Properties.ScrollLockOff
-	if scrollOff == "" {
-		scrollOff = "s"
+	scrollOn := "S"
+	if cfg.Properties.ScrollLockOn != nil {
+		scrollOn = *cfg.Properties.ScrollLockOn
+	}
+
+	scrollOff := "s"
+	if cfg.Properties.ScrollLockOff != nil {
+		scrollOff = *cfg.Properties.ScrollLockOff
 	}
 
 	spacing := cfg.Properties.Spacing
@@ -123,6 +131,7 @@ func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
 		vertAlign:     vertAlign,
 		padding:       cfg.Properties.Padding,
 		spacing:       spacing,
+		separator:     separator,
 		capsLockOn:    capsOn,
 		capsLockOff:   capsOff,
 		numLockOn:     numOn,
@@ -168,7 +177,7 @@ func (w *KeyboardWidget) Render() (image.Image, error) {
 	text := ""
 	for i, ind := range indicators {
 		if i > 0 {
-			text += " "
+			text += w.separator
 		}
 		if ind.state {
 			text += ind.on

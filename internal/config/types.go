@@ -115,15 +115,16 @@ type WidgetProperties struct {
 	WriteColor int     `json:"write_color,omitempty"`
 
 	// Keyboard widget
-	Spacing           int    `json:"spacing,omitempty"`
-	CapsLockOn        string `json:"caps_lock_on,omitempty"`
-	CapsLockOff       string `json:"caps_lock_off,omitempty"`
-	NumLockOn         string `json:"num_lock_on,omitempty"`
-	NumLockOff        string `json:"num_lock_off,omitempty"`
-	ScrollLockOn      string `json:"scroll_lock_on,omitempty"`
-	ScrollLockOff     string `json:"scroll_lock_off,omitempty"`
-	IndicatorColorOn  int    `json:"indicator_color_on,omitempty"`
-	IndicatorColorOff int    `json:"indicator_color_off,omitempty"`
+	Spacing           int     `json:"spacing,omitempty"`
+	Separator         *string `json:"separator"`
+	CapsLockOn        *string `json:"caps_lock_on"`
+	CapsLockOff       *string `json:"caps_lock_off"`
+	NumLockOn         *string `json:"num_lock_on"`
+	NumLockOff        *string `json:"num_lock_off"`
+	ScrollLockOn      *string `json:"scroll_lock_on"`
+	ScrollLockOff     *string `json:"scroll_lock_off"`
+	IndicatorColorOn  int     `json:"indicator_color_on,omitempty"`
+	IndicatorColorOff int     `json:"indicator_color_off,omitempty"`
 
 	// Keyboard layout widget
 	DisplayFormat string `json:"display_format,omitempty"` // "iso639-1", "iso639-2", "full"

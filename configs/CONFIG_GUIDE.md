@@ -684,15 +684,16 @@ Available disks: PhysicalDrive0, PhysicalDrive1
   "properties": {
     "update_interval": 0.2,
     "spacing": 3,
-    "caps_lock_on": "⬆",
-    "caps_lock_off": "",
-    "num_lock_on": "🔒",
-    "num_lock_off": "",
-    "scroll_lock_on": "⬇",
-    "scroll_lock_off": "",
+    "separator": " ",
+    "caps_lock_on": "C",
+    "caps_lock_off": "c",
+    "num_lock_on": "N",
+    "num_lock_off": "n",
+    "scroll_lock_on": "S",
+    "scroll_lock_off": "s",
     "indicator_color_on": 255,
     "indicator_color_off": 100,
-    "font": "Segoe UI Emoji",
+    "font": "Consolas",
     "font_size": 10,
     "horizontal_align": "center",
     "vertical_align": "center",
@@ -701,25 +702,35 @@ Available disks: PhysicalDrive0, PhysicalDrive1
 }
 ```
 
-| Property              | Type    | Range | Default | Description                             |
-|-----------------------|---------|-------|---------|-----------------------------------------|
-| `update_interval`     | number  | ≥0.1  | 0.2     | Update interval (seconds)               |
-| `spacing`             | integer | ≥0    | 3       | Spacing between indicators (pixels)     |
-| `caps_lock_on`        | string  | -     | "⬆"     | Symbol for Caps Lock ON                 |
-| `caps_lock_off`       | string  | -     | ""      | Symbol for Caps Lock OFF (empty=hide)   |
-| `num_lock_on`         | string  | -     | "🔒"    | Symbol for Num Lock ON                  |
-| `num_lock_off`        | string  | -     | ""      | Symbol for Num Lock OFF (empty=hide)    |
-| `scroll_lock_on`      | string  | -     | "⬇"     | Symbol for Scroll Lock ON               |
-| `scroll_lock_off`     | string  | -     | ""      | Symbol for Scroll Lock OFF (empty=hide) |
-| `indicator_color_on`  | integer | 0-255 | 255     | Color for ON state                      |
-| `indicator_color_off` | integer | 0-255 | 100     | Color for OFF state                     |
+| Property              | Type    | Range | Default | Description                                          |
+|-----------------------|---------|-------|---------|------------------------------------------------------|
+| `update_interval`     | number  | ≥0.1  | 0.2     | Update interval (seconds)                            |
+| `spacing`             | integer | ≥0    | 3       | Spacing between indicators (pixels)                  |
+| `separator`           | string  | -     | ""      | Separator between indicators (empty=condensed)       |
+| `caps_lock_on`        | string  | -     | "C"     | Symbol for Caps Lock ON (omit for default)           |
+| `caps_lock_off`       | string  | -     | "c"     | Symbol for Caps Lock OFF (omit for default)          |
+| `num_lock_on`         | string  | -     | "N"     | Symbol for Num Lock ON (omit for default)            |
+| `num_lock_off`        | string  | -     | "n"     | Symbol for Num Lock OFF (omit for default)           |
+| `scroll_lock_on`      | string  | -     | "S"     | Symbol for Scroll Lock ON (omit for default)         |
+| `scroll_lock_off`     | string  | -     | "s"     | Symbol for Scroll Lock OFF (omit for default)        |
+| `indicator_color_on`  | integer | 0-255 | 255     | Color for ON state                                   |
+| `indicator_color_off` | integer | 0-255 | 100     | Color for OFF state                                  |
 
-**Emoji Support**: Use `"font": "Segoe UI Emoji"` to display emojis.
+**Separator Examples**:
+- `""` (default): Condensed output → `cns` or `CNS`
+- `" "`: Spaced output → `c n s` or `C N S`
+- `"|"`: Pipe-separated → `c|n|s` or `C|N|S`
 
-**Alternative Symbols**:
-- Unicode arrows: ↑ ↓ ▲ ▼
-- Text: "CAPS", "NUM", "SCR"
-- Letters: "C", "N", "S"
+**Empty String Behavior**:
+- **Omit key** from config → Use default symbol (e.g., `"C"` for caps_lock_on)
+- **Set to `""`** explicitly → Hide that indicator (e.g., `"caps_lock_on": ""` hides caps when on)
+- **Set to value** → Use that value (e.g., `"caps_lock_on": "⬆"`)
+
+**Symbol Examples**:
+- Default letters: `"C"`, `"N"`, `"S"` (uppercase for ON, lowercase for OFF)
+- Unicode arrows: `"↑"`, `"↓"`, `"▲"`, `"▼"`
+- Text labels: `"CAPS"`, `"NUM"`, `"SCR"`
+- Emoji (requires emoji font): `"⬆"`, `"🔒"`, `"⬇"`
 
 ### Keyboard Layout Widget
 
