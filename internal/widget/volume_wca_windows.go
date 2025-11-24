@@ -5,10 +5,8 @@ package widget
 import (
 	"fmt"
 	"log"
-	"runtime"
 	"sync"
 
-	"github.com/go-ole/go-ole"
 	"github.com/moutend/go-wca/pkg/wca"
 )
 
@@ -40,13 +38,11 @@ func GetSharedVolumeReader() (*VolumeReaderWCA, error) {
 // VolumeReaderWCA manages Windows Core Audio using go-wca library
 // with proper COM lifecycle (initialize once, not per call)
 type VolumeReaderWCA struct {
-	mu             sync.Mutex
-	initialized    bool
-	comInitialized bool // Track if we initialized COM (vs it was already initialized)
-	threadLocked   bool // Track if we locked the OS thread
-	aev            *wca.IAudioEndpointVolume
-	mmd            *wca.IMMDevice
-	mmde           *wca.IMMDeviceEnumerator
+	mu          sync.Mutex
+	initialized bool
+	aev         *wca.IAudioEndpointVolume
+	mmd         *wca.IMMDevice
+	mmde        *wca.IMMDeviceEnumerator
 }
 
 // NewVolumeReaderWCA creates a volume reader using go-wca with proper lifecycle
@@ -76,30 +72,21 @@ func (vr *VolumeReaderWCA) initialize() error {
 	log.Printf("[VOLUME-WCA] COM is ready")
 
 	// Note: We don't own COM cleanup - it's managed per-thread by EnsureCOMInitialized
-	vr.comInitialized = false // We don't own the COM initialization
-	vr.threadLocked = false   // We don't own the thread lock
 
 	// Create device enumerator
-	var mmde *wca.IMMDeviceEnumerator
-	if err := wca.CoCreateInstance(wca.CLSID_MMDeviceEnumerator, 0, wca.CLSCTX_ALL, wca.IID_IMMDeviceEnumerator, &mmde); err != nil {
-		if vr.comInitialized {
-			ole.CoUninitialize()
-		}
-		if vr.threadLocked {
-			runtime.UnlockOSThread()
-			vr.threadLocked = false
-		}
-		return fmt.Errorf("CoCreateInstance failed: %w", err)
+	mmde, err := CreateDeviceEnumerator()
+	if err != nil {
+		return err
 	}
 	vr.mmde = mmde
 
 	log.Printf("[VOLUME-WCA] Device enumerator created")
 
 	// Get default audio endpoint
-	var mmd *wca.IMMDevice
-	if err := mmde.GetDefaultAudioEndpoint(wca.ERender, wca.EConsole, &mmd); err != nil {
+	mmd, err := GetDefaultRenderDevice(mmde)
+	if err != nil {
 		vr.cleanup()
-		return fmt.Errorf("GetDefaultAudioEndpoint failed: %w", err)
+		return err
 	}
 	vr.mmd = mmd
 
@@ -150,23 +137,9 @@ func (vr *VolumeReaderWCA) GetVolume() (volume float64, muted bool, err error) {
 
 // cleanup releases all COM objects
 func (vr *VolumeReaderWCA) cleanup() {
-	if vr.aev != nil {
-		vr.aev.Release()
-		vr.aev = nil
-		log.Printf("[VOLUME-WCA] IAudioEndpointVolume released")
-	}
-
-	if vr.mmd != nil {
-		vr.mmd.Release()
-		vr.mmd = nil
-		log.Printf("[VOLUME-WCA] IMMDevice released")
-	}
-
-	if vr.mmde != nil {
-		vr.mmde.Release()
-		vr.mmde = nil
-		log.Printf("[VOLUME-WCA] IMMDeviceEnumerator released")
-	}
+	SafeReleaseAudioEndpointVolume(&vr.aev)
+	SafeReleaseMMDevice(&vr.mmd)
+	SafeReleaseMMDeviceEnumerator(&vr.mmde)
 }
 
 // Close releases all COM resources and uninitializes COM
@@ -181,21 +154,6 @@ func (vr *VolumeReaderWCA) Close() {
 	log.Printf("[VOLUME-WCA] Closing volume reader")
 
 	vr.cleanup()
-
-	// Only uninitialize COM if we initialized it (not if it was already initialized)
-	if vr.comInitialized {
-		ole.CoUninitialize()
-		vr.comInitialized = false
-		log.Printf("[VOLUME-WCA] COM uninitialized")
-	}
-
-	// Only unlock the thread if we locked it
-	if vr.threadLocked {
-		runtime.UnlockOSThread()
-		vr.threadLocked = false
-		log.Printf("[VOLUME-WCA] OS thread unlocked")
-	}
-
 	vr.initialized = false
 
 	log.Printf("[VOLUME-WCA] Volume reader closed")

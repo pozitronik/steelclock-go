@@ -290,3 +290,73 @@ func TestNewVolumeReader_Factory(t *testing.T) {
 		t.Error("Factory-created reader not initialized")
 	}
 }
+
+// TestGetSharedVolumeReader_Singleton verifies singleton behavior
+func TestGetSharedVolumeReader_Singleton(t *testing.T) {
+	skipIfNoAudioDeviceWCA(t)
+
+	// Get shared instance twice
+	reader1, err1 := GetSharedVolumeReader()
+	if err1 != nil {
+		t.Fatalf("First GetSharedVolumeReader() failed: %v", err1)
+	}
+
+	reader2, err2 := GetSharedVolumeReader()
+	if err2 != nil {
+		t.Fatalf("Second GetSharedVolumeReader() failed: %v", err2)
+	}
+
+	// Should return the same instance
+	if reader1 != reader2 {
+		t.Error("GetSharedVolumeReader() returned different instances (expected singleton)")
+	}
+
+	// Verify it's initialized
+	if !reader1.initialized {
+		t.Error("Shared reader not initialized")
+	}
+}
+
+// TestGetSharedVolumeReader_ConcurrentCreation tests thread-safe singleton creation
+func TestGetSharedVolumeReader_ConcurrentCreation(t *testing.T) {
+	skipIfNoAudioDeviceWCA(t)
+
+	// Note: This test assumes we're running in a fresh process where the singleton hasn't been created yet
+	// In practice, the first test will create it, but sync.Once guarantees thread safety
+
+	// Start 100 goroutines trying to get the shared instance concurrently
+	done := make(chan *VolumeReaderWCA, 100)
+	errors := make(chan error, 100)
+
+	for i := 0; i < 100; i++ {
+		go func() {
+			reader, err := GetSharedVolumeReader()
+			if err != nil {
+				errors <- err
+				return
+			}
+			done <- reader
+		}()
+	}
+
+	// Collect all results
+	var readers []*VolumeReaderWCA
+	for i := 0; i < 100; i++ {
+		select {
+		case reader := <-done:
+			readers = append(readers, reader)
+		case err := <-errors:
+			t.Fatalf("Error getting shared reader: %v", err)
+		case <-time.After(5 * time.Second):
+			t.Fatal("Timeout waiting for concurrent creation")
+		}
+	}
+
+	// All readers should be the same instance
+	firstReader := readers[0]
+	for i, reader := range readers {
+		if reader != firstReader {
+			t.Errorf("Reader %d is different from first reader (expected all same)", i)
+		}
+	}
+}

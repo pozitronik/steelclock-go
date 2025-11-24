@@ -5,6 +5,7 @@ package widget
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 // skipIfNoAudioDeviceMeterWCA skips the test if audio device is not available (for WCA tests)
@@ -332,5 +333,58 @@ func TestMeterReaderWCA_ErrorAfterClose(t *testing.T) {
 		t.Error("GetMeterData() should return error after Close()")
 	} else if !strings.Contains(err.Error(), "not initialized") {
 		t.Errorf("Error should mention 'not initialized', got: %v", err)
+	}
+}
+
+// TestMeterReaderWCA_ConcurrentReads tests thread safety of meter reads
+func TestMeterReaderWCA_ConcurrentReads(t *testing.T) {
+	skipIfNoAudioDeviceMeterWCA(t)
+
+	reader, err := NewMeterReaderWCA()
+	if err != nil {
+		t.Fatalf("NewMeterReaderWCA() error = %v", err)
+	}
+	defer reader.Close()
+
+	// Start 10 goroutines reading concurrently
+	done := make(chan bool, 10)
+	errors := make(chan error, 10)
+
+	for i := 0; i < 10; i++ {
+		go func(id int) {
+			for j := 0; j < 10; j++ {
+				data, err := reader.GetMeterData(0.99, 0.01)
+				if err != nil {
+					errors <- err
+					done <- false
+					return
+				}
+				if data == nil {
+					errors <- err
+					done <- false
+					return
+				}
+				if data.Peak < 0 || data.Peak > 1.0 {
+					errors <- err
+					done <- false
+					return
+				}
+			}
+			done <- true
+		}(i)
+	}
+
+	// Wait for all goroutines
+	for i := 0; i < 10; i++ {
+		select {
+		case success := <-done:
+			if !success {
+				t.Fatal("Goroutine failed")
+			}
+		case err := <-errors:
+			t.Fatalf("Error in concurrent read: %v", err)
+		case <-time.After(5 * time.Second):
+			t.Fatal("Timeout waiting for concurrent reads")
+		}
 	}
 }

@@ -8,7 +8,6 @@ import (
 	"image/color"
 	"math"
 	"math/cmplx"
-	"runtime"
 	"sync"
 	"time"
 	"unsafe"
@@ -756,16 +755,14 @@ func GetSharedAudioCapture() (*AudioCaptureWCA, error) {
 
 // AudioCaptureWCA captures audio using Windows Core Audio API in loopback mode
 type AudioCaptureWCA struct {
-	mu             sync.Mutex
-	initialized    bool
-	comInitialized bool
-	threadLocked   bool
-	audioClient    *wca.IAudioClient
-	captureClient  *wca.IAudioCaptureClient
-	mmd            *wca.IMMDevice
-	mmde           *wca.IMMDeviceEnumerator
-	bufferSize     uint32
-	sampleRate     uint32
+	mu            sync.Mutex
+	initialized   bool
+	audioClient   *wca.IAudioClient
+	captureClient *wca.IAudioCaptureClient
+	mmd           *wca.IMMDevice
+	mmde          *wca.IMMDeviceEnumerator
+	bufferSize    uint32
+	sampleRate    uint32
 }
 
 // initialize sets up WASAPI loopback capture
@@ -780,28 +777,19 @@ func (ac *AudioCaptureWCA) initialize() error {
 	}
 
 	// Note: We don't own COM cleanup - it's managed per-thread by EnsureCOMInitialized
-	ac.comInitialized = false // We don't own the COM initialization
-	ac.threadLocked = false   // We don't own the thread lock
 
 	// Create device enumerator
-	var mmde *wca.IMMDeviceEnumerator
-	if err := wca.CoCreateInstance(wca.CLSID_MMDeviceEnumerator, 0, wca.CLSCTX_ALL, wca.IID_IMMDeviceEnumerator, &mmde); err != nil {
-		if ac.comInitialized {
-			ole.CoUninitialize()
-		}
-		if ac.threadLocked {
-			runtime.UnlockOSThread()
-			ac.threadLocked = false
-		}
-		return fmt.Errorf("CoCreateInstance failed: %w", err)
+	mmde, err := CreateDeviceEnumerator()
+	if err != nil {
+		return err
 	}
 	ac.mmde = mmde
 
 	// Get default audio endpoint (render for loopback)
-	var mmd *wca.IMMDevice
-	if err := mmde.GetDefaultAudioEndpoint(wca.ERender, wca.EConsole, &mmd); err != nil {
+	mmd, err := GetDefaultRenderDevice(mmde)
+	if err != nil {
 		ac.cleanup()
-		return fmt.Errorf("GetDefaultAudioEndpoint failed: %w", err)
+		return err
 	}
 	ac.mmd = mmd
 
@@ -915,25 +903,15 @@ func (ac *AudioCaptureWCA) ReadSamples() ([]float32, []float32, error) {
 
 // cleanup releases COM resources
 func (ac *AudioCaptureWCA) cleanup() {
+	// Stop audio client before releasing
 	if ac.audioClient != nil {
 		_ = ac.audioClient.Stop()
-		ac.audioClient.Release()
 	}
-	if ac.captureClient != nil {
-		ac.captureClient.Release()
-	}
-	if ac.mmd != nil {
-		ac.mmd.Release()
-	}
-	if ac.mmde != nil {
-		ac.mmde.Release()
-	}
-	if ac.comInitialized {
-		ole.CoUninitialize()
-	}
-	if ac.threadLocked {
-		runtime.UnlockOSThread()
-	}
+
+	SafeReleaseAudioClient(&ac.audioClient)
+	SafeReleaseAudioCaptureClient(&ac.captureClient)
+	SafeReleaseMMDevice(&ac.mmd)
+	SafeReleaseMMDeviceEnumerator(&ac.mmde)
 }
 
 // Close releases resources

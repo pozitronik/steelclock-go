@@ -849,3 +849,64 @@ func TestAudioVisualizerWidget_FrequencyCompensationToggle(t *testing.T) {
 		})
 	}
 }
+
+// TestGetSharedAudioCapture_Singleton verifies singleton behavior of audio capture
+func TestGetSharedAudioCapture_Singleton(t *testing.T) {
+	// Get shared instance twice
+	capture1, err1 := GetSharedAudioCapture()
+	if err1 != nil {
+		t.Fatalf("First GetSharedAudioCapture() failed: %v", err1)
+	}
+
+	capture2, err2 := GetSharedAudioCapture()
+	if err2 != nil {
+		t.Fatalf("Second GetSharedAudioCapture() failed: %v", err2)
+	}
+
+	// Should return the same instance
+	if capture1 != capture2 {
+		t.Error("GetSharedAudioCapture() returned different instances (expected singleton)")
+	}
+
+	// Verify it's initialized
+	if !capture1.initialized {
+		t.Error("Shared audio capture not initialized")
+	}
+}
+
+// TestGetSharedAudioCapture_ConcurrentCreation tests thread-safe singleton creation
+func TestGetSharedAudioCapture_ConcurrentCreation(t *testing.T) {
+	// Start 100 goroutines trying to get the shared instance concurrently
+	done := make(chan *AudioCaptureWCA, 100)
+	errors := make(chan error, 100)
+
+	for i := 0; i < 100; i++ {
+		go func() {
+			capture, err := GetSharedAudioCapture()
+			if err != nil {
+				errors <- err
+				return
+			}
+			done <- capture
+		}()
+	}
+
+	// Collect all results
+	var captures []*AudioCaptureWCA
+	for i := 0; i < 100; i++ {
+		select {
+		case capture := <-done:
+			captures = append(captures, capture)
+		case err := <-errors:
+			t.Fatalf("Error getting shared audio capture: %v", err)
+		}
+	}
+
+	// All captures should be the same instance
+	firstCapture := captures[0]
+	for i, capture := range captures {
+		if capture != firstCapture {
+			t.Errorf("Capture %d is different from first capture (expected all same)", i)
+		}
+	}
+}
