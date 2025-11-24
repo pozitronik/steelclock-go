@@ -3,30 +3,27 @@
 package widget
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"runtime"
 	"sync"
 
-	ole "github.com/go-ole/go-ole"
+	"github.com/go-ole/go-ole"
 	"github.com/moutend/go-wca/pkg/wca"
 )
 
 // comInitMutex protects COM initialization to prevent race conditions
-var (
-	comInitMutex   sync.Mutex
-	comInitialized bool
-)
+var comInitMutex sync.Mutex
 
 // EnsureCOMInitialized ensures COM is initialized on the calling thread.
-// This function is safe to call multiple times from the same goroutine.
+// This function is safe to call multiple times from the same thread.
 //
-// IMPORTANT ASSUMPTION: All widgets that use COM are created in the same goroutine.
-// This is guaranteed by the singleton pattern (GetSharedAudioCapture, GetSharedVolumeReader, etc.)
-// which ensures widgets are created once in the first calling goroutine.
-//
-// COM is thread-specific, so this implementation relies on runtime.LockOSThread()
-// to ensure the goroutine stays on the same OS thread after first initialization.
+// IMPORTANT: COM is thread-specific. This function must be called on each thread
+// that needs to use COM. The function handles both cases:
+// - First call on a thread: initializes COM and locks the thread
+// - Subsequent calls on same thread: no-op (COM already initialized)
+// - Calls on different threads: each thread gets its own COM initialization
 //
 // Used by all Windows Core Audio (WCA) components:
 // - AudioCaptureWCA (audio visualizer)
@@ -36,26 +33,37 @@ func EnsureCOMInitialized() error {
 	comInitMutex.Lock()
 	defer comInitMutex.Unlock()
 
-	// If already initialized, nothing to do
-	if comInitialized {
-		return nil
-	}
-
 	// Lock this goroutine to the current OS thread for COM apartment threading
 	// COM requires thread affinity - once initialized on a thread, all COM calls
 	// must happen on that same thread
 	runtime.LockOSThread()
 
 	// Initialize COM with COINIT_APARTMENTTHREADED (STA - Single-Threaded Apartment)
+	// CoInitializeEx returns:
+	// - S_OK (0x00000000): Successfully initialized COM on this thread
+	// - S_FALSE (0x00000001): COM already initialized on this thread (success)
+	// - Error: Actual initialization failure
 	err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED)
 	if err != nil {
+		// Check if this is S_FALSE (0x00000001) - already initialized on this thread
+		// Use errors.As to properly unwrap and check for ole.OleError
+		var oleErr *ole.OleError
+		if errors.As(err, &oleErr) {
+			// S_FALSE = 0x00000001 (in COM, S_FALSE is a success code with value 1)
+			// Some implementations might represent it as 0x80000001 (signed interpretation)
+			if oleErr.Code() == 0x00000001 || oleErr.Code() == 0x80000001 {
+				// S_FALSE: COM already initialized on this thread, this is OK
+				log.Printf("[WCA] COM already initialized on this thread (S_FALSE)")
+				return nil
+			}
+		}
+
 		// Real initialization error - unlock thread and return
 		runtime.UnlockOSThread()
 		return fmt.Errorf("CoInitializeEx failed: %w", err)
 	}
 
-	// Successfully initialized COM
-	comInitialized = true
+	// Successfully initialized COM (S_OK)
 	log.Printf("[WCA] COM initialized successfully on this thread")
 	return nil
 }
