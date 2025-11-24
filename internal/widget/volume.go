@@ -124,6 +124,14 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		stopChan:          make(chan struct{}),
 	}
 
+	// Initialize volume reader BEFORE starting goroutine
+	// This ensures widget creation fails if no audio device exists (fail-fast pattern)
+	reader, err := newVolumeReader()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize volume reader: %w", err)
+	}
+	w.reader = reader
+
 	// Start single background goroutine for polling volume
 	w.wg.Add(1)
 	go w.pollVolumeBackground()
@@ -143,15 +151,7 @@ func (w *VolumeWidget) pollVolumeBackground() {
 		}
 	}()
 
-	// Initialize platform-specific volume reader on THIS goroutine
-	// On Windows: COM must be initialized on the same thread that uses it
-	reader, err := newVolumeReader()
-	if err != nil {
-		log.Printf("[VOLUME] FATAL: Failed to initialize volume reader: %v", err)
-		return
-	}
-	w.reader = reader
-
+	// Reader already initialized in NewVolumeWidget (fail-fast pattern)
 	// Ensure cleanup when goroutine exits
 	defer func() {
 		if w.reader != nil {

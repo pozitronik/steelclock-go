@@ -233,6 +233,14 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		stopChan:            make(chan struct{}),
 	}
 
+	// Initialize meter reader BEFORE starting goroutine
+	// This ensures widget creation fails if no audio device exists (fail-fast pattern)
+	reader, err := newMeterReader()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize meter reader: %w", err)
+	}
+	w.reader = reader
+
 	// Start background polling goroutine
 	w.wg.Add(1)
 	go w.pollMeterBackground()
@@ -251,14 +259,8 @@ func (w *VolumeMeterWidget) pollMeterBackground() {
 		}
 	}()
 
-	// Initialize platform-specific meter reader
-	reader, err := newMeterReader()
-	if err != nil {
-		log.Printf("FATAL: Failed to initialize meter reader: %v", err)
-		return
-	}
-	w.reader = reader
-
+	// Reader already initialized in NewVolumeMeterWidget (fail-fast pattern)
+	// Ensure cleanup when goroutine exits
 	defer func() {
 		if w.reader != nil {
 			w.reader.Close()

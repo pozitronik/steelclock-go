@@ -3,10 +3,35 @@
 package widget
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/moutend/go-wca/pkg/wca"
 )
+
+// skipIfNoAudioDeviceWCATests skips the test if no audio device is available
+func skipIfNoAudioDeviceWCATests(t *testing.T) {
+	t.Helper()
+
+	err := EnsureCOMInitialized()
+	if err != nil {
+		t.Skipf("Cannot initialize COM: %v", err)
+	}
+
+	mmde, err := CreateDeviceEnumerator()
+	if err != nil {
+		t.Skipf("Cannot create device enumerator: %v", err)
+	}
+	defer SafeReleaseMMDeviceEnumerator(&mmde)
+
+	_, err = GetDefaultRenderDevice(mmde)
+	if err != nil {
+		if strings.Contains(err.Error(), "Element not found") {
+			t.Skip("No audio device available (common in CI environments)")
+		}
+		t.Skipf("Cannot get default audio device: %v", err)
+	}
+}
 
 // TestEnsureCOMInitialized_Idempotency verifies that EnsureCOMInitialized can be called multiple times safely
 func TestEnsureCOMInitialized_Idempotency(t *testing.T) {
@@ -56,6 +81,8 @@ func TestCreateDeviceEnumerator(t *testing.T) {
 
 // TestGetDefaultRenderDevice verifies default audio device retrieval
 func TestGetDefaultRenderDevice(t *testing.T) {
+	skipIfNoAudioDeviceWCATests(t)
+
 	// Ensure COM is initialized first
 	err := EnsureCOMInitialized()
 	if err != nil {
@@ -116,6 +143,8 @@ func TestSafeReleaseMMDeviceEnumerator(t *testing.T) {
 
 // TestSafeReleaseMMDevice verifies safe release of MM device
 func TestSafeReleaseMMDevice(t *testing.T) {
+	skipIfNoAudioDeviceWCATests(t)
+
 	// Ensure COM is initialized
 	err := EnsureCOMInitialized()
 	if err != nil {
@@ -150,6 +179,8 @@ func TestSafeReleaseMMDevice(t *testing.T) {
 
 // TestSafeReleaseAudioEndpointVolume verifies safe release of audio endpoint volume
 func TestSafeReleaseAudioEndpointVolume(t *testing.T) {
+	skipIfNoAudioDeviceWCATests(t)
+
 	// Ensure COM is initialized
 	err := EnsureCOMInitialized()
 	if err != nil {
@@ -191,6 +222,8 @@ func TestSafeReleaseAudioEndpointVolume(t *testing.T) {
 
 // TestSafeReleaseAudioMeterInformation verifies safe release of audio meter information
 func TestSafeReleaseAudioMeterInformation(t *testing.T) {
+	skipIfNoAudioDeviceWCATests(t)
+
 	// Ensure COM is initialized
 	err := EnsureCOMInitialized()
 	if err != nil {
@@ -232,6 +265,8 @@ func TestSafeReleaseAudioMeterInformation(t *testing.T) {
 
 // TestSafeReleaseAudioClient verifies safe release of audio client
 func TestSafeReleaseAudioClient(t *testing.T) {
+	skipIfNoAudioDeviceWCATests(t)
+
 	// Ensure COM is initialized
 	err := EnsureCOMInitialized()
 	if err != nil {
