@@ -575,7 +575,7 @@ func (w *AudioVisualizerWidget) renderSpectrum(img *image.Gray) {
 		gap = 1
 	}
 
-	fillColor := uint8(w.properties.FillColor)
+	fillColor := uint8(*w.properties.FillColor)
 
 	for i := 0; i < barCount; i++ {
 		// Magnitude is already normalized to 0.0-1.0 range (dB scale)
@@ -645,7 +645,7 @@ func (w *AudioVisualizerWidget) renderOscilloscope(img *image.Gray) {
 		}
 		centerY := height / 2
 		samples := w.audioData[len(w.audioData)-sampleCount:]
-		fillColor := uint8(w.properties.FillColor)
+		fillColor := uint8(*w.properties.FillColor)
 		w.drawWaveform(img, samples, 0, height, centerY, fillColor)
 	} else if w.properties.ChannelMode == "stereo_separated" {
 		// Use separate left and right channels for stereo_separated mode
@@ -666,8 +666,8 @@ func (w *AudioVisualizerWidget) renderOscilloscope(img *image.Gray) {
 		leftSamples := w.audioDataLeft[len(w.audioDataLeft)-leftSampleCount:]
 		rightSamples := w.audioDataRight[len(w.audioDataRight)-rightSampleCount:]
 
-		leftColor := uint8(w.properties.LeftChannelColor)
-		rightColor := uint8(w.properties.RightChannelColor)
+		leftColor := uint8(*w.properties.LeftChannelColor)
+		rightColor := uint8(*w.properties.RightChannelColor)
 
 		// Top half - actual left channel
 		w.drawWaveform(img, leftSamples, 0, height/2, height/4, leftColor)

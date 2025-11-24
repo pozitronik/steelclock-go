@@ -63,24 +63,24 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		vertAlign = "center"
 	}
 
-	rxColor := cfg.Properties.RxColor
-	if rxColor == 0 {
-		rxColor = 255
+	rxColor := 255
+	if cfg.Properties.RxColor != nil {
+		rxColor = *cfg.Properties.RxColor
 	}
 
-	txColor := cfg.Properties.TxColor
-	if txColor == 0 {
-		txColor = 255
+	txColor := 255
+	if cfg.Properties.TxColor != nil {
+		txColor = *cfg.Properties.TxColor
 	}
 
-	rxNeedleColor := cfg.Properties.RxNeedleColor
-	if rxNeedleColor == 0 {
-		rxNeedleColor = 255
+	rxNeedleColor := 255
+	if cfg.Properties.RxNeedleColor != nil {
+		rxNeedleColor = *cfg.Properties.RxNeedleColor
 	}
 
-	txNeedleColor := cfg.Properties.TxNeedleColor
-	if txNeedleColor == 0 {
-		txNeedleColor = 200
+	txNeedleColor := 200
+	if cfg.Properties.TxNeedleColor != nil {
+		txNeedleColor = *cfg.Properties.TxNeedleColor
 	}
 
 	maxSpeed := cfg.Properties.MaxSpeedMbps

@@ -89,7 +89,7 @@ type WidgetProperties struct {
 
 	// CPU/Memory/Network/Disk widgets
 	DisplayMode   string `json:"display_mode,omitempty"`
-	FillColor     int    `json:"fill_color,omitempty"`
+	FillColor     *int   `json:"fill_color"`
 	BarBorder     bool   `json:"bar_border,omitempty"`
 	HistoryLength int    `json:"history_length,omitempty"`
 
@@ -104,15 +104,15 @@ type WidgetProperties struct {
 	DynamicScaling bool    `json:"dynamic_scaling,omitempty"`
 	MaxSpeedMbps   float64 `json:"max_speed_mbps,omitempty"`
 	SpeedUnit      string  `json:"speed_unit,omitempty"`
-	RxColor        int     `json:"rx_color,omitempty"`
-	TxColor        int     `json:"tx_color,omitempty"`
-	RxNeedleColor  int     `json:"rx_needle_color,omitempty"`
-	TxNeedleColor  int     `json:"tx_needle_color,omitempty"`
+	RxColor        *int    `json:"rx_color"`
+	TxColor        *int    `json:"tx_color"`
+	RxNeedleColor  *int    `json:"rx_needle_color"`
+	TxNeedleColor  *int    `json:"tx_needle_color"`
 
 	// Disk widget
 	DiskName   *string `json:"disk_name"`
-	ReadColor  int     `json:"read_color,omitempty"`
-	WriteColor int     `json:"write_color,omitempty"`
+	ReadColor  *int    `json:"read_color"`
+	WriteColor *int    `json:"write_color"`
 
 	// Keyboard widget
 	Spacing           int     `json:"spacing,omitempty"`
@@ -130,15 +130,15 @@ type WidgetProperties struct {
 	DisplayFormat string `json:"display_format,omitempty"` // "iso639-1", "iso639-2", "full"
 
 	// Volume widget
-	GaugeColor        int  `json:"gauge_color,omitempty"`
-	GaugeNeedleColor  int  `json:"gauge_needle_color,omitempty"`
-	TriangleFillColor int  `json:"triangle_fill_color,omitempty"`
+	GaugeColor        *int `json:"gauge_color"`
+	GaugeNeedleColor  *int `json:"gauge_needle_color"`
+	TriangleFillColor *int `json:"triangle_fill_color"`
 	TriangleBorder    bool `json:"triangle_border,omitempty"`
 
 	// Volume meter widget
-	ClippingColor       int     `json:"clipping_color,omitempty"`
-	LeftChannelColor    int     `json:"left_channel_color,omitempty"`
-	RightChannelColor   int     `json:"right_channel_color,omitempty"`
+	ClippingColor       *int    `json:"clipping_color"`
+	LeftChannelColor    *int    `json:"left_channel_color"`
+	RightChannelColor   *int    `json:"right_channel_color"`
 	StereoMode          bool    `json:"stereo_mode,omitempty"`
 	UseDBScale          bool    `json:"use_db_scale,omitempty"`
 	ShowClipping        bool    `json:"show_clipping,omitempty"`

@@ -61,14 +61,14 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 		vertAlign = "center"
 	}
 
-	readColor := cfg.Properties.ReadColor
-	if readColor == 0 {
-		readColor = 255
+	readColor := 255
+	if cfg.Properties.ReadColor != nil {
+		readColor = *cfg.Properties.ReadColor
 	}
 
-	writeColor := cfg.Properties.WriteColor
-	if writeColor == 0 {
-		writeColor = 255
+	writeColor := 255
+	if cfg.Properties.WriteColor != nil {
+		writeColor = *cfg.Properties.WriteColor
 	}
 
 	maxSpeed := cfg.Properties.MaxSpeedMbps

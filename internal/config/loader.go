@@ -312,8 +312,9 @@ func applyMetricWidgetDefaults(w *WidgetConfig) {
 	if w.Properties.DisplayMode == "" {
 		w.Properties.DisplayMode = "text"
 	}
-	if w.Properties.FillColor == 0 {
-		w.Properties.FillColor = 255
+	if w.Properties.FillColor == nil {
+		defaultColor := 255
+		w.Properties.FillColor = &defaultColor
 	}
 	if w.Properties.HistoryLength == 0 {
 		w.Properties.HistoryLength = 30
@@ -325,11 +326,13 @@ func applyNetworkDefaults(w *WidgetConfig) {
 	if w.Properties.DisplayMode == "" {
 		w.Properties.DisplayMode = "text"
 	}
-	if w.Properties.RxColor == 0 {
-		w.Properties.RxColor = 255
+	if w.Properties.RxColor == nil {
+		defaultColor := 255
+		w.Properties.RxColor = &defaultColor
 	}
-	if w.Properties.TxColor == 0 {
-		w.Properties.TxColor = 255
+	if w.Properties.TxColor == nil {
+		defaultColor := 255
+		w.Properties.TxColor = &defaultColor
 	}
 	if w.Properties.MaxSpeedMbps == 0 {
 		w.Properties.MaxSpeedMbps = -1
@@ -344,11 +347,13 @@ func applyDiskDefaults(w *WidgetConfig) {
 	if w.Properties.DisplayMode == "" {
 		w.Properties.DisplayMode = "text"
 	}
-	if w.Properties.ReadColor == 0 {
-		w.Properties.ReadColor = 255
+	if w.Properties.ReadColor == nil {
+		defaultColor := 255
+		w.Properties.ReadColor = &defaultColor
 	}
-	if w.Properties.WriteColor == 0 {
-		w.Properties.WriteColor = 255
+	if w.Properties.WriteColor == nil {
+		defaultColor := 255
+		w.Properties.WriteColor = &defaultColor
 	}
 	if w.Properties.MaxSpeedMbps == 0 {
 		w.Properties.MaxSpeedMbps = -1
@@ -387,13 +392,16 @@ func applyAudioVisualizerDefaults(w *WidgetConfig) {
 	if w.Properties.SampleCount == 0 {
 		w.Properties.SampleCount = 128
 	}
-	if w.Properties.FillColor == 0 {
-		w.Properties.FillColor = 255
+	if w.Properties.FillColor == nil {
+		defaultColor := 255
+		w.Properties.FillColor = &defaultColor
 	}
-	if w.Properties.LeftChannelColor == 0 {
-		w.Properties.LeftChannelColor = 255
+	if w.Properties.LeftChannelColor == nil {
+		defaultColor := 255
+		w.Properties.LeftChannelColor = &defaultColor
 	}
-	if w.Properties.RightChannelColor == 0 {
-		w.Properties.RightChannelColor = 200
+	if w.Properties.RightChannelColor == nil {
+		defaultColor := 200
+		w.Properties.RightChannelColor = &defaultColor
 	}
 }

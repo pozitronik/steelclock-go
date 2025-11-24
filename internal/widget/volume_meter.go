@@ -109,34 +109,34 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		return nil, fmt.Errorf("invalid display mode: %s (valid: text, bar_horizontal, bar_vertical, gauge)", displayMode)
 	}
 
-	fillColor := cfg.Properties.FillColor
-	if fillColor == 0 {
-		fillColor = 255
+	fillColor := 255
+	if cfg.Properties.FillColor != nil {
+		fillColor = *cfg.Properties.FillColor
 	}
 
-	clippingColor := cfg.Properties.ClippingColor
-	if clippingColor == 0 {
-		clippingColor = 200 // Red in grayscale
+	clippingColor := 200 // Red in grayscale
+	if cfg.Properties.ClippingColor != nil {
+		clippingColor = *cfg.Properties.ClippingColor
 	}
 
-	leftChannelColor := cfg.Properties.LeftChannelColor
-	if leftChannelColor == 0 {
-		leftChannelColor = 255
+	leftChannelColor := 255
+	if cfg.Properties.LeftChannelColor != nil {
+		leftChannelColor = *cfg.Properties.LeftChannelColor
 	}
 
-	rightChannelColor := cfg.Properties.RightChannelColor
-	if rightChannelColor == 0 {
-		rightChannelColor = 200
+	rightChannelColor := 200
+	if cfg.Properties.RightChannelColor != nil {
+		rightChannelColor = *cfg.Properties.RightChannelColor
 	}
 
-	gaugeColor := cfg.Properties.GaugeColor
-	if gaugeColor == 0 {
-		gaugeColor = 200
+	gaugeColor := 200
+	if cfg.Properties.GaugeColor != nil {
+		gaugeColor = *cfg.Properties.GaugeColor
 	}
 
-	gaugeNeedleColor := cfg.Properties.GaugeNeedleColor
-	if gaugeNeedleColor == 0 {
-		gaugeNeedleColor = 255
+	gaugeNeedleColor := 255
+	if cfg.Properties.GaugeNeedleColor != nil {
+		gaugeNeedleColor = *cfg.Properties.GaugeNeedleColor
 	}
 
 	// Clipping detection

@@ -64,24 +64,24 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		displayMode = "bar_horizontal"
 	}
 
-	fillColor := cfg.Properties.FillColor
-	if fillColor == 0 {
-		fillColor = 255
+	fillColor := 255
+	if cfg.Properties.FillColor != nil {
+		fillColor = *cfg.Properties.FillColor
 	}
 
-	gaugeColor := cfg.Properties.GaugeColor
-	if gaugeColor == 0 {
-		gaugeColor = 200
+	gaugeColor := 200
+	if cfg.Properties.GaugeColor != nil {
+		gaugeColor = *cfg.Properties.GaugeColor
 	}
 
-	gaugeNeedleColor := cfg.Properties.GaugeNeedleColor
-	if gaugeNeedleColor == 0 {
-		gaugeNeedleColor = 255
+	gaugeNeedleColor := 255
+	if cfg.Properties.GaugeNeedleColor != nil {
+		gaugeNeedleColor = *cfg.Properties.GaugeNeedleColor
 	}
 
-	triangleFillColor := cfg.Properties.TriangleFillColor
-	if triangleFillColor == 0 {
-		triangleFillColor = 255
+	triangleFillColor := 255
+	if cfg.Properties.TriangleFillColor != nil {
+		triangleFillColor = *cfg.Properties.TriangleFillColor
 	}
 
 	horizAlign := cfg.Properties.HorizontalAlign
