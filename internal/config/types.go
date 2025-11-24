@@ -2,15 +2,25 @@ package config
 
 // Config represents the complete SteelClock configuration
 type Config struct {
-	GameName         string         `json:"game_name"`
-	GameDisplayName  string         `json:"game_display_name"`
-	RefreshRateMs    int            `json:"refresh_rate_ms"`
-	UnregisterOnExit bool           `json:"unregister_on_exit,omitempty"`
-	BundledFontURL   string         `json:"bundled_font_url,omitempty"`
-	BundledWadURL    string         `json:"bundled_wad_url,omitempty"`
-	Display          DisplayConfig  `json:"display"`
-	Layout           *LayoutConfig  `json:"layout,omitempty"`
-	Widgets          []WidgetConfig `json:"widgets"`
+	GameName             string             `json:"game_name"`
+	GameDisplayName      string             `json:"game_display_name"`
+	RefreshRateMs        int                `json:"refresh_rate_ms"`
+	UnregisterOnExit     bool               `json:"unregister_on_exit,omitempty"`
+	DeinitializeTimerMs  int                `json:"deinitialize_timer_length_ms,omitempty"`
+	EventBatchingEnabled bool               `json:"event_batching_enabled,omitempty"`
+	EventBatchSize       int                `json:"event_batch_size,omitempty"`
+	SupportedResolutions []ResolutionConfig `json:"supported_resolutions,omitempty"`
+	BundledFontURL       string             `json:"bundled_font_url,omitempty"`
+	BundledWadURL        string             `json:"bundled_wad_url,omitempty"`
+	Display              DisplayConfig      `json:"display"`
+	Layout               *LayoutConfig      `json:"layout,omitempty"`
+	Widgets              []WidgetConfig     `json:"widgets"`
+}
+
+// ResolutionConfig represents an additional display resolution for multi-device support
+type ResolutionConfig struct {
+	Width  int `json:"width"`
+	Height int `json:"height"`
 }
 
 // DisplayConfig represents display settings
@@ -138,6 +148,19 @@ type WidgetProperties struct {
 	PeakHoldTime        float64 `json:"peak_hold_time,omitempty"`
 	AutoHideOnSilence   bool    `json:"auto_hide_on_silence,omitempty"`
 	AutoHideSilenceTime float64 `json:"auto_hide_silence_time,omitempty"`
+
+	// Audio visualizer widget
+	BarCount                     int     `json:"bar_count,omitempty"`
+	FrequencyScale               string  `json:"frequency_scale,omitempty"`
+	BarStyle                     string  `json:"bar_style,omitempty"`
+	Smoothing                    float64 `json:"smoothing,omitempty"`
+	PeakHold                     bool    `json:"peak_hold,omitempty"`
+	WaveformStyle                string  `json:"waveform_style,omitempty"`
+	ChannelMode                  string  `json:"channel_mode,omitempty"`
+	SampleCount                  int     `json:"sample_count,omitempty"`
+	FrequencyCompensation        bool    `json:"frequency_compensation,omitempty"`
+	SpectrumDynamicScaling       float64 `json:"spectrum_dynamic_scaling,omitempty"`
+	SpectrumDynamicScalingWindow float64 `json:"spectrum_dynamic_scaling_window,omitempty"`
 
 	// DOOM widget
 	WadName string `json:"wad_name,omitempty"`

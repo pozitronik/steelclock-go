@@ -5,7 +5,6 @@ package widget
 import (
 	"fmt"
 	"log"
-	"runtime"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -69,13 +68,11 @@ func getChannelsPeakValues(ami *wca.IAudioMeterInformation, channelCount uint32,
 // MeterReaderWCA manages Windows Core Audio meter using go-wca library
 // with proper COM lifecycle (initialize once, not per call)
 type MeterReaderWCA struct {
-	mu             sync.Mutex
-	initialized    bool
-	comInitialized bool // Track if we initialized COM (vs already initialized)
-	threadLocked   bool // Track if we locked the OS thread
-	ami            *wca.IAudioMeterInformation
-	mmd            *wca.IMMDevice
-	mmde           *wca.IMMDeviceEnumerator
+	mu          sync.Mutex
+	initialized bool
+	ami         *wca.IAudioMeterInformation
+	mmd         *wca.IMMDevice
+	mmde        *wca.IMMDeviceEnumerator
 }
 
 // NewMeterReaderWCA creates a meter reader using go-wca with proper lifecycle
@@ -94,56 +91,32 @@ func (mr *MeterReaderWCA) initialize() error {
 	mr.mu.Lock()
 	defer mr.mu.Unlock()
 
-	// Lock this goroutine to the current OS thread for COM apartment threading
-	// COM requires thread affinity - once initialized on a thread, all COM calls
-	// must happen on that same thread
-	runtime.LockOSThread()
-	mr.threadLocked = true
+	log.Printf("[METER-WCA] Ensuring COM is initialized")
 
-	log.Printf("[METER-WCA] Initializing COM (ONCE per goroutine)")
-
-	// Initialize COM - ONCE, not per call
-	// Note: CoInitializeEx may return an error if COM is already initialized on this thread
-	// In test environments, this is expected and we handle it gracefully
-	err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED)
+	// Ensure COM is initialized on this thread
+	err := EnsureCOMInitialized()
 	if err != nil {
-		// Check if the error is because COM is already initialized (S_FALSE or RPC_E_CHANGED_MODE)
-		// In that case, we can continue - COM is ready to use
-		errMsg := err.Error()
-		if errMsg == "Incorrect function." || errMsg == "Cannot change thread mode after it is set." {
-			log.Printf("[METER-WCA] COM already initialized on this thread (expected in test environment)")
-			// Don't set comInitialized since we didn't initialize it
-		} else {
-			runtime.UnlockOSThread()
-			mr.threadLocked = false
-			return fmt.Errorf("CoInitializeEx failed: %w", err)
-		}
-	} else {
-		log.Printf("[METER-WCA] COM initialized successfully")
-		mr.comInitialized = true
+		return fmt.Errorf("failed to initialize COM: %w", err)
 	}
 
+	log.Printf("[METER-WCA] COM is ready")
+
+	// Note: We don't own COM cleanup - it's managed per-thread by EnsureCOMInitialized
+
 	// Create device enumerator
-	var mmde *wca.IMMDeviceEnumerator
-	if err := wca.CoCreateInstance(wca.CLSID_MMDeviceEnumerator, 0, wca.CLSCTX_ALL, wca.IID_IMMDeviceEnumerator, &mmde); err != nil {
-		if mr.comInitialized {
-			ole.CoUninitialize()
-		}
-		if mr.threadLocked {
-			runtime.UnlockOSThread()
-			mr.threadLocked = false
-		}
-		return fmt.Errorf("CoCreateInstance failed: %w", err)
+	mmde, err := CreateDeviceEnumerator()
+	if err != nil {
+		return err
 	}
 	mr.mmde = mmde
 
 	log.Printf("[METER-WCA] Device enumerator created")
 
 	// Get default audio endpoint
-	var mmd *wca.IMMDevice
-	if err := mmde.GetDefaultAudioEndpoint(wca.ERender, wca.EConsole, &mmd); err != nil {
+	mmd, err := GetDefaultRenderDevice(mmde)
+	if err != nil {
 		mr.cleanup()
-		return fmt.Errorf("GetDefaultAudioEndpoint failed: %w", err)
+		return err
 	}
 	mr.mmd = mmd
 
@@ -221,23 +194,9 @@ func (mr *MeterReaderWCA) GetMeterData(clippingThreshold, silenceThreshold float
 
 // cleanup releases all COM objects
 func (mr *MeterReaderWCA) cleanup() {
-	if mr.ami != nil {
-		mr.ami.Release()
-		mr.ami = nil
-		log.Printf("[METER-WCA] IAudioMeterInformation released")
-	}
-
-	if mr.mmd != nil {
-		mr.mmd.Release()
-		mr.mmd = nil
-		log.Printf("[METER-WCA] IMMDevice released")
-	}
-
-	if mr.mmde != nil {
-		mr.mmde.Release()
-		mr.mmde = nil
-		log.Printf("[METER-WCA] IMMDeviceEnumerator released")
-	}
+	SafeReleaseAudioMeterInformation(&mr.ami)
+	SafeReleaseMMDevice(&mr.mmd)
+	SafeReleaseMMDeviceEnumerator(&mr.mmde)
 }
 
 // Close releases all COM resources and uninitializes COM
@@ -252,21 +211,6 @@ func (mr *MeterReaderWCA) Close() {
 	log.Printf("[METER-WCA] Closing meter reader")
 
 	mr.cleanup()
-
-	// Only uninitialize COM if we initialized it (not if it was already initialized)
-	if mr.comInitialized {
-		ole.CoUninitialize()
-		mr.comInitialized = false
-		log.Printf("[METER-WCA] COM uninitialized")
-	}
-
-	// Only unlock the thread if we locked it
-	if mr.threadLocked {
-		runtime.UnlockOSThread()
-		mr.threadLocked = false
-		log.Printf("[METER-WCA] OS thread unlocked")
-	}
-
 	mr.initialized = false
 
 	log.Printf("[METER-WCA] Meter reader closed")

@@ -7,6 +7,13 @@ import (
 	"path/filepath"
 )
 
+const (
+	// DefaultGameName Default game registration values
+	// Note: game_name and game_display_name MUST be different or GameSense API returns 400 error
+	DefaultGameName    = "STEELCLOCK"
+	DefaultGameDisplay = "SteelClock"
+)
+
 // BoolPtr returns a pointer to a bool value
 func BoolPtr(b bool) *bool {
 	return &b
@@ -44,8 +51,8 @@ func Load(path string) (*Config, error) {
 // CreateDefault creates a configuration with sensible defaults
 func CreateDefault() *Config {
 	cfg := &Config{
-		GameName:        "STEELCLOCK",
-		GameDisplayName: "SteelClock",
+		GameName:        DefaultGameName,
+		GameDisplayName: DefaultGameDisplay,
 		RefreshRateMs:   100,
 		Display: DisplayConfig{
 			Width:  128,
@@ -107,13 +114,7 @@ func SaveDefault(path string) error {
 
 // validateConfig checks that required fields are present and valid
 func validateConfig(cfg *Config) error {
-	// Check required game info
-	if cfg.GameName == "" {
-		return fmt.Errorf("game_name is required")
-	}
-	if cfg.GameDisplayName == "" {
-		return fmt.Errorf("game_display_name is required")
-	}
+	// Note: game_name and game_display_name are optional - defaults applied in applyDefaults()
 
 	// Check display dimensions are positive
 	if cfg.Display.Width <= 0 {
@@ -128,6 +129,30 @@ func validateConfig(cfg *Config) error {
 		return fmt.Errorf("refresh_rate_ms must be positive (got %d)", cfg.RefreshRateMs)
 	}
 
+	// Check deinitialize_timer_length_ms if specified
+	if cfg.DeinitializeTimerMs != 0 {
+		if cfg.DeinitializeTimerMs < 1000 || cfg.DeinitializeTimerMs > 60000 {
+			return fmt.Errorf("deinitialize_timer_length_ms must be between 1000 and 60000 (got %d)", cfg.DeinitializeTimerMs)
+		}
+	}
+
+	// Check event_batch_size if specified
+	if cfg.EventBatchSize != 0 {
+		if cfg.EventBatchSize < 1 || cfg.EventBatchSize > 100 {
+			return fmt.Errorf("event_batch_size must be between 1 and 100 (got %d)", cfg.EventBatchSize)
+		}
+	}
+
+	// Check supported_resolutions if specified
+	for i, res := range cfg.SupportedResolutions {
+		if res.Width <= 0 {
+			return fmt.Errorf("supported_resolutions[%d]: width must be positive (got %d)", i, res.Width)
+		}
+		if res.Height <= 0 {
+			return fmt.Errorf("supported_resolutions[%d]: height must be positive (got %d)", i, res.Height)
+		}
+	}
+
 	// Check widgets
 	if len(cfg.Widgets) == 0 {
 		return fmt.Errorf("at least one widget must be configured")
@@ -136,7 +161,7 @@ func validateConfig(cfg *Config) error {
 	validTypes := map[string]bool{
 		"clock": true, "cpu": true, "memory": true,
 		"network": true, "disk": true, "keyboard": true, "keyboard_layout": true,
-		"volume": true, "volume_meter": true, "doom": true,
+		"volume": true, "volume_meter": true, "audio_visualizer": true, "doom": true,
 	}
 
 	for i, w := range cfg.Widgets {
@@ -150,7 +175,7 @@ func validateConfig(cfg *Config) error {
 			return fmt.Errorf("widget[%d] (%s): type is required", i, w.ID)
 		}
 		if !validTypes[w.Type] {
-			return fmt.Errorf("widget[%d] (%s): invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, keyboard_layout, volume, volume_meter, doom)", i, w.ID, w.Type)
+			return fmt.Errorf("widget[%d] (%s): invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, keyboard_layout, volume, volume_meter, audio_visualizer, doom)", i, w.ID, w.Type)
 		}
 
 		// Only validate properties for enabled widgets
@@ -193,6 +218,14 @@ func validateWidgetProperties(index int, w *WidgetConfig) error {
 
 // applyDefaults fills in default values for optional fields
 func applyDefaults(cfg *Config) {
+	// Apply default game name if not specified
+	if cfg.GameName == "" {
+		cfg.GameName = DefaultGameName
+	}
+	if cfg.GameDisplayName == "" {
+		cfg.GameDisplayName = DefaultGameDisplay
+	}
+
 	applyDisplayDefaults(cfg)
 
 	for i := range cfg.Widgets {
@@ -212,6 +245,11 @@ func applyDisplayDefaults(cfg *Config) {
 
 	if cfg.Display.Height == 0 {
 		cfg.Display.Height = 40
+	}
+
+	// Apply default for event_batch_size if not specified
+	if cfg.EventBatchingEnabled && cfg.EventBatchSize == 0 {
+		cfg.EventBatchSize = 10
 	}
 }
 
@@ -255,6 +293,8 @@ func applyTypeSpecificDefaults(w *WidgetConfig) {
 		applyDiskDefaults(w)
 	case "keyboard":
 		applyKeyboardDefaults(w)
+	case "audio_visualizer":
+		applyAudioVisualizerDefaults(w)
 	}
 }
 
@@ -323,5 +363,45 @@ func applyKeyboardDefaults(w *WidgetConfig) {
 	}
 	if w.Properties.IndicatorColorOff == 0 {
 		w.Properties.IndicatorColorOff = 100
+	}
+}
+
+// applyAudioVisualizerDefaults sets default values for audio visualizer widgets
+func applyAudioVisualizerDefaults(w *WidgetConfig) {
+	if w.Properties.DisplayMode == "" {
+		w.Properties.DisplayMode = "spectrum"
+	}
+	if w.Properties.BarCount == 0 {
+		w.Properties.BarCount = 32
+	}
+	if w.Properties.FrequencyScale == "" {
+		w.Properties.FrequencyScale = "logarithmic"
+	}
+	if w.Properties.BarStyle == "" {
+		w.Properties.BarStyle = "bars"
+	}
+	if w.Properties.Smoothing == 0 {
+		w.Properties.Smoothing = 0.7
+	}
+	if w.Properties.PeakHoldTime == 0 {
+		w.Properties.PeakHoldTime = 1.0
+	}
+	if w.Properties.WaveformStyle == "" {
+		w.Properties.WaveformStyle = "line"
+	}
+	if w.Properties.ChannelMode == "" {
+		w.Properties.ChannelMode = "stereo_combined"
+	}
+	if w.Properties.SampleCount == 0 {
+		w.Properties.SampleCount = 128
+	}
+	if w.Properties.FillColor == 0 {
+		w.Properties.FillColor = 255
+	}
+	if w.Properties.LeftChannelColor == 0 {
+		w.Properties.LeftChannelColor = 255
+	}
+	if w.Properties.RightChannelColor == 0 {
+		w.Properties.RightChannelColor = 200
 	}
 }

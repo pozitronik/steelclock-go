@@ -3,7 +3,7 @@ package gamesense
 // MockGameSenseAPI is a mock implementation of GameSenseAPI for testing
 type MockGameSenseAPI struct {
 	// Function handlers for custom behavior
-	RegisterGameFunc    func(developer string) error
+	RegisterGameFunc    func(developer string, deinitializeTimerMs int) error
 	BindScreenEventFunc func(eventName, deviceType string) error
 	SendScreenDataFunc  func(eventName string, bitmapData []int) error
 	SendHeartbeatFunc   func() error
@@ -18,6 +18,7 @@ type MockGameSenseAPI struct {
 
 	// Last call arguments
 	LastRegisterGameDeveloper string
+	LastRegisterGameTimerMs   int
 	LastBindEventName         string
 	LastBindDeviceType        string
 	LastSendDataEventName     string
@@ -25,12 +26,13 @@ type MockGameSenseAPI struct {
 }
 
 // RegisterGame implements GameSenseAPI
-func (m *MockGameSenseAPI) RegisterGame(developer string) error {
+func (m *MockGameSenseAPI) RegisterGame(developer string, deinitializeTimerMs int) error {
 	m.RegisterGameCalls++
 	m.LastRegisterGameDeveloper = developer
+	m.LastRegisterGameTimerMs = deinitializeTimerMs
 
 	if m.RegisterGameFunc != nil {
-		return m.RegisterGameFunc(developer)
+		return m.RegisterGameFunc(developer, deinitializeTimerMs)
 	}
 	return nil
 }
@@ -88,6 +90,7 @@ func (m *MockGameSenseAPI) Reset() {
 	m.RemoveGameCalls = 0
 
 	m.LastRegisterGameDeveloper = ""
+	m.LastRegisterGameTimerMs = 0
 	m.LastBindEventName = ""
 	m.LastBindDeviceType = ""
 	m.LastSendDataEventName = ""

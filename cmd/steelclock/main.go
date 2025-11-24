@@ -23,10 +23,19 @@ import (
 var (
 	comp           *compositor.Compositor
 	client         *gamesense.Client
+	trayMgr        *tray.Manager
 	configPath     string
 	logFile        *os.File
 	mu             sync.Mutex
 	lastGoodConfig *config.Config // Backup of last working config
+	retryCancel    chan struct{}  // Channel to cancel retry goroutine
+)
+
+const (
+	// GameSense API constants
+	eventName     = "STEELCLOCK_DISPLAY"
+	deviceType    = "screened-128x40"
+	developerName = "Pozitronik"
 )
 
 // BackendUnavailableError indicates SteelSeries GG backend is not available
@@ -65,33 +74,60 @@ func main() {
 	log.Printf("Config: %s", configPath)
 	log.Println("========================================")
 
-	// Start the application
-	if err := startApp(); err != nil {
-		log.Println("========================================")
-		log.Println("FATAL ERROR DURING STARTUP")
-		log.Printf("Error: %v", err)
-		log.Println("========================================")
-		log.Println("")
-		log.Println("Application failed to start. Please check the error above and fix config.json")
-		log.Println("")
+	// Initialize retry cancel channel
+	retryCancel = make(chan struct{})
 
-		// Ensure log is flushed before exit
-		if logFile != nil {
-			_ = logFile.Sync() // Ignore error - we're exiting anyway
+	// Create tray manager first
+	trayMgr = tray.NewManager(configPath, reloadConfig, stopApp)
+
+	// Set callback to run when tray is ready
+	trayMgr.OnReady(func() {
+		// Start the application after tray is initialized
+		if err := startApp(); err != nil {
+			log.Println("========================================")
+			log.Println("STARTUP ERROR")
+			log.Printf("Error: %v", err)
+			log.Println("========================================")
+			log.Println("")
+
+			// Provide context-specific guidance
+			var backendErr *BackendUnavailableError
+			if errors.As(err, &backendErr) {
+				log.Println("The SteelSeries GameSense API is not responding.")
+				log.Println("This usually happens when:")
+				log.Println("  - SteelSeries GG is starting up")
+				log.Println("  - A previous instance just closed (wait a few seconds)")
+				log.Println("  - SteelSeries GG is not running")
+				log.Println("")
+				log.Println("The application will continue running. Use 'Reload Config' to retry.")
+			} else {
+				log.Println("Application failed to start. Please check the error above and fix config.json")
+				log.Println("Use 'Reload Config' to retry after fixing the issue.")
+			}
+			log.Println("")
+
+			// Show error notification
+			var noWidgetsErr *NoWidgetsError
+			if errors.As(err, &noWidgetsErr) {
+				tray.ShowNotification("SteelClock Error", "No widgets enabled in configuration. Please check config.json")
+			} else if errors.As(err, &backendErr) {
+				tray.ShowNotification("SteelClock Connection Error", "Cannot connect to SteelSeries GameSense API. Make sure SteelSeries GG is running and try 'Reload Config'.")
+			} else {
+				tray.ShowNotification("SteelClock Configuration Error", "Failed to load configuration. Please check config.json for errors.")
+			}
 		}
+	})
 
-		os.Exit(1)
-	}
-
-	// Create tray manager
-	trayMgr := tray.NewManager(configPath, reloadConfig, stopApp)
-
-	log.Println("System tray initialized. Use tray icon to control the application.")
+	log.Println("System tray initializing. Use tray icon to control the application.")
 
 	// Run system tray (blocks until Quit)
 	trayMgr.Run()
 
 	log.Println("SteelClock shutting down...")
+
+	// Cancel any ongoing retry
+	close(retryCancel)
+
 	stopAppAndWait()
 	log.Println("SteelClock stopped")
 }
@@ -146,6 +182,49 @@ func startApp() error {
 	return nil
 }
 
+// bindEventWithRetry attempts to bind the screen event with exponential backoff
+// Returns nil on success, error if all retries failed
+func bindEventWithRetry(maxAttempts int) error {
+	baseDelay := 1 * time.Second
+	maxDelay := 10 * time.Second
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if attempt > 1 {
+			// Calculate exponential backoff delay
+			delay := time.Duration(float64(baseDelay) * float64(uint(1)<<uint(attempt-2)))
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+
+			log.Printf("Retrying bind in %v... (attempt %d/%d)", delay, attempt, maxAttempts)
+
+			select {
+			case <-time.After(delay):
+				// Continue with retry
+			case <-retryCancel:
+				log.Println("Bind retry cancelled")
+				return fmt.Errorf("bind retry cancelled")
+			}
+		}
+
+		log.Printf("Attempting to bind screen event (attempt %d/%d)...", attempt, maxAttempts)
+		if err := client.BindScreenEvent(eventName, deviceType); err != nil {
+			log.Printf("ERROR: Failed to bind screen event: %v", err)
+			if attempt == maxAttempts {
+				return &BackendUnavailableError{Err: err}
+			}
+			// Continue to next attempt
+			continue
+		}
+
+		// Success
+		log.Println("Screen event bound successfully")
+		return nil
+	}
+
+	return &BackendUnavailableError{Err: fmt.Errorf("failed to bind after %d attempts", maxAttempts)}
+}
+
 // startAppWithConfig initializes and starts all components with a provided config
 func startAppWithConfig(cfg *config.Config) error {
 	mu.Lock()
@@ -165,6 +244,12 @@ func startAppWithConfig(cfg *config.Config) error {
 		log.Printf("Using custom bundled WAD URL: %s", cfg.BundledWadURL)
 	}
 
+	// Check if we need to recreate the client due to GameName change
+	if client != nil && client.GameName() != cfg.GameName {
+		log.Printf("GameName changed from %s to %s, recreating client...", client.GameName(), cfg.GameName)
+		client = nil // Force recreation with new game name
+	}
+
 	// Create or reuse GameSense client
 	var err error
 	if client == nil {
@@ -180,17 +265,17 @@ func startAppWithConfig(cfg *config.Config) error {
 		log.Println("GameSense client created")
 
 		// Register game
-		if err := client.RegisterGame("Custom"); err != nil {
+		if err := client.RegisterGame(developerName, cfg.DeinitializeTimerMs); err != nil {
 			log.Printf("ERROR: Failed to register game: %v", err)
 			client = nil // Clear client on registration failure
 			return &BackendUnavailableError{Err: err}
 		}
 
-		// Bind screen event
-		if err := client.BindScreenEvent("STEELCLOCK_DISPLAY", "screened-128x40"); err != nil {
-			log.Printf("ERROR: Failed to bind screen event: %v", err)
+		// Bind screen event with retry
+		if err := bindEventWithRetry(10); err != nil {
+			log.Printf("ERROR: Failed to bind screen event after retries: %v", err)
 			client = nil // Clear client on bind failure
-			return &BackendUnavailableError{Err: err}
+			return err
 		}
 	} else {
 		// Reload - client already exists and game is registered
@@ -251,8 +336,11 @@ func handleStartupError(err error, cfg *config.Config) error {
 	var backendErr *BackendUnavailableError
 	if errors.As(err, &backendErr) {
 		log.Println("========================================")
-		log.Println("CRITICAL: SteelSeries GG is not running")
-		log.Println("Please start SteelSeries GG and try again")
+		log.Println("CRITICAL: Cannot connect to SteelSeries GameSense API")
+		log.Println("This may indicate:")
+		log.Println("  - SteelSeries GG is not running")
+		log.Println("  - Backend is still cleaning up from previous instance")
+		log.Println("  - API endpoint is timing out")
 		log.Println("========================================")
 		return backendErr
 	}
@@ -263,9 +351,14 @@ func handleStartupError(err error, cfg *config.Config) error {
 	if cfg != nil {
 		displayWidth = cfg.Display.Width
 		displayHeight = cfg.Display.Height
-	} else if lastGoodConfig != nil {
-		displayWidth = lastGoodConfig.Display.Width
-		displayHeight = lastGoodConfig.Display.Height
+	} else {
+		// Read lastGoodConfig under lock to avoid data race
+		mu.Lock()
+		if lastGoodConfig != nil {
+			displayWidth = lastGoodConfig.Display.Width
+			displayHeight = lastGoodConfig.Display.Height
+		}
+		mu.Unlock()
 	}
 
 	// Determine error message based on error type
@@ -388,26 +481,24 @@ func startWithErrorDisplay(message string, width, height int) error {
 
 	log.Printf("Starting error display: %s", message)
 
-	// Create or reuse GameSense client with default settings
-	var err error
-	if client == nil {
-		client, err = gamesense.NewClient("STEELCLOCK_ERROR", "SteelClock Error")
-		if err != nil {
-			log.Printf("ERROR: Failed to create GameSense client for error display: %v", err)
-			return fmt.Errorf("failed to create GameSense client: %w", err)
-		}
+	// Create temporary GameSense client for error display
+	// Use same game name to avoid creating another registration
+	errorClient, err := gamesense.NewClient(config.DefaultGameName, config.DefaultGameDisplay)
+	if err != nil {
+		log.Printf("ERROR: Failed to create GameSense client for error display: %v", err)
+		return fmt.Errorf("failed to create GameSense client: %w", err)
+	}
 
-		// Register game
-		if err := client.RegisterGame("Custom"); err != nil {
-			log.Printf("ERROR: Failed to register game for error display: %v", err)
-			return fmt.Errorf("failed to register game: %w", err)
-		}
+	// Register game (use 0 for default timeout in error display)
+	if err := errorClient.RegisterGame(developerName, 0); err != nil {
+		log.Printf("ERROR: Failed to register game for error display: %v", err)
+		return fmt.Errorf("failed to register game: %w", err)
+	}
 
-		// Bind screen event
-		if err := client.BindScreenEvent("STEELCLOCK_DISPLAY", "screened-128x40"); err != nil {
-			log.Printf("ERROR: Failed to bind screen event for error display: %v", err)
-			return fmt.Errorf("failed to bind screen event: %w", err)
-		}
+	// Bind screen event
+	if err := errorClient.BindScreenEvent(eventName, deviceType); err != nil {
+		log.Printf("ERROR: Failed to bind screen event for error display: %v", err)
+		return fmt.Errorf("failed to bind screen event: %w", err)
 	}
 
 	// Create error widget
@@ -423,8 +514,8 @@ func startWithErrorDisplay(message string, width, height int) error {
 
 	// Create default config for compositor
 	errorCfg := &config.Config{
-		GameName:        "STEELCLOCK_ERROR",
-		GameDisplayName: "SteelClock Error",
+		GameName:        config.DefaultGameName,
+		GameDisplayName: config.DefaultGameDisplay,
 		RefreshRateMs:   500, // Flash at 500ms intervals
 		Display:         displayCfg,
 		Widgets:         []config.WidgetConfig{},
@@ -433,8 +524,8 @@ func startWithErrorDisplay(message string, width, height int) error {
 	// Create layout manager
 	layoutMgr := layout.NewManager(displayCfg, widgets)
 
-	// Create compositor
-	comp = compositor.NewCompositor(client, layoutMgr, widgets, errorCfg)
+	// Create compositor with temporary error client
+	comp = compositor.NewCompositor(errorClient, layoutMgr, widgets, errorCfg)
 
 	// Start compositor
 	if err := comp.Start(); err != nil {

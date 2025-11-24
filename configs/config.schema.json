@@ -4,19 +4,8 @@
   "title": "SteelClock Configuration",
   "description": "Configuration schema for SteelClock - display manager for SteelSeries APEX 7",
   "type": "object",
-  "required": ["game_name", "display", "widgets"],
+  "required": ["display", "widgets"],
   "properties": {
-    "game_name": {
-      "type": "string",
-      "description": "Game identifier for SteelSeries Engine (A-Z, 0-9, hyphen, underscore only)",
-      "pattern": "^[A-Z0-9_-]+$",
-      "default": "STEELCLOCK"
-    },
-    "game_display_name": {
-      "type": "string",
-      "description": "Human-readable game name shown in SteelSeries Engine",
-      "default": "SteelClock"
-    },
     "refresh_rate_ms": {
       "type": "integer",
       "description": "Display refresh rate in milliseconds (minimum 100ms = 10Hz)",
@@ -27,6 +16,44 @@
       "type": "boolean",
       "description": "Whether to unregister from GameSense API on exit. Set to false to avoid timeout issues. Default: false",
       "default": false
+    },
+    "deinitialize_timer_length_ms": {
+      "type": "integer",
+      "description": "Custom timeout for game deactivation after last event in milliseconds. Valid range: 1000-60000 (1-60 seconds). If not specified, GameSense uses 15000ms (15 seconds).",
+      "minimum": 1000,
+      "maximum": 60000
+    },
+    "event_batching_enabled": {
+      "type": "boolean",
+      "description": "Enable multiple event batching to reduce HTTP request overhead. Automatically falls back to single-frame mode if not supported by GameSense API. Default: false",
+      "default": false
+    },
+    "event_batch_size": {
+      "type": "integer",
+      "description": "Maximum number of frames to batch in a single request when event_batching_enabled is true. Valid range: 1-100. Default: 10",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 10
+    },
+    "supported_resolutions": {
+      "type": "array",
+      "description": "Additional display resolutions to render for multi-device support. Each resolution is rendered and sent in the same frame. If not specified, only the main display resolution is used.",
+      "items": {
+        "type": "object",
+        "required": ["width", "height"],
+        "properties": {
+          "width": {
+            "type": "integer",
+            "description": "Display width in pixels",
+            "minimum": 1
+          },
+          "height": {
+            "type": "integer",
+            "description": "Display height in pixels",
+            "minimum": 1
+          }
+        }
+      }
     },
     "bundled_font_url": {
       "type": "string",
@@ -100,6 +127,7 @@
           {"$ref": "#/definitions/keyboardLayoutWidget"},
           {"$ref": "#/definitions/volumeWidget"},
           {"$ref": "#/definitions/volumeMeterWidget"},
+          {"$ref": "#/definitions/audioVisualizerWidget"},
           {"$ref": "#/definitions/doomWidget"}
         ]
       }
@@ -887,6 +915,131 @@
                 "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
                 "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
                 "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
+                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
+                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "audioVisualizerWidget": {
+      "allOf": [
+        {"$ref": "#/definitions/widgetBase"},
+        {
+          "properties": {
+            "type": {"const": "audio_visualizer"},
+            "properties": {
+              "type": "object",
+              "properties": {
+                "display_mode": {
+                  "type": "string",
+                  "description": "Visualization mode: spectrum (frequency bars) or oscilloscope (waveform)",
+                  "enum": ["spectrum", "oscilloscope"],
+                  "default": "spectrum"
+                },
+                "update_interval": {
+                  "type": "number",
+                  "description": "Update interval in seconds (0.033 = ~30 FPS, 0.02 = ~50 FPS)",
+                  "minimum": 0.016,
+                  "default": 0.033
+                },
+                "bar_count": {
+                  "type": "integer",
+                  "description": "Number of frequency bars for spectrum mode",
+                  "minimum": 8,
+                  "maximum": 128,
+                  "default": 32
+                },
+                "frequency_scale": {
+                  "type": "string",
+                  "description": "Frequency scaling: logarithmic (like Winamp) or linear",
+                  "enum": ["logarithmic", "linear"],
+                  "default": "logarithmic"
+                },
+                "bar_style": {
+                  "type": "string",
+                  "description": "Bar rendering style: bars or line graph",
+                  "enum": ["bars", "line"],
+                  "default": "bars"
+                },
+                "smoothing": {
+                  "type": "number",
+                  "description": "Bar fall smoothing (0.0=instant drop, 1.0=very smooth)",
+                  "minimum": 0.0,
+                  "maximum": 1.0,
+                  "default": 0.7
+                },
+                "peak_hold": {
+                  "type": "boolean",
+                  "description": "Show peak indicators on top of bars",
+                  "default": true
+                },
+                "peak_hold_time": {
+                  "type": "number",
+                  "description": "How long to hold peak indicators in seconds",
+                  "minimum": 0.1,
+                  "default": 1.0
+                },
+                "waveform_style": {
+                  "type": "string",
+                  "description": "Oscilloscope waveform style: line or filled",
+                  "enum": ["line", "filled"],
+                  "default": "line"
+                },
+                "channel_mode": {
+                  "type": "string",
+                  "description": "Audio channel mode: mono, stereo_combined (overlay), or stereo_separated (split view)",
+                  "enum": ["mono", "stereo_combined", "stereo_separated"],
+                  "default": "stereo_combined"
+                },
+                "sample_count": {
+                  "type": "integer",
+                  "description": "Number of samples to display in oscilloscope mode",
+                  "minimum": 32,
+                  "maximum": 512,
+                  "default": 128
+                },
+                "frequency_compensation": {
+                  "type": "boolean",
+                  "description": "Apply frequency-dependent gain to balance spectrum (attenuates bass, boosts highs like Winamp)",
+                  "default": false
+                },
+                "spectrum_dynamic_scaling": {
+                  "type": "number",
+                  "description": "Per-bar dynamic gain strength to balance energy across frequency spectrum (0.0 = disabled, 1.0 = moderate, 2.0 = strong)",
+                  "minimum": 0.0,
+                  "maximum": 2.0,
+                  "default": 0.0
+                },
+                "spectrum_dynamic_scaling_window": {
+                  "type": "number",
+                  "description": "Time window in seconds for energy averaging (advanced tuning, smaller = more responsive)",
+                  "minimum": 0.1,
+                  "maximum": 5.0,
+                  "default": 0.5
+                },
+                "fill_color": {
+                  "type": "integer",
+                  "description": "Main visualization color (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "left_channel_color": {
+                  "type": "integer",
+                  "description": "Left channel color for stereo modes (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 255
+                },
+                "right_channel_color": {
+                  "type": "integer",
+                  "description": "Right channel color for stereo modes (0-255)",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "default": 200
+                },
                 "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
                 "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
               }

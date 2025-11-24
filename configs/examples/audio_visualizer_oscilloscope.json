@@ -1,0 +1,36 @@
+{
+  "game_name": "SteelClock",
+  "game_display_name": "SteelClock - Oscilloscope",
+  "refresh_rate_ms": 33,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background_color": 0
+  },
+  "widgets": [
+    {
+      "id": "oscilloscope",
+      "type": "audio_visualizer",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40
+      },
+      "style": {
+        "background_color": 0,
+        "border": false
+      },
+      "properties": {
+        "display_mode": "oscilloscope",
+        "update_interval": 0.033,
+        "waveform_style": "line",
+        "channel_mode": "stereo_separated",
+        "sample_count": 128,
+        "left_channel_color": 255,
+        "right_channel_color": 200
+      }
+    }
+  ]
+}

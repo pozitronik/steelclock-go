@@ -11,7 +11,7 @@ import (
 
 // API defines the interface for GameSense API operations
 type API interface {
-	RegisterGame(developer string) error
+	RegisterGame(developer string, deinitializeTimerMs int) error
 	BindScreenEvent(eventName, deviceType string) error
 	SendScreenData(eventName string, bitmapData []int) error
 	SendHeartbeat() error
@@ -48,11 +48,16 @@ func NewClient(gameName, gameDisplayName string) (*Client, error) {
 }
 
 // RegisterGame registers the application with SteelSeries Engine
-func (c *Client) RegisterGame(developer string) error {
-	payload := map[string]string{
+func (c *Client) RegisterGame(developer string, deinitializeTimerMs int) error {
+	payload := map[string]interface{}{
 		"game":              c.gameName,
 		"game_display_name": c.gameDisplayName,
 		"developer":         developer,
+	}
+
+	// Add deinitialize_timer_length_ms if specified (optional field)
+	if deinitializeTimerMs > 0 {
+		payload["deinitialize_timer_length_ms"] = deinitializeTimerMs
 	}
 
 	if err := c.post("/game_metadata", payload); err != nil {
@@ -116,6 +121,32 @@ func (c *Client) SendScreenData(eventName string, bitmapData []int) error {
 	return nil
 }
 
+// SendScreenDataMultiRes sends bitmap data for multiple resolutions in a single frame
+// resolutionData maps resolution keys (e.g., "image-data-128x40") to bitmap data
+func (c *Client) SendScreenDataMultiRes(eventName string, resolutionData map[string][]int) error {
+	if len(resolutionData) == 0 {
+		return fmt.Errorf("no resolution data provided")
+	}
+
+	// Build frame with all resolutions
+	frameData := make(map[string]interface{})
+	for key, bitmapData := range resolutionData {
+		frameData[key] = bitmapData
+	}
+
+	payload := map[string]interface{}{
+		"game":  c.gameName,
+		"event": eventName,
+		"data": map[string]interface{}{
+			"frame": frameData,
+		},
+	}
+
+	// Fire and forget pattern - don't check response
+	_ = c.post("/game_event", payload)
+	return nil
+}
+
 // SendHeartbeat sends a heartbeat to keep the game alive
 func (c *Client) SendHeartbeat() error {
 	payload := map[string]string{
@@ -126,6 +157,71 @@ func (c *Client) SendHeartbeat() error {
 		return fmt.Errorf("failed to send heartbeat: %w", err)
 	}
 
+	return nil
+}
+
+// SupportsMultipleEvents checks if the GameSense API supports multiple event batching
+// Returns true if supported (200 OK), false if not supported (404) or error
+func (c *Client) SupportsMultipleEvents() bool {
+	req, err := http.NewRequest("GET", c.baseURL+"/supports_multiple_game_events", nil)
+	if err != nil {
+		return false
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return false
+	}
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Printf("Failed to close response body: %v", closeErr)
+		}
+	}()
+
+	supported := resp.StatusCode == http.StatusOK
+	if supported {
+		log.Println("Multiple event batching supported by GameSense API")
+	} else {
+		log.Println("Multiple event batching NOT supported by GameSense API (will use single-frame mode)")
+	}
+
+	return supported
+}
+
+// SendMultipleScreenData sends multiple bitmap frames in a single request
+// This reduces HTTP overhead when supported by the GameSense API
+func (c *Client) SendMultipleScreenData(eventName string, bitmaps [][]int) error {
+	if len(bitmaps) == 0 {
+		return nil
+	}
+
+	// Validate all bitmaps
+	for i, bitmap := range bitmaps {
+		if len(bitmap) != 640 {
+			return fmt.Errorf("invalid bitmap %d size: expected 640 bytes, got %d", i, len(bitmap))
+		}
+	}
+
+	// Build events array
+	events := make([]map[string]interface{}, len(bitmaps))
+	for i, bitmap := range bitmaps {
+		events[i] = map[string]interface{}{
+			"event": eventName,
+			"data": map[string]interface{}{
+				"frame": map[string]interface{}{
+					"image-data-128x40": bitmap,
+				},
+			},
+		}
+	}
+
+	payload := map[string]interface{}{
+		"game":   c.gameName,
+		"events": events,
+	}
+
+	// Fire and forget pattern - don't check response
+	_ = c.post("/multiple_game_events", payload)
 	return nil
 }
 
@@ -141,6 +237,11 @@ func (c *Client) RemoveGame() error {
 
 	log.Printf("Game removed: %s", c.gameName)
 	return nil
+}
+
+// GameName returns the game name used by this client
+func (c *Client) GameName() string {
+	return c.gameName
 }
 
 // post sends a POST request to the GameSense API

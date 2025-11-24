@@ -36,7 +36,6 @@ Add this line at the top of your configuration file:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
   ...
 }
 ```
@@ -50,10 +49,13 @@ Supported IDEs: VS Code, JetBrains IDEs (IntelliJ, PyCharm, WebStorm), Visual St
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
-  "game_display_name": "SteelClock",
   "refresh_rate_ms": 100,
   "unregister_on_exit": false,
+  "deinitialize_timer_length_ms": 15000,
+  "supported_resolutions": [
+    {"width": 128, "height": 36},
+    {"width": 128, "height": 48}
+  ],
   "bundled_font_url": "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf",
   "display": { ... },
   "layout": { ... },
@@ -63,13 +65,13 @@ Supported IDEs: VS Code, JetBrains IDEs (IntelliJ, PyCharm, WebStorm), Visual St
 
 ### Global Settings
 
-| Property             | Type    | Default                                                                             | Description                                             |
-|----------------------|---------|-------------------------------------------------------------------------------------|---------------------------------------------------------|
-| `game_name`          | string  | "STEELCLOCK"                                                                        | Game identifier (A-Z, 0-9, -, _ only)                   |
-| `game_display_name`  | string  | "SteelClock"                                                                        | Human-readable name                                     |
-| `refresh_rate_ms`    | integer | 100                                                                                 | Display refresh rate (min 100ms = 10Hz)                 |
-| `unregister_on_exit` | boolean | false                                                                               | Unregister from GameSense API on exit (see notes below) |
-| `bundled_font_url`   | string  | "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf" (optional) | URL for downloading bundled font (see notes below)      |
+| Property                       | Type    | Default                                                                             | Description                                                               |
+|--------------------------------|---------|-------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
+| `refresh_rate_ms`              | integer | 100                                                                                 | Display refresh rate (min 100ms = 10Hz)                                   |
+| `unregister_on_exit`           | boolean | false                                                                               | Unregister from GameSense API on exit (see notes below)                   |
+| `deinitialize_timer_length_ms` | integer | 15000 (optional)                                                                    | Game deactivation timeout in milliseconds (see notes below)               |
+| `supported_resolutions`        | array   | [] (optional)                                                                       | Additional display resolutions for multi-device support (see notes below) |
+| `bundled_font_url`             | string  | "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf" (optional) | URL for downloading bundled font (see notes below)                        |
 
 **About `unregister_on_exit`**:
 
@@ -86,6 +88,88 @@ This option controls whether SteelClock calls the GameSense API `/remove_game` e
 - During configuration reload, the game is never unregistered regardless of this setting (to avoid disruption)
 - Only affects final application shutdown (via tray menu "Quit")
 - The `/remove_game` endpoint can be slow or timeout, which is why the default is false
+
+**About `deinitialize_timer_length_ms`**:
+
+This option controls how long the GameSense API keeps the application active after the last event is sent (in milliseconds).
+
+- **Default**: 15000ms (15 seconds) - used by GameSense if not specified
+- **Valid range**: 1000-60000 (1-60 seconds)
+- **Optional**: This field can be omitted to use the default behavior
+
+**When to use**:
+- **Increase the value** (e.g., 30000-60000) if you want the display to stay active longer after SteelClock stops sending events
+- **Decrease the value** (e.g., 1000-5000) if you want the display to clear quickly after the application exits or becomes inactive
+- **Omit the field** to use GameSense's default 15-second timeout
+
+**Technical notes**:
+- This setting is sent to the GameSense API during game registration
+- It affects when the OLED display automatically clears after the last frame is sent
+- Useful for customizing the user experience when SteelClock is paused or exits unexpectedly
+
+**About `supported_resolutions`**:
+
+This option enables multi-device support by rendering frames at multiple resolutions simultaneously. All resolution variants are sent in a single frame update.
+
+- **Default**: Empty array (only main `display` resolution is used)
+- **Format**: Array of objects with `width` and `height` properties
+- **Example**:
+```json
+"supported_resolutions": [
+  {"width": 128, "height": 36},
+  {"width": 128, "height": 48},
+  {"width": 128, "height": 52}
+]
+```
+
+**Known SteelSeries Device Resolutions**:
+
+| Resolution | Devices                                                  |
+|------------|----------------------------------------------------------|
+| **128x36** | SteelSeries Rival 700, Rival 710 (mouse)                 |
+| **128x40** | SteelSeries APEX 7 (keyboard)                            |
+| **128x48** | SteelSeries Arctis Pro Wireless (headset)                |
+| **128x52** | SteelSeries GameDAC, Arctis Pro + GameDAC (audio device) |
+
+**How it works**:
+- SteelClock renders the widget canvas at the main `display` resolution
+- The same canvas is then scaled/rendered at each `supported_resolutions` entry
+- All resolution variants are sent in a single GameSense API frame update
+- Connected devices will display the appropriate resolution for their screen
+
+**When to use**:
+- **Use this** if you have multiple SteelSeries OLED devices (e.g., APEX 7 + Arctis Pro)
+- **Skip this** if you only have one device (just configure `display.width` and `display.height`)
+
+**Example configurations**:
+
+*For APEX 7 keyboard + Arctis Pro headset:*
+```json
+{
+  "display": {"width": 128, "height": 40},  // Main resolution (APEX 7)
+  "supported_resolutions": [
+    {"width": 128, "height": 48}  // Arctis Pro Wireless
+  ]
+}
+```
+
+*For all SteelSeries OLED devices:*
+```json
+{
+  "display": {"width": 128, "height": 40},
+  "supported_resolutions": [
+    {"width": 128, "height": 36},  // Rival 700/710
+    {"width": 128, "height": 48},  // Arctis Pro Wireless
+    {"width": 128, "height": 52}   // GameDAC
+  ]
+}
+```
+
+**Technical notes**:
+- Each resolution is independently rendered from the same widget canvas
+- Rendering overhead scales linearly with number of resolutions
+- GameSense API automatically routes each resolution to matching devices
+- No device detection required - the API handles device matching
 
 **About `bundled_font_url`**:
 
@@ -881,6 +965,106 @@ When `auto_hide_on_silence` is enabled:
 - Perfect for temporary audio level indicators
 - Works with standard `auto_hide` and `auto_hide_timeout` properties
 
+### Audio Visualizer Widget
+
+**Platform**: Windows only (uses Windows Core Audio API)
+
+**Display Modes**: spectrum (frequency bars), oscilloscope (waveform)
+
+```json
+{
+  "type": "audio_visualizer",
+  "properties": {
+    "display_mode": "spectrum",
+    "update_interval": 0.033,
+    "bar_count": 32,
+    "frequency_scale": "logarithmic",
+    "bar_style": "bars",
+    "smoothing": 0.7,
+    "peak_hold": true,
+    "peak_hold_time": 1.0,
+    "waveform_style": "line",
+    "channel_mode": "stereo_combined",
+    "sample_count": 128,
+    "fill_color": 255,
+    "left_channel_color": 255,
+    "right_channel_color": 200,
+    "auto_hide": false,
+    "auto_hide_timeout": 2.0
+  }
+}
+```
+
+**Common Properties**:
+
+| Property | Type | Range | Default | Description |
+|----------|------|-------|---------|-------------|
+| `display_mode` | string | spectrum, oscilloscope | "spectrum" | Visualization mode |
+| `update_interval` | number | ≥0.016 | 0.033 | Update interval in seconds (~30 FPS) |
+| `fill_color` | integer | 0-255 | 255 | Main visualization color |
+
+**Spectrum Analyzer Properties** (when `display_mode: "spectrum"`):
+
+| Property | Type | Range | Default | Description |
+|----------|------|-------|---------|-------------|
+| `bar_count` | integer | 8-128 | 32 | Number of frequency bars |
+| `frequency_scale` | string | logarithmic, linear | "logarithmic" | Frequency distribution (logarithmic = Winamp-style) |
+| `bar_style` | string | bars, line | "bars" | Bar rendering: filled bars or line graph |
+| `smoothing` | number | 0.0-1.0 | 0.7 | Bar fall smoothing (0.0 = instant, 1.0 = very smooth) |
+| `peak_hold` | boolean | - | true | Show peak indicators on top of bars |
+| `peak_hold_time` | number | ≥0.1 | 1.0 | Peak hold duration in seconds |
+
+**Oscilloscope Properties** (when `display_mode: "oscilloscope"`):
+
+| Property | Type | Range | Default | Description |
+|----------|------|-------|---------|-------------|
+| `waveform_style` | string | line, filled | "line" | Waveform rendering style |
+| `channel_mode` | string | mono, stereo_combined, stereo_separated | "stereo_combined" | Audio channel display mode |
+| `sample_count` | integer | 32-512 | 128 | Number of audio samples to display |
+| `left_channel_color` | integer | 0-255 | 255 | Left channel color (stereo modes) |
+| `right_channel_color` | integer | 0-255 | 200 | Right channel color (stereo modes) |
+
+**Display Mode Details**:
+
+**spectrum**: Classic spectrum analyzer with frequency bars (like Winamp, Windows Media Player).
+- Captures system audio via WASAPI loopback
+- Performs FFT (Fast Fourier Transform) to analyze frequencies
+- Displays frequency magnitude as vertical bars
+- **logarithmic scale**: More bars for bass/mid frequencies, fewer for high (natural hearing perception)
+- **linear scale**: Equal frequency distribution across all bars
+- **peak_hold**: Shows peak dots that slowly decay after peaks
+- **smoothing**: Controls how fast bars fall after audio quiets
+
+**oscilloscope**: Real-time audio waveform display.
+- Shows raw audio signal as time-domain waveform
+- **line style**: Single line connecting sample points
+- **filled style**: Filled area from center to waveform
+- **mono**: Single waveform (left channel only)
+- **stereo_combined**: Left and right channels overlaid on same waveform
+- **stereo_separated**: Left channel top half, right channel bottom half
+
+**Performance Considerations**:
+
+- **Update rate**: 0.033 (~30 FPS) recommended. Faster rates (0.02 = 50 FPS) use more CPU.
+- **Bar count**: More bars (64+) require more FFT processing. 16-32 bars optimal for 128px width.
+- **Smoothing**: Higher values (0.8-0.9) create fluid animations but may feel less responsive.
+
+**Audio Source**:
+
+The widget captures audio from the system's default output device in loopback mode. This means:
+- It visualizes whatever is currently playing on your system
+- Works with any audio source (music players, games, browsers, etc.)
+- Requires Windows Core Audio API (Vista and later)
+- No special audio device configuration needed
+
+**Platform Support**:
+
+This widget only works on Windows due to Windows Core Audio API dependency. On Linux/Unix systems, the widget will display an error message.
+
+**Example Configurations**:
+
+See `configs/examples/audio_visualizer.json` for spectrum analyzer example and `configs/examples/audio_visualizer_oscilloscope.json` for oscilloscope example.
+
 ## Examples
 
 ### Example 1: Simple Clock
@@ -888,8 +1072,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
-  "game_display_name": "SteelClock",
   "refresh_rate_ms": 100,
   "display": {
     "width": 128,
@@ -921,7 +1103,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
   "widgets": [
@@ -955,7 +1136,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
   "widgets": [
@@ -983,8 +1163,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
-  "game_display_name": "System Monitor",
   "refresh_rate_ms": 100,
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
@@ -1052,7 +1230,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
   "widgets": [
@@ -1079,7 +1256,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
   "widgets": [
@@ -1105,7 +1281,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
   "widgets": [
@@ -1140,8 +1315,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
-  "game_display_name": "System Gauges",
   "refresh_rate_ms": 100,
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
@@ -1179,7 +1352,6 @@ When `auto_hide_on_silence` is enabled:
 ```json
 {
   "$schema": "./config.schema.json",
-  "game_name": "STEELCLOCK",
   "display": {"width": 128, "height": 40, "background_color": 0},
   "layout": {"type": "basic"},
   "widgets": [

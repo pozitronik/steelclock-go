@@ -32,6 +32,8 @@ func CreateWidget(cfg config.WidgetConfig) (Widget, error) {
 		return NewVolumeWidget(cfg)
 	case "volume_meter":
 		return NewVolumeMeterWidget(cfg)
+	case "audio_visualizer":
+		return NewAudioVisualizerWidget(cfg)
 	case "doom":
 		return NewDoomWidget(cfg)
 	default:
