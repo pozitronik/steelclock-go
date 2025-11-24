@@ -404,49 +404,6 @@ func drawCirclePoints(img *image.Gray, centerX, centerY, x, y int, c color.Gray)
 	}
 }
 
-// DrawWarningTriangle draws a warning triangle (!) symbol
-func DrawWarningTriangle(img *image.Gray, x, y, size int, c color.Gray) {
-	bounds := img.Bounds()
-
-	// Draw triangle outline
-	// Top vertex
-	topX := x + size/2
-	topY := y - size/2
-
-	// Bottom left vertex
-	leftX := x
-	leftY := y + size/2
-
-	// Bottom right vertex
-	rightX := x + size
-	rightY := y + size/2
-
-	// Draw triangle edges
-	DrawLine(img, topX, topY, leftX, leftY, c)
-	DrawLine(img, leftX, leftY, rightX, rightY, c)
-	DrawLine(img, rightX, rightY, topX, topY, c)
-
-	// Draw exclamation mark inside
-	// Vertical line of !
-	exclamX := x + size/2
-	exclamTopY := y - size/4
-	exclamBottomY := y + size/6
-
-	for py := exclamTopY; py <= exclamBottomY; py++ {
-		if py >= bounds.Min.Y && py < bounds.Max.Y &&
-			exclamX >= bounds.Min.X && exclamX < bounds.Max.X {
-			img.Set(exclamX, py, c)
-		}
-	}
-
-	// Dot of !
-	dotY := y + size/3
-	if dotY >= bounds.Min.Y && dotY < bounds.Max.Y &&
-		exclamX >= bounds.Min.X && exclamX < bounds.Max.X {
-		img.Set(exclamX, dotY, c)
-	}
-}
-
 // DrawRectangle draws a rectangle border at the specified position
 //nolint:gocyclo // Edge and corner handling requires multiple conditions
 func DrawRectangle(img *image.Gray, x, y, w, h int, borderColor uint8) {

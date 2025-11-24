@@ -408,63 +408,6 @@ func TestDrawCircle_Clipping(t *testing.T) {
 	}
 }
 
-func TestDrawWarningTriangle(t *testing.T) {
-	tests := []struct {
-		name   string
-		width  int
-		height int
-		x      int
-		y      int
-		size   int
-	}{
-		{"Small triangle", 30, 30, 10, 15, 10},
-		{"Medium triangle", 50, 50, 15, 25, 20},
-		{"Large triangle", 60, 60, 10, 30, 30},
-		{"Tiny triangle", 20, 20, 5, 10, 6},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			img := NewGrayscaleImage(tt.width, tt.height, 0)
-			DrawWarningTriangle(img, tt.x, tt.y, tt.size, color.Gray{Y: 255})
-
-			// Count filled pixels
-			filled := 0
-			for y := 0; y < tt.height; y++ {
-				for x := 0; x < tt.width; x++ {
-					if img.GrayAt(x, y).Y == 255 {
-						filled++
-					}
-				}
-			}
-
-			if filled == 0 {
-				t.Error("DrawWarningTriangle did not draw any pixels")
-			}
-		})
-	}
-}
-
-func TestDrawWarningTriangle_ExclamationMark(t *testing.T) {
-	// Verify exclamation mark is drawn inside triangle
-	img := NewGrayscaleImage(40, 40, 0)
-	DrawWarningTriangle(img, 10, 20, 20, color.Gray{Y: 200})
-
-	// Check if pixels are drawn in the center (exclamation mark area)
-	centerX := 10 + 20/2
-	exclamPixels := 0
-
-	for y := 0; y < 40; y++ {
-		if img.GrayAt(centerX, y).Y == 200 {
-			exclamPixels++
-		}
-	}
-
-	if exclamPixels == 0 {
-		t.Error("Exclamation mark not drawn in warning triangle")
-	}
-}
-
 func TestDrawRectangle(t *testing.T) {
 	tests := []struct {
 		name        string

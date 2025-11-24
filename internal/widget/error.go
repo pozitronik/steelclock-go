@@ -72,25 +72,32 @@ func (w *ErrorWidget) Render() (image.Image, error) {
 
 	c := color.Gray{Y: uint8(style.BorderColor)}
 
-	// Draw warning triangles on left and right
-	// Triangle size
-	triangleSize := 10
+	// Draw warning triangles on left and right using glyph system
+	// Select icon size based on display height
+	var iconSet *glyphs.GlyphSet
 	if pos.H < 20 {
-		triangleSize = pos.H / 2
+		iconSet = glyphs.CommonIcons8x8
+	} else {
+		iconSet = glyphs.CommonIcons10x10
+	}
+
+	warningIcon := glyphs.GetIcon(iconSet, "warning")
+	if warningIcon == nil {
+		return img, nil // Fail gracefully if icon not found
 	}
 
 	// Left triangle
 	leftX := 5
 	centerY := pos.H / 2
-	bitmap.DrawWarningTriangle(img, leftX, centerY, triangleSize, c)
+	glyphs.DrawGlyph(img, warningIcon, leftX, centerY-warningIcon.Height/2, c)
 
 	// Right triangle
-	rightX := pos.W - 5 - triangleSize
-	bitmap.DrawWarningTriangle(img, rightX, centerY, triangleSize, c)
+	rightX := pos.W - 5 - warningIcon.Width
+	glyphs.DrawGlyph(img, warningIcon, rightX, centerY-warningIcon.Height/2, c)
 
 	// Draw message text centered between triangles
-	availableX := leftX + triangleSize + 5
-	availableW := (rightX) - (leftX + triangleSize + 5)
+	availableX := leftX + warningIcon.Width + 5
+	availableW := (rightX) - (leftX + warningIcon.Width + 5)
 
 	// Calculate text width using glyph system
 	textWidth := glyphs.MeasureText(w.message, glyphs.Font5x7)
