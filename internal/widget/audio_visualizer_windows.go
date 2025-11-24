@@ -773,24 +773,15 @@ func (ac *AudioCaptureWCA) initialize() error {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
-	// Lock thread for COM
-	runtime.LockOSThread()
-	ac.threadLocked = true
-
-	// Initialize COM
-	err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED)
+	// Ensure COM is initialized on this thread
+	err := EnsureCOMInitialized()
 	if err != nil {
-		errMsg := err.Error()
-		if errMsg == "Incorrect function." || errMsg == "Cannot change thread mode after it is set." {
-			// COM already initialized on this thread
-		} else {
-			runtime.UnlockOSThread()
-			ac.threadLocked = false
-			return fmt.Errorf("CoInitializeEx failed: %w", err)
-		}
-	} else {
-		ac.comInitialized = true
+		return fmt.Errorf("failed to initialize COM: %w", err)
 	}
+
+	// Note: We don't own COM cleanup - it's managed per-thread by EnsureCOMInitialized
+	ac.comInitialized = false // We don't own the COM initialization
+	ac.threadLocked = false   // We don't own the thread lock
 
 	// Create device enumerator
 	var mmde *wca.IMMDeviceEnumerator

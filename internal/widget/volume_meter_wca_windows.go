@@ -94,34 +94,19 @@ func (mr *MeterReaderWCA) initialize() error {
 	mr.mu.Lock()
 	defer mr.mu.Unlock()
 
-	// Lock this goroutine to the current OS thread for COM apartment threading
-	// COM requires thread affinity - once initialized on a thread, all COM calls
-	// must happen on that same thread
-	runtime.LockOSThread()
-	mr.threadLocked = true
+	log.Printf("[METER-WCA] Ensuring COM is initialized")
 
-	log.Printf("[METER-WCA] Initializing COM (ONCE per goroutine)")
-
-	// Initialize COM - ONCE, not per call
-	// Note: CoInitializeEx may return an error if COM is already initialized on this thread
-	// In test environments, this is expected and we handle it gracefully
-	err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED)
+	// Ensure COM is initialized on this thread
+	err := EnsureCOMInitialized()
 	if err != nil {
-		// Check if the error is because COM is already initialized (S_FALSE or RPC_E_CHANGED_MODE)
-		// In that case, we can continue - COM is ready to use
-		errMsg := err.Error()
-		if errMsg == "Incorrect function." || errMsg == "Cannot change thread mode after it is set." {
-			log.Printf("[METER-WCA] COM already initialized on this thread (expected in test environment)")
-			// Don't set comInitialized since we didn't initialize it
-		} else {
-			runtime.UnlockOSThread()
-			mr.threadLocked = false
-			return fmt.Errorf("CoInitializeEx failed: %w", err)
-		}
-	} else {
-		log.Printf("[METER-WCA] COM initialized successfully")
-		mr.comInitialized = true
+		return fmt.Errorf("failed to initialize COM: %w", err)
 	}
+
+	log.Printf("[METER-WCA] COM is ready")
+
+	// Note: We don't own COM cleanup - it's managed per-thread by EnsureCOMInitialized
+	mr.comInitialized = false // We don't own the COM initialization
+	mr.threadLocked = false   // We don't own the thread lock
 
 	// Create device enumerator
 	var mmde *wca.IMMDeviceEnumerator
