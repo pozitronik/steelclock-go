@@ -292,7 +292,9 @@ func applyTypeSpecificDefaults(w *WidgetConfig) {
 	case "disk":
 		applyDiskDefaults(w)
 	case "keyboard":
-		applyKeyboardDefaults(w)
+		// Color defaults are now handled in the widget constructor
+		// to properly distinguish between nil (not set) and 0 (explicitly set to black)
+		return
 	case "audio_visualizer":
 		applyAudioVisualizerDefaults(w)
 	}
@@ -353,16 +355,6 @@ func applyDiskDefaults(w *WidgetConfig) {
 	}
 	if w.Properties.HistoryLength == 0 {
 		w.Properties.HistoryLength = 30
-	}
-}
-
-// applyKeyboardDefaults sets default values for keyboard widgets
-func applyKeyboardDefaults(w *WidgetConfig) {
-	if w.Properties.IndicatorColorOn == 0 {
-		w.Properties.IndicatorColorOn = 255
-	}
-	if w.Properties.IndicatorColorOff == 0 {
-		w.Properties.IndicatorColorOff = 100
 	}
 }
 

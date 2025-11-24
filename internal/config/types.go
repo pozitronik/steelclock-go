@@ -123,8 +123,8 @@ type WidgetProperties struct {
 	NumLockOff        *string `json:"num_lock_off"`
 	ScrollLockOn      *string `json:"scroll_lock_on"`
 	ScrollLockOff     *string `json:"scroll_lock_off"`
-	IndicatorColorOn  int     `json:"indicator_color_on,omitempty"`
-	IndicatorColorOff int     `json:"indicator_color_off,omitempty"`
+	IndicatorColorOn  *int    `json:"indicator_color_on"`
+	IndicatorColorOff *int    `json:"indicator_color_off"`
 
 	// Keyboard layout widget
 	DisplayFormat string `json:"display_format,omitempty"` // "iso639-1", "iso639-2", "full"

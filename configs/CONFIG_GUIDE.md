@@ -676,8 +676,13 @@ Available disks: PhysicalDrive0, PhysicalDrive1
 
 ### Keyboard Widget
 
-**Display Modes**: Text only (customizable symbols)
+**Display Modes**: Auto-detected - Text (customizable symbols) or Icon (graphical icons)
 
+The widget automatically detects the display mode based on indicator configuration:
+- **Text mode**: Used when ANY `*_lock_on/off` property is explicitly defined
+- **Icon mode**: Used when ALL `*_lock_on/off` properties are omitted
+
+**Text Mode Example:**
 ```json
 {
   "type": "keyboard",
@@ -685,7 +690,7 @@ Available disks: PhysicalDrive0, PhysicalDrive1
     "update_interval": 0.2,
     "spacing": 3,
     "separator": " ",
-    "caps_lock_on": "C",
+    "caps_lock_on": "C",  
     "caps_lock_off": "c",
     "num_lock_on": "N",
     "num_lock_off": "n",
@@ -702,19 +707,37 @@ Available disks: PhysicalDrive0, PhysicalDrive1
 }
 ```
 
-| Property              | Type    | Range | Default | Description                                          |
-|-----------------------|---------|-------|---------|------------------------------------------------------|
-| `update_interval`     | number  | ≥0.1  | 0.2     | Update interval (seconds)                            |
-| `spacing`             | integer | ≥0    | 3       | Spacing between indicators (pixels)                  |
-| `separator`           | string  | -     | ""      | Separator between indicators (empty=condensed)       |
-| `caps_lock_on`        | string  | -     | "C"     | Symbol for Caps Lock ON (omit for default)           |
-| `caps_lock_off`       | string  | -     | "c"     | Symbol for Caps Lock OFF (omit for default)          |
-| `num_lock_on`         | string  | -     | "N"     | Symbol for Num Lock ON (omit for default)            |
-| `num_lock_off`        | string  | -     | "n"     | Symbol for Num Lock OFF (omit for default)           |
-| `scroll_lock_on`      | string  | -     | "S"     | Symbol for Scroll Lock ON (omit for default)         |
-| `scroll_lock_off`     | string  | -     | "s"     | Symbol for Scroll Lock OFF (omit for default)        |
-| `indicator_color_on`  | integer | 0-255 | 255     | Color for ON state                                   |
-| `indicator_color_off` | integer | 0-255 | 100     | Color for OFF state                                  |
+**Icon Mode Example** (omit all indicator properties):
+```json
+{
+  "type": "keyboard",
+  "properties": {
+    "update_interval": 0.2,
+    "spacing": 4,
+    "indicator_color_on": 255,
+    "indicator_color_off": 80,
+    "horizontal_align": "center",
+    "vertical_align": "center",
+    "padding": 2
+  }
+}
+```
+
+**Configuration Properties:**
+
+| Property                  | Type    | Range       | Default  | Description                                          |
+|---------------------------|---------|-------------|----------|------------------------------------------------------|
+| `update_interval`         | number  | ≥0.1        | 0.2      | Update interval (seconds)                            |
+| `spacing`                 | integer | ≥0          | 3        | Spacing between indicators (pixels)                  |
+| `separator`               | string  | -           | ""       | Separator between indicators (text mode only)        |
+| `caps_lock_on`            | string  | -           | "C"      | Symbol for Caps Lock ON (omit for icon mode)         |
+| `caps_lock_off`           | string  | -           | "c"      | Symbol for Caps Lock OFF (omit for icon mode)        |
+| `num_lock_on`             | string  | -           | "N"      | Symbol for Num Lock ON (omit for icon mode)          |
+| `num_lock_off`            | string  | -           | "n"      | Symbol for Num Lock OFF (omit for icon mode)         |
+| `scroll_lock_on`          | string  | -           | "S"      | Symbol for Scroll Lock ON (omit for icon mode)       |
+| `scroll_lock_off`         | string  | -           | "s"      | Symbol for Scroll Lock OFF (omit for icon mode)      |
+| `indicator_color_on`      | integer | 0-255       | 255      | Color for ON state                                   |
+| `indicator_color_off`     | integer | 0-255       | 100      | Color for OFF state                                  |
 
 **Separator Examples**:
 - `""` (default): Condensed output → `cns` or `CNS`
@@ -726,11 +749,27 @@ Available disks: PhysicalDrive0, PhysicalDrive1
 - **Set to `""`** explicitly → Hide that indicator (e.g., `"caps_lock_on": ""` hides caps when on)
 - **Set to value** → Use that value (e.g., `"caps_lock_on": "⬆"`)
 
-**Symbol Examples**:
+**Symbol Examples** (Text Mode):
 - Default letters: `"C"`, `"N"`, `"S"` (uppercase for ON, lowercase for OFF)
 - Unicode arrows: `"↑"`, `"↓"`, `"▲"`, `"▼"`
 - Text labels: `"CAPS"`, `"NUM"`, `"SCR"`
 - Emoji (requires emoji font): `"⬆"`, `"🔒"`, `"⬇"`
+
+**Icon Mode Details**:
+
+When all `*_lock_on/off` properties are omitted, the widget displays graphical icons:
+- **Caps Lock**: Up arrow (bright when ON, dim when OFF) - indicates uppercase
+- **Num Lock**: Closed lock (ON) / Open lock (OFF) - lock indicator
+- **Scroll Lock**: Down arrow (bright when ON, dim when OFF) - scroll indicator
+
+**Icon Size**: Automatically calculated based on widget dimensions
+- Widget tries sizes in descending order: 16px → 12px → 8px
+- Selects the largest size that fits within available space
+- Respects `padding` and `spacing` when calculating fit
+
+**Properties used in Icon Mode**:
+- **Respected**: `horizontal_align`, `vertical_align`, `padding`, `spacing`, `indicator_color_on`, `indicator_color_off`
+- **Ignored**: `caps_lock_on/off`, `num_lock_on/off`, `scroll_lock_on/off`, `separator`, `font`, `font_size`
 
 ### Keyboard Layout Widget
 
