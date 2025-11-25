@@ -161,7 +161,7 @@
       "description": "Text rendering properties",
       "properties": {
         "format": { "type": "string", "description": "Format string (widget-specific)" },
-        "font": { "type": "string", "description": "Font name or TTF path" },
+        "font": { "type": ["string", "null"], "description": "Font name or TTF path (null = bundled font)", "default": null },
         "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 10 },
         "align": {
           "type": "object",
@@ -639,24 +639,24 @@
                     "type": "object",
                     "description": "Caps Lock indicator",
                     "properties": {
-                      "on": { "type": "string", "description": "Text when Caps Lock is on", "default": "C" },
-                      "off": { "type": "string", "description": "Text when Caps Lock is off", "default": "c" }
+                      "on": { "type": ["string", "null"], "description": "Text when Caps Lock is on (null = embedded glyph)", "default": null },
+                      "off": { "type": ["string", "null"], "description": "Text when Caps Lock is off (null = embedded glyph)", "default": null }
                     }
                   },
                   "num": {
                     "type": "object",
                     "description": "Num Lock indicator",
                     "properties": {
-                      "on": { "type": "string", "description": "Text when Num Lock is on", "default": "N" },
-                      "off": { "type": "string", "description": "Text when Num Lock is off", "default": "n" }
+                      "on": { "type": ["string", "null"], "description": "Text when Num Lock is on (null = embedded glyph)", "default": null },
+                      "off": { "type": ["string", "null"], "description": "Text when Num Lock is off (null = embedded glyph)", "default": null }
                     }
                   },
                   "scroll": {
                     "type": "object",
                     "description": "Scroll Lock indicator",
                     "properties": {
-                      "on": { "type": "string", "description": "Text when Scroll Lock is on", "default": "S" },
-                      "off": { "type": "string", "description": "Text when Scroll Lock is off", "default": "s" }
+                      "on": { "type": ["string", "null"], "description": "Text when Scroll Lock is on (null = embedded glyph)", "default": null },
+                      "off": { "type": ["string", "null"], "description": "Text when Scroll Lock is off (null = embedded glyph)", "default": null }
                     }
                   }
                 }
