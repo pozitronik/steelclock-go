@@ -278,10 +278,16 @@ func startAppWithConfig(cfg *config.Config) error {
 		if err != nil {
 			return err
 		}
-		currentBackend = cfg.Backend
+
+		// Track actual backend used (important for "any" mode)
+		if _, ok := client.(*gamesense.Client); ok {
+			currentBackend = "gamesense"
+		} else {
+			currentBackend = "direct"
+		}
 
 		// For gamesense backend, we need to bind screen event
-		if _, ok := client.(*gamesense.Client); ok {
+		if currentBackend == "gamesense" {
 			// Bind screen event with retry
 			if err := bindEventWithRetry(10); err != nil {
 				log.Printf("ERROR: Failed to bind screen event after retries: %v", err)
@@ -316,6 +322,13 @@ func startAppWithConfig(cfg *config.Config) error {
 
 	// Create compositor
 	comp = compositor.NewCompositor(client, layoutMgr, widgets, cfg)
+
+	// Set backend failure callback for "any" mode
+	if cfg.Backend == "any" {
+		comp.OnBackendFailure = func() {
+			handleBackendFailure(cfg)
+		}
+	}
 
 	// Start compositor
 	if err := comp.Start(); err != nil {
@@ -422,6 +435,74 @@ func createDirectClient(cfg *config.Config) (gamesense.API, error) {
 		driverCfg.VID, driverCfg.PID)
 
 	return client, nil
+}
+
+// handleBackendFailure attempts to switch to alternative backend when current backend fails
+// Only called for "any" backend mode
+func handleBackendFailure(cfg *config.Config) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	log.Println("========================================")
+	log.Printf("Backend failure detected (current: %s)", currentBackend)
+	log.Println("Attempting to switch to alternative backend...")
+
+	// Stop current compositor
+	if comp != nil {
+		comp.Stop()
+		comp = nil
+	}
+
+	// Determine alternative backend
+	var newClient gamesense.API
+	var newBackend string
+	var err error
+
+	if currentBackend == "gamesense" {
+		// Try direct driver
+		log.Println("Trying direct driver backend...")
+		newClient, err = createDirectClient(cfg)
+		newBackend = "direct"
+	} else {
+		// Try gamesense
+		log.Println("Trying GameSense backend...")
+		newClient, err = createGameSenseClient(cfg)
+		newBackend = "gamesense"
+	}
+
+	if err != nil {
+		log.Printf("ERROR: Failed to switch to %s backend: %v", newBackend, err)
+		log.Println("Will retry on next heartbeat cycle...")
+		return
+	}
+
+	// Update client and backend
+	client = newClient
+	currentBackend = newBackend
+	log.Printf("Successfully switched to %s backend", currentBackend)
+
+	// Recreate widgets and compositor
+	widgets, err := widget.CreateWidgets(cfg.Widgets)
+	if err != nil {
+		log.Printf("ERROR: Failed to recreate widgets: %v", err)
+		return
+	}
+
+	layoutMgr := layout.NewManager(cfg.Display, widgets)
+	comp = compositor.NewCompositor(client, layoutMgr, widgets, cfg)
+
+	// Set callback again for future failures
+	comp.OnBackendFailure = func() {
+		handleBackendFailure(cfg)
+	}
+
+	if err := comp.Start(); err != nil {
+		log.Printf("ERROR: Failed to start compositor with new backend: %v", err)
+		return
+	}
+
+	log.Println("Successfully recovered with alternative backend")
+	log.Println("========================================")
 }
 
 // stopApp stops all components gracefully

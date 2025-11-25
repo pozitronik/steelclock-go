@@ -36,6 +36,12 @@ type Compositor struct {
 	frameBuffer     [][]int
 	bufferMu        sync.Mutex
 	resolutions     []Resolution // All resolutions to render (main + supported)
+
+	// Backend failure handling
+	OnBackendFailure     func()     // Callback when backend fails (called once per failure)
+	heartbeatFailures    int        // Consecutive heartbeat failure count
+	backendFailureCalled bool       // Prevents multiple callback invocations
+	failureMu            sync.Mutex // Protects failure state
 }
 
 // NewCompositor creates a new compositor
@@ -273,6 +279,8 @@ func (c *Compositor) heartbeatLoop() {
 	defer c.wg.Done()
 	defer logPanic("heartbeatLoop")
 
+	const maxFailures = 2 // Trigger callback after 2 consecutive failures (20 seconds)
+
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
@@ -283,6 +291,26 @@ func (c *Compositor) heartbeatLoop() {
 		case <-ticker.C:
 			if err := c.client.SendHeartbeat(); err != nil {
 				log.Printf("Heartbeat error: %v", err)
+
+				c.failureMu.Lock()
+				c.heartbeatFailures++
+				shouldNotify := c.heartbeatFailures >= maxFailures && !c.backendFailureCalled && c.OnBackendFailure != nil
+				if shouldNotify {
+					c.backendFailureCalled = true
+				}
+				c.failureMu.Unlock()
+
+				if shouldNotify {
+					log.Printf("Backend failure detected after %d consecutive heartbeat failures", c.heartbeatFailures)
+					// Call callback in goroutine to avoid blocking heartbeat loop
+					go c.OnBackendFailure()
+				}
+			} else {
+				// Reset failure counter on success
+				c.failureMu.Lock()
+				c.heartbeatFailures = 0
+				c.backendFailureCalled = false
+				c.failureMu.Unlock()
 			}
 		}
 	}
