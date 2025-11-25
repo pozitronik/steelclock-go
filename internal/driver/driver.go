@@ -183,21 +183,21 @@ func (d *HIDDriver) Reconnect() error {
 }
 
 // buildPacket constructs the HID packet for sending pixel data
-// Format: [00 ReportID] + [61 CMD] + [32 Padding] + [pixelData]
+// Format: [00 ReportID] + [61 CMD] + [16 Padding] + [pixelData]
 func buildPacket(pixelData []byte, width, height int) []byte {
 	dataSize := width * height / 8
-	packetSize := 34 + dataSize // ReportID(1) + CMD(1) + Padding(32) + Data
+	packetSize := 18 + dataSize // ReportID(1) + CMD(1) + Padding(16) + Data
 
 	packet := make([]byte, packetSize)
 	packet[0] = 0x00 // Report ID
 	packet[1] = 0x61 // Command byte
-	// Bytes 2-33 stay zero (padding)
+	// Bytes 2-17 stay zero (padding)
 
 	// Copy pixel data, truncate or pad as needed
 	if len(pixelData) > dataSize {
-		copy(packet[34:], pixelData[:dataSize])
+		copy(packet[18:], pixelData[:dataSize])
 	} else {
-		copy(packet[34:], pixelData)
+		copy(packet[18:], pixelData)
 	}
 
 	return packet
