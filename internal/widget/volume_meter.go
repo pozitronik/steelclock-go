@@ -93,13 +93,26 @@ type VolumeMeterWidget struct {
 func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	base := NewBaseWidget(cfg)
 
-	// Display mode
+	// Display mode - translate schema mode to internal mode
 	displayMode := cfg.Mode
 	if displayMode == "" {
-		displayMode = "bar_horizontal"
+		displayMode = "bar" // Default to bar mode
 	}
 
-	// Validate display mode
+	// Handle "bar" mode by checking bar.direction
+	if displayMode == "bar" {
+		direction := "horizontal" // Default direction
+		if cfg.Bar != nil && cfg.Bar.Direction != "" {
+			direction = cfg.Bar.Direction
+		}
+		if direction == "vertical" {
+			displayMode = "bar_vertical"
+		} else {
+			displayMode = "bar_horizontal"
+		}
+	}
+
+	// Validate display mode (internal modes)
 	validModes := map[string]bool{
 		"text":           true,
 		"bar_horizontal": true,
@@ -107,7 +120,7 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		"gauge":          true,
 	}
 	if !validModes[displayMode] {
-		return nil, fmt.Errorf("invalid display mode: %s (valid: text, bar_horizontal, bar_vertical, gauge)", displayMode)
+		return nil, fmt.Errorf("invalid display mode: %s (valid: text, bar, gauge)", displayMode)
 	}
 
 	// Extract colors
