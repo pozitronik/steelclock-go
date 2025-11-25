@@ -355,7 +355,7 @@
           "then": {
             "properties": {
               "mode": { "type": "string", "description": "Display mode for network I/O", "enum": ["text", "bar", "graph", "gauge"], "default": "bar" },
-              "interface": { "type": "string", "description": "Network interface name (auto-detect if omitted)" },
+              "interface": { "type": ["string", "null"], "description": "Network interface name (null = auto-detect)", "default": null },
               "max_speed_mbps": { "type": "number", "description": "Maximum speed in Mbps for scaling", "default": 100 },
               "bar": {
                 "type": "object",
