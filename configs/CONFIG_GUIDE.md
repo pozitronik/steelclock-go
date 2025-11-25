@@ -279,7 +279,8 @@ Widgets with multiple modes use mode-named objects:
   "show_ticks": true,
   "colors": {
     "arc": 200,
-    "needle": 255
+    "needle": 255,
+    "ticks": 150
   }
 }
 ```
@@ -346,7 +347,8 @@ Widgets with multiple modes use mode-named objects:
     "show_ticks": true,
     "colors": {
       "arc": 200,
-      "needle": 255
+      "needle": 255,
+      "ticks": 150
     }
   },
   "per_core": {
@@ -708,14 +710,14 @@ Same structure as CPU widget, without `per_core`.
       "position": {"x": 0, "y": 0, "w": 64, "h": 40},
       "style": {"border": 255},
       "mode": "gauge",
-      "gauge": {"show_ticks": true, "colors": {"arc": 200, "needle": 255}}
+      "gauge": {"show_ticks": true, "colors": {"arc": 200, "needle": 255, "ticks": 150}}
     },
     {
       "type": "memory",
       "position": {"x": 64, "y": 0, "w": 64, "h": 40},
       "style": {"border": 255},
       "mode": "gauge",
-      "gauge": {"show_ticks": true, "colors": {"arc": 180, "needle": 255}}
+      "gauge": {"show_ticks": true, "colors": {"arc": 180, "needle": 255, "ticks": 150}}
     }
   ]
 }

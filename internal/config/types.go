@@ -11,7 +11,7 @@ type Config struct {
 	EventBatchingEnabled bool                `json:"event_batching_enabled,omitempty"`
 	EventBatchSize       int                 `json:"event_batch_size,omitempty"`
 	SupportedResolutions []ResolutionConfig  `json:"supported_resolutions,omitempty"`
-	BundledFontURL       string              `json:"bundled_font_url,omitempty"`
+	BundledFontURL       *string             `json:"bundled_font_url,omitempty"`
 	Backend              string              `json:"backend,omitempty"`
 	DirectDriver         *DirectDriverConfig `json:"direct_driver,omitempty"`
 	Display              DisplayConfig       `json:"display"`
@@ -229,7 +229,7 @@ type GraphConfig struct {
 
 // GaugeConfig represents gauge mode settings
 type GaugeConfig struct {
-	ShowTicks bool              `json:"show_ticks,omitempty"`
+	ShowTicks *bool             `json:"show_ticks,omitempty"`
 	Colors    *ModeColorsConfig `json:"colors,omitempty"`
 }
 

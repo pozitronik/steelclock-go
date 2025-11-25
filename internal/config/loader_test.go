@@ -341,7 +341,7 @@ func TestValidateConfig_InvalidRefreshRate(t *testing.T) {
 	}
 }
 
-// TestValidateConfig_DeinitializeTimer tests validation of deinitialize_timer_length_ms
+// TestValidateConfig_DeinitializeTimer tests validation of deinitialize_timer_ms
 func TestValidateConfig_DeinitializeTimer(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -382,10 +382,10 @@ func TestValidateConfig_DeinitializeTimer(t *testing.T) {
 
 			err := validateConfig(cfg)
 			if tt.shouldErr && err == nil {
-				t.Errorf("validateConfig() should return error for deinitialize_timer_length_ms=%d", tt.timerMs)
+				t.Errorf("validateConfig() should return error for deinitialize_timer_ms=%d", tt.timerMs)
 			}
 			if !tt.shouldErr && err != nil {
-				t.Errorf("validateConfig() should not return error for deinitialize_timer_length_ms=%d, got: %v", tt.timerMs, err)
+				t.Errorf("validateConfig() should not return error for deinitialize_timer_ms=%d, got: %v", tt.timerMs, err)
 			}
 		})
 	}

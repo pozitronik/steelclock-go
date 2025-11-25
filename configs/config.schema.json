@@ -481,7 +481,8 @@
                     "description": "Gauge colors",
                     "properties": {
                       "arc": { "type": "integer", "description": "Gauge arc outline color", "minimum": 0, "maximum": 255, "default": 200 },
-                      "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 }
+                      "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "ticks": { "type": "integer", "description": "Gauge tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
                     }
                   }
                 }
@@ -520,7 +521,16 @@
                 "type": "object",
                 "description": "Gauge mode settings",
                 "properties": {
-                  "show_ticks": { "type": "boolean", "description": "Show gauge tick marks", "default": true }
+                  "show_ticks": { "type": "boolean", "description": "Show gauge tick marks", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "description": "Gauge colors",
+                    "properties": {
+                      "arc": { "type": "integer", "description": "Gauge arc outline color", "minimum": 0, "maximum": 255, "default": 200 },
+                      "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "ticks": { "type": "integer", "description": "Gauge tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
+                    }
+                  }
                 }
               },
               "stereo": {

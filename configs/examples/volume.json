@@ -24,7 +24,8 @@
         "show_ticks": true,
         "colors": {
           "arc": 200,
-          "needle": 255
+          "needle": 255,
+          "ticks": 150
         }
       },
       "triangle": {

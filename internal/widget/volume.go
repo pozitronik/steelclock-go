@@ -29,6 +29,8 @@ type VolumeWidget struct {
 	barBorder         bool
 	gaugeColor        uint8
 	gaugeNeedleColor  uint8
+	gaugeShowTicks    bool
+	gaugeTicksColor   uint8
 	triangleFillColor uint8
 	triangleBorder    bool
 	horizAlign        string
@@ -69,6 +71,8 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 	fillColor := 255
 	gaugeColor := 200
 	gaugeNeedleColor := 255
+	gaugeShowTicks := true
+	gaugeTicksColor := 150
 	triangleFillColor := 255
 
 	switch displayMode {
@@ -79,12 +83,20 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 			}
 		}
 	case "gauge":
-		if cfg.Gauge != nil && cfg.Gauge.Colors != nil {
-			if cfg.Gauge.Colors.Arc != nil {
-				gaugeColor = *cfg.Gauge.Colors.Arc
+		if cfg.Gauge != nil {
+			if cfg.Gauge.ShowTicks != nil {
+				gaugeShowTicks = *cfg.Gauge.ShowTicks
 			}
-			if cfg.Gauge.Colors.Needle != nil {
-				gaugeNeedleColor = *cfg.Gauge.Colors.Needle
+			if cfg.Gauge.Colors != nil {
+				if cfg.Gauge.Colors.Arc != nil {
+					gaugeColor = *cfg.Gauge.Colors.Arc
+				}
+				if cfg.Gauge.Colors.Needle != nil {
+					gaugeNeedleColor = *cfg.Gauge.Colors.Needle
+				}
+				if cfg.Gauge.Colors.Ticks != nil {
+					gaugeTicksColor = *cfg.Gauge.Colors.Ticks
+				}
 			}
 		}
 	case "triangle":
@@ -155,6 +167,8 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		barBorder:         barBorder,
 		gaugeColor:        uint8(gaugeColor),
 		gaugeNeedleColor:  uint8(gaugeNeedleColor),
+		gaugeShowTicks:    gaugeShowTicks,
+		gaugeTicksColor:   uint8(gaugeTicksColor),
 		triangleFillColor: uint8(triangleFillColor),
 		triangleBorder:    triangleBorder,
 		horizAlign:        horizAlign,
@@ -414,7 +428,7 @@ func (w *VolumeWidget) renderBarVertical(img *image.Gray, pos config.PositionCon
 // renderGauge renders volume as an old-fashioned gauge with needle
 func (w *VolumeWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
 	// Use shared gauge drawing function
-	bitmap.DrawGauge(img, pos, w.volume, w.gaugeColor, w.gaugeNeedleColor)
+	bitmap.DrawGauge(img, 0, 0, pos.W, pos.H, w.volume, w.gaugeColor, w.gaugeNeedleColor, w.gaugeShowTicks, w.gaugeTicksColor)
 
 	// Draw mute indicator
 	if w.isMuted {

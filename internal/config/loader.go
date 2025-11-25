@@ -150,10 +150,10 @@ func validateConfig(cfg *Config) error {
 		return fmt.Errorf("refresh_rate_ms must be positive (got %d)", cfg.RefreshRateMs)
 	}
 
-	// Check deinitialize_timer_length_ms if specified
+	// Check deinitialize_timer_ms if specified
 	if cfg.DeinitializeTimerMs != 0 {
 		if cfg.DeinitializeTimerMs < 1000 || cfg.DeinitializeTimerMs > 60000 {
-			return fmt.Errorf("deinitialize_timer_length_ms must be between 1000 and 60000 (got %d)", cfg.DeinitializeTimerMs)
+			return fmt.Errorf("deinitialize_timer_ms must be between 1000 and 60000 (got %d)", cfg.DeinitializeTimerMs)
 		}
 	}
 

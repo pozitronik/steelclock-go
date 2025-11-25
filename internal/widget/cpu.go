@@ -31,6 +31,8 @@ type CPUWidget struct {
 	fillColor        uint8
 	gaugeColor       uint8
 	gaugeNeedleColor uint8
+	gaugeShowTicks   bool
+	gaugeTicksColor  uint8
 	historyLen       int
 	currentUsage     interface{} // float64 or []float64
 	history          []interface{}
@@ -79,6 +81,8 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 	fillColor := 255
 	gaugeColor := 200
 	gaugeNeedleColor := 255
+	gaugeShowTicks := true
+	gaugeTicksColor := 150
 
 	switch displayMode {
 	case "bar":
@@ -94,15 +98,23 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 			}
 		}
 	case "gauge":
-		if cfg.Gauge != nil && cfg.Gauge.Colors != nil {
-			if cfg.Gauge.Colors.Fill != nil {
-				fillColor = *cfg.Gauge.Colors.Fill
+		if cfg.Gauge != nil {
+			if cfg.Gauge.ShowTicks != nil {
+				gaugeShowTicks = *cfg.Gauge.ShowTicks
 			}
-			if cfg.Gauge.Colors.Arc != nil {
-				gaugeColor = *cfg.Gauge.Colors.Arc
-			}
-			if cfg.Gauge.Colors.Needle != nil {
-				gaugeNeedleColor = *cfg.Gauge.Colors.Needle
+			if cfg.Gauge.Colors != nil {
+				if cfg.Gauge.Colors.Fill != nil {
+					fillColor = *cfg.Gauge.Colors.Fill
+				}
+				if cfg.Gauge.Colors.Arc != nil {
+					gaugeColor = *cfg.Gauge.Colors.Arc
+				}
+				if cfg.Gauge.Colors.Needle != nil {
+					gaugeNeedleColor = *cfg.Gauge.Colors.Needle
+				}
+				if cfg.Gauge.Colors.Ticks != nil {
+					gaugeTicksColor = *cfg.Gauge.Colors.Ticks
+				}
 			}
 		}
 	}
@@ -171,6 +183,8 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 		fillColor:        uint8(fillColor),
 		gaugeColor:       uint8(gaugeColor),
 		gaugeNeedleColor: uint8(gaugeNeedleColor),
+		gaugeShowTicks:   gaugeShowTicks,
+		gaugeTicksColor:  uint8(gaugeTicksColor),
 		historyLen:       historyLen,
 		history:          make([]interface{}, 0, historyLen),
 		coreCount:        cores,
@@ -478,10 +492,10 @@ func (w *CPUWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
 				bitmap.DrawRectangle(img, cellX, cellY, cellWidth, cellHeight, w.fillColor)
 			}
 
-			bitmap.DrawGaugeAt(img, cellX, cellY, cellWidth, cellHeight, usage, w.gaugeColor, w.gaugeNeedleColor)
+			bitmap.DrawGauge(img, cellX, cellY, cellWidth, cellHeight, usage, w.gaugeColor, w.gaugeNeedleColor, w.gaugeShowTicks, w.gaugeTicksColor)
 		}
 	} else {
 		usage := w.currentUsage.(float64)
-		bitmap.DrawGauge(img, pos, usage, w.gaugeColor, w.gaugeNeedleColor)
+		bitmap.DrawGauge(img, 0, 0, pos.W, pos.H, usage, w.gaugeColor, w.gaugeNeedleColor, w.gaugeShowTicks, w.gaugeTicksColor)
 	}
 }

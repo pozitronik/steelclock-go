@@ -42,6 +42,8 @@ type VolumeMeterWidget struct {
 	borderColor       uint8
 	gaugeColor        uint8
 	gaugeNeedleColor  uint8
+	gaugeShowTicks    bool
+	gaugeTicksColor   uint8
 	horizontalAlign   string
 	verticalAlign     string
 	padding           int
@@ -130,6 +132,8 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	rightChannelColor := 200
 	gaugeColor := 200
 	gaugeNeedleColor := 255
+	gaugeShowTicks := true
+	gaugeTicksColor := 150
 
 	if cfg.Colors != nil {
 		if cfg.Colors.Fill != nil {
@@ -140,6 +144,24 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		}
 		if cfg.Colors.Needle != nil {
 			gaugeNeedleColor = *cfg.Colors.Needle
+		}
+	}
+
+	// Gauge-specific settings
+	if cfg.Gauge != nil {
+		if cfg.Gauge.ShowTicks != nil {
+			gaugeShowTicks = *cfg.Gauge.ShowTicks
+		}
+		if cfg.Gauge.Colors != nil {
+			if cfg.Gauge.Colors.Arc != nil {
+				gaugeColor = *cfg.Gauge.Colors.Arc
+			}
+			if cfg.Gauge.Colors.Needle != nil {
+				gaugeNeedleColor = *cfg.Gauge.Colors.Needle
+			}
+			if cfg.Gauge.Colors.Ticks != nil {
+				gaugeTicksColor = *cfg.Gauge.Colors.Ticks
+			}
 		}
 	}
 
@@ -276,6 +298,8 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		borderColor:         uint8(borderColor),
 		gaugeColor:          uint8(gaugeColor),
 		gaugeNeedleColor:    uint8(gaugeNeedleColor),
+		gaugeShowTicks:      gaugeShowTicks,
+		gaugeTicksColor:     uint8(gaugeTicksColor),
 		horizontalAlign:     horizontalAlign,
 		verticalAlign:       verticalAlign,
 		padding:             padding,
@@ -629,7 +653,7 @@ func (w *VolumeMeterWidget) renderGauge(img *image.Gray, peak, peakHold float64,
 
 	// DrawGauge expects percentage as 0-100, not 0.0-1.0
 	percentage := peak * 100.0
-	bitmap.DrawGauge(img, pos, percentage, w.gaugeColor, needleColor)
+	bitmap.DrawGauge(img, 0, 0, pos.W, pos.H, percentage, w.gaugeColor, needleColor, w.gaugeShowTicks, w.gaugeTicksColor)
 
 	// Draw peak hold mark if enabled
 	if w.showPeakHold && peakHold > 0 {
@@ -870,7 +894,7 @@ func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []fl
 	if isClipping && w.showClipping {
 		leftNeedleColor = w.clippingColor
 	}
-	bitmap.DrawGauge(leftImg, leftGaugePos, leftPercentage, w.gaugeColor, leftNeedleColor)
+	bitmap.DrawGauge(leftImg, 0, 0, leftGaugePos.W, leftGaugePos.H, leftPercentage, w.gaugeColor, leftNeedleColor, w.gaugeShowTicks, w.gaugeTicksColor)
 
 	// Draw left channel peak hold mark
 	if w.showPeakHold && len(peakHoldValues) >= 1 && peakHoldValues[0] > 0 {
@@ -897,7 +921,7 @@ func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []fl
 	if isClipping && w.showClipping {
 		rightNeedleColor = w.clippingColor
 	}
-	bitmap.DrawGauge(rightImg, rightGaugePos, rightPercentage, w.gaugeColor, rightNeedleColor)
+	bitmap.DrawGauge(rightImg, 0, 0, rightGaugePos.W, rightGaugePos.H, rightPercentage, w.gaugeColor, rightNeedleColor, w.gaugeShowTicks, w.gaugeTicksColor)
 
 	// Draw right channel peak hold mark
 	if w.showPeakHold && len(peakHoldValues) >= 2 && peakHoldValues[1] > 0 {

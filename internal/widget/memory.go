@@ -26,6 +26,8 @@ type MemoryWidget struct {
 	fillColor        uint8
 	gaugeColor       uint8
 	gaugeNeedleColor uint8
+	gaugeShowTicks   bool
+	gaugeTicksColor  uint8
 	historyLen       int
 	currentUsage     float64
 	history          []float64
@@ -73,6 +75,8 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 	fillColor := 255
 	gaugeColor := 200
 	gaugeNeedleColor := 255
+	gaugeShowTicks := true
+	gaugeTicksColor := 150
 
 	switch displayMode {
 	case "bar":
@@ -88,15 +92,23 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 			}
 		}
 	case "gauge":
-		if cfg.Gauge != nil && cfg.Gauge.Colors != nil {
-			if cfg.Gauge.Colors.Fill != nil {
-				fillColor = *cfg.Gauge.Colors.Fill
+		if cfg.Gauge != nil {
+			if cfg.Gauge.ShowTicks != nil {
+				gaugeShowTicks = *cfg.Gauge.ShowTicks
 			}
-			if cfg.Gauge.Colors.Arc != nil {
-				gaugeColor = *cfg.Gauge.Colors.Arc
-			}
-			if cfg.Gauge.Colors.Needle != nil {
-				gaugeNeedleColor = *cfg.Gauge.Colors.Needle
+			if cfg.Gauge.Colors != nil {
+				if cfg.Gauge.Colors.Fill != nil {
+					fillColor = *cfg.Gauge.Colors.Fill
+				}
+				if cfg.Gauge.Colors.Arc != nil {
+					gaugeColor = *cfg.Gauge.Colors.Arc
+				}
+				if cfg.Gauge.Colors.Needle != nil {
+					gaugeNeedleColor = *cfg.Gauge.Colors.Needle
+				}
+				if cfg.Gauge.Colors.Ticks != nil {
+					gaugeTicksColor = *cfg.Gauge.Colors.Ticks
+				}
 			}
 		}
 	}
@@ -147,6 +159,8 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 		fillColor:        uint8(fillColor),
 		gaugeColor:       uint8(gaugeColor),
 		gaugeNeedleColor: uint8(gaugeNeedleColor),
+		gaugeShowTicks:   gaugeShowTicks,
+		gaugeTicksColor:  uint8(gaugeTicksColor),
 		historyLen:       historyLen,
 		history:          make([]float64, 0, historyLen),
 		fontFace:         fontFace,
@@ -232,5 +246,5 @@ func (w *MemoryWidget) renderText(img *image.Gray) {
 func (w *MemoryWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
 	// Note: caller must hold read lock
 	// Use shared gauge drawing function
-	bitmap.DrawGauge(img, pos, w.currentUsage, w.gaugeColor, w.gaugeNeedleColor)
+	bitmap.DrawGauge(img, 0, 0, pos.W, pos.H, w.currentUsage, w.gaugeColor, w.gaugeNeedleColor, w.gaugeShowTicks, w.gaugeTicksColor)
 }
