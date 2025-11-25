@@ -24,6 +24,7 @@ type DiskWidget struct {
 	padding          int
 	barDirection     string
 	barBorder        bool
+	graphFilled      bool
 	readColor        uint8
 	writeColor       uint8
 	historyLen       int
@@ -74,15 +75,28 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 		padding = cfg.Style.Padding
 	}
 
-	// Extract colors
+	// Extract colors from mode-specific configs
 	readColor := 255
 	writeColor := 255
-	if cfg.Colors != nil {
-		if cfg.Colors.Read != nil {
-			readColor = *cfg.Colors.Read
+
+	switch displayMode {
+	case "bar":
+		if cfg.Bar != nil && cfg.Bar.Colors != nil {
+			if cfg.Bar.Colors.Read != nil {
+				readColor = *cfg.Bar.Colors.Read
+			}
+			if cfg.Bar.Colors.Write != nil {
+				writeColor = *cfg.Bar.Colors.Write
+			}
 		}
-		if cfg.Colors.Write != nil {
-			writeColor = *cfg.Colors.Write
+	case "graph":
+		if cfg.Graph != nil && cfg.Graph.Colors != nil {
+			if cfg.Graph.Colors.Read != nil {
+				readColor = *cfg.Graph.Colors.Read
+			}
+			if cfg.Graph.Colors.Write != nil {
+				writeColor = *cfg.Graph.Colors.Write
+			}
 		}
 	}
 
@@ -94,8 +108,14 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 
 	// Extract graph settings
 	historyLen := 30
-	if cfg.Graph != nil && cfg.Graph.History > 0 {
-		historyLen = cfg.Graph.History
+	graphFilled := true // Default to filled
+	if cfg.Graph != nil {
+		if cfg.Graph.History > 0 {
+			historyLen = cfg.Graph.History
+		}
+		if cfg.Graph.Filled != nil {
+			graphFilled = *cfg.Graph.Filled
+		}
 	}
 
 	// Extract bar settings
@@ -129,6 +149,7 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 		padding:      padding,
 		barDirection: barDirection,
 		barBorder:    barBorder,
+		graphFilled:  graphFilled,
 		readColor:    uint8(readColor),
 		writeColor:   uint8(writeColor),
 		historyLen:   historyLen,
@@ -316,6 +337,6 @@ func (w *DiskWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 	}
 
 	// Draw both graphs (Read and Write overlaid)
-	bitmap.DrawGraph(img, x, y, width, height, readPercent, w.historyLen, w.readColor)
-	bitmap.DrawGraph(img, x, y, width, height, writePercent, w.historyLen, w.writeColor)
+	bitmap.DrawGraph(img, x, y, width, height, readPercent, w.historyLen, w.readColor, w.graphFilled)
+	bitmap.DrawGraph(img, x, y, width, height, writePercent, w.historyLen, w.writeColor, w.graphFilled)
 }

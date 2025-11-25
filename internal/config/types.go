@@ -182,32 +182,69 @@ type AutoHideConfig struct {
 	SilenceTime float64 `json:"silence_time,omitempty"`
 }
 
+// ModeColorsConfig represents colors for mode-specific rendering
+type ModeColorsConfig struct {
+	// Common fill color (bar, graph, gauge, triangle)
+	Fill *int `json:"fill,omitempty"`
+	Line *int `json:"line,omitempty"` // Optional separate line color for graph
+
+	// Gauge specific
+	Arc    *int `json:"arc,omitempty"`
+	Needle *int `json:"needle,omitempty"`
+	Ticks  *int `json:"ticks,omitempty"`
+
+	// Analog clock specific
+	Face   *int `json:"face,omitempty"`
+	Hour   *int `json:"hour,omitempty"`
+	Minute *int `json:"minute,omitempty"`
+	Second *int `json:"second,omitempty"`
+
+	// Dual-value widgets (Network)
+	Rx       *int `json:"rx,omitempty"`
+	Tx       *int `json:"tx,omitempty"`
+	RxNeedle *int `json:"rx_needle,omitempty"`
+	TxNeedle *int `json:"tx_needle,omitempty"`
+
+	// Dual-value widgets (Disk)
+	Read  *int `json:"read,omitempty"`
+	Write *int `json:"write,omitempty"`
+
+	// Audio visualizer stereo channels
+	Left  *int `json:"left,omitempty"`
+	Right *int `json:"right,omitempty"`
+}
+
 // BarConfig represents bar mode settings
 type BarConfig struct {
-	Direction string `json:"direction,omitempty"` // "horizontal", "vertical"
-	Border    bool   `json:"border,omitempty"`
+	Direction string            `json:"direction,omitempty"` // "horizontal", "vertical"
+	Border    bool              `json:"border,omitempty"`
+	Colors    *ModeColorsConfig `json:"colors,omitempty"`
 }
 
 // GraphConfig represents graph mode settings
 type GraphConfig struct {
-	History int  `json:"history,omitempty"`
-	Filled  bool `json:"filled,omitempty"`
+	History int               `json:"history,omitempty"`
+	Filled  *bool             `json:"filled,omitempty"`
+	Colors  *ModeColorsConfig `json:"colors,omitempty"`
 }
 
 // GaugeConfig represents gauge mode settings
 type GaugeConfig struct {
-	ShowTicks bool `json:"show_ticks,omitempty"`
+	ShowTicks bool              `json:"show_ticks,omitempty"`
+	Colors    *ModeColorsConfig `json:"colors,omitempty"`
 }
 
 // TriangleConfig represents triangle mode settings (volume widget)
 type TriangleConfig struct {
-	Border bool `json:"border,omitempty"`
+	Border bool              `json:"border,omitempty"`
+	Colors *ModeColorsConfig `json:"colors,omitempty"`
 }
 
 // AnalogConfig represents analog clock mode settings
 type AnalogConfig struct {
-	ShowSeconds bool `json:"show_seconds,omitempty"`
-	ShowTicks   bool `json:"show_ticks,omitempty"`
+	ShowSeconds bool              `json:"show_seconds,omitempty"`
+	ShowTicks   bool              `json:"show_ticks,omitempty"`
+	Colors      *ModeColorsConfig `json:"colors,omitempty"`
 }
 
 // SpectrumConfig represents spectrum analyzer settings
@@ -218,6 +255,7 @@ type SpectrumConfig struct {
 	Smoothing             float64               `json:"smoothing,omitempty"`
 	FrequencyCompensation bool                  `json:"frequency_compensation,omitempty"`
 	DynamicScaling        *DynamicScalingConfig `json:"dynamic_scaling,omitempty"`
+	Colors                *ModeColorsConfig     `json:"colors,omitempty"`
 }
 
 // DynamicScalingConfig represents dynamic scaling settings
@@ -228,8 +266,9 @@ type DynamicScalingConfig struct {
 
 // OscilloscopeConfig represents oscilloscope settings
 type OscilloscopeConfig struct {
-	Style   string `json:"style,omitempty"` // "line", "filled"
-	Samples int    `json:"samples,omitempty"`
+	Style   string            `json:"style,omitempty"` // "line", "filled"
+	Samples int               `json:"samples,omitempty"`
+	Colors  *ModeColorsConfig `json:"colors,omitempty"`
 }
 
 // PerCoreConfig represents per-core CPU settings

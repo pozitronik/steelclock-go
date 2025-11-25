@@ -21,11 +21,11 @@
       "max_speed_mbps": -1,
       "graph": {
         "history": 60,
-        "filled": true
-      },
-      "colors": {
-        "read": 255,
-        "write": 200
+        "filled": true,
+        "colors": {
+          "read": 255,
+          "write": 200
+        }
       },
       "text": {
         "align": {"h": "center", "v": "center"}

@@ -106,7 +106,7 @@ func TestDrawGraph(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			img := NewGrayscaleImage(50, 20, 0)
-			DrawGraph(img, 0, 0, 50, 20, tt.history, tt.maxHistory, 255)
+			DrawGraph(img, 0, 0, 50, 20, tt.history, tt.maxHistory, 255, true)
 
 			// Just verify no panic occurs and some pixels are drawn if history > 1
 			if len(tt.history) > 1 {

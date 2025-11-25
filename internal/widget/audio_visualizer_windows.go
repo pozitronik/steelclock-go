@@ -172,20 +172,35 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 		channelMode = cfg.Channel
 	}
 
-	// Colors
+	// Colors from mode-specific configs
 	fillColor := 255
 	leftChannelColor := 255
 	rightChannelColor := 200
 
-	if cfg.Colors != nil {
-		if cfg.Colors.Fill != nil {
-			fillColor = *cfg.Colors.Fill
+	switch displayMode {
+	case "spectrum":
+		if cfg.Spectrum != nil && cfg.Spectrum.Colors != nil {
+			if cfg.Spectrum.Colors.Fill != nil {
+				fillColor = *cfg.Spectrum.Colors.Fill
+			}
+			if cfg.Spectrum.Colors.Left != nil {
+				leftChannelColor = *cfg.Spectrum.Colors.Left
+			}
+			if cfg.Spectrum.Colors.Right != nil {
+				rightChannelColor = *cfg.Spectrum.Colors.Right
+			}
 		}
-		if cfg.Colors.Left != nil {
-			leftChannelColor = *cfg.Colors.Left
-		}
-		if cfg.Colors.Right != nil {
-			rightChannelColor = *cfg.Colors.Right
+	case "oscilloscope":
+		if cfg.Oscilloscope != nil && cfg.Oscilloscope.Colors != nil {
+			if cfg.Oscilloscope.Colors.Fill != nil {
+				fillColor = *cfg.Oscilloscope.Colors.Fill
+			}
+			if cfg.Oscilloscope.Colors.Left != nil {
+				leftChannelColor = *cfg.Oscilloscope.Colors.Left
+			}
+			if cfg.Oscilloscope.Colors.Right != nil {
+				rightChannelColor = *cfg.Oscilloscope.Colors.Right
+			}
 		}
 	}
 

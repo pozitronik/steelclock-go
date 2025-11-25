@@ -87,14 +87,13 @@ func DrawVerticalBar(img *image.Gray, x, y, w, h int, percentage float64, fillCo
 	}
 }
 
-// DrawGraph draws a history graph with filled area
-func DrawGraph(img *image.Gray, x, y, w, h int, history []float64, maxHistory int, fillColor uint8) {
+// DrawGraph draws a history graph with optional filled area
+func DrawGraph(img *image.Gray, x, y, w, h int, history []float64, maxHistory int, fillColor uint8, filled bool) {
 	if len(history) < 2 {
 		return
 	}
 
 	c := color.Gray{Y: fillColor}
-	cSemi := color.Gray{Y: fillColor / 2}
 
 	// Calculate points
 	points := make([][2]int, 0, len(history))
@@ -111,20 +110,22 @@ func DrawGraph(img *image.Gray, x, y, w, h int, history []float64, maxHistory in
 		DrawLine(img, points[i][0], points[i][1], points[i+1][0], points[i+1][1], c)
 	}
 
-	// Fill area under a line
-	for i := 0; i < len(points)-1; i++ {
-		x1, y1 := points[i][0], points[i][1]
-		x2, y2 := points[i+1][0], points[i+1][1]
+	// Fill area under a line (if enabled)
+	if filled {
+		for i := 0; i < len(points)-1; i++ {
+			x1, y1 := points[i][0], points[i][1]
+			x2, y2 := points[i+1][0], points[i+1][1]
 
-		// Fill vertical strips between consecutive points
-		for px := x1; px <= x2; px++ {
-			// Interpolate y coordinate
-			t := float64(px-x1) / float64(x2-x1+1)
-			py := int(float64(y1) + t*float64(y2-y1))
+			// Fill vertical strips between consecutive points
+			for px := x1; px <= x2; px++ {
+				// Interpolate y coordinate
+				t := float64(px-x1) / float64(x2-x1+1)
+				py := int(float64(y1) + t*float64(y2-y1))
 
-			// Fill from py to bottom
-			for fy := py; fy < y+h; fy++ {
-				img.Set(px, fy, cSemi)
+				// Fill from py to bottom using full fillColor
+				for fy := py; fy < y+h; fy++ {
+					img.Set(px, fy, c)
+				}
 			}
 		}
 	}
@@ -132,6 +133,7 @@ func DrawGraph(img *image.Gray, x, y, w, h int, history []float64, maxHistory in
 
 // DrawDualGauge draws a nested/concentric double gauge with two needles
 // Outer gauge (larger radius) for primary value, inner gauge (smaller radius) for secondary value
+//
 //nolint:gocyclo // Complex geometric calculations for dual gauge rendering
 func DrawDualGauge(img *image.Gray, pos config.PositionConfig, outerPercentage, innerPercentage float64, outerGaugeColor, outerNeedleColor, innerGaugeColor, innerNeedleColor uint8) {
 	centerX := pos.W / 2
@@ -254,6 +256,7 @@ func DrawGauge(img *image.Gray, pos config.PositionConfig, percentage float64, g
 }
 
 // DrawGaugeAt draws a gauge at a specific position with offset
+//
 //nolint:gocyclo // Complex geometric calculations for gauge rendering
 func DrawGaugeAt(img *image.Gray, x, y, width, height int, percentage float64, gaugeColor, needleColor uint8) {
 	centerX := x + width/2
@@ -405,6 +408,7 @@ func drawCirclePoints(img *image.Gray, centerX, centerY, x, y int, c color.Gray)
 }
 
 // DrawRectangle draws a rectangle border at the specified position
+//
 //nolint:gocyclo // Edge and corner handling requires multiple conditions
 func DrawRectangle(img *image.Gray, x, y, w, h int, borderColor uint8) {
 	if img == nil || w <= 0 || h <= 0 {

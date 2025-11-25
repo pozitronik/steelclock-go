@@ -210,17 +210,17 @@
                 "type": "object",
                 "properties": {
                   "show_seconds": { "type": "boolean", "default": true },
-                  "show_ticks": { "type": "boolean", "default": true }
-                }
-              },
-              "colors": {
-                "type": "object",
-                "properties": {
-                  "face": { "type": "integer", "minimum": 0, "maximum": 255 },
-                  "hour": { "type": "integer", "minimum": 0, "maximum": 255 },
-                  "minute": { "type": "integer", "minimum": 0, "maximum": 255 },
-                  "second": { "type": "integer", "minimum": 0, "maximum": 255 },
-                  "ticks": { "type": "integer", "minimum": 0, "maximum": 255 }
+                  "show_ticks": { "type": "boolean", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "face": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "hour": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "minute": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "second": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "ticks": { "type": "integer", "minimum": 0, "maximum": 255, "default": 150 }
+                    }
+                  }
                 }
               }
             }
@@ -235,20 +235,41 @@
                 "type": "object",
                 "properties": {
                   "direction": { "type": "string", "enum": ["horizontal", "vertical"], "default": "horizontal" },
-                  "border": { "type": "boolean", "default": false }
+                  "border": { "type": "boolean", "default": false },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "fill": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 }
+                    }
+                  }
                 }
               },
               "graph": {
                 "type": "object",
                 "properties": {
                   "history": { "type": "integer", "minimum": 2, "default": 60 },
-                  "filled": { "type": "boolean", "default": true }
+                  "filled": { "type": "boolean", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "fill": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 }
+                    }
+                  }
                 }
               },
               "gauge": {
                 "type": "object",
                 "properties": {
-                  "show_ticks": { "type": "boolean", "default": true }
+                  "show_ticks": { "type": "boolean", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "fill": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "arc": { "type": "integer", "minimum": 0, "maximum": 255, "default": 200 },
+                      "needle": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "ticks": { "type": "integer", "minimum": 0, "maximum": 255, "default": 150 }
+                    }
+                  }
                 }
               },
               "per_core": {
@@ -257,15 +278,6 @@
                   "enabled": { "type": "boolean", "default": false },
                   "margin": { "type": "integer", "minimum": 0, "default": 0 },
                   "border": { "type": "boolean", "default": false }
-                }
-              },
-              "colors": {
-                "type": "object",
-                "properties": {
-                  "fill": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
-                  "arc": { "type": "integer", "minimum": 0, "maximum": 255, "default": 200 },
-                  "needle": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
-                  "ticks": { "type": "integer", "minimum": 0, "maximum": 255, "default": 150 }
                 }
               }
             }
@@ -280,29 +292,41 @@
                 "type": "object",
                 "properties": {
                   "direction": { "type": "string", "enum": ["horizontal", "vertical"], "default": "horizontal" },
-                  "border": { "type": "boolean", "default": false }
+                  "border": { "type": "boolean", "default": false },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "fill": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 }
+                    }
+                  }
                 }
               },
               "graph": {
                 "type": "object",
                 "properties": {
                   "history": { "type": "integer", "minimum": 2, "default": 60 },
-                  "filled": { "type": "boolean", "default": true }
+                  "filled": { "type": "boolean", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "fill": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 }
+                    }
+                  }
                 }
               },
               "gauge": {
                 "type": "object",
                 "properties": {
-                  "show_ticks": { "type": "boolean", "default": true }
-                }
-              },
-              "colors": {
-                "type": "object",
-                "properties": {
-                  "fill": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
-                  "arc": { "type": "integer", "minimum": 0, "maximum": 255, "default": 200 },
-                  "needle": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
-                  "ticks": { "type": "integer", "minimum": 0, "maximum": 255, "default": 150 }
+                  "show_ticks": { "type": "boolean", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "fill": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "arc": { "type": "integer", "minimum": 0, "maximum": 255, "default": 200 },
+                      "needle": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "ticks": { "type": "integer", "minimum": 0, "maximum": 255, "default": 150 }
+                    }
+                  }
                 }
               }
             }
@@ -319,30 +343,43 @@
                 "type": "object",
                 "properties": {
                   "direction": { "type": "string", "enum": ["horizontal", "vertical"], "default": "horizontal" },
-                  "border": { "type": "boolean", "default": false }
+                  "border": { "type": "boolean", "default": false },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "rx": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "minimum": 0, "maximum": 255, "default": 128 }
+                    }
+                  }
                 }
               },
               "graph": {
                 "type": "object",
                 "properties": {
                   "history": { "type": "integer", "minimum": 2, "default": 60 },
-                  "filled": { "type": "boolean", "default": true }
+                  "filled": { "type": "boolean", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "rx": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "minimum": 0, "maximum": 255, "default": 128 }
+                    }
+                  }
                 }
               },
               "gauge": {
                 "type": "object",
                 "properties": {
-                  "show_ticks": { "type": "boolean", "default": true }
-                }
-              },
-              "colors": {
-                "type": "object",
-                "properties": {
-                  "rx": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
-                  "tx": { "type": "integer", "minimum": 0, "maximum": 255, "default": 128 },
-                  "arc": { "type": "integer", "minimum": 0, "maximum": 255, "default": 200 },
-                  "rx_needle": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
-                  "tx_needle": { "type": "integer", "minimum": 0, "maximum": 255, "default": 180 }
+                  "show_ticks": { "type": "boolean", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "rx": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "minimum": 0, "maximum": 255, "default": 128 },
+                      "rx_needle": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "tx_needle": { "type": "integer", "minimum": 0, "maximum": 255, "default": 180 }
+                    }
+                  }
                 }
               }
             }
@@ -359,21 +396,28 @@
                 "type": "object",
                 "properties": {
                   "direction": { "type": "string", "enum": ["horizontal", "vertical"], "default": "horizontal" },
-                  "border": { "type": "boolean", "default": false }
+                  "border": { "type": "boolean", "default": false },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "read": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "write": { "type": "integer", "minimum": 0, "maximum": 255, "default": 200 }
+                    }
+                  }
                 }
               },
               "graph": {
                 "type": "object",
                 "properties": {
                   "history": { "type": "integer", "minimum": 2, "default": 60 },
-                  "filled": { "type": "boolean", "default": true }
-                }
-              },
-              "colors": {
-                "type": "object",
-                "properties": {
-                  "read": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
-                  "write": { "type": "integer", "minimum": 0, "maximum": 255, "default": 200 }
+                  "filled": { "type": "boolean", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "read": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "write": { "type": "integer", "minimum": 0, "maximum": 255, "default": 200 }
+                    }
+                  }
                 }
               }
             }
@@ -388,27 +432,38 @@
                 "type": "object",
                 "properties": {
                   "direction": { "type": "string", "enum": ["horizontal", "vertical"], "default": "horizontal" },
-                  "border": { "type": "boolean", "default": false }
+                  "border": { "type": "boolean", "default": false },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "fill": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 }
+                    }
+                  }
                 }
               },
               "gauge": {
                 "type": "object",
                 "properties": {
-                  "show_ticks": { "type": "boolean", "default": true }
+                  "show_ticks": { "type": "boolean", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "arc": { "type": "integer", "minimum": 0, "maximum": 255, "default": 200 },
+                      "needle": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 }
+                    }
+                  }
                 }
               },
               "triangle": {
                 "type": "object",
                 "properties": {
-                  "border": { "type": "boolean", "default": false }
-                }
-              },
-              "colors": {
-                "type": "object",
-                "properties": {
-                  "fill": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
-                  "arc": { "type": "integer", "minimum": 0, "maximum": 255, "default": 200 },
-                  "needle": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 }
+                  "border": { "type": "boolean", "default": false },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "fill": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 }
+                    }
+                  }
                 }
               }
             }
@@ -493,6 +548,14 @@
                       "strength": { "type": "number", "minimum": 0, "maximum": 2, "default": 0 },
                       "window": { "type": "number", "minimum": 0.1, "maximum": 5, "default": 0.5 }
                     }
+                  },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "fill": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "left": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "right": { "type": "integer", "minimum": 0, "maximum": 255, "default": 200 }
+                    }
                   }
                 }
               },
@@ -500,7 +563,15 @@
                 "type": "object",
                 "properties": {
                   "style": { "type": "string", "enum": ["line", "filled"], "default": "line" },
-                  "samples": { "type": "integer", "minimum": 32, "maximum": 512, "default": 128 }
+                  "samples": { "type": "integer", "minimum": 32, "maximum": 512, "default": 128 },
+                  "colors": {
+                    "type": "object",
+                    "properties": {
+                      "fill": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "left": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
+                      "right": { "type": "integer", "minimum": 0, "maximum": 255, "default": 200 }
+                    }
+                  }
                 }
               },
               "peak": {
@@ -510,15 +581,7 @@
                   "hold_time": { "type": "number", "minimum": 0.1, "default": 1.0 }
                 }
               },
-              "channel": { "type": "string", "enum": ["mono", "stereo_combined", "stereo_separated"], "default": "stereo_combined" },
-              "colors": {
-                "type": "object",
-                "properties": {
-                  "fill": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
-                  "left": { "type": "integer", "minimum": 0, "maximum": 255, "default": 255 },
-                  "right": { "type": "integer", "minimum": 0, "maximum": 255, "default": 200 }
-                }
-              }
+              "channel": { "type": "string", "enum": ["mono", "stereo_combined", "stereo_separated"], "default": "stereo_combined" }
             }
           }
         },

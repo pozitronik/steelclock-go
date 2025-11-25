@@ -90,18 +90,18 @@ func NewClockWidget(cfg config.WidgetConfig) (*ClockWidget, error) {
 	hourColor := 255
 	minuteColor := 255
 	secondColor := 255
-	if cfg.Colors != nil {
-		if cfg.Colors.Face != nil {
-			faceColor = *cfg.Colors.Face
+	if cfg.Analog != nil && cfg.Analog.Colors != nil {
+		if cfg.Analog.Colors.Face != nil {
+			faceColor = *cfg.Analog.Colors.Face
 		}
-		if cfg.Colors.Hour != nil {
-			hourColor = *cfg.Colors.Hour
+		if cfg.Analog.Colors.Hour != nil {
+			hourColor = *cfg.Analog.Colors.Hour
 		}
-		if cfg.Colors.Minute != nil {
-			minuteColor = *cfg.Colors.Minute
+		if cfg.Analog.Colors.Minute != nil {
+			minuteColor = *cfg.Analog.Colors.Minute
 		}
-		if cfg.Colors.Second != nil {
-			secondColor = *cfg.Colors.Second
+		if cfg.Analog.Colors.Second != nil {
+			secondColor = *cfg.Analog.Colors.Second
 		}
 	}
 

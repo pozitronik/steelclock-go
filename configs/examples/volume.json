@@ -18,10 +18,10 @@
       "style": {"background": 0, "border": false, "padding": 2},
       "mode": "triangle",
       "triangle": {
-        "border": true
-      },
-      "colors": {
-        "fill": 255
+        "border": true,
+        "colors": {
+          "fill": 255
+        }
       },
       "text": {
         "align": {"h": "center", "v": "center"}

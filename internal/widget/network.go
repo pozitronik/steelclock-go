@@ -24,6 +24,7 @@ type NetworkWidget struct {
 	padding       int
 	barDirection  string
 	barBorder     bool
+	graphFilled   bool
 	rxColor       uint8
 	txColor       uint8
 	rxNeedleColor uint8
@@ -76,23 +77,45 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		padding = cfg.Style.Padding
 	}
 
-	// Extract colors
+	// Extract colors from mode-specific configs
 	rxColor := 255
 	txColor := 255
 	rxNeedleColor := 255
 	txNeedleColor := 200
-	if cfg.Colors != nil {
-		if cfg.Colors.Rx != nil {
-			rxColor = *cfg.Colors.Rx
+
+	switch displayMode {
+	case "bar":
+		if cfg.Bar != nil && cfg.Bar.Colors != nil {
+			if cfg.Bar.Colors.Rx != nil {
+				rxColor = *cfg.Bar.Colors.Rx
+			}
+			if cfg.Bar.Colors.Tx != nil {
+				txColor = *cfg.Bar.Colors.Tx
+			}
 		}
-		if cfg.Colors.Tx != nil {
-			txColor = *cfg.Colors.Tx
+	case "graph":
+		if cfg.Graph != nil && cfg.Graph.Colors != nil {
+			if cfg.Graph.Colors.Rx != nil {
+				rxColor = *cfg.Graph.Colors.Rx
+			}
+			if cfg.Graph.Colors.Tx != nil {
+				txColor = *cfg.Graph.Colors.Tx
+			}
 		}
-		if cfg.Colors.RxNeedle != nil {
-			rxNeedleColor = *cfg.Colors.RxNeedle
-		}
-		if cfg.Colors.TxNeedle != nil {
-			txNeedleColor = *cfg.Colors.TxNeedle
+	case "gauge":
+		if cfg.Gauge != nil && cfg.Gauge.Colors != nil {
+			if cfg.Gauge.Colors.Rx != nil {
+				rxColor = *cfg.Gauge.Colors.Rx
+			}
+			if cfg.Gauge.Colors.Tx != nil {
+				txColor = *cfg.Gauge.Colors.Tx
+			}
+			if cfg.Gauge.Colors.RxNeedle != nil {
+				rxNeedleColor = *cfg.Gauge.Colors.RxNeedle
+			}
+			if cfg.Gauge.Colors.TxNeedle != nil {
+				txNeedleColor = *cfg.Gauge.Colors.TxNeedle
+			}
 		}
 	}
 
@@ -104,8 +127,14 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 
 	// Extract graph settings
 	historyLen := 30
-	if cfg.Graph != nil && cfg.Graph.History > 0 {
-		historyLen = cfg.Graph.History
+	graphFilled := true // Default to filled
+	if cfg.Graph != nil {
+		if cfg.Graph.History > 0 {
+			historyLen = cfg.Graph.History
+		}
+		if cfg.Graph.Filled != nil {
+			graphFilled = *cfg.Graph.Filled
+		}
 	}
 
 	// Extract bar settings
@@ -139,6 +168,7 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		padding:       padding,
 		barDirection:  barDirection,
 		barBorder:     barBorder,
+		graphFilled:   graphFilled,
 		rxColor:       uint8(rxColor),
 		txColor:       uint8(txColor),
 		rxNeedleColor: uint8(rxNeedleColor),
@@ -333,8 +363,8 @@ func (w *NetworkWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 	}
 
 	// Draw both graphs (RX and TX overlaid)
-	bitmap.DrawGraph(img, x, y, width, height, rxPercent, w.historyLen, w.rxColor)
-	bitmap.DrawGraph(img, x, y, width, height, txPercent, w.historyLen, w.txColor)
+	bitmap.DrawGraph(img, x, y, width, height, rxPercent, w.historyLen, w.rxColor, w.graphFilled)
+	bitmap.DrawGraph(img, x, y, width, height, txPercent, w.historyLen, w.txColor, w.graphFilled)
 }
 
 func (w *NetworkWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {

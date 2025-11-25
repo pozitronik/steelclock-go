@@ -163,11 +163,12 @@ SteelClock supports these widget types:
   "style": { ... },
   "mode": "text",
   "text": { ... },
-  "colors": { ... },
   "auto_hide": { ... },
   "update_interval": 1.0
 }
 ```
+
+Note: Colors are defined within mode-specific objects (e.g., `bar.colors`, `graph.colors`, `gauge.colors`).
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
@@ -258,7 +259,10 @@ Widgets with multiple modes use mode-named objects:
 ```json
 "bar": {
   "direction": "horizontal",
-  "border": false
+  "border": false,
+  "colors": {
+    "fill": 255
+  }
 }
 ```
 
@@ -266,16 +270,25 @@ Widgets with multiple modes use mode-named objects:
 ```json
 "graph": {
   "history": 60,
-  "filled": true
+  "filled": true,
+  "colors": {
+    "fill": 255
+  }
 }
 ```
 
 **Gauge Mode:**
 ```json
 "gauge": {
-  "show_ticks": true
+  "show_ticks": true,
+  "colors": {
+    "arc": 200,
+    "needle": 255
+  }
 }
 ```
+
+**Note:** Colors are now nested within mode-specific objects (e.g., `bar.colors.fill` instead of `colors.fill`).
 
 ## Widget-Specific Properties
 
@@ -315,13 +328,13 @@ Widgets with multiple modes use mode-named objects:
   "mode": "analog",
   "analog": {
     "show_seconds": true,
-    "show_ticks": true
-  },
-  "colors": {
-    "face": 50,
-    "hour": 255,
-    "minute": 200,
-    "second": 128
+    "show_ticks": true,
+    "colors": {
+      "face": 50,
+      "hour": 255,
+      "minute": 200,
+      "second": 128
+    }
   }
 }
 ```
@@ -333,21 +346,18 @@ Widgets with multiple modes use mode-named objects:
 ```json
 {
   "type": "cpu",
-  "id": "cpu_bar",
-  "position": {"x": 0, "y": 0, "w": 128, "h": 10},
-  "mode": "bar",
-  "bar": {
-    "direction": "horizontal",
-    "border": false
+  "id": "cpu_gauge",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "mode": "gauge",
+  "gauge": {
+    "show_ticks": true,
+    "colors": {
+      "arc": 200,
+      "needle": 255
+    }
   },
   "per_core": {
-    "enabled": true,
-    "margin": 1
-  },
-  "colors": {
-    "fill": 255,
-    "arc": 200,
-    "needle": 255
+    "enabled": false
   },
   "update_interval": 1.0
 }
@@ -357,9 +367,10 @@ Widgets with multiple modes use mode-named objects:
 |----------|-------------|
 | `per_core.enabled` | Show per-core usage |
 | `per_core.margin` | Margin between core bars |
-| `colors.fill` | Bar/graph fill color |
-| `colors.arc` | Gauge arc color |
-| `colors.needle` | Gauge needle color |
+| `bar.colors.fill` | Bar fill color |
+| `graph.colors.fill` | Graph fill color |
+| `gauge.colors.arc` | Gauge arc color |
+| `gauge.colors.needle` | Gauge needle color |
 
 ### Memory Widget
 
@@ -374,19 +385,19 @@ Same structure as CPU widget, without `per_core`.
 ```json
 {
   "type": "network",
-  "id": "net_graph",
+  "id": "net_gauge",
   "position": {"x": 0, "y": 0, "w": 128, "h": 40},
-  "mode": "graph",
+  "mode": "gauge",
   "interface": null,
   "max_speed_mbps": 100,
-  "graph": {
-    "history": 60
-  },
-  "colors": {
-    "rx": 255,
-    "tx": 128,
-    "rx_needle": 255,
-    "tx_needle": 200
+  "gauge": {
+    "show_ticks": true,
+    "colors": {
+      "rx": 255,
+      "tx": 128,
+      "rx_needle": 255,
+      "tx_needle": 200
+    }
   }
 }
 ```
@@ -395,8 +406,12 @@ Same structure as CPU widget, without `per_core`.
 |----------|-------------|
 | `interface` | Network interface (null=auto) |
 | `max_speed_mbps` | Max speed for scaling (-1=auto) |
-| `colors.rx` | Download color |
-| `colors.tx` | Upload color |
+| `gauge.colors.rx` | RX (download) arc color |
+| `gauge.colors.tx` | TX (upload) arc color |
+| `gauge.colors.rx_needle` | RX needle color |
+| `gauge.colors.tx_needle` | TX needle color |
+| `graph.colors.rx` | RX graph fill color |
+| `graph.colors.tx` | TX graph fill color |
 
 ### Disk Widget
 
@@ -411,11 +426,12 @@ Same structure as CPU widget, without `per_core`.
   "disk": null,
   "max_speed_mbps": -1,
   "graph": {
-    "history": 60
-  },
-  "colors": {
-    "read": 255,
-    "write": 200
+    "history": 60,
+    "filled": true,
+    "colors": {
+      "read": 255,
+      "write": 200
+    }
   }
 }
 ```
@@ -431,10 +447,10 @@ Same structure as CPU widget, without `per_core`.
   "position": {"x": 0, "y": 0, "w": 40, "h": 40},
   "mode": "triangle",
   "triangle": {
-    "border": true
-  },
-  "colors": {
-    "fill": 255
+    "border": true,
+    "colors": {
+      "fill": 255
+    }
   },
   "auto_hide": {
     "enabled": true,
@@ -509,6 +525,9 @@ Same structure as CPU widget, without `per_core`.
     "dynamic_scaling": {
       "strength": 1.0,
       "window": 0.5
+    },
+    "colors": {
+      "fill": 255
     }
   },
   "peak": {
@@ -516,9 +535,6 @@ Same structure as CPU widget, without `per_core`.
     "hold_time": 1.0
   },
   "channel": "stereo_combined",
-  "colors": {
-    "fill": 255
-  },
   "update_interval": 0.033
 }
 ```
@@ -540,14 +556,14 @@ Same structure as CPU widget, without `per_core`.
   "mode": "oscilloscope",
   "oscilloscope": {
     "style": "line",
-    "samples": 128
+    "samples": 128,
+    "colors": {
+      "fill": 255,
+      "left": 255,
+      "right": 200
+    }
   },
-  "channel": "stereo_separated",
-  "colors": {
-    "fill": 255,
-    "left": 255,
-    "right": 200
-  }
+  "channel": "stereo_separated"
 }
 ```
 
@@ -657,8 +673,7 @@ Same structure as CPU widget, without `per_core`.
       "position": {"x": 0, "y": 0, "w": 128, "h": 20, "z": 0},
       "style": {"border": true, "border_color": 255},
       "mode": "bar",
-      "bar": {"direction": "horizontal"},
-      "colors": {"fill": 255}
+      "bar": {"direction": "horizontal", "colors": {"fill": 255}}
     },
     {
       "type": "memory",
@@ -666,8 +681,7 @@ Same structure as CPU widget, without `per_core`.
       "position": {"x": 0, "y": 20, "w": 128, "h": 20, "z": 0},
       "style": {"border": true, "border_color": 255},
       "mode": "bar",
-      "bar": {"direction": "horizontal"},
-      "colors": {"fill": 255}
+      "bar": {"direction": "horizontal", "colors": {"fill": 255}}
     }
   ]
 }
@@ -686,8 +700,7 @@ Same structure as CPU widget, without `per_core`.
       "id": "background",
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
       "mode": "graph",
-      "graph": {"history": 30},
-      "colors": {"rx": 200, "tx": 100}
+      "graph": {"history": 30, "colors": {"rx": 200, "tx": 100}}
     },
     {
       "type": "clock",
@@ -715,8 +728,7 @@ Same structure as CPU widget, without `per_core`.
       "position": {"x": 0, "y": 0, "w": 64, "h": 40},
       "style": {"border": true},
       "mode": "gauge",
-      "gauge": {"show_ticks": true},
-      "colors": {"arc": 200, "needle": 255}
+      "gauge": {"show_ticks": true, "colors": {"arc": 200, "needle": 255}}
     },
     {
       "type": "memory",
@@ -724,8 +736,7 @@ Same structure as CPU widget, without `per_core`.
       "position": {"x": 64, "y": 0, "w": 64, "h": 40},
       "style": {"border": true},
       "mode": "gauge",
-      "gauge": {"show_ticks": true},
-      "colors": {"arc": 180, "needle": 255}
+      "gauge": {"show_ticks": true, "colors": {"arc": 180, "needle": 255}}
     }
   ]
 }
@@ -748,10 +759,10 @@ Same structure as CPU widget, without `per_core`.
       "spectrum": {
         "bars": 32,
         "scale": "logarithmic",
-        "smoothing": 0.7
+        "smoothing": 0.7,
+        "colors": {"fill": 255}
       },
       "peak": {"enabled": true, "hold_time": 1.0},
-      "colors": {"fill": 255},
       "update_interval": 0.033
     }
   ]

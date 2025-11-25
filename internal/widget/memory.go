@@ -22,6 +22,7 @@ type MemoryWidget struct {
 	padding          int
 	barDirection     string
 	barBorder        bool
+	graphFilled      bool
 	fillColor        uint8
 	gaugeColor       uint8
 	gaugeNeedleColor uint8
@@ -68,26 +69,48 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 		padding = cfg.Style.Padding
 	}
 
-	// Extract colors
+	// Extract colors from mode-specific configs
 	fillColor := 255
 	gaugeColor := 200
 	gaugeNeedleColor := 255
-	if cfg.Colors != nil {
-		if cfg.Colors.Fill != nil {
-			fillColor = *cfg.Colors.Fill
+
+	switch displayMode {
+	case "bar":
+		if cfg.Bar != nil && cfg.Bar.Colors != nil {
+			if cfg.Bar.Colors.Fill != nil {
+				fillColor = *cfg.Bar.Colors.Fill
+			}
 		}
-		if cfg.Colors.Arc != nil {
-			gaugeColor = *cfg.Colors.Arc
+	case "graph":
+		if cfg.Graph != nil && cfg.Graph.Colors != nil {
+			if cfg.Graph.Colors.Fill != nil {
+				fillColor = *cfg.Graph.Colors.Fill
+			}
 		}
-		if cfg.Colors.Needle != nil {
-			gaugeNeedleColor = *cfg.Colors.Needle
+	case "gauge":
+		if cfg.Gauge != nil && cfg.Gauge.Colors != nil {
+			if cfg.Gauge.Colors.Fill != nil {
+				fillColor = *cfg.Gauge.Colors.Fill
+			}
+			if cfg.Gauge.Colors.Arc != nil {
+				gaugeColor = *cfg.Gauge.Colors.Arc
+			}
+			if cfg.Gauge.Colors.Needle != nil {
+				gaugeNeedleColor = *cfg.Gauge.Colors.Needle
+			}
 		}
 	}
 
 	// Extract graph settings
 	historyLen := 30
-	if cfg.Graph != nil && cfg.Graph.History > 0 {
-		historyLen = cfg.Graph.History
+	graphFilled := true // Default to filled
+	if cfg.Graph != nil {
+		if cfg.Graph.History > 0 {
+			historyLen = cfg.Graph.History
+		}
+		if cfg.Graph.Filled != nil {
+			graphFilled = *cfg.Graph.Filled
+		}
 	}
 
 	// Extract bar settings
@@ -120,6 +143,7 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 		padding:          padding,
 		barDirection:     barDirection,
 		barBorder:        barBorder,
+		graphFilled:      graphFilled,
 		fillColor:        uint8(fillColor),
 		gaugeColor:       uint8(gaugeColor),
 		gaugeNeedleColor: uint8(gaugeNeedleColor),
@@ -190,7 +214,7 @@ func (w *MemoryWidget) Render() (image.Image, error) {
 			bitmap.DrawHorizontalBar(img, contentX, contentY, contentW, contentH, w.currentUsage, w.fillColor, w.barBorder)
 		}
 	case "graph":
-		bitmap.DrawGraph(img, contentX, contentY, contentW, contentH, w.history, w.historyLen, w.fillColor)
+		bitmap.DrawGraph(img, contentX, contentY, contentW, contentH, w.history, w.historyLen, w.fillColor, w.graphFilled)
 	case "gauge":
 		w.renderGauge(img, pos)
 	}

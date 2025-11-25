@@ -20,13 +20,13 @@
       "interface": null,
       "max_speed_mbps": 100.0,
       "gauge": {
-        "show_ticks": true
-      },
-      "colors": {
-        "rx": 255,
-        "tx": 128,
-        "rx_needle": 255,
-        "tx_needle": 200
+        "show_ticks": true,
+        "colors": {
+          "rx": 255,
+          "tx": 128,
+          "rx_needle": 255,
+          "tx_needle": 200
+        }
       },
       "text": {
         "align": {"h": "center", "v": "center"}

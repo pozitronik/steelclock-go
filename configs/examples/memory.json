@@ -19,10 +19,10 @@
       "mode": "graph",
       "graph": {
         "history": 60,
-        "filled": true
-      },
-      "colors": {
-        "fill": 255
+        "filled": true,
+        "colors": {
+          "fill": 255
+        }
       },
       "text": {
         "align": {"h": "center", "v": "center"}

@@ -18,14 +18,14 @@
       "style": {"background": 0, "border": false, "padding": 2},
       "mode": "gauge",
       "gauge": {
-        "show_ticks": true
+        "show_ticks": true,
+        "colors": {
+          "arc": 200,
+          "needle": 255
+        }
       },
       "per_core": {
         "enabled": false
-      },
-      "colors": {
-        "arc": 200,
-        "needle": 255
       },
       "text": {
         "align": {"h": "center", "v": "center"}

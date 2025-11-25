@@ -65,20 +65,33 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		displayMode = "bar"
 	}
 
-	// Extract colors
+	// Extract colors from mode-specific configs
 	fillColor := 255
 	gaugeColor := 200
 	gaugeNeedleColor := 255
 	triangleFillColor := 255
-	if cfg.Colors != nil {
-		if cfg.Colors.Fill != nil {
-			fillColor = *cfg.Colors.Fill
+
+	switch displayMode {
+	case "bar":
+		if cfg.Bar != nil && cfg.Bar.Colors != nil {
+			if cfg.Bar.Colors.Fill != nil {
+				fillColor = *cfg.Bar.Colors.Fill
+			}
 		}
-		if cfg.Colors.Arc != nil {
-			gaugeColor = *cfg.Colors.Arc
+	case "gauge":
+		if cfg.Gauge != nil && cfg.Gauge.Colors != nil {
+			if cfg.Gauge.Colors.Arc != nil {
+				gaugeColor = *cfg.Gauge.Colors.Arc
+			}
+			if cfg.Gauge.Colors.Needle != nil {
+				gaugeNeedleColor = *cfg.Gauge.Colors.Needle
+			}
 		}
-		if cfg.Colors.Needle != nil {
-			gaugeNeedleColor = *cfg.Colors.Needle
+	case "triangle":
+		if cfg.Triangle != nil && cfg.Triangle.Colors != nil {
+			if cfg.Triangle.Colors.Fill != nil {
+				triangleFillColor = *cfg.Triangle.Colors.Fill
+			}
 		}
 	}
 

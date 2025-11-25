@@ -26,6 +26,9 @@
         "dynamic_scaling": {
           "strength": 1.0,
           "window": 0.5
+        },
+        "colors": {
+          "fill": 255
         }
       },
       "peak": {
@@ -33,9 +36,6 @@
         "hold_time": 1.0
       },
       "channel": "stereo_combined",
-      "colors": {
-        "fill": 255
-      },
       "update_interval": 0.033
     },
     {
@@ -47,14 +47,14 @@
       "mode": "oscilloscope",
       "oscilloscope": {
         "style": "line",
-        "samples": 128
+        "samples": 128,
+        "colors": {
+          "fill": 255,
+          "left": 255,
+          "right": 200
+        }
       },
       "channel": "stereo_separated",
-      "colors": {
-        "fill": 255,
-        "left": 255,
-        "right": 200
-      },
       "update_interval": 0.033
     }
   ]
