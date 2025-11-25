@@ -280,7 +280,7 @@ func (w *KeyboardWidget) renderIcons(img *image.Gray) {
 		}
 	}
 
-	// Fallback to smallest size if nothing fits
+	// Fallback to the smallest size if nothing fits
 	if iconSize == 0 {
 		iconSize = 8
 		actualSpacing = 0
@@ -422,7 +422,7 @@ func (w *KeyboardWidget) renderMixed(img *image.Gray) {
 			}
 		}
 
-		// Fallback to smallest size if nothing fits
+		// Fallback to the smallest size if nothing fits
 		if iconSize == 0 {
 			iconSize = 8
 		}
