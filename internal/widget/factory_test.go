@@ -221,9 +221,8 @@ func createDefaultConfig(widgetType string) config.WidgetConfig {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Text: &config.TextConfig{
 			Size: 10,
@@ -278,9 +277,8 @@ func TestCreateWidget_Disabled(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Text: &config.TextConfig{
 			Format: "15:04",
@@ -312,9 +310,8 @@ func TestCreateWidget_EnabledByDefault(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Text: &config.TextConfig{
 			Format: "15:04",
@@ -346,9 +343,8 @@ func TestCreateWidget_ExplicitlyEnabled(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Text: &config.TextConfig{
 			Format: "15:04",

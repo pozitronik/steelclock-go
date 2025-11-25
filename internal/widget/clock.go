@@ -162,9 +162,9 @@ func (w *ClockWidget) Render() (image.Image, error) {
 	// Create image with background
 	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 
-	// Draw border if enabled
-	if style.Border {
-		bitmap.DrawBorder(img, uint8(style.BorderColor))
+	// Draw border if enabled (border >= 0 means enabled with that color)
+	if style.Border >= 0 {
+		bitmap.DrawBorder(img, uint8(style.Border))
 	}
 
 	// Render based on display mode

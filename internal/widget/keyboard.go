@@ -173,8 +173,8 @@ func (w *KeyboardWidget) Render() (image.Image, error) {
 
 	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 
-	if style.Border {
-		bitmap.DrawBorder(img, uint8(style.BorderColor))
+	if style.Border >= 0 {
+		bitmap.DrawBorder(img, uint8(style.Border))
 	}
 
 	// Determine rendering mode based on indicator configurations

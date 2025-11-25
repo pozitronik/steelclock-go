@@ -30,9 +30,8 @@ func TestNewManager(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Text: &config.TextConfig{
 			Format: "15:04",
@@ -72,9 +71,8 @@ func TestManagerComposite(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Text: &config.TextConfig{
 			Format: "15:04",
@@ -131,9 +129,8 @@ func TestManagerCompositeMultipleWidgets(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      true,
-			BorderColor: 255,
+			Background: 0,
+			Border:     255,
 		},
 		Text: &config.TextConfig{
 			Format: "15:04",
@@ -153,9 +150,8 @@ func TestManagerCompositeMultipleWidgets(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      true,
-			BorderColor: 255,
+			Background: 0,
+			Border:     255,
 		},
 		Text: &config.TextConfig{
 			Format: "15:04:05",
@@ -214,7 +210,7 @@ func newMockWidgetWithRaceDetection(id string, x, y, w, h int) *mockWidgetWithRa
 		},
 		style: config.StyleConfig{
 			Background: 0,
-			Border:     false,
+			Border:     -1,
 		},
 	}
 }
@@ -374,7 +370,7 @@ func newMockWidgetSimple(name string, x, y, w, h, zOrder int) *mockWidgetSimple 
 		},
 		style: config.StyleConfig{
 			Background: 0,
-			Border:     false,
+			Border:     -1,
 		},
 	}
 }

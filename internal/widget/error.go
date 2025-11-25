@@ -32,9 +32,8 @@ func NewErrorWidget(displayWidth, displayHeight int, message string) *ErrorWidge
 			H: displayHeight,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1, // disabled
 		},
 	}
 
@@ -60,7 +59,6 @@ func (w *ErrorWidget) Update() error {
 // Render draws the error display with warning triangles
 func (w *ErrorWidget) Render() (image.Image, error) {
 	pos := w.GetPosition()
-	style := w.GetStyle()
 
 	// Create image with background
 	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
@@ -70,7 +68,7 @@ func (w *ErrorWidget) Render() (image.Image, error) {
 		return img, nil
 	}
 
-	c := color.Gray{Y: uint8(style.BorderColor)}
+	c := color.Gray{Y: 255} // White foreground for error display
 
 	// Draw warning triangles on left and right using glyph system
 	// Select icon size based on display height

@@ -19,9 +19,8 @@ func TestNewClockWidget(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Text: &config.TextConfig{
 			Format: "15:04",
@@ -56,9 +55,8 @@ func TestClockWidgetUpdate(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Text: &config.TextConfig{
 			Format: "15:04:05",
@@ -95,9 +93,8 @@ func TestClockWidgetRender(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      true,
-			BorderColor: 255,
+			Background: 0,
+			Border:     255,
 		},
 		Text: &config.TextConfig{
 			Format: "15:04",
@@ -148,9 +145,8 @@ func TestClockWidgetRender_ClockFace(t *testing.T) {
 			H: 80,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Mode: "clock_face",
 	}
@@ -224,9 +220,8 @@ func TestClockWidget_DefaultDisplayMode(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Text: &config.TextConfig{
 			Format: "15:04",
@@ -339,10 +334,9 @@ func TestClockWidgetRender_ClockFaceAlignment(t *testing.T) {
 					H: tt.height,
 				},
 				Style: &config.StyleConfig{
-					Background:  0,
-					Border:      false,
-					BorderColor: 255,
-					Padding:     tt.padding,
+					Background: 0,
+					Border:     -1,
+					Padding:    tt.padding,
 				},
 				Mode: "clock_face",
 				Text: &config.TextConfig{
@@ -394,9 +388,8 @@ func TestClockWidget_ConcurrentAccess(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Text: &config.TextConfig{
 			Format: "15:04:05",

@@ -76,9 +76,8 @@ func CreateDefault() *Config {
 					Z: 0,
 				},
 				Style: &StyleConfig{
-					Background:  0,
-					Border:      false,
-					BorderColor: 0,
+					Background: 0,
+					Border:     -1, // disabled
 				},
 				Text: &TextConfig{
 					Format: "%H:%M:%S",

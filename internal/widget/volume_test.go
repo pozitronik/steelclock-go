@@ -330,7 +330,7 @@ func TestVolumeWidget_RenderTriangle(t *testing.T) {
 		},
 		Mode: "triangle",
 		Style: &config.StyleConfig{
-			Border: true,
+			Border: 255,
 		},
 		Colors: &config.ColorsConfig{
 			Fill: config.IntPtr(255),
@@ -506,8 +506,7 @@ func TestVolumeWidget_WithBorder(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Border:      true,
-			BorderColor: 255,
+			Border: 255,
 		},
 		Mode: "bar_horizontal",
 	}

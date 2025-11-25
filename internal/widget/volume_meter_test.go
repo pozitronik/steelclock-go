@@ -599,8 +599,8 @@ func TestVolumeMeterWidget_StereoWithPeakHold(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_BorderColor tests border color configuration
-func TestVolumeMeterWidget_BorderColor(t *testing.T) {
+// TestVolumeMeterWidget_Border tests border configuration
+func TestVolumeMeterWidget_Border(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -611,8 +611,7 @@ func TestVolumeMeterWidget_BorderColor(t *testing.T) {
 			X: 0, Y: 0, W: 128, H: 40,
 		},
 		Style: &config.StyleConfig{
-			Border:      true,
-			BorderColor: 255, // White
+			Border: 255, // White border enabled
 		},
 		Mode: "bar_horizontal",
 	}

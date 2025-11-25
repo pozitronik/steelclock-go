@@ -237,18 +237,19 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	}
 
 	// Also check style for border (handle nil pointer)
-	style := config.StyleConfig{}
+	// border >= 0 means enabled with that color
+	style := config.StyleConfig{Border: -1} // Default: disabled
 	if cfg.Style != nil {
 		style = *cfg.Style
-		if style.Border {
+		if style.Border >= 0 {
 			barBorder = true
 		}
 	}
 
-	// Get border color from style config
-	borderColor := style.BorderColor
-	if borderColor == 0 {
-		borderColor = 255 // Default: bright white
+	// Get border color from style config (use the border value itself as color)
+	borderColor := style.Border
+	if borderColor < 0 {
+		borderColor = 255 // Default: bright white if somehow enabled without color
 	}
 
 	w := &VolumeMeterWidget{

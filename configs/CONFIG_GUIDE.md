@@ -203,8 +203,7 @@ Note: Colors are defined within mode-specific objects (e.g., `bar.colors`, `grap
 ```json
 "style": {
   "background": 0,
-  "border": false,
-  "border_color": 255,
+  "border": -1,
   "padding": 2
 }
 ```
@@ -212,8 +211,7 @@ Note: Colors are defined within mode-specific objects (e.g., `bar.colors`, `grap
 | Property | Type | Range | Default | Description |
 |----------|------|-------|---------|-------------|
 | `background` | integer | -1 to 255 | 0 | -1=transparent, 0-255=grayscale |
-| `border` | boolean | - | false | Draw border |
-| `border_color` | integer | 0-255 | 255 | Border color |
+| `border` | integer | -1 to 255 | -1 | -1=disabled, 0-255=border color |
 | `padding` | integer | 0+ | 0 | Padding from widget edges in pixels |
 
 ### Text Object
@@ -671,7 +669,7 @@ Same structure as CPU widget, without `per_core`.
       "type": "cpu",
       "id": "cpu_bar",
       "position": {"x": 0, "y": 0, "w": 128, "h": 20, "z": 0},
-      "style": {"border": true, "border_color": 255},
+      "style": {"border": 255},
       "mode": "bar",
       "bar": {"direction": "horizontal", "colors": {"fill": 255}}
     },
@@ -679,7 +677,7 @@ Same structure as CPU widget, without `per_core`.
       "type": "memory",
       "id": "mem_bar",
       "position": {"x": 0, "y": 20, "w": 128, "h": 20, "z": 0},
-      "style": {"border": true, "border_color": 255},
+      "style": {"border": 255},
       "mode": "bar",
       "bar": {"direction": "horizontal", "colors": {"fill": 255}}
     }
@@ -726,7 +724,7 @@ Same structure as CPU widget, without `per_core`.
       "type": "cpu",
       "id": "cpu_gauge",
       "position": {"x": 0, "y": 0, "w": 64, "h": 40},
-      "style": {"border": true},
+      "style": {"border": 255},
       "mode": "gauge",
       "gauge": {"show_ticks": true, "colors": {"arc": 200, "needle": 255}}
     },
@@ -734,7 +732,7 @@ Same structure as CPU widget, without `per_core`.
       "type": "memory",
       "id": "mem_gauge",
       "position": {"x": 64, "y": 0, "w": 64, "h": 40},
-      "style": {"border": true},
+      "style": {"border": 255},
       "mode": "gauge",
       "gauge": {"show_ticks": true, "colors": {"arc": 180, "needle": 255}}
     }

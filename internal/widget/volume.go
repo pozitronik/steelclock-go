@@ -272,9 +272,9 @@ func (w *VolumeWidget) Render() (image.Image, error) {
 	// Create base image
 	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 
-	// Draw border if enabled
-	if style.Border {
-		bitmap.DrawBorder(img, uint8(style.BorderColor))
+	// Draw border if enabled (border >= 0 means enabled with that color)
+	if style.Border >= 0 {
+		bitmap.DrawBorder(img, uint8(style.Border))
 	}
 
 	// Render based on display mode
@@ -316,7 +316,7 @@ func (w *VolumeWidget) renderText(img *image.Gray) {
 // renderBarHorizontal renders volume as horizontal bar
 func (w *VolumeWidget) renderBarHorizontal(img *image.Gray, pos config.PositionConfig, style config.StyleConfig) {
 	padding := 2
-	if style.Border {
+	if style.Border >= 0 {
 		padding = 3
 	}
 
@@ -364,7 +364,7 @@ func (w *VolumeWidget) renderBarHorizontal(img *image.Gray, pos config.PositionC
 // renderBarVertical renders volume as vertical bar
 func (w *VolumeWidget) renderBarVertical(img *image.Gray, pos config.PositionConfig, style config.StyleConfig) {
 	padding := 2
-	if style.Border {
+	if style.Border >= 0 {
 		padding = 3
 	}
 
@@ -428,7 +428,7 @@ func (w *VolumeWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
 //nolint:gocyclo // Geometric calculations for triangle rendering
 func (w *VolumeWidget) renderTriangle(img *image.Gray, pos config.PositionConfig, style config.StyleConfig) {
 	padding := 2
-	if style.Border {
+	if style.Border >= 0 {
 		padding = 3
 	}
 

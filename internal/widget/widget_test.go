@@ -296,9 +296,8 @@ func TestBaseWidget_GetRenderBackgroundColor(t *testing.T) {
 // TestBaseWidget_GetStyle tests style getter
 func TestBaseWidget_GetStyle(t *testing.T) {
 	style := &config.StyleConfig{
-		Background:  128,
-		Border:      true,
-		BorderColor: 255,
+		Background: 128,
+		Border:     255,
 	}
 
 	base := NewBaseWidget(config.WidgetConfig{
@@ -312,9 +311,6 @@ func TestBaseWidget_GetStyle(t *testing.T) {
 	}
 	if result.Border != style.Border {
 		t.Errorf("GetStyle().Border = %v, want %v", result.Border, style.Border)
-	}
-	if result.BorderColor != style.BorderColor {
-		t.Errorf("GetStyle().BorderColor = %v, want %v", result.BorderColor, style.BorderColor)
 	}
 }
 

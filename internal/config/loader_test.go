@@ -32,9 +32,8 @@ func TestLoad(t *testing.T) {
 					"h": 40
 				},
 				"style": {
-					"background_color": 0,
-					"border": false,
-					"border_color": 255
+					"background": 0,
+					"border": -1
 				},
 				"properties": {
 					"format": "15:04",

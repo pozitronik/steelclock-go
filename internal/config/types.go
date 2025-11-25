@@ -118,10 +118,9 @@ type PositionConfig struct {
 
 // StyleConfig represents widget styling
 type StyleConfig struct {
-	Background  int  `json:"background"`
-	Border      bool `json:"border"`
-	BorderColor int  `json:"border_color"`
-	Padding     int  `json:"padding,omitempty"`
+	Background int `json:"background"`
+	Border     int `json:"border"` // -1=disabled, 0-255=border color
+	Padding    int `json:"padding,omitempty"`
 }
 
 // TextConfig represents text rendering properties

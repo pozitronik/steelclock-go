@@ -35,9 +35,8 @@ func TestNewDoomWidget(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Wad: tmpFile,
 	}
@@ -84,9 +83,8 @@ func TestDoomWidgetRender_EmptyFrame(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Wad: tmpFile,
 	}
@@ -137,9 +135,8 @@ func TestDoomWidgetRender_DownloadProgress(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Wad: tmpFile,
 	}
@@ -210,9 +207,8 @@ func TestDoomWidgetRender_DownloadError(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Wad: tmpFile,
 	}

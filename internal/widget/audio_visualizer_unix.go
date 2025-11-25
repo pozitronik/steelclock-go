@@ -77,8 +77,8 @@ func (w *AudioVisualizerWidget) Render() (image.Image, error) {
 		bitmap.DrawAlignedText(img, errorMsg, face, "center", "center", 2)
 	}
 
-	if w.style.Border {
-		bitmap.DrawBorder(img, uint8(w.style.BorderColor))
+	if w.style.Border >= 0 {
+		bitmap.DrawBorder(img, uint8(w.style.Border))
 	}
 
 	return img, fmt.Errorf("audio visualizer is only supported on Windows")

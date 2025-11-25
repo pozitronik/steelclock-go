@@ -15,7 +15,7 @@
       "id": "spectrum_analyzer",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": false},
+      "style": {"background": 0, "border": -1},
       "mode": "spectrum",
       "spectrum": {
         "bars": 32,
@@ -43,7 +43,7 @@
       "id": "oscilloscope",
       "enabled": false,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": false},
+      "style": {"background": 0, "border": -1},
       "mode": "oscilloscope",
       "oscilloscope": {
         "style": "line",

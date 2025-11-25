@@ -30,9 +30,8 @@ func TestNewMemoryWidget(t *testing.T) {
 					H: 20,
 				},
 				Style: &config.StyleConfig{
-					Background:  0,
-					Border:      false,
-					BorderColor: 255,
+					Background: 0,
+					Border:     -1,
 				},
 				Mode: tt.displayMode,
 				Text: &config.TextConfig{
@@ -71,9 +70,8 @@ func TestMemoryWidgetUpdate(t *testing.T) {
 			H: 20,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Mode: "text",
 		Text: &config.TextConfig{
@@ -118,9 +116,8 @@ func TestMemoryWidgetRenderAllModes(t *testing.T) {
 					H: 20,
 				},
 				Style: &config.StyleConfig{
-					Background:  0,
-					Border:      false,
-					BorderColor: 255,
+					Background: 0,
+					Border:     -1,
 				},
 				Mode: mode,
 				Text: &config.TextConfig{
@@ -182,9 +179,8 @@ func TestMemoryWidget_GaugeDefaults(t *testing.T) {
 			H: 40,
 		},
 		Style: &config.StyleConfig{
-			Background:  0,
-			Border:      false,
-			BorderColor: 255,
+			Background: 0,
+			Border:     -1,
 		},
 		Mode: "gauge",
 		// Don't specify colors to test defaults
