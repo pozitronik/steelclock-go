@@ -692,7 +692,8 @@
           "if": { "properties": { "type": { "const": "doom" } }, "required": ["type"] },
           "then": {
             "properties": {
-              "wad": { "type": "string", "description": "WAD file name (auto-downloads doom1.wad if not found)", "default": "doom1.wad" }
+              "wad": { "type": "string", "description": "WAD file name (auto-downloads doom1.wad if not found)", "default": "doom1.wad" },
+              "bundled_wad_url": { "type": ["string", "null"], "description": "Custom URL for downloading DOOM shareware WAD (null = use default distro.ibiblio.org)", "default": null }
             }
           }
         }

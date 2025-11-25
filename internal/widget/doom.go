@@ -18,12 +18,13 @@ type DoomWidget struct {
 	*BaseWidget
 
 	// DOOM engine state
-	wadFile    string
-	currentImg *image.Gray
-	mu         sync.RWMutex
-	stopChan   chan struct{}
-	wg         sync.WaitGroup
-	started    bool
+	wadFile       string
+	bundledWadURL string // Custom URL for WAD download (empty = use default)
+	currentImg    *image.Gray
+	mu            sync.RWMutex
+	stopChan      chan struct{}
+	wg            sync.WaitGroup
+	started       bool
 
 	// Download state
 	isDownloading    bool
@@ -44,6 +45,12 @@ func NewDoomWidget(cfg config.WidgetConfig) (*DoomWidget, error) {
 		wadName = "doom1.wad"
 	}
 
+	// Get bundled WAD URL from config (empty = use default)
+	bundledWadURL := ""
+	if cfg.BundledWadURL != nil {
+		bundledWadURL = *cfg.BundledWadURL
+	}
+
 	// Calculate scale factor (DOOM renders at 320x200, we display at 128x40)
 	scaleX := float64(cfg.Position.W) / 320.0
 	scaleY := float64(cfg.Position.H) / 200.0
@@ -53,10 +60,11 @@ func NewDoomWidget(cfg config.WidgetConfig) (*DoomWidget, error) {
 	}
 
 	w := &DoomWidget{
-		BaseWidget: base,
-		wadFile:    wadName,
-		scale:      scale,
-		stopChan:   make(chan struct{}),
+		BaseWidget:    base,
+		wadFile:       wadName,
+		bundledWadURL: bundledWadURL,
+		scale:         scale,
+		stopChan:      make(chan struct{}),
 	}
 
 	// Initialize DOOM in background (handles WAD download if needed)
@@ -88,7 +96,7 @@ func (w *DoomWidget) runDoom() {
 	}
 
 	// Get WAD file (may download with progress updates)
-	wadFile, err := GetWadFileWithProgress(w.wadFile, progressCallback, &w.isDownloading, &w.mu)
+	wadFile, err := GetWadFileWithProgress(w.wadFile, w.bundledWadURL, progressCallback, &w.isDownloading, &w.mu)
 	if err != nil {
 		log.Printf("[DOOM] Failed to get WAD file: %v", err)
 		w.mu.Lock()

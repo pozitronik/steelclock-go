@@ -241,12 +241,6 @@ func startAppWithConfig(cfg *config.Config) error {
 		log.Printf("Using custom bundled font URL: %s", cfg.BundledFontURL)
 	}
 
-	// Set bundled WAD URL if configured
-	if cfg.BundledWadURL != "" {
-		widget.SetBundledWadURL(cfg.BundledWadURL)
-		log.Printf("Using custom bundled WAD URL: %s", cfg.BundledWadURL)
-	}
-
 	// Check if we need to recreate the client due to backend or GameName change
 	needNewClient := client == nil
 	if client != nil {

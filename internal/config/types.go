@@ -12,7 +12,6 @@ type Config struct {
 	EventBatchSize       int                 `json:"event_batch_size,omitempty"`
 	SupportedResolutions []ResolutionConfig  `json:"supported_resolutions,omitempty"`
 	BundledFontURL       string              `json:"bundled_font_url,omitempty"`
-	BundledWadURL        string              `json:"bundled_wad_url,omitempty"`
 	Backend              string              `json:"backend,omitempty"`
 	DirectDriver         *DirectDriverConfig `json:"direct_driver,omitempty"`
 	Display              DisplayConfig       `json:"display"`
@@ -91,12 +90,13 @@ type WidgetConfig struct {
 	Layout     *KeyboardLayout   `json:"layout,omitempty"`     // Keyboard
 
 	// Simple widget-specific properties
-	Interface    *string `json:"interface,omitempty"`      // Network
-	MaxSpeedMbps float64 `json:"max_speed_mbps,omitempty"` // Network, Disk
-	Disk         *string `json:"disk,omitempty"`           // Disk
-	Format       string  `json:"format,omitempty"`         // Keyboard layout
-	Channel      string  `json:"channel,omitempty"`        // Audio visualizer
-	Wad          string  `json:"wad,omitempty"`            // DOOM
+	Interface     *string `json:"interface,omitempty"`       // Network
+	MaxSpeedMbps  float64 `json:"max_speed_mbps,omitempty"`  // Network, Disk
+	Disk          *string `json:"disk,omitempty"`            // Disk
+	Format        string  `json:"format,omitempty"`          // Keyboard layout
+	Channel       string  `json:"channel,omitempty"`         // Audio visualizer
+	Wad           string  `json:"wad,omitempty"`             // DOOM
+	BundledWadURL *string `json:"bundled_wad_url,omitempty"` // DOOM - custom WAD download URL
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
