@@ -85,7 +85,7 @@ type WidgetConfig struct {
 	PerCore    *PerCoreConfig    `json:"per_core,omitempty"`   // CPU widget
 	Stereo     *StereoConfig     `json:"stereo,omitempty"`     // Volume meter
 	Metering   *MeteringConfig   `json:"metering,omitempty"`   // Volume meter
-	Peak       *PeakConfig       `json:"peak,omitempty"`       // Volume meter, audio visualizer
+	Peak       *PeakConfig       `json:"peak,omitempty"`       // Volume meter
 	Clipping   *ClippingConfig   `json:"clipping,omitempty"`   // Volume meter
 	Indicators *IndicatorsConfig `json:"indicators,omitempty"` // Keyboard
 	Layout     *KeyboardLayout   `json:"layout,omitempty"`     // Keyboard
@@ -254,6 +254,7 @@ type SpectrumConfig struct {
 	Smoothing             float64               `json:"smoothing,omitempty"`
 	FrequencyCompensation bool                  `json:"frequency_compensation,omitempty"`
 	DynamicScaling        *DynamicScalingConfig `json:"dynamic_scaling,omitempty"`
+	Peak                  *PeakConfig           `json:"peak,omitempty"`
 	Colors                *ModeColorsConfig     `json:"colors,omitempty"`
 }
 

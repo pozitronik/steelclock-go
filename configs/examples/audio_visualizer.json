@@ -26,13 +26,13 @@
           "strength": 1.0,
           "window": 0.5
         },
+        "peak": {
+          "enabled": true,
+          "hold_time": 1.0
+        },
         "colors": {
           "fill": 255
         }
-      },
-      "peak": {
-        "enabled": true,
-        "hold_time": 1.0
       },
       "oscilloscope": {
         "style": "line",

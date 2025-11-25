@@ -547,6 +547,13 @@
                       "window": { "type": "number", "minimum": 0.1, "maximum": 5, "default": 0.5 }
                     }
                   },
+                  "peak": {
+                    "type": "object",
+                    "properties": {
+                      "enabled": { "type": "boolean", "default": true },
+                      "hold_time": { "type": "number", "minimum": 0.1, "default": 1.0 }
+                    }
+                  },
                   "colors": {
                     "type": "object",
                     "properties": {
@@ -570,13 +577,6 @@
                       "right": { "type": "integer", "minimum": 0, "maximum": 255, "default": 200 }
                     }
                   }
-                }
-              },
-              "peak": {
-                "type": "object",
-                "properties": {
-                  "enabled": { "type": "boolean", "default": true },
-                  "hold_time": { "type": "number", "minimum": 0.1, "default": 1.0 }
                 }
               },
               "channel": { "type": "string", "enum": ["mono", "stereo_combined", "stereo_separated"], "default": "stereo_combined" }

@@ -148,14 +148,14 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 		barCount = cfg.Position.W
 	}
 
-	// Peak settings (shared between spectrum and oscilloscope)
+	// Peak settings (spectrum mode only)
 	peakHold := true
 	peakHoldTime := 1.0
 
-	if cfg.Peak != nil {
-		peakHold = cfg.Peak.Enabled
-		if cfg.Peak.HoldTime > 0 {
-			peakHoldTime = cfg.Peak.HoldTime
+	if cfg.Spectrum != nil && cfg.Spectrum.Peak != nil {
+		peakHold = cfg.Spectrum.Peak.Enabled
+		if cfg.Spectrum.Peak.HoldTime > 0 {
+			peakHoldTime = cfg.Spectrum.Peak.HoldTime
 		}
 	}
 

@@ -514,13 +514,13 @@ Same structure as CPU widget, without `per_core`.
       "strength": 1.0,
       "window": 0.5
     },
+    "peak": {
+      "enabled": true,
+      "hold_time": 1.0
+    },
     "colors": {
       "fill": 255
     }
-  },
-  "peak": {
-    "enabled": true,
-    "hold_time": 1.0
   },
   "channel": "stereo_combined",
   "update_interval": 0.033
@@ -533,6 +533,8 @@ Same structure as CPU widget, without `per_core`.
 | `spectrum.scale` | logarithmic, linear | Frequency distribution |
 | `spectrum.style` | bars, line | Rendering style |
 | `spectrum.smoothing` | 0.0-1.0 | Fall-off smoothing |
+| `spectrum.peak.enabled` | true/false | Show peak hold indicators |
+| `spectrum.peak.hold_time` | 0.1+ | Peak hold duration in seconds |
 
 #### Oscilloscope Mode
 
@@ -736,9 +738,9 @@ Same structure as CPU widget, without `per_core`.
         "bars": 32,
         "scale": "logarithmic",
         "smoothing": 0.7,
+        "peak": {"enabled": true, "hold_time": 1.0},
         "colors": {"fill": 255}
       },
-      "peak": {"enabled": true, "hold_time": 1.0},
       "update_interval": 0.033
     }
   ]
