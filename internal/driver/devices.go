@@ -82,22 +82,3 @@ var KnownDevices = []KnownDevice{
 		}{128, 40},
 	},
 }
-
-// FindKnownDevice searches for a known device by VID and PID
-func FindKnownDevice(vid, pid uint16) *KnownDevice {
-	for i := range KnownDevices {
-		if KnownDevices[i].VID == vid && KnownDevices[i].PID == pid {
-			return &KnownDevices[i]
-		}
-	}
-	return nil
-}
-
-// GetAllKnownPIDs returns all known product IDs for SteelSeries devices
-func GetAllKnownPIDs() []uint16 {
-	pids := make([]uint16, len(KnownDevices))
-	for i, d := range KnownDevices {
-		pids[i] = d.PID
-	}
-	return pids
-}

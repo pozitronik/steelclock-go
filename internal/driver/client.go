@@ -38,20 +38,20 @@ func NewClient(cfg Config) (*Client, error) {
 }
 
 // RegisterGame is a no-op for direct driver (device doesn't need registration)
-func (c *Client) RegisterGame(developer string, deinitializeTimerMs int) error {
+func (c *Client) RegisterGame(_ string, _ int) error {
 	log.Printf("Direct driver: RegisterGame (no-op)")
 	return nil
 }
 
 // BindScreenEvent is a no-op for direct driver
-func (c *Client) BindScreenEvent(eventName, deviceType string) error {
+func (c *Client) BindScreenEvent(_, _ string) error {
 	log.Printf("Direct driver: BindScreenEvent (no-op)")
 	return nil
 }
 
 // SendScreenData converts the bitmap data and sends it to the display
 // bitmapData is an array of 640 integers (0-255), each representing a byte of packed pixels
-func (c *Client) SendScreenData(eventName string, bitmapData []int) error {
+func (c *Client) SendScreenData(_ string, bitmapData []int) error {
 	if !c.driver.IsConnected() {
 		// Log disconnection only once to avoid spam
 		if !c.disconnectLogged {
