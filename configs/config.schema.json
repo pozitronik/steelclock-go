@@ -67,6 +67,33 @@
       "format": "uri",
       "default": "https://distro.ibiblio.org/slitaz/sources/packages/d/doom1.wad"
     },
+    "backend": {
+      "type": "string",
+      "description": "Backend mode for display communication. 'gamesense' uses SteelSeries GameSense API (requires SteelSeries GG running). 'direct' uses direct USB HID communication (no SteelSeries GG required, Windows only). 'any' tries gamesense first, falls back to direct if unavailable.",
+      "enum": ["gamesense", "direct", "any"],
+      "default": "gamesense"
+    },
+    "direct_driver": {
+      "type": "object",
+      "description": "Configuration for direct USB HID driver (used when backend is 'direct' or 'any')",
+      "properties": {
+        "vid": {
+          "type": "string",
+          "description": "USB Vendor ID in hexadecimal (e.g., '1038' for SteelSeries). If not specified, auto-detects from known devices.",
+          "pattern": "^[0-9A-Fa-f]{1,4}$"
+        },
+        "pid": {
+          "type": "string",
+          "description": "USB Product ID in hexadecimal (e.g., '1612' for Apex 7). If not specified, auto-detects from known devices.",
+          "pattern": "^[0-9A-Fa-f]{1,4}$"
+        },
+        "interface": {
+          "type": "string",
+          "description": "USB interface identifier. Default: 'mi_01'",
+          "default": "mi_01"
+        }
+      }
+    },
     "display": {
       "type": "object",
       "description": "Physical display configuration",

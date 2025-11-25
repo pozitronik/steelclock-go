@@ -117,9 +117,22 @@ func SaveDefault(path string) error {
 	return nil
 }
 
+// ValidBackends contains valid backend values
+var ValidBackends = map[string]bool{
+	"":          true, // Empty = default (gamesense)
+	"gamesense": true,
+	"direct":    true,
+	"any":       true,
+}
+
 // validateConfig checks that required fields are present and valid
 func validateConfig(cfg *Config) error {
 	// Note: game_name and game_display_name are optional - defaults applied in applyDefaults()
+
+	// Validate backend
+	if !ValidBackends[cfg.Backend] {
+		return fmt.Errorf("invalid backend '%s' (valid: gamesense, direct, any)", cfg.Backend)
+	}
 
 	// Check display dimensions are positive
 	if cfg.Display.Width <= 0 {
@@ -231,10 +244,29 @@ func applyDefaults(cfg *Config) {
 		cfg.GameDisplayName = DefaultGameDisplay
 	}
 
+	// Apply default backend
+	if cfg.Backend == "" {
+		cfg.Backend = "gamesense"
+	}
+
+	// Apply direct driver defaults
+	applyDirectDriverDefaults(cfg)
+
 	applyDisplayDefaults(cfg)
 
 	for i := range cfg.Widgets {
 		applyWidgetDefaults(&cfg.Widgets[i])
+	}
+}
+
+// applyDirectDriverDefaults sets default values for direct driver configuration
+func applyDirectDriverDefaults(cfg *Config) {
+	if cfg.DirectDriver == nil {
+		cfg.DirectDriver = &DirectDriverConfig{}
+	}
+
+	if cfg.DirectDriver.Interface == "" {
+		cfg.DirectDriver.Interface = "mi_01"
 	}
 }
 

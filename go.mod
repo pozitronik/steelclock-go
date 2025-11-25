@@ -7,7 +7,6 @@ require (
 	github.com/getlantern/systray v1.2.2
 	github.com/go-ole/go-ole v1.3.0
 	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4
-	github.com/karalabe/hid v1.0.0
 	github.com/mjibson/go-dsp v0.0.0-20180508042940-11479a337f12
 	github.com/moutend/go-wca v0.3.0
 	github.com/shirou/gopsutil/v4 v4.25.10

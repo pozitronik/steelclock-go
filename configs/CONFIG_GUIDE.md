@@ -67,11 +67,112 @@ Supported IDEs: VS Code, JetBrains IDEs (IntelliJ, PyCharm, WebStorm), Visual St
 
 | Property                       | Type    | Default                                                                             | Description                                                               |
 |--------------------------------|---------|-------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
-| `refresh_rate_ms`              | integer | 100                                                                                 | Display refresh rate (min 100ms = 10Hz)                                   |
+| `refresh_rate_ms`              | integer | 100                                                                                 | Display refresh rate (see notes below)                                    |
+| `backend`                      | string  | "gamesense"                                                                         | Backend mode: "gamesense", "direct", or "any" (see notes below)           |
+| `direct_driver`                | object  | {} (optional)                                                                       | Direct USB driver configuration (see notes below)                         |
 | `unregister_on_exit`           | boolean | false                                                                               | Unregister from GameSense API on exit (see notes below)                   |
 | `deinitialize_timer_length_ms` | integer | 15000 (optional)                                                                    | Game deactivation timeout in milliseconds (see notes below)               |
 | `supported_resolutions`        | array   | [] (optional)                                                                       | Additional display resolutions for multi-device support (see notes below) |
 | `bundled_font_url`             | string  | "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf" (optional) | URL for downloading bundled font (see notes below)                        |
+
+**About `refresh_rate_ms`**:
+
+This option controls how often frames are sent to the display.
+
+- **Default**: 100ms (10Hz)
+- **Minimum**: Depends on backend mode (see below)
+
+| Backend Mode | Minimum | Maximum Tested | Notes |
+|--------------|---------|----------------|-------|
+| `gamesense`  | 100ms (10Hz) | 100ms (10Hz) | Limited by GameSense API |
+| `direct`     | ~16ms (60Hz) | 30ms (33Hz) | Limited by USB HID and device |
+
+**Performance notes**:
+- With `direct` backend, refresh rates of 30-33ms (30Hz+) work reliably
+- Higher refresh rates increase CPU usage proportionally
+- The OLED panel itself may have refresh rate limitations
+- For animations (clock milliseconds, visualizers), lower values provide smoother display
+
+**About `backend`**:
+
+This option selects how SteelClock communicates with the OLED display.
+
+| Value | Description |
+|-------|-------------|
+| `gamesense` | Use SteelSeries GameSense API (default). Requires SteelSeries GG to be running. |
+| `direct` | Use direct USB HID communication. No SteelSeries GG required. Windows only. |
+| `any` | Try `gamesense` first, fall back to `direct` if unavailable. |
+
+**When to use each mode**:
+
+- **`gamesense`** (default): Best compatibility, works with all SteelSeries OLED devices, supports multi-device setups
+- **`direct`**: Higher refresh rates (30Hz+), works without SteelSeries GG, lower latency
+- **`any`**: Automatic fallback - useful if SteelSeries GG may or may not be running
+
+**Limitations of `direct` mode**:
+- Windows only (Linux not yet supported)
+- Single device only (no multi-device support)
+- Device must be a known SteelSeries keyboard with OLED (Apex 7, Apex Pro, etc.)
+
+**About `direct_driver`**:
+
+Configuration for direct USB HID driver (used when `backend` is `direct` or `any`).
+
+```json
+"direct_driver": {
+  "vid": "1038",
+  "pid": "1612",
+  "interface": "mi_01"
+}
+```
+
+| Property    | Type   | Default | Description |
+|-------------|--------|---------|-------------|
+| `vid`       | string | auto    | USB Vendor ID in hex (e.g., "1038" for SteelSeries) |
+| `pid`       | string | auto    | USB Product ID in hex (e.g., "1612" for Apex 7) |
+| `interface` | string | "mi_01" | USB interface identifier |
+
+**Auto-detection**: If `vid` and `pid` are not specified, SteelClock auto-detects from known devices:
+
+| Device | VID | PID |
+|--------|-----|-----|
+| Apex 7 | 1038 | 1612 |
+| Apex 7 TKL | 1038 | 1618 |
+| Apex Pro | 1038 | 1610 |
+| Apex Pro TKL | 1038 | 1614 |
+| Apex 5 | 1038 | 161C |
+| Apex Pro (2023) | 1038 | 1630 |
+| Apex Pro TKL (2023) | 1038 | 1632 |
+
+**Example configurations**:
+
+*Direct mode with auto-detection:*
+```json
+{
+  "backend": "direct",
+  "refresh_rate_ms": 33
+}
+```
+
+*Direct mode with explicit device:*
+```json
+{
+  "backend": "direct",
+  "refresh_rate_ms": 33,
+  "direct_driver": {
+    "vid": "1038",
+    "pid": "1612"
+  }
+}
+```
+
+*Automatic fallback mode:*
+```json
+{
+  "backend": "any",
+  "refresh_rate_ms": 50
+}
+```
 
 **About `unregister_on_exit`**:
 

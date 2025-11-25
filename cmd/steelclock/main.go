@@ -8,12 +8,14 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/compositor"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/driver"
 	"github.com/pozitronik/steelclock-go/internal/gamesense"
 	"github.com/pozitronik/steelclock-go/internal/layout"
 	"github.com/pozitronik/steelclock-go/internal/tray"
@@ -22,13 +24,14 @@ import (
 
 var (
 	comp           *compositor.Compositor
-	client         *gamesense.Client
+	client         gamesense.API // Can be *gamesense.Client or *driver.Client
 	trayMgr        *tray.Manager
 	configPath     string
 	logFile        *os.File
 	mu             sync.Mutex
 	lastGoodConfig *config.Config // Backup of last working config
 	retryCancel    chan struct{}  // Channel to cancel retry goroutine
+	currentBackend string         // Current backend type: "gamesense" or "direct"
 )
 
 const (
@@ -38,13 +41,13 @@ const (
 	developerName = "Pozitronik"
 )
 
-// BackendUnavailableError indicates SteelSeries GG backend is not available
+// BackendUnavailableError indicates display backend is not available
 type BackendUnavailableError struct {
 	Err error
 }
 
 func (e *BackendUnavailableError) Error() string {
-	return fmt.Sprintf("SteelSeries backend unavailable: %v", e.Err)
+	return fmt.Sprintf("backend unavailable: %v", e.Err)
 }
 
 func (e *BackendUnavailableError) Unwrap() error {
@@ -93,11 +96,11 @@ func main() {
 			// Provide context-specific guidance
 			var backendErr *BackendUnavailableError
 			if errors.As(err, &backendErr) {
-				log.Println("The SteelSeries GameSense API is not responding.")
+				log.Println("Cannot connect to display backend.")
 				log.Println("This usually happens when:")
-				log.Println("  - SteelSeries GG is starting up")
-				log.Println("  - A previous instance just closed (wait a few seconds)")
-				log.Println("  - SteelSeries GG is not running")
+				log.Println("  - Device is not connected")
+				log.Println("  - SteelSeries GG is not running (for gamesense backend)")
+				log.Println("  - Backend is still cleaning up from previous instance")
 				log.Println("")
 				log.Println("The application will continue running. Use 'Reload Config' to retry.")
 			} else {
@@ -111,7 +114,7 @@ func main() {
 			if errors.As(err, &noWidgetsErr) {
 				tray.ShowNotification("SteelClock Error", "No widgets enabled in configuration. Please check config.json")
 			} else if errors.As(err, &backendErr) {
-				tray.ShowNotification("SteelClock Connection Error", "Cannot connect to SteelSeries GameSense API. Make sure SteelSeries GG is running and try 'Reload Config'.")
+				tray.ShowNotification("SteelClock Connection Error", "Cannot connect to display. Check device connection and try 'Reload Config'.")
 			} else {
 				tray.ShowNotification("SteelClock Configuration Error", "Failed to load configuration. Please check config.json for errors.")
 			}
@@ -244,42 +247,51 @@ func startAppWithConfig(cfg *config.Config) error {
 		log.Printf("Using custom bundled WAD URL: %s", cfg.BundledWadURL)
 	}
 
-	// Check if we need to recreate the client due to GameName change
-	if client != nil && client.GameName() != cfg.GameName {
-		log.Printf("GameName changed from %s to %s, recreating client...", client.GameName(), cfg.GameName)
-		client = nil // Force recreation with new game name
+	// Check if we need to recreate the client due to backend or GameName change
+	needNewClient := client == nil
+	if client != nil {
+		// Check for GameName change (only relevant for gamesense backend)
+		if gsClient, ok := client.(*gamesense.Client); ok {
+			if gsClient.GameName() != cfg.GameName {
+				log.Printf("GameName changed from %s to %s, recreating client...", gsClient.GameName(), cfg.GameName)
+				needNewClient = true
+			}
+		}
+		// Check for backend change
+		if currentBackend != cfg.Backend {
+			log.Printf("Backend changed from %s to %s, recreating client...", currentBackend, cfg.Backend)
+			needNewClient = true
+		}
 	}
 
-	// Create or reuse GameSense client
+	// Create or reuse client based on backend setting
 	var err error
-	if client == nil {
-		// First time startup - create new client and register
-		client, err = gamesense.NewClient(cfg.GameName, cfg.GameDisplayName)
+	if needNewClient {
+		// Close existing client if any
+		if client != nil {
+			_ = client.RemoveGame()
+			client = nil
+		}
+
+		// Create client based on backend
+		client, err = createBackendClient(cfg)
 		if err != nil {
-			log.Printf("ERROR: Failed to create GameSense client: %v", err)
-			log.Println("SteelSeries GG may not be running or GameSense API is unavailable")
-			// Return special error for backend unavailable
-			return &BackendUnavailableError{Err: err}
-		}
-
-		log.Println("GameSense client created")
-
-		// Register game
-		if err := client.RegisterGame(developerName, cfg.DeinitializeTimerMs); err != nil {
-			log.Printf("ERROR: Failed to register game: %v", err)
-			client = nil // Clear client on registration failure
-			return &BackendUnavailableError{Err: err}
-		}
-
-		// Bind screen event with retry
-		if err := bindEventWithRetry(10); err != nil {
-			log.Printf("ERROR: Failed to bind screen event after retries: %v", err)
-			client = nil // Clear client on bind failure
 			return err
 		}
+		currentBackend = cfg.Backend
+
+		// For gamesense backend, we need to bind screen event
+		if _, ok := client.(*gamesense.Client); ok {
+			// Bind screen event with retry
+			if err := bindEventWithRetry(10); err != nil {
+				log.Printf("ERROR: Failed to bind screen event after retries: %v", err)
+				client = nil // Clear client on bind failure
+				return err
+			}
+		}
 	} else {
-		// Reload - client already exists and game is registered
-		log.Println("Reusing existing GameSense client (already registered)")
+		// Reload - client already exists
+		log.Printf("Reusing existing %s client", currentBackend)
 	}
 
 	// Create widgets
@@ -317,6 +329,101 @@ func startAppWithConfig(cfg *config.Config) error {
 	return nil
 }
 
+// createBackendClient creates the appropriate client based on backend configuration
+func createBackendClient(cfg *config.Config) (gamesense.API, error) {
+	switch cfg.Backend {
+	case "gamesense":
+		return createGameSenseClient(cfg)
+
+	case "direct":
+		return createDirectClient(cfg)
+
+	case "any":
+		// Try gamesense first, then fallback to direct
+		log.Println("Backend 'any': trying GameSense first...")
+		gsClient, err := createGameSenseClient(cfg)
+		if err == nil {
+			return gsClient, nil
+		}
+		log.Printf("GameSense backend failed: %v", err)
+		log.Println("Backend 'any': falling back to direct driver...")
+		return createDirectClient(cfg)
+
+	default:
+		// Should not happen due to validation, but fallback to gamesense
+		return createGameSenseClient(cfg)
+	}
+}
+
+// createGameSenseClient creates a GameSense API client
+func createGameSenseClient(cfg *config.Config) (gamesense.API, error) {
+	client, err := gamesense.NewClient(cfg.GameName, cfg.GameDisplayName)
+	if err != nil {
+		log.Printf("ERROR: Failed to create GameSense client: %v", err)
+		log.Println("SteelSeries GG may not be running or GameSense API is unavailable")
+		return nil, &BackendUnavailableError{Err: err}
+	}
+
+	log.Println("GameSense client created")
+
+	// Register game
+	if err := client.RegisterGame(developerName, cfg.DeinitializeTimerMs); err != nil {
+		log.Printf("ERROR: Failed to register game: %v", err)
+		return nil, &BackendUnavailableError{Err: err}
+	}
+
+	return client, nil
+}
+
+// createDirectClient creates a direct USB HID driver client
+func createDirectClient(cfg *config.Config) (gamesense.API, error) {
+	// Parse VID/PID from config if specified
+	var vid, pid uint16
+	if cfg.DirectDriver != nil {
+		if cfg.DirectDriver.VID != "" {
+			v, err := strconv.ParseUint(cfg.DirectDriver.VID, 16, 16)
+			if err != nil {
+				return nil, fmt.Errorf("invalid VID '%s': %w", cfg.DirectDriver.VID, err)
+			}
+			vid = uint16(v)
+		}
+		if cfg.DirectDriver.PID != "" {
+			p, err := strconv.ParseUint(cfg.DirectDriver.PID, 16, 16)
+			if err != nil {
+				return nil, fmt.Errorf("invalid PID '%s': %w", cfg.DirectDriver.PID, err)
+			}
+			pid = uint16(p)
+		}
+	}
+
+	// Get interface from config
+	iface := "mi_01"
+	if cfg.DirectDriver != nil && cfg.DirectDriver.Interface != "" {
+		iface = cfg.DirectDriver.Interface
+	}
+
+	// Create driver config
+	driverCfg := driver.Config{
+		VID:       vid,
+		PID:       pid,
+		Interface: iface,
+		Width:     cfg.Display.Width,
+		Height:    cfg.Display.Height,
+	}
+
+	// Create driver client
+	client, err := driver.NewClient(driverCfg)
+	if err != nil {
+		log.Printf("ERROR: Failed to create direct driver client: %v", err)
+		return nil, &BackendUnavailableError{Err: err}
+	}
+
+	log.Printf("Direct driver client created (backend: direct, VID: %04X, PID: %04X)",
+		driverCfg.VID, driverCfg.PID)
+
+	return client, nil
+}
+
 // stopApp stops all components gracefully
 // During reload, we don't unregister to avoid blocking
 func stopApp() {
@@ -336,11 +443,11 @@ func handleStartupError(err error, cfg *config.Config) error {
 	var backendErr *BackendUnavailableError
 	if errors.As(err, &backendErr) {
 		log.Println("========================================")
-		log.Println("CRITICAL: Cannot connect to SteelSeries GameSense API")
+		log.Println("CRITICAL: Cannot connect to display backend")
 		log.Println("This may indicate:")
-		log.Println("  - SteelSeries GG is not running")
+		log.Println("  - Device is not connected")
+		log.Println("  - SteelSeries GG is not running (for gamesense backend)")
 		log.Println("  - Backend is still cleaning up from previous instance")
-		log.Println("  - API endpoint is timing out")
 		log.Println("========================================")
 		return backendErr
 	}
