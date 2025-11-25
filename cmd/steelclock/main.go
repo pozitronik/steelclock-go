@@ -588,21 +588,34 @@ func startWithErrorDisplay(message string, width, height int) error {
 
 	log.Printf("Starting error display: %s", message)
 
-	// Create temporary GameSense client for error display
-	// Use same game name to avoid creating another registration
-	errorClient, err := gamesense.NewClient(config.DefaultGameName, config.DefaultGameDisplay)
-	if err != nil {
-		log.Printf("ERROR: Failed to create GameSense client for error display: %v", err)
-		return fmt.Errorf("failed to create GameSense client: %w", err)
+	// Try to use existing client first (works with both gamesense and direct backends)
+	errorClient := client
+	if errorClient == nil {
+		log.Println("No existing client, creating one for error display...")
+
+		// Try to create a client based on last good config or defaults
+		var err error
+		if lastGoodConfig != nil {
+			errorClient, err = createBackendClient(lastGoodConfig)
+		} else {
+			// Fallback: try GameSense with defaults
+			errorClient, err = gamesense.NewClient(config.DefaultGameName, config.DefaultGameDisplay)
+			if err == nil {
+				err = errorClient.RegisterGame(developerName, 0)
+			}
+		}
+		if err != nil {
+			log.Printf("ERROR: Failed to create client for error display: %v", err)
+			return fmt.Errorf("failed to create client: %w", err)
+		}
 	}
 
-	// Register game (use 0 for default timeout in error display)
+	// Register and bind (no-ops for direct driver, required for gamesense)
 	if err := errorClient.RegisterGame(developerName, 0); err != nil {
 		log.Printf("ERROR: Failed to register game for error display: %v", err)
 		return fmt.Errorf("failed to register game: %w", err)
 	}
 
-	// Bind screen event
 	if err := errorClient.BindScreenEvent(eventName, deviceType); err != nil {
 		log.Printf("ERROR: Failed to bind screen event for error display: %v", err)
 		return fmt.Errorf("failed to bind screen event: %w", err)
