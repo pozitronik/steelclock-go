@@ -92,47 +92,51 @@ func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
 		}
 	}
 
-	// Lock indicator symbols from indicators config
-	// Defaults
-	capsOn := "C"
-	capsOff := "c"
-	numOn := "N"
-	numOff := "n"
-	scrollOn := "S"
-	scrollOff := "s"
+	// Lock indicator symbols from indicators config (used only in text mode)
+	var capsOn, capsOff string
+	var numOn, numOff string
+	var scrollOn, scrollOff string
 
-	// Per-indicator mode detection: if BOTH on and off are nil, use icon mode
-	// Otherwise, use text mode (even if only one is defined)
+	// Per-indicator mode detection:
+	// - If indicator config is nil OR both On and Off pointers are nil -> use icon mode
+	// - If at least one of On/Off is not nil -> use text mode
 	capsUseIcon := true
 	numUseIcon := true
 	scrollUseIcon := true
 
 	if cfg.Indicators != nil {
 		if cfg.Indicators.Caps != nil {
-			capsUseIcon = false // Text mode if config is present
-			if cfg.Indicators.Caps.On != "" {
-				capsOn = cfg.Indicators.Caps.On
-			}
-			if cfg.Indicators.Caps.Off != "" {
-				capsOff = cfg.Indicators.Caps.Off
+			// Use icon mode only if BOTH On and Off are nil
+			if cfg.Indicators.Caps.On != nil || cfg.Indicators.Caps.Off != nil {
+				capsUseIcon = false
+				if cfg.Indicators.Caps.On != nil {
+					capsOn = *cfg.Indicators.Caps.On
+				}
+				if cfg.Indicators.Caps.Off != nil {
+					capsOff = *cfg.Indicators.Caps.Off
+				}
 			}
 		}
 		if cfg.Indicators.Num != nil {
-			numUseIcon = false
-			if cfg.Indicators.Num.On != "" {
-				numOn = cfg.Indicators.Num.On
-			}
-			if cfg.Indicators.Num.Off != "" {
-				numOff = cfg.Indicators.Num.Off
+			if cfg.Indicators.Num.On != nil || cfg.Indicators.Num.Off != nil {
+				numUseIcon = false
+				if cfg.Indicators.Num.On != nil {
+					numOn = *cfg.Indicators.Num.On
+				}
+				if cfg.Indicators.Num.Off != nil {
+					numOff = *cfg.Indicators.Num.Off
+				}
 			}
 		}
 		if cfg.Indicators.Scroll != nil {
-			scrollUseIcon = false
-			if cfg.Indicators.Scroll.On != "" {
-				scrollOn = cfg.Indicators.Scroll.On
-			}
-			if cfg.Indicators.Scroll.Off != "" {
-				scrollOff = cfg.Indicators.Scroll.Off
+			if cfg.Indicators.Scroll.On != nil || cfg.Indicators.Scroll.Off != nil {
+				scrollUseIcon = false
+				if cfg.Indicators.Scroll.On != nil {
+					scrollOn = *cfg.Indicators.Scroll.On
+				}
+				if cfg.Indicators.Scroll.Off != nil {
+					scrollOff = *cfg.Indicators.Scroll.Off
+				}
 			}
 		}
 	}

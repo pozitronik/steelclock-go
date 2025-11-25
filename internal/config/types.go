@@ -314,8 +314,8 @@ type IndicatorsConfig struct {
 
 // IndicatorConfig represents a single keyboard indicator
 type IndicatorConfig struct {
-	On  string `json:"on,omitempty"`
-	Off string `json:"off,omitempty"`
+	On  *string `json:"on"`  // nil = use embedded glyph, string = use text
+	Off *string `json:"off"` // nil = use embedded glyph, string = use text
 }
 
 // KeyboardLayout represents keyboard widget layout settings
