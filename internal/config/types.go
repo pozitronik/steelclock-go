@@ -7,7 +7,7 @@ type Config struct {
 	GameDisplayName      string              `json:"game_display_name"`
 	RefreshRateMs        int                 `json:"refresh_rate_ms"`
 	UnregisterOnExit     bool                `json:"unregister_on_exit,omitempty"`
-	DeinitializeTimerMs  int                 `json:"deinitialize_timer_length_ms,omitempty"`
+	DeinitializeTimerMs  int                 `json:"deinitialize_timer_ms,omitempty"`
 	EventBatchingEnabled bool                `json:"event_batching_enabled,omitempty"`
 	EventBatchSize       int                 `json:"event_batch_size,omitempty"`
 	SupportedResolutions []ResolutionConfig  `json:"supported_resolutions,omitempty"`

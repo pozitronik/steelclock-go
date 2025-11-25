@@ -72,7 +72,7 @@ Supported IDEs: VS Code, JetBrains IDEs, Visual Studio, Sublime Text, and others
 | `refresh_rate_ms` | integer | 100 | Display refresh rate (see notes) |
 | `backend` | string | "gamesense" | Backend: "gamesense", "direct", "any" |
 | `unregister_on_exit` | boolean | false | Unregister on exit (may timeout) |
-| `deinitialize_timer_ms` | integer | 15000 | Game deactivation timeout |
+| `deinitialize_timer_ms` | integer | 15000 | Game deactivation timeout (1000-60000ms) |
 
 ### Backend Configuration
 
