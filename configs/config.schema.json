@@ -65,6 +65,11 @@
         }
       }
     },
+    "bundled_font_url": {
+      "type": ["string", "null"],
+      "description": "Custom URL for downloading bundled font (null = use default)",
+      "default": null
+    },
     "display": {
       "type": "object",
       "description": "Physical display configuration",
