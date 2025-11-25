@@ -58,7 +58,7 @@ type LayoutConfig struct {
 // WidgetConfig represents a widget configuration (v2 schema)
 type WidgetConfig struct {
 	Type     string         `json:"type"`
-	ID       string         `json:"id"`
+	ID       string         `json:"-"` // Auto-generated, not from JSON
 	Enabled  *bool          `json:"enabled,omitempty"`
 	Position PositionConfig `json:"position"`
 	Style    *StyleConfig   `json:"style,omitempty"`

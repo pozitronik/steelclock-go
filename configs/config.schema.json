@@ -185,13 +185,12 @@
     },
     "widget": {
       "type": "object",
-      "required": ["type", "id", "position"],
+      "required": ["type", "position"],
       "properties": {
         "type": {
           "type": "string",
           "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom"]
         },
-        "id": { "type": "string", "description": "Unique widget identifier" },
         "enabled": { "type": "boolean", "default": true },
         "position": { "$ref": "#/definitions/position" },
         "style": { "$ref": "#/definitions/style" },

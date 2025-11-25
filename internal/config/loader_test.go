@@ -87,8 +87,8 @@ func TestLoad(t *testing.T) {
 		t.Errorf("Widget.Type = %s, want clock", widget.Type)
 	}
 
-	if widget.ID != "main_clock" {
-		t.Errorf("Widget.ID = %s, want main_clock", widget.ID)
+	if widget.ID != "clock_0" {
+		t.Errorf("Widget.ID = %s, want clock_0 (auto-generated)", widget.ID)
 	}
 
 	if !widget.IsEnabled() {
@@ -216,7 +216,6 @@ func TestValidateConfig_MissingGameName(t *testing.T) {
 		Widgets: []WidgetConfig{
 			{
 				Type:     "clock",
-				ID:       "test",
 				Enabled:  BoolPtr(true),
 				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 				Text: &TextConfig{
@@ -253,7 +252,6 @@ func TestValidateConfig_MissingGameDisplayName(t *testing.T) {
 		Widgets: []WidgetConfig{
 			{
 				Type:     "clock",
-				ID:       "test",
 				Enabled:  BoolPtr(true),
 				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 				Text: &TextConfig{
@@ -304,7 +302,6 @@ func TestValidateConfig_InvalidDisplayDimensions(t *testing.T) {
 				Widgets: []WidgetConfig{
 					{
 						Type:     "clock",
-						ID:       "test",
 						Enabled:  BoolPtr(true),
 						Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 					},
@@ -332,7 +329,6 @@ func TestValidateConfig_InvalidRefreshRate(t *testing.T) {
 		Widgets: []WidgetConfig{
 			{
 				Type:     "clock",
-				ID:       "test",
 				Enabled:  BoolPtr(true),
 				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 			},
@@ -375,7 +371,6 @@ func TestValidateConfig_DeinitializeTimer(t *testing.T) {
 				Widgets: []WidgetConfig{
 					{
 						Type:     "clock",
-						ID:       "test",
 						Enabled:  BoolPtr(true),
 						Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 						Text: &TextConfig{
@@ -426,7 +421,6 @@ func TestValidateConfig_EventBatchSize(t *testing.T) {
 				Widgets: []WidgetConfig{
 					{
 						Type:     "clock",
-						ID:       "test",
 						Enabled:  BoolPtr(true),
 						Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 						Text: &TextConfig{
@@ -477,7 +471,6 @@ func TestValidateConfig_SupportedResolutions(t *testing.T) {
 				Widgets: []WidgetConfig{
 					{
 						Type:     "clock",
-						ID:       "test",
 						Enabled:  BoolPtr(true),
 						Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 						Text: &TextConfig{
@@ -531,7 +524,6 @@ func TestValidateConfig_NoEnabledWidgets(t *testing.T) {
 		Widgets: []WidgetConfig{
 			{
 				Type:     "clock",
-				ID:       "test",
 				Enabled:  BoolPtr(false),
 				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 			},
@@ -541,32 +533,6 @@ func TestValidateConfig_NoEnabledWidgets(t *testing.T) {
 	err := validateConfig(cfg)
 	if err != nil {
 		t.Errorf("validateConfig() should allow config with all widgets disabled (will show error at runtime), got error: %v", err)
-	}
-}
-
-// TestValidateConfig_MissingWidgetID tests validation of missing widget ID
-func TestValidateConfig_MissingWidgetID(t *testing.T) {
-	cfg := &Config{
-		GameName:        "TEST",
-		GameDisplayName: "Test",
-		Display: DisplayConfig{
-			Width:  128,
-			Height: 40,
-		},
-		RefreshRateMs: 100,
-		Widgets: []WidgetConfig{
-			{
-				Type:     "clock",
-				ID:       "", // Missing ID
-				Enabled:  BoolPtr(true),
-				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-			},
-		},
-	}
-
-	err := validateConfig(cfg)
-	if err == nil {
-		t.Error("validateConfig() should return error for missing widget ID")
 	}
 }
 
@@ -583,7 +549,6 @@ func TestValidateConfig_MissingWidgetType(t *testing.T) {
 		Widgets: []WidgetConfig{
 			{
 				Type:     "", // Missing type
-				ID:       "test",
 				Enabled:  BoolPtr(true),
 				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 			},
@@ -609,7 +574,6 @@ func TestValidateConfig_InvalidWidgetType(t *testing.T) {
 		Widgets: []WidgetConfig{
 			{
 				Type:     "invalid_type",
-				ID:       "test",
 				Enabled:  BoolPtr(true),
 				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 			},
@@ -627,7 +591,6 @@ func TestValidateConfig_InvalidWidgetType(t *testing.T) {
 func TestValidateWidgetProperties_ClockMissingFormat(t *testing.T) {
 	w := &WidgetConfig{
 		Type:     "clock",
-		ID:       "test",
 		Enabled:  BoolPtr(true),
 		Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 		Text: &TextConfig{
@@ -647,7 +610,6 @@ func TestValidateWidgetProperties_NetworkMissingInterface(t *testing.T) {
 	emptyInterface := ""
 	w := &WidgetConfig{
 		Type:      "network",
-		ID:        "test",
 		Enabled:   BoolPtr(true),
 		Position:  PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 		Interface: &emptyInterface, // Empty interface
@@ -664,7 +626,6 @@ func TestValidateWidgetProperties_DiskMissingName(t *testing.T) {
 	emptyDisk := ""
 	w := &WidgetConfig{
 		Type:     "disk",
-		ID:       "test",
 		Enabled:  BoolPtr(true),
 		Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 		Disk:     &emptyDisk, // Empty disk name
@@ -680,12 +641,12 @@ func TestValidateWidgetProperties_DiskMissingName(t *testing.T) {
 func TestApplyDefaults_AllWidgetTypes(t *testing.T) {
 	cfg := &Config{
 		Widgets: []WidgetConfig{
-			{Type: "clock", ID: "clock1"},
-			{Type: "cpu", ID: "cpu1"},
-			{Type: "memory", ID: "mem1"},
-			{Type: "network", ID: "net1"},
-			{Type: "disk", ID: "disk1"},
-			{Type: "keyboard", ID: "kbd1"},
+			{Type: "clock"},
+			{Type: "cpu"},
+			{Type: "memory"},
+			{Type: "network"},
+			{Type: "disk"},
+			{Type: "keyboard"},
 		},
 	}
 
@@ -800,7 +761,6 @@ func TestApplyDefaults_GameNamesAreDifferent(t *testing.T) {
 		Widgets: []WidgetConfig{
 			{
 				Type:     "clock",
-				ID:       "test",
 				Enabled:  BoolPtr(true),
 				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 				Text: &TextConfig{

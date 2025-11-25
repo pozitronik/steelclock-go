@@ -185,24 +185,28 @@ func validateConfig(cfg *Config) error {
 		"volume": true, "volume_meter": true, "audio_visualizer": true, "doom": true,
 	}
 
-	for i, w := range cfg.Widgets {
-		// Check widget ID
-		if w.ID == "" {
-			return fmt.Errorf("widget[%d]: id is required", i)
-		}
+	// Track widget counts for auto-generating IDs
+	typeCounts := make(map[string]int)
+
+	for i := range cfg.Widgets {
+		w := &cfg.Widgets[i]
 
 		// Check widget type
 		if w.Type == "" {
-			return fmt.Errorf("widget[%d] (%s): type is required", i, w.ID)
+			return fmt.Errorf("widget[%d]: type is required", i)
 		}
 		if !validTypes[w.Type] {
-			return fmt.Errorf("widget[%d] (%s): invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, keyboard_layout, volume, volume_meter, audio_visualizer, doom)", i, w.ID, w.Type)
+			return fmt.Errorf("widget[%d]: invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, keyboard_layout, volume, volume_meter, audio_visualizer, doom)", i, w.Type)
 		}
+
+		// Auto-generate ID based on type and index
+		w.ID = fmt.Sprintf("%s_%d", w.Type, typeCounts[w.Type])
+		typeCounts[w.Type]++
 
 		// Only validate properties for enabled widgets
 		if w.IsEnabled() {
 			// Type-specific validation (only required properties)
-			if err := validateWidgetProperties(i, &w); err != nil {
+			if err := validateWidgetProperties(i, w); err != nil {
 				return err
 			}
 		}

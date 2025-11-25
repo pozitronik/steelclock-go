@@ -52,7 +52,6 @@ Use the provided `doom_example.json` or add to your existing config:
 ```json
 {
   "type": "doom",
-  "id": "doom_demo",
   "enabled": true,
   "position": {
     "x": 0,

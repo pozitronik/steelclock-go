@@ -12,7 +12,6 @@
   "widgets": [
     {
       "type": "doom",
-      "id": "doom_demo",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 1},
       "style": {"background": 0, "border": -1},

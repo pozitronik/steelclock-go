@@ -12,7 +12,6 @@
   "widgets": [
     {
       "type": "cpu",
-      "id": "cpu_gauge",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
       "style": {"background": 0, "border": -1, "padding": 2},

@@ -157,7 +157,6 @@ SteelClock supports these widget types:
 ```json
 {
   "type": "clock",
-  "id": "unique_id",
   "enabled": true,
   "position": { ... },
   "style": { ... },
@@ -173,7 +172,6 @@ Note: Colors are defined within mode-specific objects (e.g., `bar.colors`, `grap
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
 | `type` | string | Yes | Widget type |
-| `id` | string | Yes | Unique widget identifier |
 | `enabled` | boolean | No | Enable widget (default: true) |
 | `mode` | string | Depends | Display mode (widget-specific) |
 | `update_interval` | number | No | Update interval in seconds |
@@ -299,7 +297,6 @@ Widgets with multiple modes use mode-named objects:
 ```json
 {
   "type": "clock",
-  "id": "digital_clock",
   "position": {"x": 0, "y": 0, "w": 128, "h": 40},
   "mode": "text",
   "text": {
@@ -321,7 +318,6 @@ Widgets with multiple modes use mode-named objects:
 ```json
 {
   "type": "clock",
-  "id": "analog_clock",
   "position": {"x": 44, "y": 0, "w": 40, "h": 40},
   "mode": "analog",
   "analog": {
@@ -344,7 +340,6 @@ Widgets with multiple modes use mode-named objects:
 ```json
 {
   "type": "cpu",
-  "id": "cpu_gauge",
   "position": {"x": 0, "y": 0, "w": 128, "h": 40},
   "mode": "gauge",
   "gauge": {
@@ -383,7 +378,6 @@ Same structure as CPU widget, without `per_core`.
 ```json
 {
   "type": "network",
-  "id": "net_gauge",
   "position": {"x": 0, "y": 0, "w": 128, "h": 40},
   "mode": "gauge",
   "interface": null,
@@ -418,7 +412,6 @@ Same structure as CPU widget, without `per_core`.
 ```json
 {
   "type": "disk",
-  "id": "disk_graph",
   "position": {"x": 0, "y": 0, "w": 128, "h": 40},
   "mode": "graph",
   "disk": null,
@@ -441,7 +434,6 @@ Same structure as CPU widget, without `per_core`.
 ```json
 {
   "type": "volume",
-  "id": "vol_triangle",
   "position": {"x": 0, "y": 0, "w": 40, "h": 40},
   "mode": "triangle",
   "triangle": {
@@ -464,7 +456,6 @@ Same structure as CPU widget, without `per_core`.
 ```json
 {
   "type": "volume_meter",
-  "id": "vu_meter",
   "position": {"x": 0, "y": 0, "w": 128, "h": 40},
   "mode": "bar",
   "bar": {
@@ -511,7 +502,6 @@ Same structure as CPU widget, without `per_core`.
 ```json
 {
   "type": "audio_visualizer",
-  "id": "spectrum",
   "position": {"x": 0, "y": 0, "w": 128, "h": 40},
   "mode": "spectrum",
   "spectrum": {
@@ -549,7 +539,6 @@ Same structure as CPU widget, without `per_core`.
 ```json
 {
   "type": "audio_visualizer",
-  "id": "oscilloscope",
   "position": {"x": 0, "y": 0, "w": 128, "h": 40},
   "mode": "oscilloscope",
   "oscilloscope": {
@@ -576,7 +565,6 @@ Same structure as CPU widget, without `per_core`.
 ```json
 {
   "type": "keyboard",
-  "id": "kbd",
   "position": {"x": 0, "y": 0, "w": 40, "h": 20},
   "indicators": {
     "caps": {"on": "CAPS", "off": ""},
@@ -605,7 +593,6 @@ Same structure as CPU widget, without `per_core`.
 ```json
 {
   "type": "keyboard_layout",
-  "id": "layout",
   "position": {"x": 0, "y": 0, "w": 30, "h": 20},
   "format": "iso639-1",
   "text": {
@@ -626,7 +613,6 @@ Same structure as CPU widget, without `per_core`.
 ```json
 {
   "type": "doom",
-  "id": "doom",
   "position": {"x": 0, "y": 0, "w": 128, "h": 40},
   "wad": "doom1.wad"
 }
@@ -644,7 +630,6 @@ Same structure as CPU widget, without `per_core`.
   "widgets": [
     {
       "type": "clock",
-      "id": "main_clock",
       "position": {"x": 0, "y": 0, "w": 128, "h": 40},
       "mode": "text",
       "text": {
@@ -667,7 +652,6 @@ Same structure as CPU widget, without `per_core`.
   "widgets": [
     {
       "type": "cpu",
-      "id": "cpu_bar",
       "position": {"x": 0, "y": 0, "w": 128, "h": 20, "z": 0},
       "style": {"border": 255},
       "mode": "bar",
@@ -675,7 +659,6 @@ Same structure as CPU widget, without `per_core`.
     },
     {
       "type": "memory",
-      "id": "mem_bar",
       "position": {"x": 0, "y": 20, "w": 128, "h": 20, "z": 0},
       "style": {"border": 255},
       "mode": "bar",
@@ -695,14 +678,12 @@ Same structure as CPU widget, without `per_core`.
   "widgets": [
     {
       "type": "network",
-      "id": "background",
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
       "mode": "graph",
       "graph": {"history": 30, "colors": {"rx": 200, "tx": 100}}
     },
     {
       "type": "clock",
-      "id": "overlay",
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 10},
       "style": {"background": -1},
       "mode": "text",
@@ -722,7 +703,6 @@ Same structure as CPU widget, without `per_core`.
   "widgets": [
     {
       "type": "cpu",
-      "id": "cpu_gauge",
       "position": {"x": 0, "y": 0, "w": 64, "h": 40},
       "style": {"border": 255},
       "mode": "gauge",
@@ -730,7 +710,6 @@ Same structure as CPU widget, without `per_core`.
     },
     {
       "type": "memory",
-      "id": "mem_gauge",
       "position": {"x": 64, "y": 0, "w": 64, "h": 40},
       "style": {"border": 255},
       "mode": "gauge",
@@ -751,7 +730,6 @@ Same structure as CPU widget, without `per_core`.
   "widgets": [
     {
       "type": "audio_visualizer",
-      "id": "spectrum",
       "position": {"x": 0, "y": 0, "w": 128, "h": 40},
       "mode": "spectrum",
       "spectrum": {

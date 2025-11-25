@@ -12,7 +12,6 @@
   "widgets": [
     {
       "type": "keyboard_layout",
-      "id": "layout_iso1",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 13, "z": 0},
       "style": {"background": 0, "border": 255},
@@ -25,7 +24,6 @@
     },
     {
       "type": "keyboard_layout",
-      "id": "layout_iso2",
       "enabled": true,
       "position": {"x": 0, "y": 13, "w": 128, "h": 13, "z": 0},
       "style": {"background": 0, "border": 255},
@@ -38,7 +36,6 @@
     },
     {
       "type": "keyboard_layout",
-      "id": "layout_full",
       "enabled": true,
       "position": {"x": 0, "y": 26, "w": 128, "h": 14, "z": 0},
       "style": {"background": 0, "border": 255},

@@ -12,7 +12,6 @@
   "widgets": [
     {
       "type": "audio_visualizer",
-      "id": "spectrum_analyzer",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
       "style": {"background": 0, "border": -1},
@@ -40,7 +39,6 @@
     },
     {
       "type": "audio_visualizer",
-      "id": "oscilloscope",
       "enabled": false,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
       "style": {"background": 0, "border": -1},
