@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"log"
 	"math"
 	"math/cmplx"
 	"sync"
@@ -139,6 +140,12 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 				spectrumDynamicWindow = cfg.Spectrum.DynamicScaling.Window
 			}
 		}
+	}
+
+	// Validate and clamp bar count to widget width
+	if barCount > cfg.Position.W {
+		log.Printf("audio_visualizer: bars count (%d) exceeds widget width (%d), clamping to %d", barCount, cfg.Position.W, cfg.Position.W)
+		barCount = cfg.Position.W
 	}
 
 	// Peak settings (shared between spectrum and oscilloscope)

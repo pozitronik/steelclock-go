@@ -34,15 +34,6 @@
         "enabled": true,
         "hold_time": 1.0
       },
-      "channel": "stereo_combined",
-      "update_interval": 0.033
-    },
-    {
-      "type": "audio_visualizer",
-      "enabled": false,
-      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": -1},
-      "mode": "oscilloscope",
       "oscilloscope": {
         "style": "line",
         "samples": 128,
@@ -52,8 +43,8 @@
           "right": 200
         }
       },
-      "channel": "stereo_separated",
+      "channel": "stereo_combined",
       "update_interval": 0.033
-    }
+    },
   ]
 }
