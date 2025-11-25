@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://steelclock.local/config.schema.json",
   "title": "SteelClock Configuration",
-  "description": "Configuration schema for SteelClock - display manager for SteelSeries APEX 7",
+  "description": "Configuration schema for SteelClock - display manager for SteelSeries devices",
   "type": "object",
   "required": ["display", "widgets"],
   "properties": {
