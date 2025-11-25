@@ -24,18 +24,22 @@ type AudioVisualizerWidget struct {
 	id             string
 	position       config.PositionConfig
 	style          config.StyleConfig
-	properties     config.WidgetProperties
 	updateInterval time.Duration
 }
 
 // NewAudioVisualizerWidget creates a stub widget that displays an error
 func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
+	// Extract style (handle nil pointer)
+	style := config.StyleConfig{}
+	if cfg.Style != nil {
+		style = *cfg.Style
+	}
+
 	return &AudioVisualizerWidget{
 		id:             cfg.ID,
 		position:       cfg.Position,
-		style:          cfg.Style,
-		properties:     cfg.Properties,
-		updateInterval: time.Duration(cfg.Properties.UpdateInterval * float64(time.Second)),
+		style:          style,
+		updateInterval: time.Duration(cfg.UpdateInterval * float64(time.Second)),
 	}, nil
 }
 
@@ -60,7 +64,11 @@ func (w *AudioVisualizerWidget) Update() error {
 }
 
 func (w *AudioVisualizerWidget) Render() (image.Image, error) {
-	img := bitmap.NewGrayscaleImage(w.position.W, w.position.H, uint8(w.style.BackgroundColor))
+	bgColor := uint8(0)
+	if w.style.Background >= 0 {
+		bgColor = uint8(w.style.Background)
+	}
+	img := bitmap.NewGrayscaleImage(w.position.W, w.position.H, bgColor)
 
 	// Draw error message
 	errorMsg := "AUDIO\nVISUALIZER\nWINDOWS\nONLY"

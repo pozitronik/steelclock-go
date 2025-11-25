@@ -25,6 +25,8 @@ type CPUWidget struct {
 	padding          int
 	coreBorder       bool
 	coreMargin       int
+	barDirection     string
+	barBorder        bool
 	fillColor        uint8
 	gaugeColor       uint8
 	gaugeNeedleColor uint8
@@ -40,44 +42,78 @@ type CPUWidget struct {
 func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 	base := NewBaseWidget(cfg)
 
-	displayMode := cfg.Properties.DisplayMode
+	displayMode := cfg.Mode
 	if displayMode == "" {
 		displayMode = "text"
 	}
 
-	fontSize := cfg.Properties.FontSize
-	if fontSize == 0 {
-		fontSize = 10
+	// Extract text settings
+	fontSize := 10
+	fontName := ""
+	horizAlign := "center"
+	vertAlign := "center"
+	padding := 0
+
+	if cfg.Text != nil {
+		if cfg.Text.Size > 0 {
+			fontSize = cfg.Text.Size
+		}
+		fontName = cfg.Text.Font
+		if cfg.Text.Align != nil {
+			if cfg.Text.Align.H != "" {
+				horizAlign = cfg.Text.Align.H
+			}
+			if cfg.Text.Align.V != "" {
+				vertAlign = cfg.Text.Align.V
+			}
+		}
 	}
 
-	horizAlign := cfg.Properties.HorizontalAlign
-	if horizAlign == "" {
-		horizAlign = "center"
+	// Extract padding from style
+	if cfg.Style != nil {
+		padding = cfg.Style.Padding
 	}
 
-	vertAlign := cfg.Properties.VerticalAlign
-	if vertAlign == "" {
-		vertAlign = "center"
-	}
-
+	// Extract colors
 	fillColor := 255
-	if cfg.Properties.FillColor != nil {
-		fillColor = *cfg.Properties.FillColor
-	}
-
 	gaugeColor := 200
-	if cfg.Properties.GaugeColor != nil {
-		gaugeColor = *cfg.Properties.GaugeColor
-	}
-
 	gaugeNeedleColor := 255
-	if cfg.Properties.GaugeNeedleColor != nil {
-		gaugeNeedleColor = *cfg.Properties.GaugeNeedleColor
+	if cfg.Colors != nil {
+		if cfg.Colors.Fill != nil {
+			fillColor = *cfg.Colors.Fill
+		}
+		if cfg.Colors.Arc != nil {
+			gaugeColor = *cfg.Colors.Arc
+		}
+		if cfg.Colors.Needle != nil {
+			gaugeNeedleColor = *cfg.Colors.Needle
+		}
 	}
 
-	historyLen := cfg.Properties.HistoryLength
-	if historyLen == 0 {
-		historyLen = 30
+	// Extract graph settings
+	historyLen := 30
+	if cfg.Graph != nil && cfg.Graph.History > 0 {
+		historyLen = cfg.Graph.History
+	}
+
+	// Extract per-core settings
+	perCore := false
+	coreBorder := false
+	coreMargin := 0
+	if cfg.PerCore != nil {
+		perCore = cfg.PerCore.Enabled
+		coreBorder = cfg.PerCore.Border
+		coreMargin = cfg.PerCore.Margin
+	}
+
+	// Extract bar settings
+	barDirection := "horizontal"
+	barBorder := false
+	if cfg.Bar != nil {
+		if cfg.Bar.Direction != "" {
+			barDirection = cfg.Bar.Direction
+		}
+		barBorder = cfg.Bar.Border
 	}
 
 	// Get core count
@@ -89,7 +125,7 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 	// Load font for text mode
 	var fontFace font.Face
 	if displayMode == "text" {
-		fontFace, err = bitmap.LoadFont(cfg.Properties.Font, fontSize)
+		fontFace, err = bitmap.LoadFont(fontName, fontSize)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load font: %w", err)
 		}
@@ -98,14 +134,16 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 	return &CPUWidget{
 		BaseWidget:       base,
 		displayMode:      displayMode,
-		perCore:          cfg.Properties.PerCore,
+		perCore:          perCore,
 		fontSize:         fontSize,
-		fontName:         cfg.Properties.Font,
+		fontName:         fontName,
 		horizAlign:       horizAlign,
 		vertAlign:        vertAlign,
-		padding:          cfg.Properties.Padding,
-		coreBorder:       cfg.Properties.CoreBorder,
-		coreMargin:       cfg.Properties.CoreMargin,
+		padding:          padding,
+		coreBorder:       coreBorder,
+		coreMargin:       coreMargin,
+		barDirection:     barDirection,
+		barBorder:        barBorder,
 		fillColor:        uint8(fillColor),
 		gaugeColor:       uint8(gaugeColor),
 		gaugeNeedleColor: uint8(gaugeNeedleColor),
@@ -205,10 +243,12 @@ func (w *CPUWidget) Render() (image.Image, error) {
 	switch w.displayMode {
 	case "text":
 		w.renderText(img)
-	case "bar_horizontal":
-		w.renderBarHorizontal(img, contentX, contentY, contentW, contentH)
-	case "bar_vertical":
-		w.renderBarVertical(img, contentX, contentY, contentW, contentH)
+	case "bar":
+		if w.barDirection == "vertical" {
+			w.renderBarVertical(img, contentX, contentY, contentW, contentH)
+		} else {
+			w.renderBarHorizontal(img, contentX, contentY, contentW, contentH)
+		}
 	case "graph":
 		w.renderGraph(img, contentX, contentY, contentW, contentH)
 	case "gauge":
@@ -289,11 +329,11 @@ func (w *CPUWidget) renderBarHorizontal(img *image.Gray, x, y, width, height int
 
 		for i, usage := range cores {
 			coreY := y + i*(coreHeight+w.coreMargin)
-			bitmap.DrawHorizontalBar(img, x, coreY, width, coreHeight, usage, w.fillColor, w.coreBorder)
+			bitmap.DrawHorizontalBar(img, x, coreY, width, coreHeight, usage, w.fillColor, w.barBorder || w.coreBorder)
 		}
 	} else {
 		usage := w.currentUsage.(float64)
-		bitmap.DrawHorizontalBar(img, x, y, width, height, usage, w.fillColor, w.coreBorder)
+		bitmap.DrawHorizontalBar(img, x, y, width, height, usage, w.fillColor, w.barBorder)
 	}
 }
 
@@ -311,11 +351,11 @@ func (w *CPUWidget) renderBarVertical(img *image.Gray, x, y, width, height int) 
 
 		for i, usage := range cores {
 			coreX := x + i*(coreWidth+w.coreMargin)
-			bitmap.DrawVerticalBar(img, coreX, y, coreWidth, height, usage, w.fillColor, w.coreBorder)
+			bitmap.DrawVerticalBar(img, coreX, y, coreWidth, height, usage, w.fillColor, w.barBorder || w.coreBorder)
 		}
 	} else {
 		usage := w.currentUsage.(float64)
-		bitmap.DrawVerticalBar(img, x, y, width, height, usage, w.fillColor, w.coreBorder)
+		bitmap.DrawVerticalBar(img, x, y, width, height, usage, w.fillColor, w.barBorder)
 	}
 }
 

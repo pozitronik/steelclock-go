@@ -42,84 +42,103 @@ type KeyboardWidget struct {
 func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
 	base := NewBaseWidget(cfg)
 
-	fontSize := cfg.Properties.FontSize
-	if fontSize == 0 {
-		fontSize = 10
+	// Extract text settings
+	fontSize := 10
+	fontName := ""
+	horizAlign := "center"
+	vertAlign := "center"
+	padding := 0
+
+	if cfg.Text != nil {
+		if cfg.Text.Size > 0 {
+			fontSize = cfg.Text.Size
+		}
+		fontName = cfg.Text.Font
+		if cfg.Text.Align != nil {
+			if cfg.Text.Align.H != "" {
+				horizAlign = cfg.Text.Align.H
+			}
+			if cfg.Text.Align.V != "" {
+				vertAlign = cfg.Text.Align.V
+			}
+		}
 	}
 
-	horizAlign := cfg.Properties.HorizontalAlign
-	if horizAlign == "" {
-		horizAlign = "center"
-	}
-
-	vertAlign := cfg.Properties.VerticalAlign
-	if vertAlign == "" {
-		vertAlign = "center"
+	// Extract padding from style
+	if cfg.Style != nil {
+		padding = cfg.Style.Padding
 	}
 
 	// Color handling - only apply defaults when not explicitly set (nil)
 	// Allow 0 as valid value (black/invisible)
 	colorOn := 255
-	if cfg.Properties.IndicatorColorOn != nil {
-		colorOn = *cfg.Properties.IndicatorColorOn
-	}
-
 	colorOff := 100
-	if cfg.Properties.IndicatorColorOff != nil {
-		colorOff = *cfg.Properties.IndicatorColorOff
+	if cfg.Colors != nil {
+		if cfg.Colors.On != nil {
+			colorOn = *cfg.Colors.On
+		}
+		if cfg.Colors.Off != nil {
+			colorOff = *cfg.Colors.Off
+		}
 	}
 
-	// Separator between indicators (defaults to empty string for condensed output)
+	// Layout settings - separator and spacing
 	separator := ""
-	if cfg.Properties.Separator != nil {
-		separator = *cfg.Properties.Separator
+	spacing := 2
+	if cfg.Layout != nil {
+		separator = cfg.Layout.Separator
+		if cfg.Layout.Spacing > 0 {
+			spacing = cfg.Layout.Spacing
+		}
 	}
 
-	// Lock indicator symbols - only apply defaults when config key is omitted (nil)
-	// Empty string ("") is respected as intentional empty value
+	// Lock indicator symbols from indicators config
+	// Defaults
 	capsOn := "C"
-	if cfg.Properties.CapsLockOn != nil {
-		capsOn = *cfg.Properties.CapsLockOn
-	}
-
 	capsOff := "c"
-	if cfg.Properties.CapsLockOff != nil {
-		capsOff = *cfg.Properties.CapsLockOff
-	}
-
 	numOn := "N"
-	if cfg.Properties.NumLockOn != nil {
-		numOn = *cfg.Properties.NumLockOn
-	}
-
 	numOff := "n"
-	if cfg.Properties.NumLockOff != nil {
-		numOff = *cfg.Properties.NumLockOff
-	}
-
 	scrollOn := "S"
-	if cfg.Properties.ScrollLockOn != nil {
-		scrollOn = *cfg.Properties.ScrollLockOn
-	}
-
 	scrollOff := "s"
-	if cfg.Properties.ScrollLockOff != nil {
-		scrollOff = *cfg.Properties.ScrollLockOff
-	}
-
-	spacing := cfg.Properties.Spacing
-	if spacing == 0 {
-		spacing = 2
-	}
 
 	// Per-indicator mode detection: if BOTH on and off are nil, use icon mode
 	// Otherwise, use text mode (even if only one is defined)
-	capsUseIcon := cfg.Properties.CapsLockOn == nil && cfg.Properties.CapsLockOff == nil
-	numUseIcon := cfg.Properties.NumLockOn == nil && cfg.Properties.NumLockOff == nil
-	scrollUseIcon := cfg.Properties.ScrollLockOn == nil && cfg.Properties.ScrollLockOff == nil
+	capsUseIcon := true
+	numUseIcon := true
+	scrollUseIcon := true
+
+	if cfg.Indicators != nil {
+		if cfg.Indicators.Caps != nil {
+			capsUseIcon = false // Text mode if config is present
+			if cfg.Indicators.Caps.On != "" {
+				capsOn = cfg.Indicators.Caps.On
+			}
+			if cfg.Indicators.Caps.Off != "" {
+				capsOff = cfg.Indicators.Caps.Off
+			}
+		}
+		if cfg.Indicators.Num != nil {
+			numUseIcon = false
+			if cfg.Indicators.Num.On != "" {
+				numOn = cfg.Indicators.Num.On
+			}
+			if cfg.Indicators.Num.Off != "" {
+				numOff = cfg.Indicators.Num.Off
+			}
+		}
+		if cfg.Indicators.Scroll != nil {
+			scrollUseIcon = false
+			if cfg.Indicators.Scroll.On != "" {
+				scrollOn = cfg.Indicators.Scroll.On
+			}
+			if cfg.Indicators.Scroll.Off != "" {
+				scrollOff = cfg.Indicators.Scroll.Off
+			}
+		}
+	}
 
 	// Load font (needed when any indicator uses text mode)
-	fontFace, err := bitmap.LoadFont(cfg.Properties.Font, fontSize)
+	fontFace, err := bitmap.LoadFont(fontName, fontSize)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
@@ -129,7 +148,7 @@ func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
 		fontSize:      fontSize,
 		horizAlign:    horizAlign,
 		vertAlign:     vertAlign,
-		padding:       cfg.Properties.Padding,
+		padding:       padding,
 		spacing:       spacing,
 		separator:     separator,
 		capsUseIcon:   capsUseIcon,

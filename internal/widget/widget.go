@@ -45,22 +45,33 @@ type BaseWidget struct {
 
 // NewBaseWidget creates a new base widget
 func NewBaseWidget(cfg config.WidgetConfig) *BaseWidget {
-	interval := cfg.Properties.UpdateInterval
+	interval := cfg.UpdateInterval
 	if interval == 0 {
 		interval = 1.0
 	}
 
-	autoHideTimeout := cfg.Properties.AutoHideTimeout
-	if autoHideTimeout == 0 {
-		autoHideTimeout = 2.0 // Default 2 seconds
+	// Extract auto-hide settings
+	autoHide := false
+	autoHideTimeout := 2.0 // Default 2 seconds
+	if cfg.AutoHide != nil {
+		autoHide = cfg.AutoHide.Enabled
+		if cfg.AutoHide.Timeout > 0 {
+			autoHideTimeout = cfg.AutoHide.Timeout
+		}
+	}
+
+	// Extract style (handle nil pointer)
+	style := config.StyleConfig{}
+	if cfg.Style != nil {
+		style = *cfg.Style
 	}
 
 	return &BaseWidget{
 		id:              cfg.ID,
 		position:        cfg.Position,
-		style:           cfg.Style,
+		style:           style,
 		updateInterval:  time.Duration(interval * float64(time.Second)),
-		autoHide:        cfg.Properties.AutoHide,
+		autoHide:        autoHide,
 		autoHideTimeout: time.Duration(autoHideTimeout * float64(time.Second)),
 		lastTriggerTime: time.Time{}, // Zero time = widget starts hidden if auto-hide enabled
 	}
@@ -131,8 +142,8 @@ func (b *BaseWidget) GetAutoHideTimeout() time.Duration {
 // Handles the special case of -1 (transparent) by returning 0 (black)
 // The compositor will skip black pixels for transparent widgets
 func (b *BaseWidget) GetRenderBackgroundColor() uint8 {
-	if b.style.BackgroundColor == -1 {
+	if b.style.Background == -1 {
 		return 0 // Use black as background for transparent widgets
 	}
-	return uint8(b.style.BackgroundColor)
+	return uint8(b.style.Background)
 }

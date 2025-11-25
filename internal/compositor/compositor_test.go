@@ -34,7 +34,7 @@ func newMockWidget(name string, x, y, w, h int) *mockWidget {
 			X: x, Y: y, W: w, H: h,
 		},
 		style: config.StyleConfig{
-			BackgroundColor: 0,
+			Background: 0,
 		},
 	}
 }
@@ -154,9 +154,9 @@ func (m *mockGameSenseAPI) GetLastBitmapData() []int {
 // Helper to create layout manager
 func createLayoutManager(widgets []widget.Widget) *layout.Manager {
 	displayCfg := config.DisplayConfig{
-		Width:           128,
-		Height:          40,
-		BackgroundColor: 0,
+		Width:      128,
+		Height:     40,
+		Background: 0,
 	}
 	return layout.NewManager(displayCfg, widgets)
 }
@@ -168,9 +168,9 @@ func TestNewCompositor(t *testing.T) {
 		newMockWidget("widget1", 0, 0, 64, 40),
 	}
 	displayCfg := config.DisplayConfig{
-		Width:           128,
-		Height:          40,
-		BackgroundColor: 0,
+		Width:      128,
+		Height:     40,
+		Background: 0,
 	}
 	layoutMgr := layout.NewManager(displayCfg, widgets)
 	cfg := &config.Config{

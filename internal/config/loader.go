@@ -73,18 +73,22 @@ func CreateDefault() *Config {
 					Y: 0,
 					W: 128,
 					H: 40,
+					Z: 0,
 				},
-				Properties: WidgetProperties{
-					Format:          "%H:%M:%S",
-					FontSize:        10,
-					HorizontalAlign: "center",
-					VerticalAlign:   "center",
-					UpdateInterval:  1.0,
+				Style: &StyleConfig{
+					Background:  0,
+					Border:      false,
+					BorderColor: 0,
 				},
-				Style: StyleConfig{
-					BackgroundColor: 0,
-					Border:          false,
+				Text: &TextConfig{
+					Format: "%H:%M:%S",
+					Size:   10,
+					Align: &AlignConfig{
+						H: "center",
+						V: "center",
+					},
 				},
+				UpdateInterval: 1.0,
 			},
 		},
 	}
@@ -216,18 +220,17 @@ func validateConfig(cfg *Config) error {
 func validateWidgetProperties(index int, w *WidgetConfig) error {
 	switch w.Type {
 	case "clock":
-		if w.Properties.Format == "" {
-			return fmt.Errorf("widget[%d] (%s): clock format is required", index, w.ID)
-		}
+		// Format can be in Text.Format or as a fallback we apply defaults
+		// No strict validation needed - defaults will be applied
 
 	case "network":
-		if w.Properties.Interface == nil || *w.Properties.Interface == "" {
-			return fmt.Errorf("widget[%d] (%s): network interface is required", index, w.ID)
+		if w.Interface == nil || *w.Interface == "" {
+			return fmt.Errorf("widget[%d] (%s): interface is required", index, w.ID)
 		}
 
 	case "disk":
-		if w.Properties.DiskName == nil || *w.Properties.DiskName == "" {
-			return fmt.Errorf("widget[%d] (%s): disk_name is required", index, w.ID)
+		if w.Disk == nil || *w.Disk == "" {
+			return fmt.Errorf("widget[%d] (%s): disk is required", index, w.ID)
 		}
 	}
 
@@ -300,20 +303,34 @@ func applyWidgetDefaults(w *WidgetConfig) {
 
 // applyCommonWidgetDefaults sets default values common to all widgets
 func applyCommonWidgetDefaults(w *WidgetConfig) {
-	if w.Properties.UpdateInterval == 0 {
-		w.Properties.UpdateInterval = 1.0
+	if w.UpdateInterval == 0 {
+		w.UpdateInterval = 1.0
 	}
 
-	if w.Properties.FontSize == 0 {
-		w.Properties.FontSize = 10
+	// Initialize Style config if nil
+	if w.Style == nil {
+		w.Style = &StyleConfig{}
 	}
 
-	if w.Properties.HorizontalAlign == "" {
-		w.Properties.HorizontalAlign = "center"
+	// Initialize Text config if nil and apply defaults
+	if w.Text == nil {
+		w.Text = &TextConfig{}
 	}
 
-	if w.Properties.VerticalAlign == "" {
-		w.Properties.VerticalAlign = "center"
+	if w.Text.Size == 0 {
+		w.Text.Size = 10
+	}
+
+	if w.Text.Align == nil {
+		w.Text.Align = &AlignConfig{}
+	}
+
+	if w.Text.Align.H == "" {
+		w.Text.Align.H = "center"
+	}
+
+	if w.Text.Align.V == "" {
+		w.Text.Align.V = "center"
 	}
 }
 
@@ -334,111 +351,209 @@ func applyTypeSpecificDefaults(w *WidgetConfig) {
 		return
 	case "audio_visualizer":
 		applyAudioVisualizerDefaults(w)
+	case "volume_meter":
+		applyVolumeMeterDefaults(w)
 	}
 }
 
 // applyClockDefaults sets default values for clock widgets
 func applyClockDefaults(w *WidgetConfig) {
-	if w.Properties.Format == "" {
-		w.Properties.Format = "%H:%M:%S"
+	if w.Text == nil {
+		w.Text = &TextConfig{}
+	}
+	if w.Text.Format == "" {
+		w.Text.Format = "%H:%M:%S"
 	}
 }
 
 // applyMetricWidgetDefaults sets default values for CPU and Memory widgets
 func applyMetricWidgetDefaults(w *WidgetConfig) {
-	if w.Properties.DisplayMode == "" {
-		w.Properties.DisplayMode = "text"
+	if w.Mode == "" {
+		w.Mode = "text"
 	}
-	if w.Properties.FillColor == nil {
-		defaultColor := 255
-		w.Properties.FillColor = &defaultColor
+
+	// Initialize Colors if nil
+	if w.Colors == nil {
+		w.Colors = &ColorsConfig{}
 	}
-	if w.Properties.HistoryLength == 0 {
-		w.Properties.HistoryLength = 30
+	if w.Colors.Fill == nil {
+		w.Colors.Fill = IntPtr(255)
+	}
+
+	// Initialize Graph config with defaults
+	if w.Graph == nil {
+		w.Graph = &GraphConfig{}
+	}
+	if w.Graph.History == 0 {
+		w.Graph.History = 30
 	}
 }
 
 // applyNetworkDefaults sets default values for network widgets
 func applyNetworkDefaults(w *WidgetConfig) {
-	if w.Properties.DisplayMode == "" {
-		w.Properties.DisplayMode = "text"
+	if w.Mode == "" {
+		w.Mode = "text"
 	}
-	if w.Properties.RxColor == nil {
-		defaultColor := 255
-		w.Properties.RxColor = &defaultColor
+
+	// Initialize Colors if nil
+	if w.Colors == nil {
+		w.Colors = &ColorsConfig{}
 	}
-	if w.Properties.TxColor == nil {
-		defaultColor := 255
-		w.Properties.TxColor = &defaultColor
+	if w.Colors.Rx == nil {
+		w.Colors.Rx = IntPtr(255)
 	}
-	if w.Properties.MaxSpeedMbps == 0 {
-		w.Properties.MaxSpeedMbps = -1
+	if w.Colors.Tx == nil {
+		w.Colors.Tx = IntPtr(255)
 	}
-	if w.Properties.HistoryLength == 0 {
-		w.Properties.HistoryLength = 30
+
+	if w.MaxSpeedMbps == 0 {
+		w.MaxSpeedMbps = -1
+	}
+
+	// Initialize Graph config with defaults
+	if w.Graph == nil {
+		w.Graph = &GraphConfig{}
+	}
+	if w.Graph.History == 0 {
+		w.Graph.History = 30
 	}
 }
 
 // applyDiskDefaults sets default values for disk widgets
 func applyDiskDefaults(w *WidgetConfig) {
-	if w.Properties.DisplayMode == "" {
-		w.Properties.DisplayMode = "text"
+	if w.Mode == "" {
+		w.Mode = "text"
 	}
-	if w.Properties.ReadColor == nil {
-		defaultColor := 255
-		w.Properties.ReadColor = &defaultColor
+
+	// Initialize Colors if nil
+	if w.Colors == nil {
+		w.Colors = &ColorsConfig{}
 	}
-	if w.Properties.WriteColor == nil {
-		defaultColor := 255
-		w.Properties.WriteColor = &defaultColor
+	if w.Colors.Read == nil {
+		w.Colors.Read = IntPtr(255)
 	}
-	if w.Properties.MaxSpeedMbps == 0 {
-		w.Properties.MaxSpeedMbps = -1
+	if w.Colors.Write == nil {
+		w.Colors.Write = IntPtr(255)
 	}
-	if w.Properties.HistoryLength == 0 {
-		w.Properties.HistoryLength = 30
+
+	if w.MaxSpeedMbps == 0 {
+		w.MaxSpeedMbps = -1
+	}
+
+	// Initialize Graph config with defaults
+	if w.Graph == nil {
+		w.Graph = &GraphConfig{}
+	}
+	if w.Graph.History == 0 {
+		w.Graph.History = 30
 	}
 }
 
 // applyAudioVisualizerDefaults sets default values for audio visualizer widgets
 func applyAudioVisualizerDefaults(w *WidgetConfig) {
-	if w.Properties.DisplayMode == "" {
-		w.Properties.DisplayMode = "spectrum"
+	if w.Mode == "" {
+		w.Mode = "spectrum"
 	}
-	if w.Properties.BarCount == 0 {
-		w.Properties.BarCount = 32
+
+	// Initialize Colors if nil
+	if w.Colors == nil {
+		w.Colors = &ColorsConfig{}
 	}
-	if w.Properties.FrequencyScale == "" {
-		w.Properties.FrequencyScale = "logarithmic"
+	if w.Colors.Fill == nil {
+		w.Colors.Fill = IntPtr(255)
 	}
-	if w.Properties.BarStyle == "" {
-		w.Properties.BarStyle = "bars"
+	if w.Colors.Left == nil {
+		w.Colors.Left = IntPtr(255)
 	}
-	if w.Properties.Smoothing == 0 {
-		w.Properties.Smoothing = 0.7
+	if w.Colors.Right == nil {
+		w.Colors.Right = IntPtr(200)
 	}
-	if w.Properties.PeakHoldTime == 0 {
-		w.Properties.PeakHoldTime = 1.0
+
+	// Channel mode default
+	if w.Channel == "" {
+		w.Channel = "stereo_combined"
 	}
-	if w.Properties.WaveformStyle == "" {
-		w.Properties.WaveformStyle = "line"
+
+	// Spectrum defaults
+	if w.Spectrum == nil {
+		w.Spectrum = &SpectrumConfig{}
 	}
-	if w.Properties.ChannelMode == "" {
-		w.Properties.ChannelMode = "stereo_combined"
+	if w.Spectrum.Bars == 0 {
+		w.Spectrum.Bars = 32
 	}
-	if w.Properties.SampleCount == 0 {
-		w.Properties.SampleCount = 128
+	if w.Spectrum.Scale == "" {
+		w.Spectrum.Scale = "logarithmic"
 	}
-	if w.Properties.FillColor == nil {
-		defaultColor := 255
-		w.Properties.FillColor = &defaultColor
+	if w.Spectrum.Style == "" {
+		w.Spectrum.Style = "bars"
 	}
-	if w.Properties.LeftChannelColor == nil {
-		defaultColor := 255
-		w.Properties.LeftChannelColor = &defaultColor
+	if w.Spectrum.Smoothing == 0 {
+		w.Spectrum.Smoothing = 0.7
 	}
-	if w.Properties.RightChannelColor == nil {
-		defaultColor := 200
-		w.Properties.RightChannelColor = &defaultColor
+
+	// Peak defaults
+	if w.Peak == nil {
+		w.Peak = &PeakConfig{}
+	}
+	if w.Peak.HoldTime == 0 {
+		w.Peak.HoldTime = 1.0
+	}
+
+	// Oscilloscope defaults
+	if w.Oscilloscope == nil {
+		w.Oscilloscope = &OscilloscopeConfig{}
+	}
+	if w.Oscilloscope.Style == "" {
+		w.Oscilloscope.Style = "line"
+	}
+	if w.Oscilloscope.Samples == 0 {
+		w.Oscilloscope.Samples = 128
+	}
+}
+
+// applyVolumeMeterDefaults sets default values for volume meter widgets
+func applyVolumeMeterDefaults(w *WidgetConfig) {
+	if w.Mode == "" {
+		w.Mode = "bar"
+	}
+
+	// Initialize Bar config with defaults
+	if w.Bar == nil {
+		w.Bar = &BarConfig{}
+	}
+	if w.Bar.Direction == "" {
+		w.Bar.Direction = "horizontal"
+	}
+
+	// Initialize Stereo config with defaults
+	if w.Stereo == nil {
+		w.Stereo = &StereoConfig{}
+	}
+
+	// Initialize Metering config with defaults
+	if w.Metering == nil {
+		w.Metering = &MeteringConfig{}
+	}
+	if w.Metering.DecayRate == 0 {
+		w.Metering.DecayRate = 2.0
+	}
+	if w.Metering.SilenceThreshold == 0 {
+		w.Metering.SilenceThreshold = 0.01
+	}
+
+	// Initialize Peak config with defaults
+	if w.Peak == nil {
+		w.Peak = &PeakConfig{}
+	}
+	if w.Peak.HoldTime == 0 {
+		w.Peak.HoldTime = 1.0
+	}
+
+	// Initialize Clipping config with defaults
+	if w.Clipping == nil {
+		w.Clipping = &ClippingConfig{}
+	}
+	if w.Clipping.Threshold == 0 {
+		w.Clipping.Threshold = 0.99
 	}
 }

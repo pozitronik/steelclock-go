@@ -24,7 +24,7 @@ func NewManager(display config.DisplayConfig, widgets []widget.Widget) *Manager 
 	return &Manager{
 		width:   display.Width,
 		height:  display.Height,
-		bgColor: uint8(display.BackgroundColor),
+		bgColor: uint8(display.Background),
 		widgets: widgets,
 	}
 }
@@ -38,7 +38,7 @@ func (m *Manager) Composite() (image.Image, error) {
 	sortedWidgets := make([]widget.Widget, len(m.widgets))
 	copy(sortedWidgets, m.widgets)
 	sort.Slice(sortedWidgets, func(i, j int) bool {
-		return sortedWidgets[i].GetPosition().ZOrder < sortedWidgets[j].GetPosition().ZOrder
+		return sortedWidgets[i].GetPosition().Z < sortedWidgets[j].GetPosition().Z
 	})
 
 	// Render and composite each widget
@@ -61,13 +61,13 @@ func (m *Manager) Composite() (image.Image, error) {
 		style := w.GetStyle()
 		pos := w.GetPosition()
 
-		// Check if widget has transparent background (background_color = -1)
-		transparentBg := style.BackgroundColor == -1
+		// Check if widget has transparent background (background = -1)
+		transparentBg := style.Background == -1
 
 		// Composite widget onto canvas
 		if transparentBg {
 			// Transparent background: only copy non-background pixels
-			compositeWithTransparency(canvas, widgetImg, pos, style.BackgroundColor)
+			compositeWithTransparency(canvas, widgetImg, pos, style.Background)
 		} else {
 			// Opaque background: draw all pixels
 			destRect := image.Rect(pos.X, pos.Y, pos.X+pos.W, pos.Y+pos.H)

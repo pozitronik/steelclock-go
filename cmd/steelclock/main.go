@@ -708,9 +708,9 @@ func startWithErrorDisplay(message string, width, height int) error {
 
 	// Create simple display config
 	displayCfg := config.DisplayConfig{
-		Width:           width,
-		Height:          height,
-		BackgroundColor: 0,
+		Width:      width,
+		Height:     height,
+		Background: 0,
 	}
 
 	// Create default config for compositor

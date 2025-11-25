@@ -98,33 +98,46 @@ type KeyboardLayoutWidget struct {
 func NewKeyboardLayoutWidget(cfg config.WidgetConfig) (*KeyboardLayoutWidget, error) {
 	base := NewBaseWidget(cfg)
 
-	fontSize := cfg.Properties.FontSize
-	if fontSize == 0 {
-		fontSize = 10
+	// Extract text settings
+	fontSize := 10
+	fontName := ""
+	horizAlign := "center"
+	vertAlign := "center"
+	padding := 0
+
+	if cfg.Text != nil {
+		if cfg.Text.Size > 0 {
+			fontSize = cfg.Text.Size
+		}
+		fontName = cfg.Text.Font
+		if cfg.Text.Align != nil {
+			if cfg.Text.Align.H != "" {
+				horizAlign = cfg.Text.Align.H
+			}
+			if cfg.Text.Align.V != "" {
+				vertAlign = cfg.Text.Align.V
+			}
+		}
 	}
 
-	horizAlign := cfg.Properties.HorizontalAlign
-	if horizAlign == "" {
-		horizAlign = "center"
+	// Extract padding from style
+	if cfg.Style != nil {
+		padding = cfg.Style.Padding
 	}
 
-	vertAlign := cfg.Properties.VerticalAlign
-	if vertAlign == "" {
-		vertAlign = "center"
-	}
-
-	displayFormat := cfg.Properties.DisplayFormat
+	// Display format from config
+	displayFormat := cfg.Format
 	if displayFormat == "" {
 		displayFormat = "iso639-1"
 	}
 
 	// Validate display format
 	if displayFormat != "iso639-1" && displayFormat != "iso639-2" && displayFormat != "full" {
-		return nil, fmt.Errorf("invalid display_format: %s (must be iso639-1, iso639-2, or full)", displayFormat)
+		return nil, fmt.Errorf("invalid format: %s (must be iso639-1, iso639-2, or full)", displayFormat)
 	}
 
 	// Load font
-	fontFace, err := bitmap.LoadFont(cfg.Properties.Font, fontSize)
+	fontFace, err := bitmap.LoadFont(fontName, fontSize)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
@@ -134,7 +147,7 @@ func NewKeyboardLayoutWidget(cfg config.WidgetConfig) (*KeyboardLayoutWidget, er
 		fontSize:      fontSize,
 		horizAlign:    horizAlign,
 		vertAlign:     vertAlign,
-		padding:       cfg.Properties.Padding,
+		padding:       padding,
 		displayFormat: displayFormat,
 		fontFace:      fontFace,
 	}

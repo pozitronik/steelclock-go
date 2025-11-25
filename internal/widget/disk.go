@@ -22,6 +22,7 @@ type DiskWidget struct {
 	horizAlign       string
 	vertAlign        string
 	padding          int
+	barDirection     string
 	barBorder        bool
 	readColor        uint8
 	writeColor       uint8
@@ -41,51 +42,77 @@ type DiskWidget struct {
 func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 	base := NewBaseWidget(cfg)
 
-	displayMode := cfg.Properties.DisplayMode
+	displayMode := cfg.Mode
 	if displayMode == "" {
 		displayMode = "text"
 	}
 
-	fontSize := cfg.Properties.FontSize
-	if fontSize == 0 {
-		fontSize = 10
+	// Extract text settings
+	fontSize := 10
+	fontName := ""
+	horizAlign := "center"
+	vertAlign := "center"
+	padding := 0
+
+	if cfg.Text != nil {
+		if cfg.Text.Size > 0 {
+			fontSize = cfg.Text.Size
+		}
+		fontName = cfg.Text.Font
+		if cfg.Text.Align != nil {
+			if cfg.Text.Align.H != "" {
+				horizAlign = cfg.Text.Align.H
+			}
+			if cfg.Text.Align.V != "" {
+				vertAlign = cfg.Text.Align.V
+			}
+		}
 	}
 
-	horizAlign := cfg.Properties.HorizontalAlign
-	if horizAlign == "" {
-		horizAlign = "center"
+	// Extract padding from style
+	if cfg.Style != nil {
+		padding = cfg.Style.Padding
 	}
 
-	vertAlign := cfg.Properties.VerticalAlign
-	if vertAlign == "" {
-		vertAlign = "center"
-	}
-
+	// Extract colors
 	readColor := 255
-	if cfg.Properties.ReadColor != nil {
-		readColor = *cfg.Properties.ReadColor
-	}
-
 	writeColor := 255
-	if cfg.Properties.WriteColor != nil {
-		writeColor = *cfg.Properties.WriteColor
+	if cfg.Colors != nil {
+		if cfg.Colors.Read != nil {
+			readColor = *cfg.Colors.Read
+		}
+		if cfg.Colors.Write != nil {
+			writeColor = *cfg.Colors.Write
+		}
 	}
 
-	maxSpeed := cfg.Properties.MaxSpeedMbps
+	// Max speed
+	maxSpeed := cfg.MaxSpeedMbps
 	if maxSpeed == 0 {
 		maxSpeed = -1 // Auto-scale
 	}
 
-	historyLen := cfg.Properties.HistoryLength
-	if historyLen == 0 {
-		historyLen = 30
+	// Extract graph settings
+	historyLen := 30
+	if cfg.Graph != nil && cfg.Graph.History > 0 {
+		historyLen = cfg.Graph.History
+	}
+
+	// Extract bar settings
+	barDirection := "horizontal"
+	barBorder := false
+	if cfg.Bar != nil {
+		if cfg.Bar.Direction != "" {
+			barDirection = cfg.Bar.Direction
+		}
+		barBorder = cfg.Bar.Border
 	}
 
 	// Load font for text mode
 	var fontFace font.Face
 	var err error
 	if displayMode == "text" {
-		fontFace, err = bitmap.LoadFont(cfg.Properties.Font, fontSize)
+		fontFace, err = bitmap.LoadFont(fontName, fontSize)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load font: %w", err)
 		}
@@ -94,13 +121,14 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 	return &DiskWidget{
 		BaseWidget:   base,
 		displayMode:  displayMode,
-		diskName:     cfg.Properties.DiskName,
+		diskName:     cfg.Disk,
 		maxSpeedMbps: maxSpeed,
 		fontSize:     fontSize,
 		horizAlign:   horizAlign,
 		vertAlign:    vertAlign,
-		padding:      cfg.Properties.Padding,
-		barBorder:    cfg.Properties.BarBorder,
+		padding:      padding,
+		barDirection: barDirection,
+		barBorder:    barBorder,
 		readColor:    uint8(readColor),
 		writeColor:   uint8(writeColor),
 		historyLen:   historyLen,
@@ -188,10 +216,12 @@ func (w *DiskWidget) Render() (image.Image, error) {
 	switch w.displayMode {
 	case "text":
 		w.renderText(img)
-	case "bar_horizontal":
-		w.renderBarHorizontal(img, contentX, contentY, contentW, contentH)
-	case "bar_vertical":
-		w.renderBarVertical(img, contentX, contentY, contentW, contentH)
+	case "bar":
+		if w.barDirection == "vertical" {
+			w.renderBarVertical(img, contentX, contentY, contentW, contentH)
+		} else {
+			w.renderBarHorizontal(img, contentX, contentY, contentW, contentH)
+		}
 	case "graph":
 		w.renderGraph(img, contentX, contentY, contentW, contentH)
 	}

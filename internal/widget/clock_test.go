@@ -18,16 +18,15 @@ func TestNewClockWidget(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background:  0,
+			Border:      false,
+			BorderColor: 255,
 		},
-		Properties: config.WidgetProperties{
-			Format:          "15:04",
-			FontSize:        12,
-			HorizontalAlign: "center",
-			VerticalAlign:   "center",
+		Text: &config.TextConfig{
+			Format: "15:04",
+			Size:   12,
+			Align:  &config.AlignConfig{H: "center", V: "center"},
 		},
 	}
 
@@ -56,16 +55,15 @@ func TestClockWidgetUpdate(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background:  0,
+			Border:      false,
+			BorderColor: 255,
 		},
-		Properties: config.WidgetProperties{
-			Format:          "15:04:05",
-			FontSize:        12,
-			HorizontalAlign: "center",
-			VerticalAlign:   "center",
+		Text: &config.TextConfig{
+			Format: "15:04:05",
+			Size:   12,
+			Align:  &config.AlignConfig{H: "center", V: "center"},
 		},
 	}
 
@@ -96,16 +94,15 @@ func TestClockWidgetRender(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          true,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background:  0,
+			Border:      true,
+			BorderColor: 255,
 		},
-		Properties: config.WidgetProperties{
-			Format:          "15:04",
-			FontSize:        12,
-			HorizontalAlign: "center",
-			VerticalAlign:   "center",
+		Text: &config.TextConfig{
+			Format: "15:04",
+			Size:   12,
+			Align:  &config.AlignConfig{H: "center", V: "center"},
 		},
 	}
 
@@ -150,14 +147,12 @@ func TestClockWidgetRender_ClockFace(t *testing.T) {
 			W: 80,
 			H: 80,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background:  0,
+			Border:      false,
+			BorderColor: 255,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "clock_face",
-		},
+		Mode: "clock_face",
 	}
 
 	widget, err := NewClockWidget(cfg)
@@ -228,14 +223,14 @@ func TestClockWidget_DefaultDisplayMode(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background:  0,
+			Border:      false,
+			BorderColor: 255,
 		},
-		Properties: config.WidgetProperties{
-			Format:   "15:04",
-			FontSize: 12,
+		Text: &config.TextConfig{
+			Format: "15:04",
+			Size:   12,
 		},
 	}
 
@@ -343,16 +338,15 @@ func TestClockWidgetRender_ClockFaceAlignment(t *testing.T) {
 					W: tt.width,
 					H: tt.height,
 				},
-				Style: config.StyleConfig{
-					BackgroundColor: 0,
-					Border:          false,
-					BorderColor:     255,
+				Style: &config.StyleConfig{
+					Background:  0,
+					Border:      false,
+					BorderColor: 255,
+					Padding:     tt.padding,
 				},
-				Properties: config.WidgetProperties{
-					DisplayMode:     "clock_face",
-					HorizontalAlign: tt.horizAlign,
-					VerticalAlign:   tt.vertAlign,
-					Padding:         tt.padding,
+				Mode: "clock_face",
+				Text: &config.TextConfig{
+					Align: &config.AlignConfig{H: tt.horizAlign, V: tt.vertAlign},
 				},
 			}
 
@@ -399,16 +393,15 @@ func TestClockWidget_ConcurrentAccess(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background:  0,
+			Border:      false,
+			BorderColor: 255,
 		},
-		Properties: config.WidgetProperties{
-			Format:          "15:04:05",
-			FontSize:        12,
-			HorizontalAlign: "center",
-			VerticalAlign:   "center",
+		Text: &config.TextConfig{
+			Format: "15:04:05",
+			Size:   12,
+			Align:  &config.AlignConfig{H: "center", V: "center"},
 		},
 	}
 

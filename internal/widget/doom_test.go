@@ -34,14 +34,12 @@ func TestNewDoomWidget(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background:  0,
+			Border:      false,
+			BorderColor: 255,
 		},
-		Properties: config.WidgetProperties{
-			WadName: tmpFile,
-		},
+		Wad: tmpFile,
 	}
 
 	widget, err := NewDoomWidget(cfg)
@@ -85,14 +83,12 @@ func TestDoomWidgetRender_EmptyFrame(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background:  0,
+			Border:      false,
+			BorderColor: 255,
 		},
-		Properties: config.WidgetProperties{
-			WadName: tmpFile,
-		},
+		Wad: tmpFile,
 	}
 
 	widget, _ := NewDoomWidget(cfg)
@@ -140,14 +136,12 @@ func TestDoomWidgetRender_DownloadProgress(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background:  0,
+			Border:      false,
+			BorderColor: 255,
 		},
-		Properties: config.WidgetProperties{
-			WadName: tmpFile,
-		},
+		Wad: tmpFile,
 	}
 
 	widget, _ := NewDoomWidget(cfg)
@@ -215,14 +209,12 @@ func TestDoomWidgetRender_DownloadError(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background:  0,
+			Border:      false,
+			BorderColor: 255,
 		},
-		Properties: config.WidgetProperties{
-			WadName: tmpFile,
-		},
+		Wad: tmpFile,
 	}
 
 	widget, _ := NewDoomWidget(cfg)
@@ -467,9 +459,7 @@ func TestDoomWidget_StopCleansUpGoroutines(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{
-			WadName: tmpFile,
-		},
+		Wad: tmpFile,
 	}
 
 	widget, err := NewDoomWidget(cfg)

@@ -25,6 +25,7 @@ type VolumeWidget struct {
 	*BaseWidget
 	displayMode       string
 	fillColor         uint8
+	barDirection      string
 	barBorder         bool
 	gaugeColor        uint8
 	gaugeNeedleColor  uint8
@@ -59,49 +60,75 @@ type VolumeWidget struct {
 func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 	base := NewBaseWidget(cfg)
 
-	displayMode := cfg.Properties.DisplayMode
+	displayMode := cfg.Mode
 	if displayMode == "" {
-		displayMode = "bar_horizontal"
+		displayMode = "bar"
 	}
 
+	// Extract colors
 	fillColor := 255
-	if cfg.Properties.FillColor != nil {
-		fillColor = *cfg.Properties.FillColor
-	}
-
 	gaugeColor := 200
-	if cfg.Properties.GaugeColor != nil {
-		gaugeColor = *cfg.Properties.GaugeColor
-	}
-
 	gaugeNeedleColor := 255
-	if cfg.Properties.GaugeNeedleColor != nil {
-		gaugeNeedleColor = *cfg.Properties.GaugeNeedleColor
-	}
-
 	triangleFillColor := 255
-	if cfg.Properties.TriangleFillColor != nil {
-		triangleFillColor = *cfg.Properties.TriangleFillColor
+	if cfg.Colors != nil {
+		if cfg.Colors.Fill != nil {
+			fillColor = *cfg.Colors.Fill
+		}
+		if cfg.Colors.Arc != nil {
+			gaugeColor = *cfg.Colors.Arc
+		}
+		if cfg.Colors.Needle != nil {
+			gaugeNeedleColor = *cfg.Colors.Needle
+		}
 	}
 
-	horizAlign := cfg.Properties.HorizontalAlign
-	if horizAlign == "" {
-		horizAlign = "center"
+	// Extract text settings
+	fontSize := 10
+	fontName := ""
+	horizAlign := "center"
+	vertAlign := "center"
+	padding := 0
+
+	if cfg.Text != nil {
+		if cfg.Text.Size > 0 {
+			fontSize = cfg.Text.Size
+		}
+		fontName = cfg.Text.Font
+		if cfg.Text.Align != nil {
+			if cfg.Text.Align.H != "" {
+				horizAlign = cfg.Text.Align.H
+			}
+			if cfg.Text.Align.V != "" {
+				vertAlign = cfg.Text.Align.V
+			}
+		}
 	}
 
-	vertAlign := cfg.Properties.VerticalAlign
-	if vertAlign == "" {
-		vertAlign = "center"
+	// Extract padding from style
+	if cfg.Style != nil {
+		padding = cfg.Style.Padding
+	}
+
+	// Extract bar settings
+	barDirection := "horizontal"
+	barBorder := false
+	if cfg.Bar != nil {
+		if cfg.Bar.Direction != "" {
+			barDirection = cfg.Bar.Direction
+		}
+		barBorder = cfg.Bar.Border
+	}
+
+	// Extract triangle settings
+	triangleBorder := false
+	if cfg.Triangle != nil {
+		triangleBorder = cfg.Triangle.Border
 	}
 
 	// Load font for text mode
 	var fontFace font.Face
 	if displayMode == "text" {
-		fontSize := cfg.Properties.FontSize
-		if fontSize == 0 {
-			fontSize = 10
-		}
-		face, err := bitmap.LoadFont(cfg.Properties.Font, fontSize)
+		face, err := bitmap.LoadFont(fontName, fontSize)
 		if err == nil {
 			fontFace = face
 		}
@@ -111,14 +138,15 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		BaseWidget:        base,
 		displayMode:       displayMode,
 		fillColor:         uint8(fillColor),
-		barBorder:         cfg.Properties.BarBorder,
+		barDirection:      barDirection,
+		barBorder:         barBorder,
 		gaugeColor:        uint8(gaugeColor),
 		gaugeNeedleColor:  uint8(gaugeNeedleColor),
 		triangleFillColor: uint8(triangleFillColor),
-		triangleBorder:    cfg.Properties.TriangleBorder,
+		triangleBorder:    triangleBorder,
 		horizAlign:        horizAlign,
 		vertAlign:         vertAlign,
-		padding:           cfg.Properties.Padding,
+		padding:           padding,
 		lastSuccessTime:   time.Now(), // Initialize to prevent false "stuck" detection
 		face:              fontFace,
 		stopChan:          make(chan struct{}),
@@ -240,10 +268,12 @@ func (w *VolumeWidget) Render() (image.Image, error) {
 	switch w.displayMode {
 	case "text":
 		w.renderText(img)
-	case "bar_horizontal":
-		w.renderBarHorizontal(img, pos, style)
-	case "bar_vertical":
-		w.renderBarVertical(img, pos, style)
+	case "bar":
+		if w.barDirection == "vertical" {
+			w.renderBarVertical(img, pos, style)
+		} else {
+			w.renderBarHorizontal(img, pos, style)
+		}
 	case "gauge":
 		w.renderGauge(img, pos)
 	case "triangle":

@@ -38,8 +38,8 @@ type DoomWidget struct {
 func NewDoomWidget(cfg config.WidgetConfig) (*DoomWidget, error) {
 	base := NewBaseWidget(cfg)
 
-	// Get WAD file name from properties
-	wadName := cfg.Properties.WadName
+	// Get WAD file name from config
+	wadName := cfg.Wad
 	if wadName == "" {
 		wadName = "doom1.wad"
 	}

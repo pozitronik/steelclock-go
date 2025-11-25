@@ -93,7 +93,8 @@ type VolumeMeterWidget struct {
 func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	base := NewBaseWidget(cfg)
 
-	displayMode := cfg.Properties.DisplayMode
+	// Display mode
+	displayMode := cfg.Mode
 	if displayMode == "" {
 		displayMode = "bar_horizontal"
 	}
@@ -109,96 +110,143 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		return nil, fmt.Errorf("invalid display mode: %s (valid: text, bar_horizontal, bar_vertical, gauge)", displayMode)
 	}
 
+	// Extract colors
 	fillColor := 255
-	if cfg.Properties.FillColor != nil {
-		fillColor = *cfg.Properties.FillColor
-	}
-
-	clippingColor := 200 // Red in grayscale
-	if cfg.Properties.ClippingColor != nil {
-		clippingColor = *cfg.Properties.ClippingColor
-	}
-
+	clippingColor := 200
 	leftChannelColor := 255
-	if cfg.Properties.LeftChannelColor != nil {
-		leftChannelColor = *cfg.Properties.LeftChannelColor
-	}
-
 	rightChannelColor := 200
-	if cfg.Properties.RightChannelColor != nil {
-		rightChannelColor = *cfg.Properties.RightChannelColor
-	}
-
 	gaugeColor := 200
-	if cfg.Properties.GaugeColor != nil {
-		gaugeColor = *cfg.Properties.GaugeColor
-	}
-
 	gaugeNeedleColor := 255
-	if cfg.Properties.GaugeNeedleColor != nil {
-		gaugeNeedleColor = *cfg.Properties.GaugeNeedleColor
+
+	if cfg.Colors != nil {
+		if cfg.Colors.Fill != nil {
+			fillColor = *cfg.Colors.Fill
+		}
+		if cfg.Colors.Arc != nil {
+			gaugeColor = *cfg.Colors.Arc
+		}
+		if cfg.Colors.Needle != nil {
+			gaugeNeedleColor = *cfg.Colors.Needle
+		}
 	}
 
-	// Clipping detection
-	clippingThreshold := cfg.Properties.ClippingThreshold
-	if clippingThreshold == 0 {
-		clippingThreshold = 0.99 // Default: 99% of max
+	// Clipping settings (includes color)
+	clippingThreshold := 0.99
+	showClipping := false
+
+	if cfg.Clipping != nil {
+		showClipping = cfg.Clipping.Enabled
+		if cfg.Clipping.Threshold > 0 {
+			clippingThreshold = cfg.Clipping.Threshold
+		}
+		if cfg.Clipping.Color != nil {
+			clippingColor = *cfg.Clipping.Color
+		}
 	}
 
-	// Silence detection
-	silenceThreshold := cfg.Properties.SilenceThreshold
-	if silenceThreshold == 0 {
-		silenceThreshold = 0.01 // Default: 1% of max
+	// Stereo settings (includes channel colors)
+	stereoMode := false
+
+	if cfg.Stereo != nil {
+		stereoMode = cfg.Stereo.Enabled
+		if cfg.Stereo.LeftColor != nil {
+			leftChannelColor = *cfg.Stereo.LeftColor
+		}
+		if cfg.Stereo.RightColor != nil {
+			rightChannelColor = *cfg.Stereo.RightColor
+		}
 	}
 
-	// Decay rate (normalized units per second)
-	decayRate := cfg.Properties.DecayRate
-	if decayRate == 0 {
-		decayRate = 2.0 // Default: decay 2.0 units/sec (0.5 seconds from 1.0 to 0.0)
+	// Metering settings
+	silenceThreshold := 0.01
+	decayRate := 2.0
+	useDBScale := false
+
+	if cfg.Metering != nil {
+		useDBScale = cfg.Metering.DBScale
+		if cfg.Metering.DecayRate > 0 {
+			decayRate = cfg.Metering.DecayRate
+		}
+		if cfg.Metering.SilenceThreshold > 0 {
+			silenceThreshold = cfg.Metering.SilenceThreshold
+		}
 	}
 
-	// Peak hold time
-	peakHoldTime := time.Duration(cfg.Properties.PeakHoldTime * float64(time.Second))
-	if peakHoldTime == 0 {
-		peakHoldTime = 1 * time.Second
+	// Peak hold settings
+	peakHoldTime := 1 * time.Second
+	showPeakHold := false
+
+	if cfg.Peak != nil {
+		showPeakHold = cfg.Peak.Enabled
+		if cfg.Peak.HoldTime > 0 {
+			peakHoldTime = time.Duration(cfg.Peak.HoldTime * float64(time.Second))
+		}
 	}
 
-	// Auto-hide on silence timeout
-	autoHideSilenceTime := time.Duration(cfg.Properties.AutoHideSilenceTime * float64(time.Second))
-	if autoHideSilenceTime == 0 {
-		autoHideSilenceTime = 2 * time.Second
+	// Auto-hide settings
+	autoHideOnSilence := false
+	autoHideSilenceTime := 2 * time.Second
+
+	if cfg.AutoHide != nil {
+		autoHideOnSilence = cfg.AutoHide.OnSilence
+		if cfg.AutoHide.SilenceTime > 0 {
+			autoHideSilenceTime = time.Duration(cfg.AutoHide.SilenceTime * float64(time.Second))
+		}
+	}
+
+	// Extract text settings
+	fontSize := 10
+	fontName := ""
+	horizontalAlign := "center"
+	verticalAlign := "center"
+	padding := 0
+
+	if cfg.Text != nil {
+		if cfg.Text.Size > 0 {
+			fontSize = cfg.Text.Size
+		}
+		fontName = cfg.Text.Font
+		if cfg.Text.Align != nil {
+			if cfg.Text.Align.H != "" {
+				horizontalAlign = cfg.Text.Align.H
+			}
+			if cfg.Text.Align.V != "" {
+				verticalAlign = cfg.Text.Align.V
+			}
+		}
+	}
+
+	// Extract padding from style
+	if cfg.Style != nil {
+		padding = cfg.Style.Padding
 	}
 
 	// Load font for text mode
 	var fontFace font.Face
 	if displayMode == "text" {
-		fontSize := cfg.Properties.FontSize
-		if fontSize == 0 {
-			fontSize = 10
-		}
-		face, err := bitmap.LoadFont(cfg.Properties.Font, fontSize)
+		face, err := bitmap.LoadFont(fontName, fontSize)
 		if err == nil {
 			fontFace = face
 		}
 	}
 
-	horizontalAlign := cfg.Properties.HorizontalAlign
-	if horizontalAlign == "" {
-		horizontalAlign = "center"
+	// Extract bar settings
+	barBorder := false
+	if cfg.Bar != nil {
+		barBorder = cfg.Bar.Border
 	}
 
-	verticalAlign := cfg.Properties.VerticalAlign
-	if verticalAlign == "" {
-		verticalAlign = "center"
+	// Also check style for border (handle nil pointer)
+	style := config.StyleConfig{}
+	if cfg.Style != nil {
+		style = *cfg.Style
+		if style.Border {
+			barBorder = true
+		}
 	}
-
-	padding := cfg.Properties.Padding
-
-	// Check for border in both properties and style
-	barBorder := cfg.Properties.BarBorder || cfg.Style.Border
 
 	// Get border color from style config
-	borderColor := cfg.Style.BorderColor
+	borderColor := style.BorderColor
 	if borderColor == 0 {
 		borderColor = 255 // Default: bright white
 	}
@@ -217,15 +265,15 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		horizontalAlign:     horizontalAlign,
 		verticalAlign:       verticalAlign,
 		padding:             padding,
-		stereoMode:          cfg.Properties.StereoMode,
-		useDBScale:          cfg.Properties.UseDBScale,
-		showClipping:        cfg.Properties.ShowClipping,
+		stereoMode:          stereoMode,
+		useDBScale:          useDBScale,
+		showClipping:        showClipping,
 		clippingThreshold:   clippingThreshold,
 		silenceThreshold:    silenceThreshold,
 		decayRate:           decayRate,
-		showPeakHold:        cfg.Properties.ShowPeakHold,
+		showPeakHold:        showPeakHold,
 		peakHoldTime:        peakHoldTime,
-		autoHideOnSilence:   cfg.Properties.AutoHideOnSilence,
+		autoHideOnSilence:   autoHideOnSilence,
 		autoHideSilenceTime: autoHideSilenceTime,
 		lastSuccessTime:     time.Now(),
 		lastUpdateTime:      time.Now(),

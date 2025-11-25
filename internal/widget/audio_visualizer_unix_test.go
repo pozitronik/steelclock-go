@@ -20,14 +20,12 @@ func TestNewAudioVisualizerWidget_Unix(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     false,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:    "spectrum",
-			UpdateInterval: 0.033,
-		},
+		Mode:           "spectrum",
+		UpdateInterval: 0.033,
 	}
 
 	// On Unix, NewAudioVisualizerWidget should succeed (stub widget created)
@@ -56,14 +54,12 @@ func TestAudioVisualizerWidget_Unix_Render(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     false,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:    "spectrum",
-			UpdateInterval: 0.033,
-		},
+		Mode:           "spectrum",
+		UpdateInterval: 0.033,
 	}
 
 	widget, err := NewAudioVisualizerWidget(cfg)
@@ -107,13 +103,11 @@ func TestAudioVisualizerWidget_Unix_Update(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
+		Style: &config.StyleConfig{
+			Background: 0,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:    "spectrum",
-			UpdateInterval: 0.033,
-		},
+		Mode:           "spectrum",
+		UpdateInterval: 0.033,
 	}
 
 	widget, err := NewAudioVisualizerWidget(cfg)
@@ -134,21 +128,19 @@ func TestAudioVisualizerWidget_Unix_GetMethods(t *testing.T) {
 		ID:      "test_unix_getters",
 		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
-			X:      10,
-			Y:      20,
-			W:      128,
-			H:      40,
-			ZOrder: 5,
+			X: 10,
+			Y: 20,
+			W: 128,
+			H: 40,
+			Z: 5,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 100,
-			Border:          true,
-			BorderColor:     200,
+		Style: &config.StyleConfig{
+			Background:  100,
+			Border:      true,
+			BorderColor: 200,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:    "spectrum",
-			UpdateInterval: 0.05,
-		},
+		Mode:           "spectrum",
+		UpdateInterval: 0.05,
 	}
 
 	widget, err := NewAudioVisualizerWidget(cfg)
@@ -163,14 +155,14 @@ func TestAudioVisualizerWidget_Unix_GetMethods(t *testing.T) {
 
 	// Test GetPosition()
 	pos := widget.GetPosition()
-	if pos.X != 10 || pos.Y != 20 || pos.W != 128 || pos.H != 40 || pos.ZOrder != 5 {
-		t.Errorf("GetPosition() = %+v, want {X:10 Y:20 W:128 H:40 ZOrder:5}", pos)
+	if pos.X != 10 || pos.Y != 20 || pos.W != 128 || pos.H != 40 || pos.Z != 5 {
+		t.Errorf("GetPosition() = %+v, want {X:10 Y:20 W:128 H:40 Z:5}", pos)
 	}
 
 	// Test GetStyle()
 	style := widget.GetStyle()
-	if style.BackgroundColor != 100 || !style.Border || style.BorderColor != 200 {
-		t.Errorf("GetStyle() = %+v, want {BackgroundColor:100 Border:true BorderColor:200}", style)
+	if style.Background != 100 || !style.Border || style.BorderColor != 200 {
+		t.Errorf("GetStyle() = %+v, want {Background:100 Border:true BorderColor:200}", style)
 	}
 
 	// Test GetUpdateInterval()
@@ -209,14 +201,12 @@ func TestAudioVisualizerWidget_Unix_BorderRendering(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          true,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background:  0,
+			Border:      true,
+			BorderColor: 255,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "spectrum",
-		},
+		Mode: "spectrum",
 	}
 
 	widget, err := NewAudioVisualizerWidget(cfg)

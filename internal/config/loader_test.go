@@ -220,7 +220,7 @@ func TestValidateConfig_MissingGameName(t *testing.T) {
 				ID:       "test",
 				Enabled:  BoolPtr(true),
 				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-				Properties: WidgetProperties{
+				Text: &TextConfig{
 					Format: "%H:%M:%S",
 				},
 			},
@@ -257,7 +257,7 @@ func TestValidateConfig_MissingGameDisplayName(t *testing.T) {
 				ID:       "test",
 				Enabled:  BoolPtr(true),
 				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-				Properties: WidgetProperties{
+				Text: &TextConfig{
 					Format: "%H:%M:%S",
 				},
 			},
@@ -379,7 +379,7 @@ func TestValidateConfig_DeinitializeTimer(t *testing.T) {
 						ID:       "test",
 						Enabled:  BoolPtr(true),
 						Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-						Properties: WidgetProperties{
+						Text: &TextConfig{
 							Format: "%H:%M:%S",
 						},
 					},
@@ -430,7 +430,7 @@ func TestValidateConfig_EventBatchSize(t *testing.T) {
 						ID:       "test",
 						Enabled:  BoolPtr(true),
 						Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-						Properties: WidgetProperties{
+						Text: &TextConfig{
 							Format: "%H:%M:%S",
 						},
 					},
@@ -481,7 +481,7 @@ func TestValidateConfig_SupportedResolutions(t *testing.T) {
 						ID:       "test",
 						Enabled:  BoolPtr(true),
 						Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-						Properties: WidgetProperties{
+						Text: &TextConfig{
 							Format: "%H:%M:%S",
 						},
 					},
@@ -624,20 +624,22 @@ func TestValidateConfig_InvalidWidgetType(t *testing.T) {
 }
 
 // TestValidateWidgetProperties_ClockMissingFormat tests clock widget without format
+// In v2, clock format is optional - defaults are applied automatically
 func TestValidateWidgetProperties_ClockMissingFormat(t *testing.T) {
 	w := &WidgetConfig{
 		Type:     "clock",
 		ID:       "test",
 		Enabled:  BoolPtr(true),
 		Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-		Properties: WidgetProperties{
-			Format: "", // Missing format
+		Text: &TextConfig{
+			Format: "", // Missing format - defaults will be applied
 		},
 	}
 
 	err := validateWidgetProperties(0, w)
-	if err == nil {
-		t.Error("validateWidgetProperties() should return error for clock without format")
+	// In v2, missing format is valid - defaults are applied
+	if err != nil {
+		t.Errorf("validateWidgetProperties() should not return error for clock without format, got: %v", err)
 	}
 }
 
@@ -645,13 +647,11 @@ func TestValidateWidgetProperties_ClockMissingFormat(t *testing.T) {
 func TestValidateWidgetProperties_NetworkMissingInterface(t *testing.T) {
 	emptyInterface := ""
 	w := &WidgetConfig{
-		Type:     "network",
-		ID:       "test",
-		Enabled:  BoolPtr(true),
-		Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-		Properties: WidgetProperties{
-			Interface: &emptyInterface, // Empty interface
-		},
+		Type:      "network",
+		ID:        "test",
+		Enabled:   BoolPtr(true),
+		Position:  PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+		Interface: &emptyInterface, // Empty interface
 	}
 
 	err := validateWidgetProperties(0, w)
@@ -668,9 +668,7 @@ func TestValidateWidgetProperties_DiskMissingName(t *testing.T) {
 		ID:       "test",
 		Enabled:  BoolPtr(true),
 		Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-		Properties: WidgetProperties{
-			DiskName: &emptyDisk, // Empty disk name
-		},
+		Disk:     &emptyDisk, // Empty disk name
 	}
 
 	err := validateWidgetProperties(0, w)
@@ -696,21 +694,21 @@ func TestApplyDefaults_AllWidgetTypes(t *testing.T) {
 
 	// Verify each widget got its defaults
 	for i, w := range cfg.Widgets {
-		if w.Properties.UpdateInterval == 0 {
+		if w.UpdateInterval == 0 {
 			t.Errorf("Widget %d (%s) missing default UpdateInterval", i, w.Type)
 		}
 
-		if w.Properties.FontSize == 0 {
-			t.Errorf("Widget %d (%s) missing default FontSize", i, w.Type)
+		if w.Text == nil || w.Text.Size == 0 {
+			t.Errorf("Widget %d (%s) missing default Text.Size", i, w.Type)
 		}
 	}
 
 	// Verify type-specific defaults
-	if cfg.Widgets[0].Properties.Format == "" {
+	if cfg.Widgets[0].Text == nil || cfg.Widgets[0].Text.Format == "" {
 		t.Error("Clock widget missing default format")
 	}
 
-	if cfg.Widgets[1].Properties.DisplayMode == "" {
+	if cfg.Widgets[1].Mode == "" {
 		t.Error("CPU widget missing default display mode")
 	}
 }
@@ -752,7 +750,7 @@ func TestLoad_PartialConfig(t *testing.T) {
 		t.Error("Display.Width default was not applied")
 	}
 
-	if cfg.Widgets[0].Properties.UpdateInterval == 0 {
+	if cfg.Widgets[0].UpdateInterval == 0 {
 		t.Error("Widget UpdateInterval default was not applied")
 	}
 }
@@ -806,7 +804,7 @@ func TestApplyDefaults_GameNamesAreDifferent(t *testing.T) {
 				ID:       "test",
 				Enabled:  BoolPtr(true),
 				Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-				Properties: WidgetProperties{
+				Text: &TextConfig{
 					Format: "%H:%M:%S",
 				},
 			},
