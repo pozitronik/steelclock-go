@@ -37,13 +37,10 @@ var frequencyCompensationCurve = []struct {
 
 // AudioVisualizerWidget displays real-time spectrum analyzer or oscilloscope
 type AudioVisualizerWidget struct {
-	id             string
-	position       config.PositionConfig
-	style          config.StyleConfig
-	updateInterval time.Duration
-	audioCapture   *AudioCaptureWCA
-	volumeReader   *VolumeReaderWCA
-	mu             sync.Mutex
+	*BaseWidget
+	audioCapture *AudioCaptureWCA
+	volumeReader *VolumeReaderWCA
+	mu           sync.Mutex
 
 	// Display settings
 	displayMode string
@@ -97,11 +94,13 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 		return nil, fmt.Errorf("failed to get shared volume reader: %w", err)
 	}
 
-	// Extract style (handle nil pointer)
-	style := config.StyleConfig{}
-	if cfg.Style != nil {
-		style = *cfg.Style
+	// Set default update interval for audio visualizer (33ms = ~30fps)
+	if cfg.UpdateInterval <= 0 {
+		cfg.UpdateInterval = 0.033
 	}
+
+	// Create base widget
+	base := NewBaseWidget(cfg)
 
 	// Display mode
 	displayMode := cfg.Mode
@@ -204,14 +203,8 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 		}
 	}
 
-	// Update interval
-	updateInterval := cfg.UpdateInterval
-	if updateInterval <= 0 {
-		updateInterval = 0.033 // Default 33ms if not set
-	}
-
 	// Calculate energy history window size for dynamic scaling
-	windowSize := int(spectrumDynamicWindow/updateInterval) + 1
+	windowSize := int(spectrumDynamicWindow/cfg.UpdateInterval) + 1
 	if windowSize < 2 {
 		windowSize = 2 // Minimum 2 samples
 	}
@@ -223,10 +216,7 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 	}
 
 	w := &AudioVisualizerWidget{
-		id:                     cfg.ID,
-		position:               cfg.Position,
-		style:                  style,
-		updateInterval:         time.Duration(updateInterval * float64(time.Second)),
+		BaseWidget:             base,
 		audioCapture:           capture,
 		volumeReader:           volumeReader,
 		displayMode:            displayMode,
@@ -256,22 +246,6 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 	}
 
 	return w, nil
-}
-
-func (w *AudioVisualizerWidget) Name() string {
-	return w.id
-}
-
-func (w *AudioVisualizerWidget) GetUpdateInterval() time.Duration {
-	return w.updateInterval
-}
-
-func (w *AudioVisualizerWidget) GetPosition() config.PositionConfig {
-	return w.position
-}
-
-func (w *AudioVisualizerWidget) GetStyle() config.StyleConfig {
-	return w.style
 }
 
 // Update captures audio and processes it
@@ -683,7 +657,10 @@ func (w *AudioVisualizerWidget) Render() (image.Image, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	img := bitmap.NewGrayscaleImage(w.position.W, w.position.H, uint8(w.style.Background))
+	pos := w.GetPosition()
+	style := w.GetStyle()
+
+	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 
 	if w.displayMode == "spectrum" {
 		w.renderSpectrum(img)
@@ -691,8 +668,8 @@ func (w *AudioVisualizerWidget) Render() (image.Image, error) {
 		w.renderOscilloscope(img)
 	}
 
-	if w.style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(w.style.Border))
+	if style.Border >= 0 {
+		bitmap.DrawBorder(img, uint8(style.Border))
 	}
 
 	return img, nil
