@@ -250,15 +250,10 @@ func DrawDualGauge(img *image.Gray, pos config.PositionConfig, outerPercentage, 
 	}
 }
 
-// DrawGauge draws a semicircular gauge with needle
-func DrawGauge(img *image.Gray, pos config.PositionConfig, percentage float64, gaugeColor, needleColor uint8) {
-	DrawGaugeAt(img, 0, 0, pos.W, pos.H, percentage, gaugeColor, needleColor)
-}
-
-// DrawGaugeAt draws a gauge at a specific position with offset
+// DrawGauge draws a semicircular gauge with needle at a specific position
 //
 //nolint:gocyclo // Complex geometric calculations for gauge rendering
-func DrawGaugeAt(img *image.Gray, x, y, width, height int, percentage float64, gaugeColor, needleColor uint8) {
+func DrawGauge(img *image.Gray, x, y, width, height int, percentage float64, gaugeColor, needleColor uint8, showTicks bool, ticksColor uint8) {
 	centerX := x + width/2
 	centerY := y + height - 3 // Near bottom
 
@@ -274,6 +269,7 @@ func DrawGaugeAt(img *image.Gray, x, y, width, height int, percentage float64, g
 
 	gColor := color.Gray{Y: gaugeColor}
 	nColor := color.Gray{Y: needleColor}
+	tColor := color.Gray{Y: ticksColor}
 
 	bounds := img.Bounds()
 
@@ -288,24 +284,26 @@ func DrawGaugeAt(img *image.Gray, x, y, width, height int, percentage float64, g
 		}
 	}
 
-	// Draw tick marks
-	for tick := 0; tick <= 10; tick++ {
-		angle := 180.0 - float64(tick)*18.0 // 0-180 degrees in 10 steps
-		rad := angle * math.Pi / 180.0
+	// Draw tick marks if enabled
+	if showTicks {
+		for tick := 0; tick <= 10; tick++ {
+			angle := 180.0 - float64(tick)*18.0 // 0-180 degrees in 10 steps
+			rad := angle * math.Pi / 180.0
 
-		// Outer point
-		x1 := centerX + int(float64(radius)*math.Cos(rad))
-		y1 := centerY - int(float64(radius)*math.Sin(rad))
+			// Outer point
+			x1 := centerX + int(float64(radius)*math.Cos(rad))
+			y1 := centerY - int(float64(radius)*math.Sin(rad))
 
-		// Inner point
-		tickLen := 3
-		if tick%5 == 0 {
-			tickLen = 5 // Longer ticks at 0%, 50%, 100%
+			// Inner point
+			tickLen := 3
+			if tick%5 == 0 {
+				tickLen = 5 // Longer ticks at 0%, 50%, 100%
+			}
+			x2 := centerX + int(float64(radius-tickLen)*math.Cos(rad))
+			y2 := centerY - int(float64(radius-tickLen)*math.Sin(rad))
+
+			DrawLine(img, x1, y1, x2, y2, tColor)
 		}
-		x2 := centerX + int(float64(radius-tickLen)*math.Cos(rad))
-		y2 := centerY - int(float64(radius-tickLen)*math.Sin(rad))
-
-		DrawLine(img, x1, y1, x2, y2, gColor)
 	}
 
 	// Draw needle based on percentage

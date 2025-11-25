@@ -225,13 +225,9 @@ func TestDrawGauge(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			img := NewGrayscaleImage(tt.width, tt.height, 0)
-			pos := config.PositionConfig{
-				W: tt.width,
-				H: tt.height,
-			}
 
 			// Should not panic
-			DrawGauge(img, pos, tt.percentage, tt.gaugeColor, tt.needleColor)
+			DrawGauge(img, 0, 0, tt.width, tt.height, tt.percentage, tt.gaugeColor, tt.needleColor, true, tt.gaugeColor)
 
 			// Count pixels of gauge color
 			gaugePixels := 0
