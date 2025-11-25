@@ -424,7 +424,7 @@ func TestKeyboardIcons_Existence(t *testing.T) {
 
 	for _, iconSet := range iconSets {
 		if iconSet == nil {
-			t.Errorf("Icon set %s is nil", iconSet.Name)
+			t.Errorf("Icon set is nil")
 			continue
 		}
 
