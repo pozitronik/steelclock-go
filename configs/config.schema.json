@@ -391,9 +391,8 @@
               },
               "gauge": {
                 "type": "object",
-                "description": "Gauge mode settings",
+                "description": "Gauge mode settings (dual gauge: outer for RX, inner for TX)",
                 "properties": {
-                  "show_ticks": { "type": "boolean", "description": "Show gauge tick marks", "default": true },
                   "colors": {
                     "type": "object",
                     "description": "Gauge colors for RX/TX",

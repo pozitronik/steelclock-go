@@ -32,7 +32,6 @@
         }
       },
       "gauge": {
-        "show_ticks": true,
         "colors": {
           "rx": 255,
           "tx": 128,
