@@ -74,7 +74,7 @@ func findDevicePath(vid, pid uint16, targetInterface string) (string, error) {
 	if hDevInfo == 0 || hDevInfo == ^uintptr(0) {
 		return "", fmt.Errorf("SetupDiGetClassDevsW failed")
 	}
-	defer procSetupDiDestroyDeviceInfoList.Call(hDevInfo)
+	defer func() { _, _, _ = procSetupDiDestroyDeviceInfoList.Call(hDevInfo) }()
 
 	var ifaceData spDeviceInterfaceData
 	// Set cbSize based on architecture
@@ -107,7 +107,7 @@ func findDevicePath(vid, pid uint16, targetInterface string) (string, error) {
 		}
 
 		var reqSize uint32
-		procSetupDiGetDeviceInterfaceDetailW.Call(
+		_, _, _ = procSetupDiGetDeviceInterfaceDetailW.Call(
 			hDevInfo,
 			uintptr(unsafe.Pointer(&ifaceData)),
 			uintptr(unsafe.Pointer(&detailData)),
