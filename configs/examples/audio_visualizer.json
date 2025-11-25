@@ -1,8 +1,5 @@
 {
   "$schema": "../config.schema.json",
-  "schema_version": 2,
-  "game_name": "STEELCLOCK_AUDIO",
-  "game_display_name": "SteelClock - Audio Visualizer",
   "refresh_rate_ms": 33,
   "display": {
     "width": 128,
@@ -14,7 +11,7 @@
       "type": "audio_visualizer",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": -1},
+      "style": {"background": 0, "border": -1, "padding": 0},
       "mode": "spectrum",
       "spectrum": {
         "bars": 32,
@@ -31,7 +28,9 @@
           "hold_time": 1.0
         },
         "colors": {
-          "fill": 255
+          "fill": 255,
+          "left": 255,
+          "right": 200
         }
       },
       "oscilloscope": {
@@ -44,7 +43,13 @@
         }
       },
       "channel": "stereo_combined",
+      "auto_hide": {
+        "enabled": false,
+        "timeout": 2.0,
+        "on_silence": false,
+        "silence_time": 2.0
+      },
       "update_interval": 0.033
-    },
+    }
   ]
 }

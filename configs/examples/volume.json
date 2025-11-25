@@ -1,8 +1,5 @@
 {
   "$schema": "../config.schema.json",
-  "schema_version": 2,
-  "game_name": "STEELCLOCK_VOLUME",
-  "game_display_name": "SteelClock - Volume Indicator",
   "refresh_rate_ms": 100,
   "display": {
     "width": 128,
@@ -16,6 +13,20 @@
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
       "style": {"background": 0, "border": -1, "padding": 2},
       "mode": "triangle",
+      "bar": {
+        "direction": "horizontal",
+        "border": false,
+        "colors": {
+          "fill": 255
+        }
+      },
+      "gauge": {
+        "show_ticks": true,
+        "colors": {
+          "arc": 200,
+          "needle": 255
+        }
+      },
       "triangle": {
         "border": true,
         "colors": {
@@ -23,6 +34,9 @@
         }
       },
       "text": {
+        "format": "%d%%",
+        "font": null,
+        "size": 10,
         "align": {"h": "center", "v": "center"}
       },
       "auto_hide": {

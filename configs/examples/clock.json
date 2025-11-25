@@ -1,8 +1,5 @@
 {
   "$schema": "../config.schema.json",
-  "schema_version": 2,
-  "game_name": "STEELCLOCK_CLOCK",
-  "game_display_name": "SteelClock - Digital Clock",
   "refresh_rate_ms": 1000,
   "display": {
     "width": 128,
@@ -18,8 +15,20 @@
       "mode": "text",
       "text": {
         "format": "%H:%M:%S",
+        "font": null,
         "size": 16,
         "align": {"h": "center", "v": "center"}
+      },
+      "analog": {
+        "show_seconds": true,
+        "show_ticks": true,
+        "colors": {
+          "face": 255,
+          "hour": 255,
+          "minute": 255,
+          "second": 255,
+          "ticks": 150
+        }
       },
       "update_interval": 0.1
     }

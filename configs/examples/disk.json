@@ -1,8 +1,5 @@
 {
   "$schema": "../config.schema.json",
-  "schema_version": 2,
-  "game_name": "STEELCLOCK_DISK",
-  "game_display_name": "SteelClock - Disk Monitor",
   "refresh_rate_ms": 1000,
   "display": {
     "width": 128,
@@ -18,6 +15,14 @@
       "mode": "graph",
       "disk": null,
       "max_speed_mbps": -1,
+      "bar": {
+        "direction": "horizontal",
+        "border": false,
+        "colors": {
+          "read": 255,
+          "write": 200
+        }
+      },
       "graph": {
         "history": 60,
         "filled": true,
@@ -27,6 +32,9 @@
         }
       },
       "text": {
+        "format": "R: %s W: %s",
+        "font": null,
+        "size": 10,
         "align": {"h": "center", "v": "center"}
       },
       "update_interval": 1.0

@@ -1,8 +1,5 @@
 {
   "$schema": "../config.schema.json",
-  "schema_version": 2,
-  "game_name": "STEELCLOCK_MEMORY",
-  "game_display_name": "SteelClock - Memory Monitor",
   "refresh_rate_ms": 1000,
   "display": {
     "width": 128,
@@ -16,6 +13,13 @@
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
       "style": {"background": 0, "border": 255, "padding": 2},
       "mode": "graph",
+      "bar": {
+        "direction": "horizontal",
+        "border": false,
+        "colors": {
+          "fill": 255
+        }
+      },
       "graph": {
         "history": 60,
         "filled": true,
@@ -23,7 +27,19 @@
           "fill": 255
         }
       },
+      "gauge": {
+        "show_ticks": true,
+        "colors": {
+          "fill": 255,
+          "arc": 200,
+          "needle": 255,
+          "ticks": 150
+        }
+      },
       "text": {
+        "format": "%d%%",
+        "font": null,
+        "size": 10,
         "align": {"h": "center", "v": "center"}
       },
       "update_interval": 1.0

@@ -1,8 +1,5 @@
 {
   "$schema": "../config.schema.json",
-  "schema_version": 2,
-  "game_name": "STEELCLOCK_KEYBOARD",
-  "game_display_name": "SteelClock - Keyboard Indicators",
   "refresh_rate_ms": 200,
   "display": {
     "width": 128,
@@ -16,9 +13,9 @@
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
       "style": {"background": 0, "border": -1, "padding": 2},
       "indicators": {
-        "caps": {"on": "CAPS", "off": ""},
-        "num": {"on": "NUM", "off": ""},
-        "scroll": {"on": "SCR", "off": ""}
+        "caps": {"on": null, "off": null},
+        "num": {"on": null, "off": null},
+        "scroll": {"on": null, "off": null}
       },
       "layout": {
         "spacing": 3,
@@ -29,6 +26,7 @@
         "off": 100
       },
       "text": {
+        "font": null,
         "size": 10,
         "align": {"h": "center", "v": "center"}
       },

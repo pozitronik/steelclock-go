@@ -1,8 +1,5 @@
 {
   "$schema": "../config.schema.json",
-  "schema_version": 2,
-  "game_name": "STEELCLOCK_VOLUME_METER",
-  "game_display_name": "SteelClock - VU Meter",
   "refresh_rate_ms": 100,
   "display": {
     "width": 128,
@@ -19,6 +16,9 @@
       "bar": {
         "direction": "vertical",
         "border": false
+      },
+      "gauge": {
+        "show_ticks": true
       },
       "stereo": {
         "enabled": true,
@@ -39,11 +39,22 @@
         "threshold": 0.99,
         "color": 200
       },
+      "colors": {
+        "fill": 255,
+        "arc": 200,
+        "needle": 255
+      },
       "text": {
+        "format": "%d dB",
+        "font": null,
+        "size": 10,
         "align": {"h": "center", "v": "center"}
       },
       "auto_hide": {
-        "on_silence": false
+        "enabled": false,
+        "timeout": 2.0,
+        "on_silence": false,
+        "silence_time": 2.0
       },
       "update_interval": 0.05
     }

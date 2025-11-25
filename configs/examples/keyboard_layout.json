@@ -1,8 +1,5 @@
 {
   "$schema": "../config.schema.json",
-  "schema_version": 2,
-  "game_name": "STEELCLOCK_KBDLAYOUT",
-  "game_display_name": "SteelClock - Keyboard Layout",
   "refresh_rate_ms": 100,
   "display": {
     "width": 128,
@@ -13,38 +10,15 @@
     {
       "type": "keyboard_layout",
       "enabled": true,
-      "position": {"x": 0, "y": 0, "w": 128, "h": 13, "z": 0},
-      "style": {"background": 0, "border": 255},
-      "format": "iso639-1",
-      "text": {
-        "size": 10,
-        "align": {"h": "center", "v": "center"}
-      },
-      "update_interval": 0.2
-    },
-    {
-      "type": "keyboard_layout",
-      "enabled": true,
-      "position": {"x": 0, "y": 13, "w": 128, "h": 13, "z": 0},
-      "style": {"background": 0, "border": 255},
+      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
+      "style": {"background": 0, "border": 255, "padding": 0},
       "format": "iso639-2",
       "text": {
+        "font": null,
         "size": 10,
         "align": {"h": "center", "v": "center"}
       },
       "update_interval": 0.2
     },
-    {
-      "type": "keyboard_layout",
-      "enabled": true,
-      "position": {"x": 0, "y": 26, "w": 128, "h": 14, "z": 0},
-      "style": {"background": 0, "border": 255},
-      "format": "full",
-      "text": {
-        "size": 8,
-        "align": {"h": "center", "v": "center"}
-      },
-      "update_interval": 0.2
-    }
   ]
 }
