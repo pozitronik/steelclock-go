@@ -53,7 +53,7 @@ func TestImageToBytes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			img := image.NewGray(image.Rect(0, 0, tt.width, tt.height))
-			bytes, err := ImageToBytes(img, tt.width, tt.height)
+			bytes, err := ImageToBytes(img, tt.width, tt.height, nil)
 
 			if err != nil {
 				t.Fatalf("ImageToBytes() error = %v", err)
@@ -77,7 +77,7 @@ func TestImageToBytesPattern(t *testing.T) {
 		}
 	}
 
-	bytes, err := ImageToBytes(img, 8, 1)
+	bytes, err := ImageToBytes(img, 8, 1, nil)
 	if err != nil {
 		t.Fatalf("ImageToBytes() error = %v", err)
 	}
@@ -300,7 +300,7 @@ func TestImageToBytes_WrongSize(t *testing.T) {
 	img := image.NewGray(image.Rect(0, 0, 8, 8))
 
 	// ImageToBytes will resize the image to match requested dimensions
-	bytes, err := ImageToBytes(img, 16, 16)
+	bytes, err := ImageToBytes(img, 16, 16, nil)
 	if err != nil {
 		t.Errorf("ImageToBytes() should resize mismatched image, got error: %v", err)
 	}
@@ -316,7 +316,7 @@ func TestImageToBytes_EmptyImage(t *testing.T) {
 	// Create 0x0 image
 	img := image.NewGray(image.Rect(0, 0, 0, 0))
 
-	bytes, err := ImageToBytes(img, 0, 0)
+	bytes, err := ImageToBytes(img, 0, 0, nil)
 	if err != nil {
 		t.Errorf("ImageToBytes() with 0x0 image should not error, got: %v", err)
 	}
@@ -421,5 +421,128 @@ func TestNewGrayscaleImage_LargeSize(t *testing.T) {
 	// Verify background in corner
 	if img.GrayAt(0, 0).Y != 64 {
 		t.Errorf("Background = %d, want 64", img.GrayAt(0, 0).Y)
+	}
+}
+
+// TestImageToBytes_WithBuffer tests buffer reuse optimization
+func TestImageToBytes_WithBuffer(t *testing.T) {
+	tests := []struct {
+		name   string
+		width  int
+		height int
+	}{
+		{"Standard display", 128, 40},
+		{"Single row", 8, 1},
+		{"Single column", 1, 8},
+		{"Small square", 16, 16},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create test image with a pattern
+			img := image.NewGray(image.Rect(0, 0, tt.width, tt.height))
+			for y := 0; y < tt.height; y++ {
+				for x := 0; x < tt.width; x++ {
+					img.SetGray(x, y, color.Gray{Y: uint8((x + y) % 256)})
+				}
+			}
+
+			// Get result without buffer (nil)
+			expected, err := ImageToBytes(img, tt.width, tt.height, nil)
+			if err != nil {
+				t.Fatalf("ImageToBytes(nil) error = %v", err)
+			}
+
+			// Create pre-allocated buffer
+			bufferSize := (tt.width*tt.height + 7) / 8
+			buffer := make([]int, bufferSize)
+
+			// Get result using pre-allocated buffer
+			result, err := ImageToBytes(img, tt.width, tt.height, buffer)
+			if err != nil {
+				t.Fatalf("ImageToBytes(buffer) error = %v", err)
+			}
+
+			// Verify results are identical
+			if len(result) != len(expected) {
+				t.Errorf("len(result) = %d, want %d", len(result), len(expected))
+			}
+
+			for i := range expected {
+				if result[i] != expected[i] {
+					t.Errorf("result[%d] = %d, want %d", i, result[i], expected[i])
+				}
+			}
+		})
+	}
+}
+
+// TestImageToBytes_BufferTooSmall tests error handling for small buffer
+func TestImageToBytes_BufferTooSmall(t *testing.T) {
+	img := image.NewGray(image.Rect(0, 0, 128, 40))
+
+	// Create buffer that is too small
+	smallBuffer := make([]int, 100) // Needs 640
+
+	_, err := ImageToBytes(img, 128, 40, smallBuffer)
+	if err == nil {
+		t.Error("ImageToBytes() should return error for small buffer")
+	}
+}
+
+// TestImageToBytes_BufferReuse tests that buffer is actually reused
+func TestImageToBytes_BufferReuse(t *testing.T) {
+	// Create two different images
+	img1 := image.NewGray(image.Rect(0, 0, 8, 8))
+	img2 := image.NewGray(image.Rect(0, 0, 8, 8))
+
+	// Fill with different patterns
+	for y := 0; y < 8; y++ {
+		for x := 0; x < 8; x++ {
+			img1.SetGray(x, y, color.Gray{Y: 255}) // All white
+			img2.SetGray(x, y, color.Gray{Y: 0})   // All black
+		}
+	}
+
+	// Create single buffer
+	bufferSize := (8*8 + 7) / 8 // 8 bytes
+	buffer := make([]int, bufferSize)
+
+	// First call
+	result1, err := ImageToBytes(img1, 8, 8, buffer)
+	if err != nil {
+		t.Fatalf("First ImageToBytes() error = %v", err)
+	}
+
+	// Verify buffer is the same slice (by pointer)
+	if &result1[0] != &buffer[0] {
+		t.Error("First result should use the same buffer")
+	}
+
+	// Second call with same buffer
+	result2, err := ImageToBytes(img2, 8, 8, buffer)
+	if err != nil {
+		t.Fatalf("Second ImageToBytes() error = %v", err)
+	}
+
+	// Verify buffer is still the same slice
+	if &result2[0] != &buffer[0] {
+		t.Error("Second result should use the same buffer")
+	}
+
+	// Results should be different (different images)
+	allSame := true
+	for i := range result1 {
+		if result1[i] != result2[i] {
+			allSame = false
+			break
+		}
+	}
+	// Note: Due to buffer reuse, result1 and result2 point to same memory
+	// so after second call, both will have img2's data
+	// This test verifies the buffer IS reused
+
+	if !allSame {
+		t.Error("After reuse, both results should point to same buffer data")
 	}
 }

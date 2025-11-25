@@ -20,9 +20,35 @@ func NewGrayscaleImage(width, height int, bgColor uint8) *image.Gray {
 	return img
 }
 
-// ImageToBytes converts an image to byte array for GameSense API
+// ImageToBytes converts an image to byte array for GameSense API.
+// If buffer is provided and has sufficient capacity, it will be reused to reduce allocations.
+// If buffer is nil or too small, a new buffer will be allocated.
 // Format: Monochrome, MSB first, row-major order
-func ImageToBytes(img image.Image, width, height int) ([]int, error) {
+func ImageToBytes(img image.Image, width, height int, buffer []int) ([]int, error) {
+	expectedSize := (width*height + 7) / 8
+
+	// Handle edge case of zero-size image
+	if expectedSize == 0 {
+		if buffer != nil && len(buffer) == 0 {
+			return buffer, nil
+		}
+		return []int{}, nil
+	}
+
+	// Validate or allocate buffer
+	var bytes []int
+	if buffer == nil {
+		bytes = make([]int, expectedSize)
+	} else if len(buffer) < expectedSize {
+		return nil, fmt.Errorf("buffer too small: got %d, need %d", len(buffer), expectedSize)
+	} else {
+		bytes = buffer[:expectedSize]
+		// Clear the buffer for reuse
+		for i := range bytes {
+			bytes[i] = 0
+		}
+	}
+
 	// Resize if needed
 	if img.Bounds().Dx() != width || img.Bounds().Dy() != height {
 		img = ResizeImage(img, width, height)
@@ -35,7 +61,6 @@ func ImageToBytes(img image.Image, width, height int) ([]int, error) {
 	monoImg := FloydSteinbergDither(grayImg)
 
 	// Convert to byte array
-	bytes := make([]int, (width*height+7)/8)
 	byteIndex := 0
 	bitIndex := 0
 	var currentByte byte
@@ -63,11 +88,6 @@ func ImageToBytes(img image.Image, width, height int) ([]int, error) {
 	// Handle remaining bits
 	if bitIndex > 0 {
 		bytes[byteIndex] = int(currentByte)
-	}
-
-	expectedSize := (width*height + 7) / 8
-	if len(bytes) != expectedSize {
-		return nil, fmt.Errorf("unexpected bitmap size: got %d, expected %d", len(bytes), expectedSize)
 	}
 
 	return bytes, nil

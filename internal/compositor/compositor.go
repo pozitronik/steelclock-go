@@ -37,6 +37,9 @@ type Compositor struct {
 	bufferMu        sync.Mutex
 	resolutions     []Resolution // All resolutions to render (main + supported)
 
+	// Pre-allocated buffers for ImageToBytes to reduce allocations in render loop
+	bitmapBuffers map[string][]int
+
 	// Backend failure handling
 	OnBackendFailure     func()     // Callback when backend fails (called once per failure)
 	heartbeatFailures    int        // Consecutive heartbeat failure count
@@ -56,6 +59,14 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 		resolutions = append(resolutions, Resolution{Width: res.Width, Height: res.Height})
 	}
 
+	// Pre-allocate bitmap buffers for each resolution
+	bitmapBuffers := make(map[string][]int)
+	for _, res := range resolutions {
+		bufferSize := (res.Width*res.Height + 7) / 8
+		key := fmt.Sprintf("image-data-%dx%d", res.Width, res.Height)
+		bitmapBuffers[key] = make([]int, bufferSize)
+	}
+
 	comp := &Compositor{
 		client:          client,
 		layoutManager:   layoutMgr,
@@ -67,6 +78,7 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 		batchSize:       cfg.EventBatchSize,
 		frameBuffer:     make([][]int, 0, cfg.EventBatchSize),
 		resolutions:     resolutions,
+		bitmapBuffers:   bitmapBuffers,
 	}
 
 	log.Printf("Rendering for %d resolution(s):", len(resolutions))
@@ -208,14 +220,15 @@ func (c *Compositor) renderFrame() error {
 		return fmt.Errorf("composite failed: %w", err)
 	}
 
-	// Render at all resolutions
+	// Render at all resolutions using pre-allocated buffers
 	resolutionData := make(map[string][]int)
 	for _, res := range c.resolutions {
-		bitmapData, err := bitmap.ImageToBytes(canvas, res.Width, res.Height)
+		key := fmt.Sprintf("image-data-%dx%d", res.Width, res.Height)
+		buffer := c.bitmapBuffers[key]
+		bitmapData, err := bitmap.ImageToBytes(canvas, res.Width, res.Height, buffer)
 		if err != nil {
 			return fmt.Errorf("image conversion failed for %dx%d: %w", res.Width, res.Height, err)
 		}
-		key := fmt.Sprintf("image-data-%dx%d", res.Width, res.Height)
 		resolutionData[key] = bitmapData
 	}
 
