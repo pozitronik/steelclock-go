@@ -20,8 +20,8 @@ func TestNewDiskWidget(t *testing.T) {
 			DiskName:      &diskName,
 			DisplayMode:   "text",
 			FontSize:      10,
-			ReadColor:     255,
-			WriteColor:    200,
+			ReadColor:     config.IntPtr(255),
+			WriteColor:    config.IntPtr(200),
 			MaxSpeedMbps:  100,
 			HistoryLength: 30,
 		},
@@ -190,8 +190,8 @@ func TestDiskWidget_RenderBarHorizontal(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode:  "bar_horizontal",
-			ReadColor:    255,
-			WriteColor:   200,
+			ReadColor:    config.IntPtr(255),
+			WriteColor:   config.IntPtr(200),
 			MaxSpeedMbps: 100,
 		},
 	}
@@ -224,8 +224,8 @@ func TestDiskWidget_RenderBarVertical(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode: "bar_vertical",
-			ReadColor:   255,
-			WriteColor:  200,
+			ReadColor:   config.IntPtr(255),
+			WriteColor:  config.IntPtr(200),
 		},
 	}
 
@@ -257,8 +257,8 @@ func TestDiskWidget_RenderGraph(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode:   "graph",
-			ReadColor:     255,
-			WriteColor:    200,
+			ReadColor:     config.IntPtr(255),
+			WriteColor:    config.IntPtr(200),
 			HistoryLength: 30,
 		},
 	}

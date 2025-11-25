@@ -51,7 +51,7 @@ func TestNewAudioVisualizerWidget_Spectrum(t *testing.T) {
 			Smoothing:              0.7,
 			PeakHold:               true,
 			PeakHoldTime:           1.0,
-			FillColor:              255,
+			FillColor:              config.IntPtr(255),
 			FrequencyCompensation:  true,
 			SpectrumDynamicScaling: 1.0,
 		},
@@ -103,8 +103,8 @@ func TestNewAudioVisualizerWidget_Oscilloscope(t *testing.T) {
 			WaveformStyle:     "line",
 			ChannelMode:       "stereo_separated",
 			SampleCount:       128,
-			LeftChannelColor:  255,
-			RightChannelColor: 200,
+			LeftChannelColor:  config.IntPtr(255),
+			RightChannelColor: config.IntPtr(200),
 		},
 	}
 
@@ -264,7 +264,7 @@ func TestAudioVisualizerWidget_Render_Spectrum(t *testing.T) {
 			DisplayMode:    "spectrum",
 			UpdateInterval: 0.033,
 			BarCount:       32,
-			FillColor:      255,
+			FillColor:      config.IntPtr(255),
 		},
 	}
 
@@ -314,8 +314,8 @@ func TestAudioVisualizerWidget_Render_Oscilloscope(t *testing.T) {
 			WaveformStyle:     "line",
 			ChannelMode:       "stereo_combined",
 			SampleCount:       128,
-			LeftChannelColor:  255,
-			RightChannelColor: 200,
+			LeftChannelColor:  config.IntPtr(255),
+			RightChannelColor: config.IntPtr(200),
 		},
 	}
 
@@ -366,7 +366,7 @@ func TestAudioVisualizerWidget_BarStyles(t *testing.T) {
 					DisplayMode: "spectrum",
 					BarCount:    16,
 					BarStyle:    style,
-					FillColor:   255,
+					FillColor:   config.IntPtr(255),
 				},
 			}
 
@@ -416,7 +416,7 @@ func TestAudioVisualizerWidget_FrequencyScales(t *testing.T) {
 					DisplayMode:    "spectrum",
 					BarCount:       16,
 					FrequencyScale: scale,
-					FillColor:      255,
+					FillColor:      config.IntPtr(255),
 				},
 			}
 
@@ -466,7 +466,7 @@ func TestAudioVisualizerWidget_WaveformStyles(t *testing.T) {
 					DisplayMode:   "oscilloscope",
 					WaveformStyle: style,
 					SampleCount:   128,
-					FillColor:     255,
+					FillColor:     config.IntPtr(255),
 				},
 			}
 
@@ -516,8 +516,8 @@ func TestAudioVisualizerWidget_ChannelModes(t *testing.T) {
 					DisplayMode:       "oscilloscope",
 					ChannelMode:       mode,
 					SampleCount:       128,
-					LeftChannelColor:  255,
-					RightChannelColor: 200,
+					LeftChannelColor:  config.IntPtr(255),
+					RightChannelColor: config.IntPtr(200),
 				},
 			}
 

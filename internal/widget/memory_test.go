@@ -39,7 +39,7 @@ func TestNewMemoryWidget(t *testing.T) {
 					FontSize:        10,
 					HorizontalAlign: "center",
 					VerticalAlign:   "center",
-					FillColor:       255,
+					FillColor:       config.IntPtr(255),
 					HistoryLength:   30,
 				},
 			}
@@ -77,7 +77,7 @@ func TestMemoryWidgetUpdate(t *testing.T) {
 			FontSize:        10,
 			HorizontalAlign: "center",
 			VerticalAlign:   "center",
-			FillColor:       255,
+			FillColor:       config.IntPtr(255),
 		},
 	}
 
@@ -123,10 +123,10 @@ func TestMemoryWidgetRenderAllModes(t *testing.T) {
 					FontSize:         10,
 					HorizontalAlign:  "center",
 					VerticalAlign:    "center",
-					FillColor:        255,
+					FillColor:        config.IntPtr(255),
 					HistoryLength:    30,
-					GaugeColor:       200,
-					GaugeNeedleColor: 255,
+					GaugeColor:       config.IntPtr(200),
+					GaugeNeedleColor: config.IntPtr(255),
 				},
 			}
 

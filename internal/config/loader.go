@@ -19,6 +19,11 @@ func BoolPtr(b bool) *bool {
 	return &b
 }
 
+// IntPtr returns a pointer to an int value
+func IntPtr(i int) *int {
+	return &i
+}
+
 // Load reads and parses a configuration file
 // If the file doesn't exist, returns a default configuration
 func Load(path string) (*Config, error) {

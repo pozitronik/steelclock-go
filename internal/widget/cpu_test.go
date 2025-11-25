@@ -20,7 +20,7 @@ func TestNewCPUWidget(t *testing.T) {
 			FontSize:        10,
 			HorizontalAlign: "center",
 			VerticalAlign:   "center",
-			FillColor:       255,
+			FillColor:       config.IntPtr(255),
 			HistoryLength:   30,
 		},
 	}
@@ -51,7 +51,7 @@ func TestNewCPUWidget_PerCore(t *testing.T) {
 		Properties: config.WidgetProperties{
 			DisplayMode: "bar_vertical",
 			PerCore:     true,
-			FillColor:   255,
+			FillColor:   config.IntPtr(255),
 		},
 	}
 
@@ -225,7 +225,7 @@ func TestCPUWidget_RenderBarHorizontal(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode: "bar_horizontal",
-			FillColor:   255,
+			FillColor:   config.IntPtr(255),
 		},
 	}
 
@@ -261,7 +261,7 @@ func TestCPUWidget_RenderBarVertical(t *testing.T) {
 		Properties: config.WidgetProperties{
 			DisplayMode: "bar_vertical",
 			PerCore:     true, // Test with per-core mode
-			FillColor:   255,
+			FillColor:   config.IntPtr(255),
 		},
 	}
 
@@ -296,7 +296,7 @@ func TestCPUWidget_RenderGraph(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode:   "graph",
-			FillColor:     255,
+			FillColor:     config.IntPtr(255),
 			HistoryLength: 30,
 		},
 	}
@@ -335,7 +335,7 @@ func TestCPUWidget_RenderGraph_InsufficientHistory(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode:   "graph",
-			FillColor:     255,
+			FillColor:     config.IntPtr(255),
 			HistoryLength: 30,
 		},
 	}
@@ -373,8 +373,8 @@ func TestCPUWidget_RenderGauge(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode:      "gauge",
-			GaugeColor:       200,
-			GaugeNeedleColor: 255,
+			GaugeColor:       config.IntPtr(200),
+			GaugeNeedleColor: config.IntPtr(255),
 		},
 	}
 
@@ -410,8 +410,8 @@ func TestCPUWidget_RenderGauge_PerCore(t *testing.T) {
 		Properties: config.WidgetProperties{
 			DisplayMode:      "gauge",
 			PerCore:          true, // Should show average
-			GaugeColor:       200,
-			GaugeNeedleColor: 255,
+			GaugeColor:       config.IntPtr(200),
+			GaugeNeedleColor: config.IntPtr(255),
 		},
 	}
 
@@ -577,7 +577,7 @@ func TestCPUWidget_RenderBarHorizontal_PerCore(t *testing.T) {
 		Properties: config.WidgetProperties{
 			DisplayMode: "bar_horizontal",
 			PerCore:     true, // Test per-core bars
-			FillColor:   255,
+			FillColor:   config.IntPtr(255),
 		},
 	}
 
@@ -613,7 +613,7 @@ func TestCPUWidget_RenderGraph_PerCore(t *testing.T) {
 		Properties: config.WidgetProperties{
 			DisplayMode:   "graph",
 			PerCore:       true,
-			FillColor:     255,
+			FillColor:     config.IntPtr(255),
 			HistoryLength: 30,
 		},
 	}
@@ -652,7 +652,7 @@ func TestCPUWidget_RenderGraph_EmptyHistory(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode:   "graph",
-			FillColor:     255,
+			FillColor:     config.IntPtr(255),
 			HistoryLength: 30,
 		},
 	}
@@ -684,7 +684,7 @@ func TestCPUWidget_SmallSize(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode: "bar_horizontal",
-			FillColor:   255,
+			FillColor:   config.IntPtr(255),
 		},
 	}
 

@@ -20,8 +20,8 @@ func TestNewNetworkWidget(t *testing.T) {
 			Interface:     &iface,
 			DisplayMode:   "text",
 			FontSize:      10,
-			RxColor:       255,
-			TxColor:       200,
+			RxColor:       config.IntPtr(255),
+			TxColor:       config.IntPtr(200),
 			MaxSpeedMbps:  1000,
 			HistoryLength: 30,
 		},
@@ -163,8 +163,8 @@ func TestNetworkWidget_RenderBarHorizontal(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode:  "bar_horizontal",
-			RxColor:      255,
-			TxColor:      200,
+			RxColor:      config.IntPtr(255),
+			TxColor:      config.IntPtr(200),
 			MaxSpeedMbps: 100,
 		},
 	}
@@ -197,8 +197,8 @@ func TestNetworkWidget_RenderBarVertical(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode: "bar_vertical",
-			RxColor:     255,
-			TxColor:     200,
+			RxColor:     config.IntPtr(255),
+			TxColor:     config.IntPtr(200),
 		},
 	}
 
@@ -230,8 +230,8 @@ func TestNetworkWidget_RenderGraph(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode:   "graph",
-			RxColor:       255,
-			TxColor:       200,
+			RxColor:       config.IntPtr(255),
+			TxColor:       config.IntPtr(200),
 			HistoryLength: 30,
 		},
 	}
@@ -330,10 +330,10 @@ func TestNetworkWidget_RenderGauge(t *testing.T) {
 		Properties: config.WidgetProperties{
 			DisplayMode:   "gauge",
 			MaxSpeedMbps:  100,
-			RxColor:       255,
-			TxColor:       200,
-			RxNeedleColor: 255,
-			TxNeedleColor: 180,
+			RxColor:       config.IntPtr(255),
+			TxColor:       config.IntPtr(200),
+			RxNeedleColor: config.IntPtr(255),
+			TxNeedleColor: config.IntPtr(180),
 		},
 	}
 
@@ -408,8 +408,8 @@ func TestNetworkWidget_GaugeAutoScale(t *testing.T) {
 		Properties: config.WidgetProperties{
 			DisplayMode:  "gauge",
 			MaxSpeedMbps: -1, // Auto-scale
-			RxColor:      255,
-			TxColor:      200,
+			RxColor:      config.IntPtr(255),
+			TxColor:      config.IntPtr(200),
 		},
 	}
 

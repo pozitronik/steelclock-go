@@ -226,7 +226,7 @@ func TestVolumeWidget_RenderBarHorizontal(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode: "bar_horizontal",
-			FillColor:   255,
+			FillColor:   config.IntPtr(255),
 		},
 	}
 
@@ -262,7 +262,7 @@ func TestVolumeWidget_RenderBarVertical(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode: "bar_vertical",
-			FillColor:   255,
+			FillColor:   config.IntPtr(255),
 		},
 	}
 
@@ -298,8 +298,8 @@ func TestVolumeWidget_RenderGauge(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode:      "gauge",
-			GaugeColor:       200,
-			GaugeNeedleColor: 255,
+			GaugeColor:       config.IntPtr(200),
+			GaugeNeedleColor: config.IntPtr(255),
 		},
 	}
 
@@ -335,7 +335,7 @@ func TestVolumeWidget_RenderTriangle(t *testing.T) {
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode:       "triangle",
-			TriangleFillColor: 255,
+			TriangleFillColor: config.IntPtr(255),
 			TriangleBorder:    true,
 		},
 	}
