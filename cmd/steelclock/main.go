@@ -236,9 +236,9 @@ func startAppWithConfig(cfg *config.Config) error {
 	log.Printf("Config loaded: %s (%s)", cfg.GameName, cfg.GameDisplayName)
 
 	// Set bundled font URL if configured
-	if cfg.BundledFontURL != "" {
-		bitmap.SetBundledFontURL(cfg.BundledFontURL)
-		log.Printf("Using custom bundled font URL: %s", cfg.BundledFontURL)
+	if cfg.BundledFontURL != nil && *cfg.BundledFontURL != "" {
+		bitmap.SetBundledFontURL(*cfg.BundledFontURL)
+		log.Printf("Using custom bundled font URL: %s", *cfg.BundledFontURL)
 	}
 
 	// Check if we need to recreate the client due to backend or GameName change
