@@ -113,3 +113,28 @@ func (c *Client) DeviceInfo() DeviceInfo {
 func (c *Client) Driver() *HIDDriver {
 	return c.driver
 }
+
+// SupportsMultipleEvents returns false - USB HID doesn't benefit from HTTP batching optimization
+func (c *Client) SupportsMultipleEvents() bool {
+	return false
+}
+
+// SendScreenDataMultiRes sends screen data for the resolution matching the driver's configured dimensions.
+// Other resolutions in the map are ignored.
+func (c *Client) SendScreenDataMultiRes(_ string, resolutionData map[string][]int) error {
+	// Find our resolution in the map
+	key := fmt.Sprintf("image-data-%dx%d", c.width, c.height)
+	if data, ok := resolutionData[key]; ok {
+		return c.SendScreenData("", data)
+	}
+	return fmt.Errorf("resolution %dx%d not found in data", c.width, c.height)
+}
+
+// SendMultipleScreenData sends the last frame from the batch.
+// USB HID doesn't benefit from batching (no HTTP overhead), so only the most recent frame is sent.
+func (c *Client) SendMultipleScreenData(_ string, frames [][]int) error {
+	if len(frames) > 0 {
+		return c.SendScreenData("", frames[len(frames)-1])
+	}
+	return nil
+}
