@@ -10,6 +10,8 @@ import (
 )
 
 // Winamp IPC message constants
+//
+//goland:noinspection ALL
 const (
 	WM_USER   = 0x0400
 	WM_WA_IPC = WM_USER
