@@ -124,6 +124,48 @@ func DrawTextInRect(img *image.Gray, text string, face font.Face, x, y, width, h
 	drawer.DrawString(text)
 }
 
+// DrawTextAtPosition draws text at a specific position with clipping to a content area
+// This is useful for scrolling text where the text may extend beyond visible bounds
+func DrawTextAtPosition(img *image.Gray, text string, face font.Face, x, y, clipX, clipY, clipW, clipH int) {
+	// Protect font face access - font.Face is not thread-safe
+	fontMutex.Lock()
+	defer fontMutex.Unlock()
+
+	// Create a clipping mask by only drawing within the clip bounds
+	point := fixed.Point26_6{
+		X: fixed.Int26_6(x << 6),
+		Y: fixed.Int26_6(y << 6),
+	}
+
+	drawer := &font.Drawer{
+		Dst:  img,
+		Src:  image.White,
+		Face: face,
+		Dot:  point,
+	}
+
+	// Draw each character, checking if it falls within clip bounds
+	for _, r := range text {
+		// Get glyph bounds
+		advance, ok := face.GlyphAdvance(r)
+		if !ok {
+			continue
+		}
+
+		charX := drawer.Dot.X.Ceil()
+		charWidth := advance.Ceil()
+
+		// Skip if completely outside clip area
+		if charX+charWidth < clipX || charX >= clipX+clipW {
+			drawer.Dot.X += advance
+			continue
+		}
+
+		// Draw the character
+		drawer.DrawString(string(r))
+	}
+}
+
 // DrawBorder draws a border around the image
 func DrawBorder(img *image.Gray, borderColor uint8) {
 	if img == nil {

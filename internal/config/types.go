@@ -98,6 +98,11 @@ type WidgetConfig struct {
 	Channel       string  `json:"channel,omitempty"`         // Audio visualizer
 	Wad           string  `json:"wad,omitempty"`             // DOOM
 	BundledWadURL *string `json:"bundled_wad_url,omitempty"` // DOOM - custom WAD download URL
+
+	// Winamp widget
+	Winamp   *WinampConfig         `json:"winamp,omitempty"`    // Winamp settings (placeholder)
+	Scroll   *ScrollConfig         `json:"scroll,omitempty"`    // Text scrolling settings
+	AutoShow *WinampAutoShowConfig `json:"auto_show,omitempty"` // Auto-show events (Winamp)
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -327,4 +332,51 @@ type IndicatorConfig struct {
 type KeyboardLayout struct {
 	Spacing   int    `json:"spacing,omitempty"`
 	Separator string `json:"separator,omitempty"`
+}
+
+// WinampConfig represents Winamp widget settings
+// Note: format string is configured via text.format with placeholders:
+// {title}, {filename}, {filepath}, {position}, {duration}, {position_ms},
+// {duration_s}, {bitrate}, {samplerate}, {channels}, {status}
+type WinampConfig struct {
+	// Placeholder configuration when Winamp is not playing
+	Placeholder *WinampPlaceholderConfig `json:"placeholder,omitempty"`
+}
+
+// WinampAutoShowConfig represents events that trigger the widget to show
+type WinampAutoShowConfig struct {
+	// OnTrackChange - show widget when track changes (default: true)
+	OnTrackChange *bool `json:"on_track_change,omitempty"`
+	// OnPlay - show widget when playback starts
+	OnPlay bool `json:"on_play,omitempty"`
+	// OnPause - show widget when playback is paused
+	OnPause bool `json:"on_pause,omitempty"`
+	// OnStop - show widget when playback stops
+	OnStop bool `json:"on_stop,omitempty"`
+	// OnSeek - show widget when user seeks to different position
+	OnSeek bool `json:"on_seek,omitempty"`
+}
+
+// WinampPlaceholderConfig represents what to show when Winamp is not playing
+type WinampPlaceholderConfig struct {
+	// Mode: "text" for custom text, "icon" for Winamp icon
+	Mode string `json:"mode,omitempty"`
+	// Text to display when mode is "text"
+	Text string `json:"text,omitempty"`
+}
+
+// ScrollConfig represents text scrolling settings
+type ScrollConfig struct {
+	// Enabled explicitly enables/disables scrolling
+	Enabled bool `json:"enabled,omitempty"`
+	// Direction: "left", "right", "up", "down"
+	Direction string `json:"direction,omitempty"`
+	// Speed in pixels per second
+	Speed float64 `json:"speed,omitempty"`
+	// Mode: "continuous" (loop), "bounce" (reverse at edges), "pause_ends" (pause at start/end)
+	Mode string `json:"mode,omitempty"`
+	// PauseMs - pause duration in milliseconds at ends (for bounce/pause_ends modes)
+	PauseMs int `json:"pause_ms,omitempty"`
+	// Gap - pixels between end and start of text in continuous mode
+	Gap int `json:"gap,omitempty"`
 }
