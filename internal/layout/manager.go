@@ -82,7 +82,8 @@ func (m *Manager) Composite() (image.Image, error) {
 	return canvas, nil
 }
 
-// compositeWithTransparency composites a widget image onto canvas, skipping background pixels
+// compositeWithTransparency composites a widget image onto canvas, skipping background pixels.
+// Optimized version using direct slice access instead of GrayAt/SetGray calls.
 func compositeWithTransparency(canvas *image.Gray, widgetImg image.Image, pos config.PositionConfig, bgColor int) {
 	// Convert widget image to Gray if needed
 	grayWidget, ok := widgetImg.(*image.Gray)
@@ -97,26 +98,55 @@ func compositeWithTransparency(canvas *image.Gray, widgetImg image.Image, pos co
 		transparentValue = uint8(bgColor)
 	}
 
-	// Copy only non-transparent pixels
-	bounds := grayWidget.Bounds()
-	for y := 0; y < bounds.Dy(); y++ {
-		for x := 0; x < bounds.Dx(); x++ {
-			pixelValue := grayWidget.GrayAt(x, y).Y
+	// Pre-calculate bounds and clipping region
+	srcBounds := grayWidget.Bounds()
+	dstBounds := canvas.Bounds()
 
-			// Skip transparent pixels
-			if pixelValue == transparentValue {
-				continue
-			}
+	// Calculate the visible region (intersection of widget and canvas)
+	startX := pos.X
+	startY := pos.Y
+	endX := pos.X + srcBounds.Dx()
+	endY := pos.Y + srcBounds.Dy()
 
-			// Calculate destination coordinates
-			destX := pos.X + x
-			destY := pos.Y + y
+	// Clip to canvas bounds
+	if startX < dstBounds.Min.X {
+		startX = dstBounds.Min.X
+	}
+	if startY < dstBounds.Min.Y {
+		startY = dstBounds.Min.Y
+	}
+	if endX > dstBounds.Max.X {
+		endX = dstBounds.Max.X
+	}
+	if endY > dstBounds.Max.Y {
+		endY = dstBounds.Max.Y
+	}
 
-			// Check bounds
-			canvasBounds := canvas.Bounds()
-			if destX >= canvasBounds.Min.X && destX < canvasBounds.Max.X &&
-				destY >= canvasBounds.Min.Y && destY < canvasBounds.Max.Y {
-				canvas.SetGray(destX, destY, grayWidget.GrayAt(x, y))
+	// Nothing to draw if clipped completely
+	if startX >= endX || startY >= endY {
+		return
+	}
+
+	// Get direct access to underlying pixel slices
+	srcPix := grayWidget.Pix
+	srcStride := grayWidget.Stride
+	dstPix := canvas.Pix
+	dstStride := canvas.Stride
+
+	// Source offset (widget may start at non-zero position)
+	srcOffsetX := startX - pos.X - srcBounds.Min.X
+	srcOffsetY := startY - pos.Y - srcBounds.Min.Y
+
+	// Copy non-transparent pixels using direct slice access
+	for y := startY; y < endY; y++ {
+		srcY := srcOffsetY + (y - startY)
+		srcRowStart := srcY*srcStride + srcOffsetX
+		dstRowStart := (y-dstBounds.Min.Y)*dstStride + (startX - dstBounds.Min.X)
+
+		for x := 0; x < endX-startX; x++ {
+			pixelValue := srcPix[srcRowStart+x]
+			if pixelValue != transparentValue {
+				dstPix[dstRowStart+x] = pixelValue
 			}
 		}
 	}
