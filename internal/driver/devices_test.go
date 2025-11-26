@@ -4,6 +4,7 @@ import (
 	"testing"
 )
 
+//goland:noinspection GoBoolExpressions
 func TestSteelSeriesVID(t *testing.T) {
 	// SteelSeries VID should be 0x1038
 	if SteelSeriesVID != 0x1038 {
