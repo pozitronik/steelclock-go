@@ -15,7 +15,6 @@
       "mode": "bar",
       "bar": {
         "direction": "vertical",
-        "border": false,
         "colors": {
           "fill": 255,
           "clipping": 200
@@ -41,7 +40,8 @@
         }
       },
       "stereo": {
-        "enabled": true
+        "enabled": true,
+        "divider": 64
       },
       "metering": {
         "db_scale": false,

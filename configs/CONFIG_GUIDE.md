@@ -464,7 +464,6 @@ Same structure as CPU widget, without `per_core`.
   "mode": "bar",
   "bar": {
     "direction": "vertical",
-    "border": false,
     "colors": {
       "fill": 255,
       "clipping": 200
@@ -487,7 +486,8 @@ Same structure as CPU widget, without `per_core`.
     }
   },
   "stereo": {
-    "enabled": true
+    "enabled": true,
+    "divider": 64
   },
   "metering": {
     "db_scale": false,
@@ -514,7 +514,7 @@ Same structure as CPU widget, without `per_core`.
 | `bar.colors` | `fill`, `clipping` |
 | `gauge.colors` | `arc`, `needle`, `ticks`, `clipping` |
 | `text.colors` | `fill`, `clipping` |
-| `stereo` | `enabled` |
+| `stereo` | `enabled`, `divider` |
 | `metering` | `db_scale`, `decay_rate`, `silence_threshold` |
 | `peak` | `enabled`, `hold_time` |
 | `clipping` | `enabled`, `threshold` |

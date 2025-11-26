@@ -286,6 +286,7 @@ type PerCoreConfig struct {
 // StereoConfig represents stereo settings for volume meter
 type StereoConfig struct {
 	Enabled bool `json:"enabled,omitempty"`
+	Divider *int `json:"divider,omitempty"` // Divider color between left/right channels (0-255, -1=disabled)
 }
 
 // MeteringConfig represents VU meter metering settings

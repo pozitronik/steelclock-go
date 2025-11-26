@@ -36,8 +36,6 @@ type VolumeMeterWidget struct {
 	displayMode      string
 	fillColor        uint8
 	clippingColor    uint8
-	barBorder        bool
-	borderColor      uint8
 	gaugeColor       uint8
 	gaugeNeedleColor uint8
 	gaugeShowTicks   bool
@@ -49,6 +47,7 @@ type VolumeMeterWidget struct {
 	// Meter configuration
 	pollInterval        time.Duration // Configurable internal polling rate
 	stereoMode          bool
+	stereoDivider       int // Divider color between channels (-1=disabled, 0-255=color)
 	useDBScale          bool
 	showClipping        bool
 	clippingThreshold   float64
@@ -166,11 +165,15 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		}
 	}
 
-	// Stereo settings (no color fields - moved to bar.colors)
+	// Stereo settings (includes divider color between channels)
 	stereoMode := false
+	stereoDivider := 64 // Default: mid-gray divider
 
 	if cfg.Stereo != nil {
 		stereoMode = cfg.Stereo.Enabled
+		if cfg.Stereo.Divider != nil {
+			stereoDivider = *cfg.Stereo.Divider
+		}
 	}
 
 	// Metering settings
@@ -219,29 +222,11 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	// Load font for text mode (ignore error - degrades gracefully)
 	fontFace, _ := helper.LoadFontForTextMode(displayMode)
 
-	// Border settings (combine bar and style)
-	barBorder := barSettings.Border
-	style := config.StyleConfig{Border: -1} // Default: disabled
-	if cfg.Style != nil {
-		style = *cfg.Style
-		if style.Border >= 0 {
-			barBorder = true
-		}
-	}
-
-	// Get border color from style config (use the border value itself as color)
-	borderColor := style.Border
-	if borderColor < 0 {
-		borderColor = 255 // Default: bright white if somehow enabled without color
-	}
-
 	w := &VolumeMeterWidget{
 		BaseWidget:          base,
 		displayMode:         displayMode,
 		fillColor:           uint8(fillColor),
 		clippingColor:       uint8(clippingColor),
-		barBorder:           barBorder,
-		borderColor:         uint8(borderColor),
 		gaugeColor:          uint8(gaugeSettings.ArcColor),
 		gaugeNeedleColor:    uint8(gaugeSettings.NeedleColor),
 		gaugeShowTicks:      gaugeSettings.ShowTicks,
@@ -251,6 +236,7 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		padding:             padding,
 		pollInterval:        pollInterval,
 		stereoMode:          stereoMode,
+		stereoDivider:       stereoDivider,
 		useDBScale:          useDBScale,
 		showClipping:        showClipping,
 		clippingThreshold:   clippingThreshold,
@@ -565,10 +551,6 @@ func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, displayPeak, pe
 		}
 	}
 
-	// Draw border
-	if w.barBorder {
-		bitmap.DrawBorder(img, w.borderColor)
-	}
 }
 
 // renderBarVertical renders vertical bar display
@@ -599,10 +581,6 @@ func (w *VolumeMeterWidget) renderBarVertical(img *image.Gray, displayPeak, peak
 		}
 	}
 
-	// Draw border
-	if w.barBorder {
-		bitmap.DrawBorder(img, w.borderColor)
-	}
 }
 
 // renderGauge renders gauge display
@@ -686,14 +664,11 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 		}
 	}
 
-	// Draw separator
-	for x := 0; x < pos.W; x++ {
-		img.SetGray(x, halfHeight, color.Gray{Y: 64})
-	}
-
-	// Draw border
-	if w.barBorder {
-		bitmap.DrawBorder(img, w.borderColor)
+	// Draw separator between channels (if enabled)
+	if w.stereoDivider >= 0 {
+		for x := 0; x < pos.W; x++ {
+			img.SetGray(x, halfHeight, color.Gray{Y: uint8(w.stereoDivider)})
+		}
 	}
 }
 
@@ -792,31 +767,10 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 		}
 	}
 
-	// Draw separator
-	for y := 0; y < pos.H; y++ {
-		img.SetGray(halfWidth, y, color.Gray{Y: 64})
-	}
-
-	// Draw borders if enabled
-	if w.barBorder {
-		// Left bar border
-		for x := 0; x < halfWidth; x++ {
-			img.SetGray(x, 0, color.Gray{Y: w.borderColor})
-			img.SetGray(x, pos.H-1, color.Gray{Y: w.borderColor})
-		}
+	// Draw separator between channels (if enabled)
+	if w.stereoDivider >= 0 {
 		for y := 0; y < pos.H; y++ {
-			img.SetGray(0, y, color.Gray{Y: w.borderColor})
-			img.SetGray(halfWidth-1, y, color.Gray{Y: w.borderColor})
-		}
-
-		// Right bar border
-		for x := halfWidth; x < pos.W; x++ {
-			img.SetGray(x, 0, color.Gray{Y: w.borderColor})
-			img.SetGray(x, pos.H-1, color.Gray{Y: w.borderColor})
-		}
-		for y := 0; y < pos.H; y++ {
-			img.SetGray(halfWidth+1, y, color.Gray{Y: w.borderColor})
-			img.SetGray(pos.W-1, y, color.Gray{Y: w.borderColor})
+			img.SetGray(halfWidth, y, color.Gray{Y: uint8(w.stereoDivider)})
 		}
 	}
 }
@@ -898,9 +852,11 @@ func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []fl
 		}
 	}
 
-	// Draw separator
-	for y := 0; y < pos.H; y++ {
-		img.SetGray(halfWidth, y, color.Gray{Y: 64})
+	// Draw separator between channels (if enabled)
+	if w.stereoDivider >= 0 {
+		for y := 0; y < pos.H; y++ {
+			img.SetGray(halfWidth, y, color.Gray{Y: uint8(w.stereoDivider)})
+		}
 	}
 }
 

@@ -599,21 +599,23 @@ func TestVolumeMeterWidget_StereoWithPeakHold(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_Border tests border configuration
-func TestVolumeMeterWidget_Border(t *testing.T) {
+// TestVolumeMeterWidget_StereoDivider tests stereo divider configuration
+func TestVolumeMeterWidget_StereoDivider(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
+	dividerColor := 128
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
-		ID:      "test_meter_border",
+		ID:      "test_meter_divider",
 		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Style: &config.StyleConfig{
-			Border: 255, // White border enabled
+		Mode: "bar",
+		Stereo: &config.StereoConfig{
+			Enabled: true,
+			Divider: &dividerColor,
 		},
-		Mode: "bar_horizontal",
 	}
 
 	widget, err := NewVolumeMeterWidget(cfg)
@@ -622,12 +624,12 @@ func TestVolumeMeterWidget_Border(t *testing.T) {
 	}
 	defer widget.Stop()
 
-	if !widget.barBorder {
-		t.Error("barBorder should be true")
+	if !widget.stereoMode {
+		t.Error("stereoMode should be true")
 	}
 
-	if widget.borderColor != 255 {
-		t.Errorf("borderColor = %d, want 255", widget.borderColor)
+	if widget.stereoDivider != 128 {
+		t.Errorf("stereoDivider = %d, want 128", widget.stereoDivider)
 	}
 }
 

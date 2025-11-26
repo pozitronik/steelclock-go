@@ -514,7 +514,6 @@
                 "description": "Bar mode settings",
                 "properties": {
                   "direction": { "type": "string", "description": "Bar orientation", "enum": ["horizontal", "vertical"], "default": "horizontal" },
-                  "border": { "type": "boolean", "description": "Draw border around bars", "default": false },
                   "colors": {
                     "type": "object",
                     "description": "Bar colors",
@@ -571,7 +570,8 @@
                 "type": "object",
                 "description": "Stereo channel settings",
                 "properties": {
-                  "enabled": { "type": "boolean", "description": "Show separate left/right channels", "default": false }
+                  "enabled": { "type": "boolean", "description": "Show separate left/right channels", "default": false },
+                  "divider": { "type": "integer", "description": "Divider line color between left/right channels (-1=disabled, 0-255=color)", "minimum": -1, "maximum": 255, "default": 64 }
                 }
               },
               "metering": {
