@@ -355,3 +355,89 @@ func TestConfigHelper_GetFillColorForMode(t *testing.T) {
 		})
 	}
 }
+
+func TestConfigHelper_GetTriangleSettings(t *testing.T) {
+	t.Run("defaults", func(t *testing.T) {
+		cfg := config.WidgetConfig{}
+		h := NewConfigHelper(cfg)
+		settings := h.GetTriangleSettings()
+
+		if settings.FillColor != 255 {
+			t.Errorf("FillColor = %d, want 255", settings.FillColor)
+		}
+		if settings.Border != false {
+			t.Errorf("Border = %v, want false", settings.Border)
+		}
+	})
+
+	t.Run("custom values", func(t *testing.T) {
+		fillColor := 180
+		cfg := config.WidgetConfig{
+			Triangle: &config.TriangleConfig{
+				Border: true,
+				Colors: &config.ModeColorsConfig{
+					Fill: &fillColor,
+				},
+			},
+		}
+		h := NewConfigHelper(cfg)
+		settings := h.GetTriangleSettings()
+
+		if settings.FillColor != 180 {
+			t.Errorf("FillColor = %d, want 180", settings.FillColor)
+		}
+		if settings.Border != true {
+			t.Errorf("Border = %v, want true", settings.Border)
+		}
+	})
+
+	t.Run("triangle with nil colors", func(t *testing.T) {
+		cfg := config.WidgetConfig{
+			Triangle: &config.TriangleConfig{
+				Border: true,
+				Colors: nil,
+			},
+		}
+		h := NewConfigHelper(cfg)
+		settings := h.GetTriangleSettings()
+
+		if settings.FillColor != 255 {
+			t.Errorf("FillColor = %d, want 255 (default)", settings.FillColor)
+		}
+		if settings.Border != true {
+			t.Errorf("Border = %v, want true", settings.Border)
+		}
+	})
+}
+
+func TestConfigHelper_LoadFontForTextMode(t *testing.T) {
+	t.Run("non-text mode returns nil", func(t *testing.T) {
+		cfg := config.WidgetConfig{}
+		h := NewConfigHelper(cfg)
+
+		face, err := h.LoadFontForTextMode("bar")
+		if err != nil {
+			t.Errorf("LoadFontForTextMode(bar) returned error: %v", err)
+		}
+		if face != nil {
+			t.Error("LoadFontForTextMode(bar) should return nil face")
+		}
+	})
+
+	t.Run("text mode loads default font", func(t *testing.T) {
+		cfg := config.WidgetConfig{
+			Text: &config.TextConfig{
+				Size: 10,
+			},
+		}
+		h := NewConfigHelper(cfg)
+
+		face, err := h.LoadFontForTextMode("text")
+		if err != nil {
+			t.Errorf("LoadFontForTextMode(text) returned error: %v", err)
+		}
+		if face == nil {
+			t.Error("LoadFontForTextMode(text) should return a font face")
+		}
+	})
+}
