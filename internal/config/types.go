@@ -215,6 +215,9 @@ type ModeColorsConfig struct {
 
 	// Volume meter clipping indicator
 	Clipping *int `json:"clipping,omitempty"`
+
+	// Volume meter peak hold indicator
+	Peak *int `json:"peak,omitempty"`
 }
 
 // BarConfig represents bar mode settings

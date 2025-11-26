@@ -36,6 +36,7 @@ type VolumeMeterWidget struct {
 	displayMode      string
 	fillColor        uint8
 	clippingColor    uint8
+	peakColor        uint8
 	gaugeColor       uint8
 	gaugeNeedleColor uint8
 	gaugeShowTicks   bool
@@ -126,6 +127,7 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	// Extract colors based on active display mode only
 	fillColor := 255
 	clippingColor := 200
+	peakColor := 180
 
 	// Bar mode colors (for bar_horizontal and bar_vertical)
 	if displayMode == "bar_horizontal" || displayMode == "bar_vertical" {
@@ -136,6 +138,9 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 			if cfg.Bar.Colors.Clipping != nil {
 				clippingColor = *cfg.Bar.Colors.Clipping
 			}
+			if cfg.Bar.Colors.Peak != nil {
+				peakColor = *cfg.Bar.Colors.Peak
+			}
 		}
 	}
 
@@ -144,6 +149,9 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		if cfg.Gauge != nil && cfg.Gauge.Colors != nil {
 			if cfg.Gauge.Colors.Clipping != nil {
 				clippingColor = *cfg.Gauge.Colors.Clipping
+			}
+			if cfg.Gauge.Colors.Peak != nil {
+				peakColor = *cfg.Gauge.Colors.Peak
 			}
 		}
 	}
@@ -223,6 +231,7 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		displayMode:         displayMode,
 		fillColor:           uint8(fillColor),
 		clippingColor:       uint8(clippingColor),
+		peakColor:           uint8(peakColor),
 		gaugeColor:          uint8(gaugeSettings.ArcColor),
 		gaugeNeedleColor:    uint8(gaugeSettings.NeedleColor),
 		gaugeShowTicks:      gaugeSettings.ShowTicks,
@@ -542,7 +551,7 @@ func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, displayPeak, pe
 		peakX := int(float64(pos.W) * peakHold)
 		if peakX < pos.W {
 			for y := 0; y < pos.H; y++ {
-				img.SetGray(peakX, y, color.Gray{Y: 180})
+				img.SetGray(peakX, y, color.Gray{Y: w.peakColor})
 			}
 		}
 	}
@@ -572,7 +581,7 @@ func (w *VolumeMeterWidget) renderBarVertical(img *image.Gray, displayPeak, peak
 		peakY := pos.H - int(float64(pos.H)*peakHold)
 		if peakY >= 0 {
 			for x := 0; x < pos.W; x++ {
-				img.SetGray(x, peakY, color.Gray{Y: 180})
+				img.SetGray(x, peakY, color.Gray{Y: w.peakColor})
 			}
 		}
 	}
@@ -649,7 +658,7 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 			leftPeakX := int(float64(pos.W) * peakHoldValues[0])
 			if leftPeakX < pos.W {
 				for y := 0; y < halfHeight; y++ {
-					img.SetGray(leftPeakX, y, color.Gray{Y: 180})
+					img.SetGray(leftPeakX, y, color.Gray{Y: w.peakColor})
 				}
 			}
 		}
@@ -659,7 +668,7 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 			rightPeakX := int(float64(pos.W) * peakHoldValues[1])
 			if rightPeakX < pos.W {
 				for y := halfHeight; y < pos.H; y++ {
-					img.SetGray(rightPeakX, y, color.Gray{Y: 180})
+					img.SetGray(rightPeakX, y, color.Gray{Y: w.peakColor})
 				}
 			}
 		}
@@ -766,7 +775,7 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 			leftPeakY := pos.H - int(float64(pos.H)*peakHoldValues[0])
 			if leftPeakY >= 0 && leftPeakY < pos.H {
 				for x := 0; x < halfWidth; x++ {
-					img.SetGray(x, leftPeakY, color.Gray{Y: 180})
+					img.SetGray(x, leftPeakY, color.Gray{Y: w.peakColor})
 				}
 			}
 		}
@@ -776,7 +785,7 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 			rightPeakY := pos.H - int(float64(pos.H)*peakHoldValues[1])
 			if rightPeakY >= 0 && rightPeakY < pos.H {
 				for x := halfWidth; x < pos.W; x++ {
-					img.SetGray(x, rightPeakY, color.Gray{Y: 180})
+					img.SetGray(x, rightPeakY, color.Gray{Y: w.peakColor})
 				}
 			}
 		}
@@ -895,7 +904,7 @@ func (w *VolumeMeterWidget) drawGaugePeakHoldMark(img *image.Gray, pos config.Po
 	rad := angle * math.Pi / 180.0
 
 	// Draw a small mark extending outward from the gauge arc
-	markColor := color.Gray{Y: 180} // Same brightness as peak hold lines in bar modes
+	markColor := color.Gray{Y: w.peakColor}
 	tickLen := 5
 
 	// Outer point (extended beyond arc)

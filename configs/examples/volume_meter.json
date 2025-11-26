@@ -17,7 +17,8 @@
         "direction": "vertical",
         "colors": {
           "fill": 255,
-          "clipping": 200
+          "clipping": 200,
+          "peak": 180
         }
       },
       "gauge": {
@@ -26,7 +27,8 @@
           "arc": 200,
           "needle": 255,
           "ticks": 150,
-          "clipping": 200
+          "clipping": 200,
+          "peak": 180
         }
       },
       "text": {

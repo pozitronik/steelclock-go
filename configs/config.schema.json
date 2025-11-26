@@ -519,7 +519,8 @@
                     "description": "Bar colors",
                     "properties": {
                       "fill": { "type": "integer", "description": "Bar fill color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "clipping": { "type": "integer", "description": "Clipping indicator color", "minimum": 0, "maximum": 255, "default": 200 }
+                      "clipping": { "type": "integer", "description": "Clipping indicator color", "minimum": 0, "maximum": 255, "default": 200 },
+                      "peak": { "type": "integer", "description": "Peak hold indicator color", "minimum": 0, "maximum": 255, "default": 180 }
                     }
                   }
                 }
@@ -536,7 +537,8 @@
                       "arc": { "type": "integer", "description": "Gauge arc outline color", "minimum": 0, "maximum": 255, "default": 200 },
                       "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 },
                       "ticks": { "type": "integer", "description": "Gauge tick marks color", "minimum": 0, "maximum": 255, "default": 150 },
-                      "clipping": { "type": "integer", "description": "Clipping needle color", "minimum": 0, "maximum": 255, "default": 200 }
+                      "clipping": { "type": "integer", "description": "Clipping needle color", "minimum": 0, "maximum": 255, "default": 200 },
+                      "peak": { "type": "integer", "description": "Peak hold indicator color", "minimum": 0, "maximum": 255, "default": 180 }
                     }
                   }
                 }

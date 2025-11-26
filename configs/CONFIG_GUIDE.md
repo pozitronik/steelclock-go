@@ -466,7 +466,8 @@ Same structure as CPU widget, without `per_core`.
     "direction": "vertical",
     "colors": {
       "fill": 255,
-      "clipping": 200
+      "clipping": 200,
+      "peak": 180
     }
   },
   "gauge": {
@@ -475,7 +476,8 @@ Same structure as CPU widget, without `per_core`.
       "arc": 200,
       "needle": 255,
       "ticks": 150,
-      "clipping": 200
+      "clipping": 200,
+      "peak": 180
     }
   },
   "text": {
@@ -510,13 +512,13 @@ Same structure as CPU widget, without `per_core`.
 
 | Object | Properties |
 |--------|------------|
-| `bar.colors` | `fill`, `clipping` (bar mode only) |
-| `gauge.colors` | `arc`, `needle`, `ticks`, `clipping` (gauge mode only) |
+| `bar.colors` | `fill`, `clipping`, `peak` (bar mode only) |
+| `gauge.colors` | `arc`, `needle`, `ticks`, `clipping`, `peak` (gauge mode only) |
 | `text` | `format`, `font`, `size`, `align` (no colors - uses font glyphs) |
-| `stereo` | `enabled`, `divider` (divider only applies to bar/gauge modes) |
+| `stereo` | `enabled`, `divider` (divider applies to all modes) |
 | `metering` | `db_scale`, `decay_rate`, `silence_threshold` |
-| `peak` | `enabled`, `hold_time` |
-| `clipping` | `enabled`, `threshold` |
+| `peak` | `enabled`, `hold_time` (color configured in mode colors) |
+| `clipping` | `enabled`, `threshold` (color configured in mode colors) |
 
 ### Audio Visualizer Widget
 
