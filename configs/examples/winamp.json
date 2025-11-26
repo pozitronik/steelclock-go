@@ -1,0 +1,48 @@
+{
+  "$schema": "../config.schema.json",
+  "game_name": "STEELCLOCK",
+  "game_display_name": "SteelClock",
+  "refresh_rate_ms": 100,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background_color": 0
+  },
+  "widgets": [
+    {
+      "type": "winamp",
+      "position": { "x": 0, "y": 0, "w": 128, "h": 40 },
+      "update_interval": 0.2,
+      "text": {
+        "format": "{title}",
+        "font": null,
+        "size": 12,
+        "align": { "h": "center", "v": "center" }
+      },
+      "winamp": {
+        "placeholder": {
+          "mode": "icon"
+        }
+      },
+      "scroll": {
+        "enabled": true,
+        "direction": "left",
+        "speed": 30,
+        "mode": "continuous",
+        "gap": 20
+      },
+      "auto_show": {
+        "on_track_change": true,
+        "on_play": false,
+        "on_pause": false,
+        "on_stop": false,
+        "on_seek": false
+      },
+      "auto_hide": {
+        "enabled": true,
+        "timeout": 5,
+        "on_show": "always"
+      }
+    }
+  ]
+}
