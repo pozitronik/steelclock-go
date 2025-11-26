@@ -221,6 +221,9 @@ func (w *CPUWidget) Update() error {
 		w.hasData = true
 
 		// Add to history
+		// FIXME: Consider using a ring buffer instead of slice append/trim.
+		// Current approach causes slice growth followed by trimming, which may
+		// lead to unnecessary allocations. A ring buffer would avoid this overhead.
 		if w.displayMode == "graph" {
 			w.historyPerCore = append(w.historyPerCore, percentages)
 			if len(w.historyPerCore) > w.historyLen {
@@ -253,6 +256,8 @@ func (w *CPUWidget) Update() error {
 		w.hasData = true
 
 		// Add to history
+		// FIXME: Consider using a ring buffer instead of slice append/trim.
+		// See comment above for per-core history.
 		if w.displayMode == "graph" {
 			w.historySingle = append(w.historySingle, usage)
 			if len(w.historySingle) > w.historyLen {

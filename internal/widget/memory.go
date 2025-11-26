@@ -186,6 +186,9 @@ func (w *MemoryWidget) Update() error {
 	}
 
 	// Add to history for graph mode
+	// FIXME: Consider using a ring buffer instead of slice append/trim.
+	// Current approach causes slice growth followed by trimming, which may
+	// lead to unnecessary allocations. A ring buffer would avoid this overhead.
 	if w.displayMode == "graph" {
 		w.history = append(w.history, w.currentUsage)
 		if len(w.history) > w.historyLen {
