@@ -123,6 +123,7 @@ func TestBackendUnavailableErrorWrapping(t *testing.T) {
 	}
 }
 
+//goland:noinspection GoBoolExpressions,GoBoolExpressions,GoBoolExpressions
 func TestAppConstants(t *testing.T) {
 	// Verify constants have expected values
 	if EventName != "STEELCLOCK_DISPLAY" {

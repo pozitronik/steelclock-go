@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+//goland:noinspection GoBoolExpressions,GoBoolExpressions,GoBoolExpressions,GoBoolExpressions
 func TestValidatorConstants(t *testing.T) {
 	if MinDeinitializeTimerMs != 1000 {
 		t.Errorf("MinDeinitializeTimerMs = %d, want 1000", MinDeinitializeTimerMs)

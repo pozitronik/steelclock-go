@@ -6,6 +6,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
+//goland:noinspection GoBoolExpressions
 func TestErrorDisplayRefreshRateConstant(t *testing.T) {
 	// Verify the constant has expected value
 	if ErrorDisplayRefreshRateMs != 500 {
