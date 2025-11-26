@@ -72,7 +72,8 @@ func TestBackendUnavailableError(t *testing.T) {
 
 	// Test Unwrap() method
 	unwrapped := err.Unwrap()
-	if unwrapped != originalErr {
+	if //goland:noinspection GoDirectComparisonOfErrors // Testing Unwrap() requires exact pointer equality
+	unwrapped != originalErr {
 		t.Errorf("Unwrap() = %v, want %v", unwrapped, originalErr)
 	}
 
