@@ -131,8 +131,7 @@ func (w *VolumeWidget) pollVolumeBackground() {
 		}
 	}()
 
-	// Poll every 100ms for responsive display
-	ticker := time.NewTicker(100 * time.Millisecond)
+	ticker := time.NewTicker(w.GetUpdateInterval())
 	defer ticker.Stop()
 
 	for {

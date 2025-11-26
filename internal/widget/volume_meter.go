@@ -287,8 +287,7 @@ func (w *VolumeMeterWidget) pollMeterBackground() {
 		}
 	}()
 
-	pollInterval := 100 * time.Millisecond // 10Hz default
-	ticker := time.NewTicker(pollInterval)
+	ticker := time.NewTicker(w.GetUpdateInterval())
 	defer ticker.Stop()
 
 	for {
