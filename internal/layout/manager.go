@@ -13,19 +13,29 @@ import (
 
 // Manager handles widget positioning and compositing
 type Manager struct {
-	width   int
-	height  int
-	bgColor uint8
-	widgets []widget.Widget
+	width         int
+	height        int
+	bgColor       uint8
+	widgets       []widget.Widget
+	sortedWidgets []widget.Widget // Pre-sorted by z-order (cached to avoid sorting every frame)
 }
 
 // NewManager creates a new layout manager
 func NewManager(display config.DisplayConfig, widgets []widget.Widget) *Manager {
+	// Pre-sort widgets by z-order once during initialization
+	// Z-order only changes on config reload, which creates a new Manager
+	sortedWidgets := make([]widget.Widget, len(widgets))
+	copy(sortedWidgets, widgets)
+	sort.Slice(sortedWidgets, func(i, j int) bool {
+		return sortedWidgets[i].GetPosition().Z < sortedWidgets[j].GetPosition().Z
+	})
+
 	return &Manager{
-		width:   display.Width,
-		height:  display.Height,
-		bgColor: uint8(display.Background),
-		widgets: widgets,
+		width:         display.Width,
+		height:        display.Height,
+		bgColor:       uint8(display.Background),
+		widgets:       widgets,
+		sortedWidgets: sortedWidgets,
 	}
 }
 
@@ -34,15 +44,9 @@ func (m *Manager) Composite() (image.Image, error) {
 	// Create canvas
 	canvas := bitmap.NewGrayscaleImage(m.width, m.height, m.bgColor)
 
-	// Sort widgets by z-order
-	sortedWidgets := make([]widget.Widget, len(m.widgets))
-	copy(sortedWidgets, m.widgets)
-	sort.Slice(sortedWidgets, func(i, j int) bool {
-		return sortedWidgets[i].GetPosition().Z < sortedWidgets[j].GetPosition().Z
-	})
-
+	// Use pre-sorted widgets (sorted once in NewManager)
 	// Render and composite each widget
-	for _, w := range sortedWidgets {
+	for _, w := range m.sortedWidgets {
 		// Render widget
 		// NOTE: We do NOT call Update() here because widgets have dedicated
 		// update loops running in background goroutines (see compositor.widgetUpdateLoop).
