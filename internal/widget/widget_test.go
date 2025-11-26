@@ -34,10 +34,8 @@ func TestBaseWidget_GetUpdateInterval(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			base := NewBaseWidget(config.WidgetConfig{
-				ID: "test",
-				Properties: config.WidgetProperties{
-					UpdateInterval: tt.interval,
-				},
+				ID:             "test",
+				UpdateInterval: tt.interval,
 			})
 
 			result := base.GetUpdateInterval()
@@ -51,11 +49,11 @@ func TestBaseWidget_GetUpdateInterval(t *testing.T) {
 // TestBaseWidget_GetPosition tests position getter
 func TestBaseWidget_GetPosition(t *testing.T) {
 	pos := config.PositionConfig{
-		X:      10,
-		Y:      20,
-		W:      128,
-		H:      40,
-		ZOrder: 5,
+		X: 10,
+		Y: 20,
+		W: 128,
+		H: 40,
+		Z: 5,
 	}
 
 	base := NewBaseWidget(config.WidgetConfig{
@@ -64,7 +62,7 @@ func TestBaseWidget_GetPosition(t *testing.T) {
 	})
 
 	result := base.GetPosition()
-	if result.X != pos.X || result.Y != pos.Y || result.W != pos.W || result.H != pos.H || result.ZOrder != pos.ZOrder {
+	if result.X != pos.X || result.Y != pos.Y || result.W != pos.W || result.H != pos.H || result.Z != pos.Z {
 		t.Errorf("GetPosition() = %+v, want %+v", result, pos)
 	}
 }
@@ -92,9 +90,9 @@ func TestBaseWidget_GetAutoHideTimeout(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			base := NewBaseWidget(config.WidgetConfig{
 				ID: "test",
-				Properties: config.WidgetProperties{
-					AutoHide:        true,
-					AutoHideTimeout: tt.timeout,
+				AutoHide: &config.AutoHideConfig{
+					Enabled: true,
+					Timeout: tt.timeout,
 				},
 			})
 
@@ -111,8 +109,8 @@ func TestBaseWidget_AutoHide(t *testing.T) {
 	t.Run("disabled auto-hide", func(t *testing.T) {
 		base := NewBaseWidget(config.WidgetConfig{
 			ID: "test",
-			Properties: config.WidgetProperties{
-				AutoHide: false,
+			AutoHide: &config.AutoHideConfig{
+				Enabled: false,
 			},
 		})
 
@@ -132,9 +130,9 @@ func TestBaseWidget_AutoHide(t *testing.T) {
 	t.Run("enabled auto-hide - initial state", func(t *testing.T) {
 		base := NewBaseWidget(config.WidgetConfig{
 			ID: "test",
-			Properties: config.WidgetProperties{
-				AutoHide:        true,
-				AutoHideTimeout: 0.1, // 100ms
+			AutoHide: &config.AutoHideConfig{
+				Enabled: true,
+				Timeout: 0.1, // 100ms
 			},
 		})
 
@@ -147,9 +145,9 @@ func TestBaseWidget_AutoHide(t *testing.T) {
 	t.Run("enabled auto-hide - after trigger", func(t *testing.T) {
 		base := NewBaseWidget(config.WidgetConfig{
 			ID: "test",
-			Properties: config.WidgetProperties{
-				AutoHide:        true,
-				AutoHideTimeout: 0.2, // 200ms
+			AutoHide: &config.AutoHideConfig{
+				Enabled: true,
+				Timeout: 0.2, // 200ms
 			},
 		})
 
@@ -173,9 +171,9 @@ func TestBaseWidget_AutoHide(t *testing.T) {
 	t.Run("enabled auto-hide - retrigger resets timer", func(t *testing.T) {
 		base := NewBaseWidget(config.WidgetConfig{
 			ID: "test",
-			Properties: config.WidgetProperties{
-				AutoHide:        true,
-				AutoHideTimeout: 0.3, // 300ms
+			AutoHide: &config.AutoHideConfig{
+				Enabled: true,
+				Timeout: 0.3, // 300ms
 			},
 		})
 
@@ -250,8 +248,8 @@ func TestBaseWidget_IsAutoHideEnabled(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			base := NewBaseWidget(config.WidgetConfig{
 				ID: "test",
-				Properties: config.WidgetProperties{
-					AutoHide: tt.autoHide,
+				AutoHide: &config.AutoHideConfig{
+					Enabled: tt.autoHide,
 				},
 			})
 
@@ -282,8 +280,8 @@ func TestBaseWidget_GetRenderBackgroundColor(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			base := NewBaseWidget(config.WidgetConfig{
 				ID: "test",
-				Style: config.StyleConfig{
-					BackgroundColor: tt.bgColor,
+				Style: &config.StyleConfig{
+					Background: tt.bgColor,
 				},
 			})
 
@@ -297,10 +295,9 @@ func TestBaseWidget_GetRenderBackgroundColor(t *testing.T) {
 
 // TestBaseWidget_GetStyle tests style getter
 func TestBaseWidget_GetStyle(t *testing.T) {
-	style := config.StyleConfig{
-		BackgroundColor: 128,
-		Border:          true,
-		BorderColor:     255,
+	style := &config.StyleConfig{
+		Background: 128,
+		Border:     255,
 	}
 
 	base := NewBaseWidget(config.WidgetConfig{
@@ -309,24 +306,19 @@ func TestBaseWidget_GetStyle(t *testing.T) {
 	})
 
 	result := base.GetStyle()
-	if result.BackgroundColor != style.BackgroundColor {
-		t.Errorf("GetStyle().BackgroundColor = %v, want %v", result.BackgroundColor, style.BackgroundColor)
+	if result.Background != style.Background {
+		t.Errorf("GetStyle().Background = %v, want %v", result.Background, style.Background)
 	}
 	if result.Border != style.Border {
 		t.Errorf("GetStyle().Border = %v, want %v", result.Border, style.Border)
-	}
-	if result.BorderColor != style.BorderColor {
-		t.Errorf("GetStyle().BorderColor = %v, want %v", result.BorderColor, style.BorderColor)
 	}
 }
 
 // TestNewBaseWidget_DefaultInterval tests default update interval
 func TestNewBaseWidget_DefaultInterval(t *testing.T) {
 	base := NewBaseWidget(config.WidgetConfig{
-		ID: "test",
-		Properties: config.WidgetProperties{
-			UpdateInterval: 0, // Not specified
-		},
+		ID:             "test",
+		UpdateInterval: 0, // Not specified
 	})
 
 	expected := 1 * time.Second // Default is 1.0 second
@@ -340,9 +332,9 @@ func TestNewBaseWidget_DefaultInterval(t *testing.T) {
 func TestNewBaseWidget_DefaultAutoHideTimeout(t *testing.T) {
 	base := NewBaseWidget(config.WidgetConfig{
 		ID: "test",
-		Properties: config.WidgetProperties{
-			AutoHide:        true,
-			AutoHideTimeout: 0, // Not specified
+		AutoHide: &config.AutoHideConfig{
+			Enabled: true,
+			Timeout: 0, // Not specified
 		},
 	})
 

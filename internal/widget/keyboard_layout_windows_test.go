@@ -16,11 +16,11 @@ func TestNewKeyboardLayoutWidget(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
+		Style: &config.StyleConfig{
+			Background: 0,
 		},
-		Properties: config.WidgetProperties{
-			FontSize: 10,
+		Text: &config.TextConfig{
+			Size: 10,
 		},
 	}
 
@@ -58,12 +58,10 @@ func TestNewKeyboardLayoutWidget_WithDisplayFormat(t *testing.T) {
 					W: 128,
 					H: 40,
 				},
-				Style: config.StyleConfig{
-					BackgroundColor: 0,
+				Style: &config.StyleConfig{
+					Background: 0,
 				},
-				Properties: config.WidgetProperties{
-					DisplayFormat: format,
-				},
+				Format: format,
 			}
 
 			widget, err := NewKeyboardLayoutWidget(cfg)
@@ -86,12 +84,10 @@ func TestNewKeyboardLayoutWidget_InvalidFormat(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
+		Style: &config.StyleConfig{
+			Background: 0,
 		},
-		Properties: config.WidgetProperties{
-			DisplayFormat: "invalid",
-		},
+		Format: "invalid",
 	}
 
 	_, err := NewKeyboardLayoutWidget(cfg)
@@ -108,10 +104,9 @@ func TestKeyboardLayoutWidget_Update(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
+		Style: &config.StyleConfig{
+			Background: 0,
 		},
-		Properties: config.WidgetProperties{},
 	}
 
 	widget, err := NewKeyboardLayoutWidget(cfg)
@@ -138,10 +133,9 @@ func TestKeyboardLayoutWidget_Render(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
+		Style: &config.StyleConfig{
+			Background: 0,
 		},
-		Properties: config.WidgetProperties{},
 	}
 
 	widget, err := NewKeyboardLayoutWidget(cfg)
@@ -175,9 +169,7 @@ func TestKeyboardLayoutWidget_FormatLayout_ISO639_1(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayFormat: "iso639-1",
-		},
+		Format: "iso639-1",
 	}
 
 	widget, _ := NewKeyboardLayoutWidget(cfg)
@@ -210,9 +202,7 @@ func TestKeyboardLayoutWidget_FormatLayout_ISO639_2(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayFormat: "iso639-2",
-		},
+		Format: "iso639-2",
 	}
 
 	widget, _ := NewKeyboardLayoutWidget(cfg)
@@ -244,9 +234,7 @@ func TestKeyboardLayoutWidget_FormatLayout_Full(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayFormat: "full",
-		},
+		Format: "full",
 	}
 
 	widget, _ := NewKeyboardLayoutWidget(cfg)
@@ -278,7 +266,6 @@ func TestKeyboardLayoutWidget_GetUpdateInterval(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{},
 	}
 
 	widget, _ := NewKeyboardLayoutWidget(cfg)
@@ -299,7 +286,6 @@ func TestKeyboardLayoutWidget_GetPosition(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{},
 	}
 
 	widget, _ := NewKeyboardLayoutWidget(cfg)

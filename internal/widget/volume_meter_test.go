@@ -44,9 +44,7 @@ func TestNewVolumeMeterWidget(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-		},
+		Mode: "bar_horizontal",
 	}
 
 	widget, err := NewVolumeMeterWidget(cfg)
@@ -73,9 +71,7 @@ func TestVolumeMeterWidget_InvalidDisplayMode(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "invalid_mode",
-		},
+		Mode: "invalid_mode",
 	}
 
 	_, err := NewVolumeMeterWidget(cfg)
@@ -109,9 +105,9 @@ func TestVolumeMeterWidget_AllDisplayModes(t *testing.T) {
 				Position: config.PositionConfig{
 					X: 0, Y: 0, W: 128, H: 40,
 				},
-				Properties: config.WidgetProperties{
-					DisplayMode: mode,
-					FontSize:    10,
+				Mode: mode,
+				Text: &config.TextConfig{
+					Size: 10,
 				},
 			}
 
@@ -152,9 +148,9 @@ func TestVolumeMeterWidget_DBScale(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-			UseDBScale:  true,
+		Mode: "bar_horizontal",
+		Metering: &config.MeteringConfig{
+			DBScale: true,
 		},
 	}
 
@@ -201,10 +197,10 @@ func TestVolumeMeterWidget_ClippingDetection(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:       "bar_horizontal",
-			ShowClipping:      true,
-			ClippingThreshold: 0.95,
+		Mode: "bar_horizontal",
+		Clipping: &config.ClippingConfig{
+			Enabled:   true,
+			Threshold: 0.95,
 		},
 	}
 
@@ -234,9 +230,9 @@ func TestVolumeMeterWidget_DecayBehavior(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "vu_meter",
-			DecayRate:   5.0, // Fast decay for testing
+		Mode: "vu_meter",
+		Metering: &config.MeteringConfig{
+			DecayRate: 5.0, // Fast decay for testing
 		},
 	}
 
@@ -274,10 +270,10 @@ func TestVolumeMeterWidget_PeakHold(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:  "vu_meter",
-			ShowPeakHold: true,
-			PeakHoldTime: 0.5, // 500ms
+		Mode: "vu_meter",
+		Peak: &config.PeakConfig{
+			Enabled:  true,
+			HoldTime: 0.5, // 500ms
 		},
 	}
 
@@ -321,12 +317,14 @@ func TestVolumeMeterWidget_AutoHideConfig(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:         "bar_horizontal",
-			AutoHide:            true,
-			AutoHideOnSilence:   true,
-			AutoHideSilenceTime: 1.0,
-			SilenceThreshold:    0.01,
+		Mode: "bar_horizontal",
+		AutoHide: &config.AutoHideConfig{
+			Enabled:     true,
+			OnSilence:   true,
+			SilenceTime: 1.0,
+		},
+		Metering: &config.MeteringConfig{
+			SilenceThreshold: 0.01,
 		},
 	}
 
@@ -356,9 +354,7 @@ func TestVolumeMeterWidget_Stop(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-		},
+		Mode: "bar_horizontal",
 	}
 
 	widget, err := NewVolumeMeterWidget(cfg)
@@ -405,9 +401,9 @@ func TestVolumeMeterWidget_Render(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-			AutoHide:    false, // Disable auto-hide for render test
+		Mode: "bar_horizontal",
+		AutoHide: &config.AutoHideConfig{
+			Enabled: false, // Disable auto-hide for render test
 		},
 	}
 
@@ -446,9 +442,7 @@ func TestVolumeMeterWidget_HealthMetrics(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-		},
+		Mode: "bar_horizontal",
 	}
 
 	widget, err := NewVolumeMeterWidget(cfg)
@@ -507,9 +501,9 @@ func TestVolumeMeterWidget_StereoMode(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-			StereoMode:  true,
+		Mode: "bar_horizontal",
+		Stereo: &config.StereoConfig{
+			Enabled: true,
 		},
 	}
 
@@ -555,11 +549,13 @@ func TestVolumeMeterWidget_StereoWithPeakHold(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:  "bar_horizontal",
-			StereoMode:   true,
-			ShowPeakHold: true,
-			PeakHoldTime: 0.5,
+		Mode: "bar_horizontal",
+		Stereo: &config.StereoConfig{
+			Enabled: true,
+		},
+		Peak: &config.PeakConfig{
+			Enabled:  true,
+			HoldTime: 0.5,
 		},
 	}
 
@@ -603,23 +599,22 @@ func TestVolumeMeterWidget_StereoWithPeakHold(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_BorderColor tests border color configuration
-func TestVolumeMeterWidget_BorderColor(t *testing.T) {
+// TestVolumeMeterWidget_StereoDivider tests stereo divider configuration
+func TestVolumeMeterWidget_StereoDivider(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
+	dividerColor := 128
 	cfg := config.WidgetConfig{
 		Type:    "volume_meter",
-		ID:      "test_meter_border",
+		ID:      "test_meter_divider",
 		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Style: config.StyleConfig{
-			Border:      true,
-			BorderColor: 255, // White
-		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
+		Mode: "bar",
+		Stereo: &config.StereoConfig{
+			Enabled: true,
+			Divider: &dividerColor,
 		},
 	}
 
@@ -629,12 +624,12 @@ func TestVolumeMeterWidget_BorderColor(t *testing.T) {
 	}
 	defer widget.Stop()
 
-	if !widget.barBorder {
-		t.Error("barBorder should be true")
+	if !widget.stereoMode {
+		t.Error("stereoMode should be true")
 	}
 
-	if widget.borderColor != 255 {
-		t.Errorf("borderColor = %d, want 255", widget.borderColor)
+	if widget.stereoDivider != 128 {
+		t.Errorf("stereoDivider = %d, want 128", widget.stereoDivider)
 	}
 }
 
@@ -649,10 +644,10 @@ func TestVolumeMeterWidget_GaugeWithPeakHold(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 80, H: 60,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:  "gauge",
-			ShowPeakHold: true,
-			PeakHoldTime: 0.5,
+		Mode: "gauge",
+		Peak: &config.PeakConfig{
+			Enabled:  true,
+			HoldTime: 0.5,
 		},
 	}
 
@@ -694,11 +689,13 @@ func TestVolumeMeterWidget_StereoGauge(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 160, H: 60,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:  "gauge",
-			StereoMode:   true,
-			ShowPeakHold: true,
-			PeakHoldTime: 0.5,
+		Mode: "gauge",
+		Stereo: &config.StereoConfig{
+			Enabled: true,
+		},
+		Peak: &config.PeakConfig{
+			Enabled:  true,
+			HoldTime: 0.5,
 		},
 	}
 
@@ -745,9 +742,9 @@ func TestVolumeMeterWidget_Ballistics(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "vu_meter",
-			DecayRate:   2.0, // Units per second
+		Mode: "vu_meter",
+		Metering: &config.MeteringConfig{
+			DecayRate: 2.0, // Units per second
 		},
 	}
 

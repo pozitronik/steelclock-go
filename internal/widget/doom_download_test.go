@@ -6,27 +6,6 @@ import (
 	"testing"
 )
 
-func TestSetBundledWadURL(t *testing.T) {
-	originalURL := bundledWadURL
-	defer func() {
-		bundledWadURL = originalURL
-	}()
-
-	// Test setting a custom URL
-	customURL := "https://example.com/custom.wad"
-	SetBundledWadURL(customURL)
-
-	if bundledWadURL != customURL {
-		t.Errorf("SetBundledWadURL() = %s, want %s", bundledWadURL, customURL)
-	}
-
-	// Test setting empty URL (should not change)
-	SetBundledWadURL("")
-	if bundledWadURL != customURL {
-		t.Errorf("SetBundledWadURL(\"\") changed URL to %s, should remain %s", bundledWadURL, customURL)
-	}
-}
-
 func TestGetWadFile_FileExists(t *testing.T) {
 	// Create a temporary WAD file
 	tmpFile := "test_existing.wad"
@@ -37,8 +16,8 @@ func TestGetWadFile_FileExists(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	// Test getting existing file
-	result, err := GetWadFile(tmpFile)
+	// Test getting existing file (empty URL = use default)
+	result, err := GetWadFile(tmpFile, "")
 	if err != nil {
 		t.Errorf("GetWadFile() error = %v, want nil", err)
 	}
@@ -58,7 +37,7 @@ func TestGetWadFile_FileNotExists(t *testing.T) {
 	nonexistent := "test_download_12345.wad"
 	defer func() { _ = os.Remove(nonexistent) }() // Clean up
 
-	result, err := GetWadFile(nonexistent)
+	result, err := GetWadFile(nonexistent, "")
 	if err != nil {
 		// Network error or download failed - this is acceptable in tests
 		t.Logf("GetWadFile() error = %v (network test may fail)", err)
@@ -90,7 +69,7 @@ func TestGetWadFileWithProgress_FileExists(t *testing.T) {
 	var isDownloading bool
 	var mu sync.RWMutex
 
-	result, err := GetWadFileWithProgress(tmpFile, progressCallback, &isDownloading, &mu)
+	result, err := GetWadFileWithProgress(tmpFile, "", progressCallback, &isDownloading, &mu)
 	if err != nil {
 		t.Errorf("GetWadFileWithProgress() error = %v, want nil", err)
 	}
@@ -128,7 +107,7 @@ func TestGetWadFileWithProgress_ProgressCallback(t *testing.T) {
 	var isDownloading bool
 	var mu sync.RWMutex
 
-	_, err := GetWadFileWithProgress(tmpFile, progressCallback, &isDownloading, &mu)
+	_, err := GetWadFileWithProgress(tmpFile, "", progressCallback, &isDownloading, &mu)
 	if err != nil {
 		t.Errorf("GetWadFileWithProgress() error = %v", err)
 	}

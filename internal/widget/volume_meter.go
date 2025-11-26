@@ -33,21 +33,22 @@ type meterReader interface {
 // VolumeMeterWidget displays realtime audio output levels
 type VolumeMeterWidget struct {
 	*BaseWidget
-	displayMode       string
-	fillColor         uint8
-	clippingColor     uint8
-	leftChannelColor  uint8
-	rightChannelColor uint8
-	barBorder         bool
-	borderColor       uint8
-	gaugeColor        uint8
-	gaugeNeedleColor  uint8
-	horizontalAlign   string
-	verticalAlign     string
-	padding           int
+	displayMode      string
+	fillColor        uint8
+	clippingColor    uint8
+	peakColor        uint8
+	gaugeColor       uint8
+	gaugeNeedleColor uint8
+	gaugeShowTicks   bool
+	gaugeTicksColor  uint8
+	horizontalAlign  string
+	verticalAlign    string
+	padding          int
 
 	// Meter configuration
+	pollInterval        time.Duration // Configurable internal polling rate
 	stereoMode          bool
+	stereoDivider       int // Divider color between channels (-1=disabled, 0-255=color)
 	useDBScale          bool
 	showClipping        bool
 	clippingThreshold   float64
@@ -92,13 +93,27 @@ type VolumeMeterWidget struct {
 //nolint:gocyclo // Complex initialization logic for different display modes
 func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	base := NewBaseWidget(cfg)
+	helper := NewConfigHelper(cfg)
 
-	displayMode := cfg.Properties.DisplayMode
-	if displayMode == "" {
-		displayMode = "bar_horizontal"
+	// Extract common settings using helper
+	textSettings := helper.GetTextSettings()
+	padding := helper.GetPadding()
+	barSettings := helper.GetBarSettings()
+	gaugeSettings := helper.GetGaugeSettings()
+
+	// Display mode - translate schema mode to internal mode
+	displayMode := helper.GetDisplayMode("bar")
+
+	// Handle "bar" mode by checking bar.direction
+	if displayMode == "bar" {
+		if barSettings.Direction == "vertical" {
+			displayMode = "bar_vertical"
+		} else {
+			displayMode = "bar_horizontal"
+		}
 	}
 
-	// Validate display mode
+	// Validate display mode (internal modes)
 	validModes := map[string]bool{
 		"text":           true,
 		"bar_horizontal": true,
@@ -106,126 +121,135 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		"gauge":          true,
 	}
 	if !validModes[displayMode] {
-		return nil, fmt.Errorf("invalid display mode: %s (valid: text, bar_horizontal, bar_vertical, gauge)", displayMode)
+		return nil, fmt.Errorf("invalid display mode: %s (valid: text, bar, gauge)", displayMode)
 	}
 
-	fillColor := cfg.Properties.FillColor
-	if fillColor == 0 {
-		fillColor = 255
-	}
+	// Extract colors based on active display mode only
+	fillColor := 255
+	clippingColor := 200
+	peakColor := 180
 
-	clippingColor := cfg.Properties.ClippingColor
-	if clippingColor == 0 {
-		clippingColor = 200 // Red in grayscale
-	}
-
-	leftChannelColor := cfg.Properties.LeftChannelColor
-	if leftChannelColor == 0 {
-		leftChannelColor = 255
-	}
-
-	rightChannelColor := cfg.Properties.RightChannelColor
-	if rightChannelColor == 0 {
-		rightChannelColor = 200
-	}
-
-	gaugeColor := cfg.Properties.GaugeColor
-	if gaugeColor == 0 {
-		gaugeColor = 200
-	}
-
-	gaugeNeedleColor := cfg.Properties.GaugeNeedleColor
-	if gaugeNeedleColor == 0 {
-		gaugeNeedleColor = 255
-	}
-
-	// Clipping detection
-	clippingThreshold := cfg.Properties.ClippingThreshold
-	if clippingThreshold == 0 {
-		clippingThreshold = 0.99 // Default: 99% of max
-	}
-
-	// Silence detection
-	silenceThreshold := cfg.Properties.SilenceThreshold
-	if silenceThreshold == 0 {
-		silenceThreshold = 0.01 // Default: 1% of max
-	}
-
-	// Decay rate (normalized units per second)
-	decayRate := cfg.Properties.DecayRate
-	if decayRate == 0 {
-		decayRate = 2.0 // Default: decay 2.0 units/sec (0.5 seconds from 1.0 to 0.0)
-	}
-
-	// Peak hold time
-	peakHoldTime := time.Duration(cfg.Properties.PeakHoldTime * float64(time.Second))
-	if peakHoldTime == 0 {
-		peakHoldTime = 1 * time.Second
-	}
-
-	// Auto-hide on silence timeout
-	autoHideSilenceTime := time.Duration(cfg.Properties.AutoHideSilenceTime * float64(time.Second))
-	if autoHideSilenceTime == 0 {
-		autoHideSilenceTime = 2 * time.Second
-	}
-
-	// Load font for text mode
-	var fontFace font.Face
-	if displayMode == "text" {
-		fontSize := cfg.Properties.FontSize
-		if fontSize == 0 {
-			fontSize = 10
-		}
-		face, err := bitmap.LoadFont(cfg.Properties.Font, fontSize)
-		if err == nil {
-			fontFace = face
+	// Bar mode colors (for bar_horizontal and bar_vertical)
+	if displayMode == "bar_horizontal" || displayMode == "bar_vertical" {
+		if cfg.Bar != nil && cfg.Bar.Colors != nil {
+			if cfg.Bar.Colors.Fill != nil {
+				fillColor = *cfg.Bar.Colors.Fill
+			}
+			if cfg.Bar.Colors.Clipping != nil {
+				clippingColor = *cfg.Bar.Colors.Clipping
+			}
+			if cfg.Bar.Colors.Peak != nil {
+				peakColor = *cfg.Bar.Colors.Peak
+			}
 		}
 	}
 
-	horizontalAlign := cfg.Properties.HorizontalAlign
-	if horizontalAlign == "" {
-		horizontalAlign = "center"
+	// Gauge mode colors
+	if displayMode == "gauge" {
+		if cfg.Gauge != nil && cfg.Gauge.Colors != nil {
+			if cfg.Gauge.Colors.Clipping != nil {
+				clippingColor = *cfg.Gauge.Colors.Clipping
+			}
+			if cfg.Gauge.Colors.Peak != nil {
+				peakColor = *cfg.Gauge.Colors.Peak
+			}
+		}
 	}
 
-	verticalAlign := cfg.Properties.VerticalAlign
-	if verticalAlign == "" {
-		verticalAlign = "center"
+	// Text mode doesn't use fill colors - text is rendered via font glyphs
+
+	// Clipping settings (no color field - moved to mode colors)
+	clippingThreshold := 0.99
+	showClipping := false
+
+	if cfg.Clipping != nil {
+		showClipping = cfg.Clipping.Enabled
+		if cfg.Clipping.Threshold > 0 {
+			clippingThreshold = cfg.Clipping.Threshold
+		}
 	}
 
-	padding := cfg.Properties.Padding
+	// Stereo settings (includes divider color between channels)
+	stereoMode := false
+	stereoDivider := 64 // Default: mid-gray divider
 
-	// Check for border in both properties and style
-	barBorder := cfg.Properties.BarBorder || cfg.Style.Border
-
-	// Get border color from style config
-	borderColor := cfg.Style.BorderColor
-	if borderColor == 0 {
-		borderColor = 255 // Default: bright white
+	if cfg.Stereo != nil {
+		stereoMode = cfg.Stereo.Enabled
+		if cfg.Stereo.Divider != nil {
+			stereoDivider = *cfg.Stereo.Divider
+		}
 	}
+
+	// Metering settings
+	silenceThreshold := 0.01
+	decayRate := 2.0
+	useDBScale := false
+
+	if cfg.Metering != nil {
+		useDBScale = cfg.Metering.DBScale
+		if cfg.Metering.DecayRate > 0 {
+			decayRate = cfg.Metering.DecayRate
+		}
+		if cfg.Metering.SilenceThreshold > 0 {
+			silenceThreshold = cfg.Metering.SilenceThreshold
+		}
+	}
+
+	// Peak hold settings
+	peakHoldTime := 1 * time.Second
+	showPeakHold := false
+
+	if cfg.Peak != nil {
+		showPeakHold = cfg.Peak.Enabled
+		if cfg.Peak.HoldTime > 0 {
+			peakHoldTime = time.Duration(cfg.Peak.HoldTime * float64(time.Second))
+		}
+	}
+
+	// Auto-hide settings
+	autoHideOnSilence := false
+	autoHideSilenceTime := 2 * time.Second
+
+	if cfg.AutoHide != nil {
+		autoHideOnSilence = cfg.AutoHide.OnSilence
+		if cfg.AutoHide.SilenceTime > 0 {
+			autoHideSilenceTime = time.Duration(cfg.AutoHide.SilenceTime * float64(time.Second))
+		}
+	}
+
+	// Get poll interval from config, fall back to default
+	pollInterval := time.Duration(config.DefaultPollInterval * float64(time.Second))
+	if cfg.PollInterval > 0 {
+		pollInterval = time.Duration(cfg.PollInterval * float64(time.Second))
+	}
+
+	// Load font for text mode (ignore error - degrades gracefully)
+	fontFace, _ := helper.LoadFontForTextMode(displayMode)
 
 	w := &VolumeMeterWidget{
 		BaseWidget:          base,
 		displayMode:         displayMode,
 		fillColor:           uint8(fillColor),
 		clippingColor:       uint8(clippingColor),
-		leftChannelColor:    uint8(leftChannelColor),
-		rightChannelColor:   uint8(rightChannelColor),
-		barBorder:           barBorder,
-		borderColor:         uint8(borderColor),
-		gaugeColor:          uint8(gaugeColor),
-		gaugeNeedleColor:    uint8(gaugeNeedleColor),
-		horizontalAlign:     horizontalAlign,
-		verticalAlign:       verticalAlign,
+		peakColor:           uint8(peakColor),
+		gaugeColor:          uint8(gaugeSettings.ArcColor),
+		gaugeNeedleColor:    uint8(gaugeSettings.NeedleColor),
+		gaugeShowTicks:      gaugeSettings.ShowTicks,
+		gaugeTicksColor:     uint8(gaugeSettings.TicksColor),
+		horizontalAlign:     textSettings.HorizAlign,
+		verticalAlign:       textSettings.VertAlign,
 		padding:             padding,
-		stereoMode:          cfg.Properties.StereoMode,
-		useDBScale:          cfg.Properties.UseDBScale,
-		showClipping:        cfg.Properties.ShowClipping,
+		pollInterval:        pollInterval,
+		stereoMode:          stereoMode,
+		stereoDivider:       stereoDivider,
+		useDBScale:          useDBScale,
+		showClipping:        showClipping,
 		clippingThreshold:   clippingThreshold,
 		silenceThreshold:    silenceThreshold,
 		decayRate:           decayRate,
-		showPeakHold:        cfg.Properties.ShowPeakHold,
+		showPeakHold:        showPeakHold,
 		peakHoldTime:        peakHoldTime,
-		autoHideOnSilence:   cfg.Properties.AutoHideOnSilence,
+		autoHideOnSilence:   autoHideOnSilence,
 		autoHideSilenceTime: autoHideSilenceTime,
 		lastSuccessTime:     time.Now(),
 		lastUpdateTime:      time.Now(),
@@ -233,15 +257,9 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		stopChan:            make(chan struct{}),
 	}
 
-	// Initialize meter reader BEFORE starting goroutine
-	// This ensures widget creation fails if no audio device exists (fail-fast pattern)
-	reader, err := newMeterReader()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize meter reader: %w", err)
-	}
-	w.reader = reader
-
 	// Start background polling goroutine
+	// Note: Reader is created INSIDE the goroutine due to Windows COM thread affinity -
+	// COM objects must be created and used on the same thread
 	w.wg.Add(1)
 	go w.pollMeterBackground()
 
@@ -259,7 +277,15 @@ func (w *VolumeMeterWidget) pollMeterBackground() {
 		}
 	}()
 
-	// Reader already initialized in NewVolumeMeterWidget (fail-fast pattern)
+	// Create reader on this goroutine due to Windows COM thread affinity -
+	// COM objects must be created and used on the same thread
+	reader, err := newMeterReader()
+	if err != nil {
+		log.Printf("[VOLUME-METER] Failed to initialize meter reader: %v", err)
+		return
+	}
+	w.reader = reader
+
 	// Ensure cleanup when goroutine exits
 	defer func() {
 		if w.reader != nil {
@@ -268,9 +294,11 @@ func (w *VolumeMeterWidget) pollMeterBackground() {
 		}
 	}()
 
-	pollInterval := 100 * time.Millisecond // 10Hz default
-	ticker := time.NewTicker(pollInterval)
+	ticker := time.NewTicker(w.pollInterval)
 	defer ticker.Stop()
+
+	// Do initial poll immediately (ticker won't fire until first interval)
+	w.updateMeter()
 
 	for {
 		select {
@@ -304,6 +332,10 @@ func (w *VolumeMeterWidget) updateMeter() {
 	}
 
 	if err != nil {
+		// Log first error for debugging
+		if w.consecutiveErrors == 0 {
+			log.Printf("[VOLUME-METER] Error reading meter: %v", err)
+		}
 		w.failedCalls++
 		w.consecutiveErrors++
 		return
@@ -406,7 +438,15 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 	}
 
 	pos := w.GetPosition()
-	img := image.NewGray(image.Rect(0, 0, pos.W, pos.H))
+	style := w.GetStyle()
+
+	// Create base image with background color
+	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
+
+	// Draw border if enabled (border >= 0 means enabled with that color)
+	if style.Border >= 0 {
+		bitmap.DrawBorder(img, uint8(style.Border))
+	}
 
 	// Check if we should render in stereo mode
 	if w.stereoMode && len(channelPeaks) >= 2 {
@@ -511,15 +551,11 @@ func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, displayPeak, pe
 		peakX := int(float64(pos.W) * peakHold)
 		if peakX < pos.W {
 			for y := 0; y < pos.H; y++ {
-				img.SetGray(peakX, y, color.Gray{Y: 180})
+				img.SetGray(peakX, y, color.Gray{Y: w.peakColor})
 			}
 		}
 	}
 
-	// Draw border
-	if w.barBorder {
-		bitmap.DrawBorder(img, w.borderColor)
-	}
 }
 
 // renderBarVertical renders vertical bar display
@@ -545,15 +581,11 @@ func (w *VolumeMeterWidget) renderBarVertical(img *image.Gray, displayPeak, peak
 		peakY := pos.H - int(float64(pos.H)*peakHold)
 		if peakY >= 0 {
 			for x := 0; x < pos.W; x++ {
-				img.SetGray(x, peakY, color.Gray{Y: 180})
+				img.SetGray(x, peakY, color.Gray{Y: w.peakColor})
 			}
 		}
 	}
 
-	// Draw border
-	if w.barBorder {
-		bitmap.DrawBorder(img, w.borderColor)
-	}
 }
 
 // renderGauge renders gauge display
@@ -567,7 +599,7 @@ func (w *VolumeMeterWidget) renderGauge(img *image.Gray, peak, peakHold float64,
 
 	// DrawGauge expects percentage as 0-100, not 0.0-1.0
 	percentage := peak * 100.0
-	bitmap.DrawGauge(img, pos, percentage, w.gaugeColor, needleColor)
+	bitmap.DrawGauge(img, 0, 0, pos.W, pos.H, percentage, w.gaugeColor, needleColor, w.gaugeShowTicks, w.gaugeTicksColor)
 
 	// Draw peak hold mark if enabled
 	if w.showPeakHold && peakHold > 0 {
@@ -598,11 +630,16 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 	// Draw two bars: top half = left, bottom half = right
 	halfHeight := pos.H / 2
 
+	fillColor := w.fillColor
+	if isClipping && w.showClipping {
+		fillColor = w.clippingColor
+	}
+
 	// Left channel (top)
 	leftWidth := int(float64(pos.W) * channelPeaks[0])
 	for y := 0; y < halfHeight; y++ {
 		for x := 0; x < leftWidth; x++ {
-			img.SetGray(x, y, color.Gray{Y: w.leftChannelColor})
+			img.SetGray(x, y, color.Gray{Y: fillColor})
 		}
 	}
 
@@ -610,7 +647,7 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 	rightWidth := int(float64(pos.W) * channelPeaks[1])
 	for y := halfHeight; y < pos.H; y++ {
 		for x := 0; x < rightWidth; x++ {
-			img.SetGray(x, y, color.Gray{Y: w.rightChannelColor})
+			img.SetGray(x, y, color.Gray{Y: fillColor})
 		}
 	}
 
@@ -621,7 +658,7 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 			leftPeakX := int(float64(pos.W) * peakHoldValues[0])
 			if leftPeakX < pos.W {
 				for y := 0; y < halfHeight; y++ {
-					img.SetGray(leftPeakX, y, color.Gray{Y: 180})
+					img.SetGray(leftPeakX, y, color.Gray{Y: w.peakColor})
 				}
 			}
 		}
@@ -631,20 +668,17 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 			rightPeakX := int(float64(pos.W) * peakHoldValues[1])
 			if rightPeakX < pos.W {
 				for y := halfHeight; y < pos.H; y++ {
-					img.SetGray(rightPeakX, y, color.Gray{Y: 180})
+					img.SetGray(rightPeakX, y, color.Gray{Y: w.peakColor})
 				}
 			}
 		}
 	}
 
-	// Draw separator
-	for x := 0; x < pos.W; x++ {
-		img.SetGray(x, halfHeight, color.Gray{Y: 64})
-	}
-
-	// Draw border
-	if w.barBorder {
-		bitmap.DrawBorder(img, w.borderColor)
+	// Draw separator between channels (if enabled)
+	if w.stereoDivider >= 0 {
+		for x := 0; x < pos.W; x++ {
+			img.SetGray(x, halfHeight, color.Gray{Y: uint8(w.stereoDivider)})
+		}
 	}
 }
 
@@ -679,6 +713,15 @@ func (w *VolumeMeterWidget) renderTextStereo(img *image.Gray, channelPeaks []flo
 	}
 
 	bitmap.DrawAlignedText(img, text, w.face, w.horizontalAlign, w.verticalAlign, w.padding)
+
+	// Draw separator between channels (if enabled)
+	if w.stereoDivider >= 0 {
+		pos := w.GetPosition()
+		halfWidth := pos.W / 2
+		for y := 0; y < pos.H; y++ {
+			img.SetGray(halfWidth, y, color.Gray{Y: uint8(w.stereoDivider)})
+		}
+	}
 }
 
 // renderBarVerticalStereo renders vertical bars in stereo mode (left/right channels)
@@ -704,11 +747,16 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 	// Draw two bars: left half = left channel, right half = right channel
 	halfWidth := pos.W / 2
 
+	fillColor := w.fillColor
+	if isClipping && w.showClipping {
+		fillColor = w.clippingColor
+	}
+
 	// Left channel (left half)
 	leftHeight := int(float64(pos.H) * channelPeaks[0])
 	for y := pos.H - leftHeight; y < pos.H; y++ {
 		for x := 0; x < halfWidth; x++ {
-			img.SetGray(x, y, color.Gray{Y: w.leftChannelColor})
+			img.SetGray(x, y, color.Gray{Y: fillColor})
 		}
 	}
 
@@ -716,7 +764,7 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 	rightHeight := int(float64(pos.H) * channelPeaks[1])
 	for y := pos.H - rightHeight; y < pos.H; y++ {
 		for x := halfWidth; x < pos.W; x++ {
-			img.SetGray(x, y, color.Gray{Y: w.rightChannelColor})
+			img.SetGray(x, y, color.Gray{Y: fillColor})
 		}
 	}
 
@@ -727,7 +775,7 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 			leftPeakY := pos.H - int(float64(pos.H)*peakHoldValues[0])
 			if leftPeakY >= 0 && leftPeakY < pos.H {
 				for x := 0; x < halfWidth; x++ {
-					img.SetGray(x, leftPeakY, color.Gray{Y: 180})
+					img.SetGray(x, leftPeakY, color.Gray{Y: w.peakColor})
 				}
 			}
 		}
@@ -737,37 +785,16 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 			rightPeakY := pos.H - int(float64(pos.H)*peakHoldValues[1])
 			if rightPeakY >= 0 && rightPeakY < pos.H {
 				for x := halfWidth; x < pos.W; x++ {
-					img.SetGray(x, rightPeakY, color.Gray{Y: 180})
+					img.SetGray(x, rightPeakY, color.Gray{Y: w.peakColor})
 				}
 			}
 		}
 	}
 
-	// Draw separator
-	for y := 0; y < pos.H; y++ {
-		img.SetGray(halfWidth, y, color.Gray{Y: 64})
-	}
-
-	// Draw borders if enabled
-	if w.barBorder {
-		// Left bar border
-		for x := 0; x < halfWidth; x++ {
-			img.SetGray(x, 0, color.Gray{Y: w.borderColor})
-			img.SetGray(x, pos.H-1, color.Gray{Y: w.borderColor})
-		}
+	// Draw separator between channels (if enabled)
+	if w.stereoDivider >= 0 {
 		for y := 0; y < pos.H; y++ {
-			img.SetGray(0, y, color.Gray{Y: w.borderColor})
-			img.SetGray(halfWidth-1, y, color.Gray{Y: w.borderColor})
-		}
-
-		// Right bar border
-		for x := halfWidth; x < pos.W; x++ {
-			img.SetGray(x, 0, color.Gray{Y: w.borderColor})
-			img.SetGray(x, pos.H-1, color.Gray{Y: w.borderColor})
-		}
-		for y := 0; y < pos.H; y++ {
-			img.SetGray(halfWidth+1, y, color.Gray{Y: w.borderColor})
-			img.SetGray(pos.W-1, y, color.Gray{Y: w.borderColor})
+			img.SetGray(halfWidth, y, color.Gray{Y: uint8(w.stereoDivider)})
 		}
 	}
 }
@@ -808,7 +835,7 @@ func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []fl
 	if isClipping && w.showClipping {
 		leftNeedleColor = w.clippingColor
 	}
-	bitmap.DrawGauge(leftImg, leftGaugePos, leftPercentage, w.gaugeColor, leftNeedleColor)
+	bitmap.DrawGauge(leftImg, 0, 0, leftGaugePos.W, leftGaugePos.H, leftPercentage, w.gaugeColor, leftNeedleColor, w.gaugeShowTicks, w.gaugeTicksColor)
 
 	// Draw left channel peak hold mark
 	if w.showPeakHold && len(peakHoldValues) >= 1 && peakHoldValues[0] > 0 {
@@ -835,7 +862,7 @@ func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []fl
 	if isClipping && w.showClipping {
 		rightNeedleColor = w.clippingColor
 	}
-	bitmap.DrawGauge(rightImg, rightGaugePos, rightPercentage, w.gaugeColor, rightNeedleColor)
+	bitmap.DrawGauge(rightImg, 0, 0, rightGaugePos.W, rightGaugePos.H, rightPercentage, w.gaugeColor, rightNeedleColor, w.gaugeShowTicks, w.gaugeTicksColor)
 
 	// Draw right channel peak hold mark
 	if w.showPeakHold && len(peakHoldValues) >= 2 && peakHoldValues[1] > 0 {
@@ -849,9 +876,11 @@ func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []fl
 		}
 	}
 
-	// Draw separator
-	for y := 0; y < pos.H; y++ {
-		img.SetGray(halfWidth, y, color.Gray{Y: 64})
+	// Draw separator between channels (if enabled)
+	if w.stereoDivider >= 0 {
+		for y := 0; y < pos.H; y++ {
+			img.SetGray(halfWidth, y, color.Gray{Y: uint8(w.stereoDivider)})
+		}
 	}
 }
 
@@ -875,7 +904,7 @@ func (w *VolumeMeterWidget) drawGaugePeakHoldMark(img *image.Gray, pos config.Po
 	rad := angle * math.Pi / 180.0
 
 	// Draw a small mark extending outward from the gauge arc
-	markColor := color.Gray{Y: 180} // Same brightness as peak hold lines in bar modes
+	markColor := color.Gray{Y: w.peakColor}
 	tickLen := 5
 
 	// Outer point (extended beyond arc)

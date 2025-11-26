@@ -13,19 +13,29 @@ import (
 
 // Manager handles widget positioning and compositing
 type Manager struct {
-	width   int
-	height  int
-	bgColor uint8
-	widgets []widget.Widget
+	width         int
+	height        int
+	bgColor       uint8
+	widgets       []widget.Widget
+	sortedWidgets []widget.Widget // Pre-sorted by z-order (cached to avoid sorting every frame)
 }
 
 // NewManager creates a new layout manager
 func NewManager(display config.DisplayConfig, widgets []widget.Widget) *Manager {
+	// Pre-sort widgets by z-order once during initialization
+	// Z-order only changes on config reload, which creates a new Manager
+	sortedWidgets := make([]widget.Widget, len(widgets))
+	copy(sortedWidgets, widgets)
+	sort.Slice(sortedWidgets, func(i, j int) bool {
+		return sortedWidgets[i].GetPosition().Z < sortedWidgets[j].GetPosition().Z
+	})
+
 	return &Manager{
-		width:   display.Width,
-		height:  display.Height,
-		bgColor: uint8(display.BackgroundColor),
-		widgets: widgets,
+		width:         display.Width,
+		height:        display.Height,
+		bgColor:       uint8(display.Background),
+		widgets:       widgets,
+		sortedWidgets: sortedWidgets,
 	}
 }
 
@@ -34,15 +44,9 @@ func (m *Manager) Composite() (image.Image, error) {
 	// Create canvas
 	canvas := bitmap.NewGrayscaleImage(m.width, m.height, m.bgColor)
 
-	// Sort widgets by z-order
-	sortedWidgets := make([]widget.Widget, len(m.widgets))
-	copy(sortedWidgets, m.widgets)
-	sort.Slice(sortedWidgets, func(i, j int) bool {
-		return sortedWidgets[i].GetPosition().ZOrder < sortedWidgets[j].GetPosition().ZOrder
-	})
-
+	// Use pre-sorted widgets (sorted once in NewManager)
 	// Render and composite each widget
-	for _, w := range sortedWidgets {
+	for _, w := range m.sortedWidgets {
 		// Render widget
 		// NOTE: We do NOT call Update() here because widgets have dedicated
 		// update loops running in background goroutines (see compositor.widgetUpdateLoop).
@@ -61,13 +65,13 @@ func (m *Manager) Composite() (image.Image, error) {
 		style := w.GetStyle()
 		pos := w.GetPosition()
 
-		// Check if widget has transparent background (background_color = -1)
-		transparentBg := style.BackgroundColor == -1
+		// Check if widget has transparent background (background = -1)
+		transparentBg := style.Background == -1
 
 		// Composite widget onto canvas
 		if transparentBg {
 			// Transparent background: only copy non-background pixels
-			compositeWithTransparency(canvas, widgetImg, pos, style.BackgroundColor)
+			compositeWithTransparency(canvas, widgetImg, pos, style.Background)
 		} else {
 			// Opaque background: draw all pixels
 			destRect := image.Rect(pos.X, pos.Y, pos.X+pos.W, pos.Y+pos.H)
@@ -78,7 +82,8 @@ func (m *Manager) Composite() (image.Image, error) {
 	return canvas, nil
 }
 
-// compositeWithTransparency composites a widget image onto canvas, skipping background pixels
+// compositeWithTransparency composites a widget image onto canvas, skipping background pixels.
+// Optimized version using direct slice access instead of GrayAt/SetGray calls.
 func compositeWithTransparency(canvas *image.Gray, widgetImg image.Image, pos config.PositionConfig, bgColor int) {
 	// Convert widget image to Gray if needed
 	grayWidget, ok := widgetImg.(*image.Gray)
@@ -93,26 +98,55 @@ func compositeWithTransparency(canvas *image.Gray, widgetImg image.Image, pos co
 		transparentValue = uint8(bgColor)
 	}
 
-	// Copy only non-transparent pixels
-	bounds := grayWidget.Bounds()
-	for y := 0; y < bounds.Dy(); y++ {
-		for x := 0; x < bounds.Dx(); x++ {
-			pixelValue := grayWidget.GrayAt(x, y).Y
+	// Pre-calculate bounds and clipping region
+	srcBounds := grayWidget.Bounds()
+	dstBounds := canvas.Bounds()
 
-			// Skip transparent pixels
-			if pixelValue == transparentValue {
-				continue
-			}
+	// Calculate the visible region (intersection of widget and canvas)
+	startX := pos.X
+	startY := pos.Y
+	endX := pos.X + srcBounds.Dx()
+	endY := pos.Y + srcBounds.Dy()
 
-			// Calculate destination coordinates
-			destX := pos.X + x
-			destY := pos.Y + y
+	// Clip to canvas bounds
+	if startX < dstBounds.Min.X {
+		startX = dstBounds.Min.X
+	}
+	if startY < dstBounds.Min.Y {
+		startY = dstBounds.Min.Y
+	}
+	if endX > dstBounds.Max.X {
+		endX = dstBounds.Max.X
+	}
+	if endY > dstBounds.Max.Y {
+		endY = dstBounds.Max.Y
+	}
 
-			// Check bounds
-			canvasBounds := canvas.Bounds()
-			if destX >= canvasBounds.Min.X && destX < canvasBounds.Max.X &&
-				destY >= canvasBounds.Min.Y && destY < canvasBounds.Max.Y {
-				canvas.SetGray(destX, destY, grayWidget.GrayAt(x, y))
+	// Nothing to draw if clipped completely
+	if startX >= endX || startY >= endY {
+		return
+	}
+
+	// Get direct access to underlying pixel slices
+	srcPix := grayWidget.Pix
+	srcStride := grayWidget.Stride
+	dstPix := canvas.Pix
+	dstStride := canvas.Stride
+
+	// Source offset (widget may start at non-zero position)
+	srcOffsetX := startX - pos.X - srcBounds.Min.X
+	srcOffsetY := startY - pos.Y - srcBounds.Min.Y
+
+	// Copy non-transparent pixels using direct slice access
+	for y := startY; y < endY; y++ {
+		srcY := srcOffsetY + (y - startY)
+		srcRowStart := srcY*srcStride + srcOffsetX
+		dstRowStart := (y-dstBounds.Min.Y)*dstStride + (startX - dstBounds.Min.X)
+
+		for x := 0; x < endX-startX; x++ {
+			pixelValue := srcPix[srcRowStart+x]
+			if pixelValue != transparentValue {
+				dstPix[dstRowStart+x] = pixelValue
 			}
 		}
 	}

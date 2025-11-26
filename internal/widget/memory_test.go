@@ -29,18 +29,20 @@ func TestNewMemoryWidget(t *testing.T) {
 					W: 64,
 					H: 20,
 				},
-				Style: config.StyleConfig{
-					BackgroundColor: 0,
-					Border:          false,
-					BorderColor:     255,
+				Style: &config.StyleConfig{
+					Background: 0,
+					Border:     -1,
 				},
-				Properties: config.WidgetProperties{
-					DisplayMode:     tt.displayMode,
-					FontSize:        10,
-					HorizontalAlign: "center",
-					VerticalAlign:   "center",
-					FillColor:       255,
-					HistoryLength:   30,
+				Mode: tt.displayMode,
+				Text: &config.TextConfig{
+					Size:  10,
+					Align: &config.AlignConfig{H: "center", V: "center"},
+				},
+				Colors: &config.ColorsConfig{
+					Fill: config.IntPtr(255),
+				},
+				Graph: &config.GraphConfig{
+					History: 30,
 				},
 			}
 
@@ -67,17 +69,17 @@ func TestMemoryWidgetUpdate(t *testing.T) {
 			W: 64,
 			H: 20,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:     "text",
-			FontSize:        10,
-			HorizontalAlign: "center",
-			VerticalAlign:   "center",
-			FillColor:       255,
+		Mode: "text",
+		Text: &config.TextConfig{
+			Size:  10,
+			Align: &config.AlignConfig{H: "center", V: "center"},
+		},
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
 		},
 	}
 
@@ -113,20 +115,22 @@ func TestMemoryWidgetRenderAllModes(t *testing.T) {
 					W: 64,
 					H: 20,
 				},
-				Style: config.StyleConfig{
-					BackgroundColor: 0,
-					Border:          false,
-					BorderColor:     255,
+				Style: &config.StyleConfig{
+					Background: 0,
+					Border:     -1,
 				},
-				Properties: config.WidgetProperties{
-					DisplayMode:      mode,
-					FontSize:         10,
-					HorizontalAlign:  "center",
-					VerticalAlign:    "center",
-					FillColor:        255,
-					HistoryLength:    30,
-					GaugeColor:       200,
-					GaugeNeedleColor: 255,
+				Mode: mode,
+				Text: &config.TextConfig{
+					Size:  10,
+					Align: &config.AlignConfig{H: "center", V: "center"},
+				},
+				Colors: &config.ColorsConfig{
+					Fill:   config.IntPtr(255),
+					Arc:    config.IntPtr(200),
+					Needle: config.IntPtr(255),
+				},
+				Graph: &config.GraphConfig{
+					History: 30,
 				},
 			}
 
@@ -174,15 +178,12 @@ func TestMemoryWidget_GaugeDefaults(t *testing.T) {
 			W: 64,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "gauge",
-			// Don't specify colors to test defaults
-		},
+		Mode: "gauge",
+		// Don't specify colors to test defaults
 	}
 
 	widget, err := NewMemoryWidget(cfg)

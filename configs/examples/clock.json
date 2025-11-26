@@ -1,42 +1,36 @@
 {
   "$schema": "../config.schema.json",
-  "game_name": "STEELCLOCK_CLOCK",
-  "game_display_name": "SteelClock - Digital Clock",
   "refresh_rate_ms": 1000,
   "display": {
     "width": 128,
     "height": 40,
-    "background_color": 0
-  },
-  "layout": {
-    "type": "basic"
+    "background": 0
   },
   "widgets": [
     {
       "type": "clock",
-      "id": "digital_clock",
       "enabled": true,
-      "position": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 40,
-        "z_order": 0
-      },
-      "style": {
-        "background_color": 0,
-        "border": false,
-        "border_color": 255
-      },
-      "properties": {
-        "display_mode": "text",
+      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
+      "style": {"background": 0, "border": -1, "padding": 2},
+      "mode": "text",
+      "text": {
         "format": "%H:%M:%S",
-        "update_interval": 0.1,
-        "font_size": 16,
-        "horizontal_align": "center",
-        "vertical_align": "center",
-        "padding": 2
-      }
+        "font": null,
+        "size": 16,
+        "align": {"h": "center", "v": "center"}
+      },
+      "analog": {
+        "show_seconds": true,
+        "show_ticks": true,
+        "colors": {
+          "face": 255,
+          "hour": 255,
+          "minute": 255,
+          "second": 255,
+          "ticks": 150
+        }
+      },
+      "update_interval": 0.1
     }
   ]
 }

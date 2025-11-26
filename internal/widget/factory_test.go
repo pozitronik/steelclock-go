@@ -209,49 +209,56 @@ func TestCreateWidgets_AllFailed(t *testing.T) {
 // createDefaultConfig creates a default widget configuration for testing
 func createDefaultConfig(widgetType string) config.WidgetConfig {
 	cfg := config.WidgetConfig{
-		Type:    widgetType,
-		ID:      "test_" + widgetType,
-		Enabled: config.BoolPtr(true),
+		Type:           widgetType,
+		ID:             "test_" + widgetType,
+		Enabled:        config.BoolPtr(true),
+		UpdateInterval: 1.0,
+		Mode:           "text",
 		Position: config.PositionConfig{
 			X: 0,
 			Y: 0,
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			FontSize:          10,
-			HorizontalAlign:   "center",
-			VerticalAlign:     "center",
-			UpdateInterval:    1.0,
-			DisplayMode:       "text",
-			FillColor:         255,
-			HistoryLength:     30,
-			BarBorder:         false,
-			MaxSpeedMbps:      -1,
-			RxColor:           255,
-			TxColor:           255,
-			ReadColor:         255,
-			WriteColor:        255,
-			IndicatorColorOn:  255,
-			IndicatorColorOff: 100,
+		Text: &config.TextConfig{
+			Size: 10,
+			Align: &config.AlignConfig{
+				H: "center",
+				V: "center",
+			},
+		},
+		Colors: &config.ColorsConfig{
+			Fill:  config.IntPtr(255),
+			Rx:    config.IntPtr(255),
+			Tx:    config.IntPtr(255),
+			Read:  config.IntPtr(255),
+			Write: config.IntPtr(255),
+			On:    config.IntPtr(255),
+			Off:   config.IntPtr(100),
+		},
+		Graph: &config.GraphConfig{
+			History: 30,
+		},
+		Bar: &config.BarConfig{
+			Border: false,
 		},
 	}
 
 	// Type-specific configurations
 	switch widgetType {
 	case "clock":
-		cfg.Properties.Format = "%H:%M:%S"
+		cfg.Text.Format = "%H:%M:%S"
 	case "network":
 		iface := "eth0"
-		cfg.Properties.Interface = &iface
+		cfg.Interface = &iface
+		cfg.MaxSpeedMbps = -1
 	case "disk":
 		disk := "sda"
-		cfg.Properties.DiskName = &disk
+		cfg.Disk = &disk
 	}
 
 	return cfg
@@ -269,14 +276,13 @@ func TestCreateWidget_Disabled(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			Format:   "15:04",
-			FontSize: 12,
+		Text: &config.TextConfig{
+			Format: "15:04",
+			Size:   12,
 		},
 	}
 
@@ -303,14 +309,13 @@ func TestCreateWidget_EnabledByDefault(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			Format:   "15:04",
-			FontSize: 12,
+		Text: &config.TextConfig{
+			Format: "15:04",
+			Size:   12,
 		},
 	}
 
@@ -337,14 +342,13 @@ func TestCreateWidget_ExplicitlyEnabled(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			Format:   "15:04",
-			FontSize: 12,
+		Text: &config.TextConfig{
+			Format: "15:04",
+			Size:   12,
 		},
 	}
 

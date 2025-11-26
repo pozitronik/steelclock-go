@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"log"
 	"math"
 	"math/cmplx"
 	"sync"
@@ -37,17 +38,39 @@ var frequencyCompensationCurve = []struct {
 
 // AudioVisualizerWidget displays real-time spectrum analyzer or oscilloscope
 type AudioVisualizerWidget struct {
-	id                  string
-	position            config.PositionConfig
-	style               config.StyleConfig
-	properties          config.WidgetProperties
-	updateInterval      time.Duration
-	audioCapture        *AudioCaptureWCA
-	volumeReader        *VolumeReaderWCA
-	mu                  sync.Mutex
-	audioData           []float32 // Latest audio samples (mixed for spectrum)
-	audioDataLeft       []float32 // Left channel samples (for oscilloscope)
-	audioDataRight      []float32 // Right channel samples (for oscilloscope)
+	*BaseWidget
+	audioCapture *AudioCaptureWCA
+	volumeReader *VolumeReaderWCA
+	mu           sync.Mutex
+
+	// Display settings
+	displayMode string
+
+	// Spectrum settings
+	frequencyScale         string
+	frequencyCompensation  bool
+	spectrumDynamicScaling float64
+	spectrumDynamicWindow  float64
+	smoothing              float64
+	peakHold               bool
+	peakHoldTime           float64
+	barStyle               string
+	fillColor              uint8
+	barCount               int
+
+	// Oscilloscope settings
+	sampleCount       int
+	channelMode       string
+	waveformStyle     string
+	leftChannelColor  uint8
+	rightChannelColor uint8
+
+	// Audio data buffers
+	audioData      []float32 // Latest audio samples (mixed for spectrum)
+	audioDataLeft  []float32 // Left channel samples (for oscilloscope)
+	audioDataRight []float32 // Right channel samples (for oscilloscope)
+
+	// Spectrum analysis state
 	spectrumData        []float64 // Spectrum magnitudes
 	peakValues          []float64 // Peak hold values
 	peakTimestamps      []time.Time
@@ -72,22 +95,123 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 		return nil, fmt.Errorf("failed to get shared volume reader: %w", err)
 	}
 
-	barCount := cfg.Properties.BarCount
-	if barCount == 0 {
-		barCount = 32
+	// Set default update interval for audio visualizer (33ms = ~30fps)
+	if cfg.UpdateInterval <= 0 {
+		cfg.UpdateInterval = 0.033
+	}
+
+	// Create base widget
+	base := NewBaseWidget(cfg)
+
+	// Display mode
+	displayMode := cfg.Mode
+	if displayMode == "" {
+		displayMode = "spectrum"
+	}
+
+	// Spectrum settings
+	barCount := 32
+	frequencyScale := "logarithmic"
+	frequencyCompensation := true
+	spectrumDynamicScaling := 0.0
+	spectrumDynamicWindow := 0.5
+	smoothing := 0.5
+	barStyle := "bars"
+
+	if cfg.Spectrum != nil {
+		if cfg.Spectrum.Bars > 0 {
+			barCount = cfg.Spectrum.Bars
+		}
+		if cfg.Spectrum.Scale != "" {
+			frequencyScale = cfg.Spectrum.Scale
+		}
+		frequencyCompensation = cfg.Spectrum.FrequencyCompensation
+		if cfg.Spectrum.Smoothing > 0 {
+			smoothing = cfg.Spectrum.Smoothing
+		}
+		if cfg.Spectrum.Style != "" {
+			barStyle = cfg.Spectrum.Style
+		}
+		if cfg.Spectrum.DynamicScaling != nil {
+			if cfg.Spectrum.DynamicScaling.Strength > 0 {
+				spectrumDynamicScaling = cfg.Spectrum.DynamicScaling.Strength
+			}
+			if cfg.Spectrum.DynamicScaling.Window > 0 {
+				spectrumDynamicWindow = cfg.Spectrum.DynamicScaling.Window
+			}
+		}
+	}
+
+	// Validate and clamp bar count to widget width
+	if barCount > cfg.Position.W {
+		log.Printf("audio_visualizer: bars count (%d) exceeds widget width (%d), clamping to %d", barCount, cfg.Position.W, cfg.Position.W)
+		barCount = cfg.Position.W
+	}
+
+	// Peak settings (spectrum mode only)
+	peakHold := true
+	peakHoldTime := 1.0
+
+	if cfg.Spectrum != nil && cfg.Spectrum.Peak != nil {
+		peakHold = cfg.Spectrum.Peak.Enabled
+		if cfg.Spectrum.Peak.HoldTime > 0 {
+			peakHoldTime = cfg.Spectrum.Peak.HoldTime
+		}
+	}
+
+	// Oscilloscope settings
+	sampleCount := 256
+	channelMode := "mono"
+	waveformStyle := "line"
+
+	if cfg.Oscilloscope != nil {
+		if cfg.Oscilloscope.Samples > 0 {
+			sampleCount = cfg.Oscilloscope.Samples
+		}
+		if cfg.Oscilloscope.Style != "" {
+			waveformStyle = cfg.Oscilloscope.Style
+		}
+	}
+
+	// Channel mode from top-level config
+	if cfg.Channel != "" {
+		channelMode = cfg.Channel
+	}
+
+	// Colors from mode-specific configs
+	fillColor := 255
+	leftChannelColor := 255
+	rightChannelColor := 200
+
+	switch displayMode {
+	case "spectrum":
+		if cfg.Spectrum != nil && cfg.Spectrum.Colors != nil {
+			if cfg.Spectrum.Colors.Fill != nil {
+				fillColor = *cfg.Spectrum.Colors.Fill
+			}
+			if cfg.Spectrum.Colors.Left != nil {
+				leftChannelColor = *cfg.Spectrum.Colors.Left
+			}
+			if cfg.Spectrum.Colors.Right != nil {
+				rightChannelColor = *cfg.Spectrum.Colors.Right
+			}
+		}
+	case "oscilloscope":
+		if cfg.Oscilloscope != nil && cfg.Oscilloscope.Colors != nil {
+			if cfg.Oscilloscope.Colors.Fill != nil {
+				fillColor = *cfg.Oscilloscope.Colors.Fill
+			}
+			if cfg.Oscilloscope.Colors.Left != nil {
+				leftChannelColor = *cfg.Oscilloscope.Colors.Left
+			}
+			if cfg.Oscilloscope.Colors.Right != nil {
+				rightChannelColor = *cfg.Oscilloscope.Colors.Right
+			}
+		}
 	}
 
 	// Calculate energy history window size for dynamic scaling
-	// Default to 0.5 seconds, or use configured value
-	dynamicScalingWindow := 0.5 // Default: 0.5 seconds
-	if cfg.Properties.SpectrumDynamicScalingWindow > 0 {
-		dynamicScalingWindow = cfg.Properties.SpectrumDynamicScalingWindow
-	}
-	updateInterval := cfg.Properties.UpdateInterval
-	if updateInterval <= 0 {
-		updateInterval = 0.033 // Default 33ms if not set
-	}
-	windowSize := int(dynamicScalingWindow/updateInterval) + 1
+	windowSize := int(spectrumDynamicWindow/cfg.UpdateInterval) + 1
 	if windowSize < 2 {
 		windowSize = 2 // Minimum 2 samples
 	}
@@ -99,40 +223,36 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 	}
 
 	w := &AudioVisualizerWidget{
-		id:                  cfg.ID,
-		position:            cfg.Position,
-		style:               cfg.Style,
-		properties:          cfg.Properties,
-		updateInterval:      time.Duration(cfg.Properties.UpdateInterval * float64(time.Second)),
-		audioCapture:        capture,
-		volumeReader:        volumeReader,
-		spectrumData:        make([]float64, barCount),
-		peakValues:          make([]float64, barCount),
-		peakTimestamps:      make([]time.Time, barCount),
-		smoothedValues:      make([]float64, barCount),
-		barEnergyHistory:    energyHistory,
-		barEnergyIndex:      0,
-		barEnergyWindowSize: windowSize,
-		audioData:           make([]float32, 0, 4096),
+		BaseWidget:             base,
+		audioCapture:           capture,
+		volumeReader:           volumeReader,
+		displayMode:            displayMode,
+		frequencyScale:         frequencyScale,
+		frequencyCompensation:  frequencyCompensation,
+		spectrumDynamicScaling: spectrumDynamicScaling,
+		spectrumDynamicWindow:  spectrumDynamicWindow,
+		smoothing:              smoothing,
+		peakHold:               peakHold,
+		peakHoldTime:           peakHoldTime,
+		barStyle:               barStyle,
+		fillColor:              uint8(fillColor),
+		barCount:               barCount,
+		sampleCount:            sampleCount,
+		channelMode:            channelMode,
+		waveformStyle:          waveformStyle,
+		leftChannelColor:       uint8(leftChannelColor),
+		rightChannelColor:      uint8(rightChannelColor),
+		spectrumData:           make([]float64, barCount),
+		peakValues:             make([]float64, barCount),
+		peakTimestamps:         make([]time.Time, barCount),
+		smoothedValues:         make([]float64, barCount),
+		barEnergyHistory:       energyHistory,
+		barEnergyIndex:         0,
+		barEnergyWindowSize:    windowSize,
+		audioData:              make([]float32, 0, 4096),
 	}
 
 	return w, nil
-}
-
-func (w *AudioVisualizerWidget) Name() string {
-	return w.id
-}
-
-func (w *AudioVisualizerWidget) GetUpdateInterval() time.Duration {
-	return w.updateInterval
-}
-
-func (w *AudioVisualizerWidget) GetPosition() config.PositionConfig {
-	return w.position
-}
-
-func (w *AudioVisualizerWidget) GetStyle() config.StyleConfig {
-	return w.style
 }
 
 // Update captures audio and processes it
@@ -209,7 +329,7 @@ func (w *AudioVisualizerWidget) Update() error {
 
 	// Process for spectrum mode (always update, even with silence to decay peaks)
 	// Use accumulated audioData buffer, not just current samples
-	if w.properties.DisplayMode == "spectrum" {
+	if w.displayMode == "spectrum" {
 		w.updateSpectrum(w.audioData)
 	}
 
@@ -281,7 +401,7 @@ func (w *AudioVisualizerWidget) updateSpectrum(samples []float32) {
 	// Map frequencies to bars
 	barCount := len(w.spectrumData)
 
-	if w.properties.FrequencyScale == "logarithmic" {
+	if w.frequencyScale == "logarithmic" {
 		w.mapFrequenciesLogarithmic(magnitudes, barCount)
 	} else {
 		w.mapFrequenciesLinear(magnitudes, barCount)
@@ -294,7 +414,7 @@ func (w *AudioVisualizerWidget) updateSpectrum(samples []float32) {
 	w.barEnergyIndex = (w.barEnergyIndex + 1) % w.barEnergyWindowSize
 
 	// Apply dynamic scaling if enabled (strength > 0)
-	if w.properties.SpectrumDynamicScaling > 0 {
+	if w.spectrumDynamicScaling > 0 {
 		dynamicGains := w.calculateDynamicGain(barCount)
 		for i := 0; i < barCount; i++ {
 			w.spectrumData[i] *= dynamicGains[i]
@@ -309,12 +429,11 @@ func (w *AudioVisualizerWidget) updateSpectrum(samples []float32) {
 	}
 
 	// Apply smoothing
-	smoothing := w.properties.Smoothing
 	dt := time.Since(w.lastUpdateTime).Seconds()
-	if dt > 0 && smoothing > 0 {
+	if dt > 0 && w.smoothing > 0 {
 		for i := range w.smoothedValues {
 			// Exponential moving average with time-based decay
-			alpha := 1.0 - math.Pow(smoothing, dt*30) // Adjust for frame rate
+			alpha := 1.0 - math.Pow(w.smoothing, dt*30) // Adjust for frame rate
 			w.smoothedValues[i] = alpha*w.spectrumData[i] + (1-alpha)*w.smoothedValues[i]
 		}
 	} else {
@@ -322,7 +441,7 @@ func (w *AudioVisualizerWidget) updateSpectrum(samples []float32) {
 	}
 
 	// Update peak hold
-	if w.properties.PeakHold {
+	if w.peakHold {
 		now := time.Now()
 		for i := range w.peakValues {
 			if w.smoothedValues[i] > w.peakValues[i] {
@@ -331,7 +450,7 @@ func (w *AudioVisualizerWidget) updateSpectrum(samples []float32) {
 			} else {
 				// Decay peak if hold time expired
 				elapsed := now.Sub(w.peakTimestamps[i]).Seconds()
-				if elapsed > w.properties.PeakHoldTime {
+				if elapsed > w.peakHoldTime {
 					// Faster decay - drop at ~30% per second
 					decayRate := 0.3 // 30% decay per second
 					dt := time.Since(w.lastUpdateTime).Seconds()
@@ -402,7 +521,7 @@ func (w *AudioVisualizerWidget) mapFrequenciesLogarithmic(magnitudes []float64, 
 
 		if count > 0 {
 			// Apply frequency-dependent gain to compensate for natural bass-heavy energy distribution
-			if w.properties.FrequencyCompensation {
+			if w.frequencyCompensation {
 				centerFreq := (freqStart + freqEnd) / 2.0
 				for _, curve := range frequencyCompensationCurve {
 					if centerFreq < curve.maxFreq {
@@ -451,7 +570,7 @@ func (w *AudioVisualizerWidget) mapFrequenciesLinear(magnitudes []float64, barCo
 		}
 
 		// Apply frequency-dependent gain (configurable)
-		if w.properties.FrequencyCompensation {
+		if w.frequencyCompensation {
 			centerFreq := (float64(start) + float64(end)) / 2.0 * freqPerBin
 			for _, curve := range frequencyCompensationCurve {
 				if centerFreq < curve.maxFreq {
@@ -512,7 +631,7 @@ func (w *AudioVisualizerWidget) calculateDynamicGain(barCount int) []float64 {
 	}
 
 	// Get strength multiplier from config (default 1.0 if not set)
-	strength := w.properties.SpectrumDynamicScaling
+	strength := w.spectrumDynamicScaling
 	if strength <= 0 {
 		strength = 1.0
 	}
@@ -545,16 +664,19 @@ func (w *AudioVisualizerWidget) Render() (image.Image, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	img := bitmap.NewGrayscaleImage(w.position.W, w.position.H, uint8(w.style.BackgroundColor))
+	pos := w.GetPosition()
+	style := w.GetStyle()
 
-	if w.properties.DisplayMode == "spectrum" {
+	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
+
+	if w.displayMode == "spectrum" {
 		w.renderSpectrum(img)
-	} else if w.properties.DisplayMode == "oscilloscope" {
+	} else if w.displayMode == "oscilloscope" {
 		w.renderOscilloscope(img)
 	}
 
-	if w.style.Border {
-		bitmap.DrawBorder(img, uint8(w.style.BorderColor))
+	if style.Border >= 0 {
+		bitmap.DrawBorder(img, uint8(style.Border))
 	}
 
 	return img, nil
@@ -571,11 +693,9 @@ func (w *AudioVisualizerWidget) renderSpectrum(img *image.Gray) {
 	height := w.position.H
 	barWidth := width / barCount
 	gap := 0
-	if w.properties.BarStyle == "bars" && barWidth > 2 {
+	if w.barStyle == "bars" && barWidth > 2 {
 		gap = 1
 	}
-
-	fillColor := uint8(w.properties.FillColor)
 
 	for i := 0; i < barCount; i++ {
 		// Magnitude is already normalized to 0.0-1.0 range (dB scale)
@@ -596,23 +716,23 @@ func (w *AudioVisualizerWidget) renderSpectrum(img *image.Gray) {
 		y := height - barHeight
 
 		// Draw bar
-		if w.properties.BarStyle == "bars" {
+		if w.barStyle == "bars" {
 			for py := y; py < height; py++ {
 				for px := x; px < x+barWidth-gap && px < width; px++ {
-					img.SetGray(px, py, color.Gray{Y: fillColor})
+					img.SetGray(px, py, color.Gray{Y: w.fillColor})
 				}
 			}
 		} else {
 			// Line style - draw top pixel of each bar
 			for px := x; px < x+barWidth && px < width; px++ {
 				if y >= 0 && y < height {
-					img.SetGray(px, y, color.Gray{Y: fillColor})
+					img.SetGray(px, y, color.Gray{Y: w.fillColor})
 				}
 			}
 		}
 
 		// Draw peak hold
-		if w.properties.PeakHold && i < len(w.peakValues) {
+		if w.peakHold && i < len(w.peakValues) {
 			peakMagnitude := w.peakValues[i]
 			if peakMagnitude > 1.0 {
 				peakMagnitude = 1.0
@@ -623,7 +743,7 @@ func (w *AudioVisualizerWidget) renderSpectrum(img *image.Gray) {
 			peakY := height - int(peakMagnitude*float64(height))
 			if peakY >= 0 && peakY < height {
 				for px := x; px < x+barWidth-gap && px < width; px++ {
-					img.SetGray(px, peakY, color.Gray{Y: fillColor})
+					img.SetGray(px, peakY, color.Gray{Y: w.fillColor})
 				}
 			}
 		}
@@ -633,9 +753,9 @@ func (w *AudioVisualizerWidget) renderSpectrum(img *image.Gray) {
 // renderOscilloscope draws waveform
 func (w *AudioVisualizerWidget) renderOscilloscope(img *image.Gray) {
 	height := w.position.H
-	sampleCount := w.properties.SampleCount
+	sampleCount := w.sampleCount
 
-	if w.properties.ChannelMode == "mono" || w.properties.ChannelMode == "stereo_combined" {
+	if w.channelMode == "mono" || w.channelMode == "stereo_combined" {
 		// Use mixed channels for mono/combined modes
 		if len(w.audioData) == 0 {
 			return
@@ -645,9 +765,8 @@ func (w *AudioVisualizerWidget) renderOscilloscope(img *image.Gray) {
 		}
 		centerY := height / 2
 		samples := w.audioData[len(w.audioData)-sampleCount:]
-		fillColor := uint8(w.properties.FillColor)
-		w.drawWaveform(img, samples, 0, height, centerY, fillColor)
-	} else if w.properties.ChannelMode == "stereo_separated" {
+		w.drawWaveform(img, samples, 0, height, centerY, w.fillColor)
+	} else if w.channelMode == "stereo_separated" {
 		// Use separate left and right channels for stereo_separated mode
 		if len(w.audioDataLeft) == 0 || len(w.audioDataRight) == 0 {
 			return
@@ -666,14 +785,11 @@ func (w *AudioVisualizerWidget) renderOscilloscope(img *image.Gray) {
 		leftSamples := w.audioDataLeft[len(w.audioDataLeft)-leftSampleCount:]
 		rightSamples := w.audioDataRight[len(w.audioDataRight)-rightSampleCount:]
 
-		leftColor := uint8(w.properties.LeftChannelColor)
-		rightColor := uint8(w.properties.RightChannelColor)
-
 		// Top half - actual left channel
-		w.drawWaveform(img, leftSamples, 0, height/2, height/4, leftColor)
+		w.drawWaveform(img, leftSamples, 0, height/2, height/4, w.leftChannelColor)
 
 		// Bottom half - actual right channel
-		w.drawWaveform(img, rightSamples, height/2, height, height*3/4, rightColor)
+		w.drawWaveform(img, rightSamples, height/2, height, height*3/4, w.rightChannelColor)
 	}
 }
 
@@ -707,9 +823,9 @@ func (w *AudioVisualizerWidget) drawWaveform(img *image.Gray, samples []float32,
 			y2 = yEnd - 1
 		}
 
-		if w.properties.WaveformStyle == "line" {
+		if w.waveformStyle == "line" {
 			bitmap.DrawLine(img, x1, y1, x2, y2, color.Gray{Y: fillColor})
-		} else if w.properties.WaveformStyle == "filled" {
+		} else if w.waveformStyle == "filled" {
 			// Draw vertical line from center to sample
 			if y1 < centerY {
 				for y := y1; y <= centerY && y < yEnd; y++ {

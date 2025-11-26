@@ -22,7 +22,9 @@ type DiskWidget struct {
 	horizAlign       string
 	vertAlign        string
 	padding          int
+	barDirection     string
 	barBorder        bool
+	graphFilled      bool
 	readColor        uint8
 	writeColor       uint8
 	historyLen       int
@@ -40,72 +42,68 @@ type DiskWidget struct {
 // NewDiskWidget creates a new disk widget
 func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 	base := NewBaseWidget(cfg)
+	helper := NewConfigHelper(cfg)
 
-	displayMode := cfg.Properties.DisplayMode
-	if displayMode == "" {
-		displayMode = "text"
+	// Extract common settings using helper
+	displayMode := helper.GetDisplayMode("text")
+	textSettings := helper.GetTextSettings()
+	padding := helper.GetPadding()
+	barSettings := helper.GetBarSettings()
+	graphSettings := helper.GetGraphSettings()
+
+	// Extract disk-specific colors (read/write)
+	readColor := 255
+	writeColor := 255
+	switch displayMode {
+	case "bar":
+		if cfg.Bar != nil && cfg.Bar.Colors != nil {
+			if cfg.Bar.Colors.Read != nil {
+				readColor = *cfg.Bar.Colors.Read
+			}
+			if cfg.Bar.Colors.Write != nil {
+				writeColor = *cfg.Bar.Colors.Write
+			}
+		}
+	case "graph":
+		if cfg.Graph != nil && cfg.Graph.Colors != nil {
+			if cfg.Graph.Colors.Read != nil {
+				readColor = *cfg.Graph.Colors.Read
+			}
+			if cfg.Graph.Colors.Write != nil {
+				writeColor = *cfg.Graph.Colors.Write
+			}
+		}
 	}
 
-	fontSize := cfg.Properties.FontSize
-	if fontSize == 0 {
-		fontSize = 10
-	}
-
-	horizAlign := cfg.Properties.HorizontalAlign
-	if horizAlign == "" {
-		horizAlign = "center"
-	}
-
-	vertAlign := cfg.Properties.VerticalAlign
-	if vertAlign == "" {
-		vertAlign = "center"
-	}
-
-	readColor := cfg.Properties.ReadColor
-	if readColor == 0 {
-		readColor = 255
-	}
-
-	writeColor := cfg.Properties.WriteColor
-	if writeColor == 0 {
-		writeColor = 255
-	}
-
-	maxSpeed := cfg.Properties.MaxSpeedMbps
+	// Max speed
+	maxSpeed := cfg.MaxSpeedMbps
 	if maxSpeed == 0 {
 		maxSpeed = -1 // Auto-scale
 	}
 
-	historyLen := cfg.Properties.HistoryLength
-	if historyLen == 0 {
-		historyLen = 30
-	}
-
 	// Load font for text mode
-	var fontFace font.Face
-	var err error
-	if displayMode == "text" {
-		fontFace, err = bitmap.LoadFont(cfg.Properties.Font, fontSize)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load font: %w", err)
-		}
+	fontFace, err := helper.LoadFontForTextMode(displayMode)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
 
 	return &DiskWidget{
 		BaseWidget:   base,
 		displayMode:  displayMode,
-		diskName:     cfg.Properties.DiskName,
+		diskName:     cfg.Disk,
 		maxSpeedMbps: maxSpeed,
-		fontSize:     fontSize,
-		horizAlign:   horizAlign,
-		vertAlign:    vertAlign,
-		padding:      cfg.Properties.Padding,
-		barBorder:    cfg.Properties.BarBorder,
+		fontSize:     textSettings.FontSize,
+		horizAlign:   textSettings.HorizAlign,
+		vertAlign:    textSettings.VertAlign,
+		padding:      padding,
+		barDirection: barSettings.Direction,
+		barBorder:    barSettings.Border,
+		graphFilled:  graphSettings.Filled,
 		readColor:    uint8(readColor),
 		writeColor:   uint8(writeColor),
-		historyLen:   historyLen,
-		readHistory:  make([]float64, 0, historyLen),
-		writeHistory: make([]float64, 0, historyLen),
+		historyLen:   graphSettings.HistoryLen,
+		readHistory:  make([]float64, 0, graphSettings.HistoryLen),
+		writeHistory: make([]float64, 0, graphSettings.HistoryLen),
 		fontFace:     fontFace,
 	}, nil
 }
@@ -176,8 +174,8 @@ func (w *DiskWidget) Render() (image.Image, error) {
 
 	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 
-	if style.Border {
-		bitmap.DrawBorder(img, uint8(style.BorderColor))
+	if style.Border >= 0 {
+		bitmap.DrawBorder(img, uint8(style.Border))
 	}
 
 	contentX := w.padding
@@ -188,10 +186,12 @@ func (w *DiskWidget) Render() (image.Image, error) {
 	switch w.displayMode {
 	case "text":
 		w.renderText(img)
-	case "bar_horizontal":
-		w.renderBarHorizontal(img, contentX, contentY, contentW, contentH)
-	case "bar_vertical":
-		w.renderBarVertical(img, contentX, contentY, contentW, contentH)
+	case "bar":
+		if w.barDirection == "vertical" {
+			w.renderBarVertical(img, contentX, contentY, contentW, contentH)
+		} else {
+			w.renderBarHorizontal(img, contentX, contentY, contentW, contentH)
+		}
 	case "graph":
 		w.renderGraph(img, contentX, contentY, contentW, contentH)
 	}
@@ -286,6 +286,6 @@ func (w *DiskWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 	}
 
 	// Draw both graphs (Read and Write overlaid)
-	bitmap.DrawGraph(img, x, y, width, height, readPercent, w.historyLen, w.readColor)
-	bitmap.DrawGraph(img, x, y, width, height, writePercent, w.historyLen, w.writeColor)
+	bitmap.DrawGraph(img, x, y, width, height, readPercent, w.historyLen, w.readColor, w.graphFilled)
+	bitmap.DrawGraph(img, x, y, width, height, writePercent, w.historyLen, w.writeColor, w.graphFilled)
 }

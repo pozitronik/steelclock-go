@@ -22,7 +22,9 @@ type NetworkWidget struct {
 	horizAlign    string
 	vertAlign     string
 	padding       int
+	barDirection  string
 	barBorder     bool
+	graphFilled   bool
 	rxColor       uint8
 	txColor       uint8
 	rxNeedleColor uint8
@@ -42,84 +44,88 @@ type NetworkWidget struct {
 // NewNetworkWidget creates a new network widget
 func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 	base := NewBaseWidget(cfg)
+	helper := NewConfigHelper(cfg)
 
-	displayMode := cfg.Properties.DisplayMode
-	if displayMode == "" {
-		displayMode = "text"
+	// Extract common settings using helper
+	displayMode := helper.GetDisplayMode("text")
+	textSettings := helper.GetTextSettings()
+	padding := helper.GetPadding()
+	barSettings := helper.GetBarSettings()
+	graphSettings := helper.GetGraphSettings()
+
+	// Extract network-specific colors (rx/tx)
+	rxColor := 255
+	txColor := 255
+	rxNeedleColor := 255
+	txNeedleColor := 200
+
+	switch displayMode {
+	case "bar":
+		if cfg.Bar != nil && cfg.Bar.Colors != nil {
+			if cfg.Bar.Colors.Rx != nil {
+				rxColor = *cfg.Bar.Colors.Rx
+			}
+			if cfg.Bar.Colors.Tx != nil {
+				txColor = *cfg.Bar.Colors.Tx
+			}
+		}
+	case "graph":
+		if cfg.Graph != nil && cfg.Graph.Colors != nil {
+			if cfg.Graph.Colors.Rx != nil {
+				rxColor = *cfg.Graph.Colors.Rx
+			}
+			if cfg.Graph.Colors.Tx != nil {
+				txColor = *cfg.Graph.Colors.Tx
+			}
+		}
+	case "gauge":
+		if cfg.Gauge != nil && cfg.Gauge.Colors != nil {
+			if cfg.Gauge.Colors.Rx != nil {
+				rxColor = *cfg.Gauge.Colors.Rx
+			}
+			if cfg.Gauge.Colors.Tx != nil {
+				txColor = *cfg.Gauge.Colors.Tx
+			}
+			if cfg.Gauge.Colors.RxNeedle != nil {
+				rxNeedleColor = *cfg.Gauge.Colors.RxNeedle
+			}
+			if cfg.Gauge.Colors.TxNeedle != nil {
+				txNeedleColor = *cfg.Gauge.Colors.TxNeedle
+			}
+		}
 	}
 
-	fontSize := cfg.Properties.FontSize
-	if fontSize == 0 {
-		fontSize = 10
-	}
-
-	horizAlign := cfg.Properties.HorizontalAlign
-	if horizAlign == "" {
-		horizAlign = "center"
-	}
-
-	vertAlign := cfg.Properties.VerticalAlign
-	if vertAlign == "" {
-		vertAlign = "center"
-	}
-
-	rxColor := cfg.Properties.RxColor
-	if rxColor == 0 {
-		rxColor = 255
-	}
-
-	txColor := cfg.Properties.TxColor
-	if txColor == 0 {
-		txColor = 255
-	}
-
-	rxNeedleColor := cfg.Properties.RxNeedleColor
-	if rxNeedleColor == 0 {
-		rxNeedleColor = 255
-	}
-
-	txNeedleColor := cfg.Properties.TxNeedleColor
-	if txNeedleColor == 0 {
-		txNeedleColor = 200
-	}
-
-	maxSpeed := cfg.Properties.MaxSpeedMbps
+	// Max speed
+	maxSpeed := cfg.MaxSpeedMbps
 	if maxSpeed == 0 {
 		maxSpeed = -1 // Auto-scale
 	}
 
-	historyLen := cfg.Properties.HistoryLength
-	if historyLen == 0 {
-		historyLen = 30
-	}
-
 	// Load font for text mode
-	var fontFace font.Face
-	var err error
-	if displayMode == "text" {
-		fontFace, err = bitmap.LoadFont(cfg.Properties.Font, fontSize)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load font: %w", err)
-		}
+	fontFace, err := helper.LoadFontForTextMode(displayMode)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
 
 	return &NetworkWidget{
 		BaseWidget:    base,
 		displayMode:   displayMode,
-		interfaceName: cfg.Properties.Interface,
+		interfaceName: cfg.Interface,
 		maxSpeedMbps:  maxSpeed,
-		fontSize:      fontSize,
-		horizAlign:    horizAlign,
-		vertAlign:     vertAlign,
-		padding:       cfg.Properties.Padding,
-		barBorder:     cfg.Properties.BarBorder,
+		fontSize:      textSettings.FontSize,
+		horizAlign:    textSettings.HorizAlign,
+		vertAlign:     textSettings.VertAlign,
+		padding:       padding,
+		barDirection:  barSettings.Direction,
+		barBorder:     barSettings.Border,
+		graphFilled:   graphSettings.Filled,
 		rxColor:       uint8(rxColor),
 		txColor:       uint8(txColor),
 		rxNeedleColor: uint8(rxNeedleColor),
 		txNeedleColor: uint8(txNeedleColor),
-		historyLen:    historyLen,
-		rxHistory:     make([]float64, 0, historyLen),
-		txHistory:     make([]float64, 0, historyLen),
+		historyLen:    graphSettings.HistoryLen,
+		rxHistory:     make([]float64, 0, graphSettings.HistoryLen),
+		txHistory:     make([]float64, 0, graphSettings.HistoryLen),
 		fontFace:      fontFace,
 	}, nil
 }
@@ -193,8 +199,8 @@ func (w *NetworkWidget) Render() (image.Image, error) {
 
 	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 
-	if style.Border {
-		bitmap.DrawBorder(img, uint8(style.BorderColor))
+	if style.Border >= 0 {
+		bitmap.DrawBorder(img, uint8(style.Border))
 	}
 
 	contentX := w.padding
@@ -205,10 +211,12 @@ func (w *NetworkWidget) Render() (image.Image, error) {
 	switch w.displayMode {
 	case "text":
 		w.renderText(img)
-	case "bar_horizontal":
-		w.renderBarHorizontal(img, contentX, contentY, contentW, contentH)
-	case "bar_vertical":
-		w.renderBarVertical(img, contentX, contentY, contentW, contentH)
+	case "bar":
+		if w.barDirection == "vertical" {
+			w.renderBarVertical(img, contentX, contentY, contentW, contentH)
+		} else {
+			w.renderBarHorizontal(img, contentX, contentY, contentW, contentH)
+		}
 	case "graph":
 		w.renderGraph(img, contentX, contentY, contentW, contentH)
 	case "gauge":
@@ -305,8 +313,8 @@ func (w *NetworkWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 	}
 
 	// Draw both graphs (RX and TX overlaid)
-	bitmap.DrawGraph(img, x, y, width, height, rxPercent, w.historyLen, w.rxColor)
-	bitmap.DrawGraph(img, x, y, width, height, txPercent, w.historyLen, w.txColor)
+	bitmap.DrawGraph(img, x, y, width, height, rxPercent, w.historyLen, w.rxColor, w.graphFilled)
+	bitmap.DrawGraph(img, x, y, width, height, txPercent, w.historyLen, w.txColor, w.graphFilled)
 }
 
 func (w *NetworkWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {

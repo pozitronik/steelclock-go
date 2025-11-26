@@ -38,9 +38,8 @@ func TestNewAudioVisualizerWidget_Spectrum(t *testing.T) {
 			H: 40,
 		},
 		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+			Background: 0,
+			Border:     -1,
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode:            "spectrum",
@@ -51,7 +50,7 @@ func TestNewAudioVisualizerWidget_Spectrum(t *testing.T) {
 			Smoothing:              0.7,
 			PeakHold:               true,
 			PeakHoldTime:           1.0,
-			FillColor:              255,
+			FillColor:              config.IntPtr(255),
 			FrequencyCompensation:  true,
 			SpectrumDynamicScaling: 1.0,
 		},
@@ -93,9 +92,8 @@ func TestNewAudioVisualizerWidget_Oscilloscope(t *testing.T) {
 			H: 40,
 		},
 		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+			Background: 0,
+			Border:     -1,
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode:       "oscilloscope",
@@ -103,8 +101,8 @@ func TestNewAudioVisualizerWidget_Oscilloscope(t *testing.T) {
 			WaveformStyle:     "line",
 			ChannelMode:       "stereo_separated",
 			SampleCount:       128,
-			LeftChannelColor:  255,
-			RightChannelColor: 200,
+			LeftChannelColor:  config.IntPtr(255),
+			RightChannelColor: config.IntPtr(200),
 		},
 	}
 
@@ -257,14 +255,14 @@ func TestAudioVisualizerWidget_Render_Spectrum(t *testing.T) {
 			H: 40,
 		},
 		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
+			Background: 0,
+			Border:     -1,
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode:    "spectrum",
 			UpdateInterval: 0.033,
 			BarCount:       32,
-			FillColor:      255,
+			FillColor:      config.IntPtr(255),
 		},
 	}
 
@@ -305,8 +303,8 @@ func TestAudioVisualizerWidget_Render_Oscilloscope(t *testing.T) {
 			H: 40,
 		},
 		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
+			Background: 0,
+			Border:     -1,
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode:       "oscilloscope",
@@ -314,8 +312,8 @@ func TestAudioVisualizerWidget_Render_Oscilloscope(t *testing.T) {
 			WaveformStyle:     "line",
 			ChannelMode:       "stereo_combined",
 			SampleCount:       128,
-			LeftChannelColor:  255,
-			RightChannelColor: 200,
+			LeftChannelColor:  config.IntPtr(255),
+			RightChannelColor: config.IntPtr(200),
 		},
 	}
 
@@ -366,7 +364,7 @@ func TestAudioVisualizerWidget_BarStyles(t *testing.T) {
 					DisplayMode: "spectrum",
 					BarCount:    16,
 					BarStyle:    style,
-					FillColor:   255,
+					FillColor:   config.IntPtr(255),
 				},
 			}
 
@@ -416,7 +414,7 @@ func TestAudioVisualizerWidget_FrequencyScales(t *testing.T) {
 					DisplayMode:    "spectrum",
 					BarCount:       16,
 					FrequencyScale: scale,
-					FillColor:      255,
+					FillColor:      config.IntPtr(255),
 				},
 			}
 
@@ -466,7 +464,7 @@ func TestAudioVisualizerWidget_WaveformStyles(t *testing.T) {
 					DisplayMode:   "oscilloscope",
 					WaveformStyle: style,
 					SampleCount:   128,
-					FillColor:     255,
+					FillColor:     config.IntPtr(255),
 				},
 			}
 
@@ -516,8 +514,8 @@ func TestAudioVisualizerWidget_ChannelModes(t *testing.T) {
 					DisplayMode:       "oscilloscope",
 					ChannelMode:       mode,
 					SampleCount:       128,
-					LeftChannelColor:  255,
-					RightChannelColor: 200,
+					LeftChannelColor:  config.IntPtr(255),
+					RightChannelColor: config.IntPtr(200),
 				},
 			}
 
@@ -623,9 +621,8 @@ func TestAudioVisualizerWidget_GetMethods(t *testing.T) {
 			ZOrder: 5,
 		},
 		Style: config.StyleConfig{
-			BackgroundColor: 100,
-			Border:          true,
-			BorderColor:     200,
+			Background: 100,
+			Border:     200,
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode:    "spectrum",
@@ -651,8 +648,8 @@ func TestAudioVisualizerWidget_GetMethods(t *testing.T) {
 
 	// Test GetStyle()
 	style := widget.GetStyle()
-	if style.BackgroundColor != 100 || !style.Border || style.BorderColor != 200 {
-		t.Errorf("GetStyle() = %+v, want {BackgroundColor:100 Border:true BorderColor:200}", style)
+	if style.Background != 100 || style.Border != 200 {
+		t.Errorf("GetStyle() = %+v, want {Background:100 Border:200}", style)
 	}
 
 	// Test GetUpdateInterval()
@@ -756,9 +753,8 @@ func TestAudioVisualizerWidget_BorderRendering(t *testing.T) {
 			H: 40,
 		},
 		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          true,
-			BorderColor:     255,
+			Background: 0,
+			Border:     255,
 		},
 		Properties: config.WidgetProperties{
 			DisplayMode: "spectrum",

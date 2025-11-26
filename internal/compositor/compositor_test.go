@@ -34,7 +34,7 @@ func newMockWidget(name string, x, y, w, h int) *mockWidget {
 			X: x, Y: y, W: w, H: h,
 		},
 		style: config.StyleConfig{
-			BackgroundColor: 0,
+			Background: 0,
 		},
 	}
 }
@@ -133,6 +133,25 @@ func (m *mockGameSenseAPI) RemoveGame() error {
 	return m.removeGameErr
 }
 
+func (m *mockGameSenseAPI) SupportsMultipleEvents() bool {
+	return false
+}
+
+func (m *mockGameSenseAPI) SendScreenDataMultiRes(_ string, resolutionData map[string][]int) error {
+	// Find 128x40 resolution (standard test resolution)
+	if data, ok := resolutionData["image-data-128x40"]; ok {
+		return m.SendScreenData("", data)
+	}
+	return nil
+}
+
+func (m *mockGameSenseAPI) SendMultipleScreenData(_ string, frames [][]int) error {
+	if len(frames) > 0 {
+		return m.SendScreenData("", frames[len(frames)-1])
+	}
+	return nil
+}
+
 func (m *mockGameSenseAPI) GetSendScreenDataCalls() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -154,9 +173,9 @@ func (m *mockGameSenseAPI) GetLastBitmapData() []int {
 // Helper to create layout manager
 func createLayoutManager(widgets []widget.Widget) *layout.Manager {
 	displayCfg := config.DisplayConfig{
-		Width:           128,
-		Height:          40,
-		BackgroundColor: 0,
+		Width:      128,
+		Height:     40,
+		Background: 0,
 	}
 	return layout.NewManager(displayCfg, widgets)
 }
@@ -168,9 +187,9 @@ func TestNewCompositor(t *testing.T) {
 		newMockWidget("widget1", 0, 0, 64, 40),
 	}
 	displayCfg := config.DisplayConfig{
-		Width:           128,
-		Height:          40,
-		BackgroundColor: 0,
+		Width:      128,
+		Height:     40,
+		Background: 0,
 	}
 	layoutMgr := layout.NewManager(displayCfg, widgets)
 	cfg := &config.Config{

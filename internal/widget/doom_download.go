@@ -16,10 +16,6 @@ const (
 	DefaultBundledWadURL = "https://distro.ibiblio.org/slitaz/sources/packages/d/doom1.wad"
 )
 
-var (
-	bundledWadURL = DefaultBundledWadURL // Can be overridden via SetBundledWadURL
-)
-
 // progressReader wraps an io.Reader and logs download progress
 type progressReader struct {
 	reader      io.Reader
@@ -82,22 +78,16 @@ func (pr *progressReader) logProgress() {
 	}
 }
 
-// SetBundledWadURL sets the URL for downloading the bundled WAD file
-// This should be called at application startup if a custom URL is configured
-func SetBundledWadURL(url string) {
-	if url != "" {
-		bundledWadURL = url
-	}
-}
-
 // GetWadFile gets WAD file from working directory and downloads if necessary
 // Only accepts filename, not path (e.g., "doom1.wad", not "path/to/doom1.wad")
-func GetWadFile(wadName string) (string, error) {
-	return GetWadFileWithProgress(wadName, nil, nil, nil)
+// bundledWadURL: custom URL for download (empty = use default)
+func GetWadFile(wadName string, bundledWadURL string) (string, error) {
+	return GetWadFileWithProgress(wadName, bundledWadURL, nil, nil, nil)
 }
 
 // GetWadFileWithProgress gets WAD file with progress callback
-func GetWadFileWithProgress(wadName string, progressCallback func(float64), isDownloading *bool, mu *sync.RWMutex) (string, error) {
+// bundledWadURL: custom URL for download (empty = use default)
+func GetWadFileWithProgress(wadName string, bundledWadURL string, progressCallback func(float64), isDownloading *bool, mu *sync.RWMutex) (string, error) {
 	// Check if file exists in working directory
 	if _, err := os.Stat(wadName); err == nil {
 		log.Printf("[DOOM] Using existing WAD: %s", wadName)
@@ -114,7 +104,7 @@ func GetWadFileWithProgress(wadName string, progressCallback func(float64), isDo
 	}
 
 	// Download to working directory with progress
-	downloadedFile, err := downloadWadFileWithProgress(wadName, progressCallback)
+	downloadedFile, err := downloadWadFileWithProgress(wadName, bundledWadURL, progressCallback)
 	if err != nil {
 		return "", fmt.Errorf("WAD file not found and download failed: %w", err)
 	}
@@ -123,11 +113,18 @@ func GetWadFileWithProgress(wadName string, progressCallback func(float64), isDo
 }
 
 // downloadWadFileWithProgress downloads WAD file with progress callback
-func downloadWadFileWithProgress(wadName string, progressCallback func(float64)) (string, error) {
-	log.Printf("[DOOM] Downloading %s from: %s", wadName, bundledWadURL)
+// bundledWadURL: custom URL for download (empty = use default)
+func downloadWadFileWithProgress(wadName string, bundledWadURL string, progressCallback func(float64)) (string, error) {
+	// Use default URL if not specified
+	downloadURL := bundledWadURL
+	if downloadURL == "" {
+		downloadURL = DefaultBundledWadURL
+	}
+
+	log.Printf("[DOOM] Downloading %s from: %s", wadName, downloadURL)
 
 	// Download WAD from configured URL
-	resp, err := http.Get(bundledWadURL)
+	resp, err := http.Get(downloadURL)
 	if err != nil {
 		return "", err
 	}

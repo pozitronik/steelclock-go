@@ -1,5 +1,7 @@
 github.com/AndreRenaud/gore v0.0.0-20251117080046-77cd91201682 h1:duub7lQdF5QiDXSGrZ2tRG5rlOB1VCqKWVVBgoSDX5k=
 github.com/AndreRenaud/gore v0.0.0-20251117080046-77cd91201682/go.mod h1:8gdAHDZZ9H6F/13beq5mMpJznIGpeAw0ODgiXzvQyqU=
+github.com/boombuler/hid v0.0.0-20200606170446-6a2dff8586bc h1:mPoyO6/N4SwSKRhuhYccA3dAVSnQFRl+3kuiTf9ptAQ=
+github.com/boombuler/hid v0.0.0-20200606170446-6a2dff8586bc/go.mod h1:5tIGNm7VNPEAS8ulRl5g4wU/zCpPgj5vyYI5Bo77Hz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

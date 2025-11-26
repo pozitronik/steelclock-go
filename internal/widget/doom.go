@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/AndreRenaud/gore"
+	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
@@ -17,12 +18,13 @@ type DoomWidget struct {
 	*BaseWidget
 
 	// DOOM engine state
-	wadFile    string
-	currentImg *image.Gray
-	mu         sync.RWMutex
-	stopChan   chan struct{}
-	wg         sync.WaitGroup
-	started    bool
+	wadFile       string
+	bundledWadURL string // Custom URL for WAD download (empty = use default)
+	currentImg    *image.Gray
+	mu            sync.RWMutex
+	stopChan      chan struct{}
+	wg            sync.WaitGroup
+	started       bool
 
 	// Download state
 	isDownloading    bool
@@ -37,10 +39,16 @@ type DoomWidget struct {
 func NewDoomWidget(cfg config.WidgetConfig) (*DoomWidget, error) {
 	base := NewBaseWidget(cfg)
 
-	// Get WAD file name from properties
-	wadName := cfg.Properties.WadName
+	// Get WAD file name from config
+	wadName := cfg.Wad
 	if wadName == "" {
 		wadName = "doom1.wad"
+	}
+
+	// Get bundled WAD URL from config (empty = use default)
+	bundledWadURL := ""
+	if cfg.BundledWadURL != nil {
+		bundledWadURL = *cfg.BundledWadURL
 	}
 
 	// Calculate scale factor (DOOM renders at 320x200, we display at 128x40)
@@ -52,10 +60,11 @@ func NewDoomWidget(cfg config.WidgetConfig) (*DoomWidget, error) {
 	}
 
 	w := &DoomWidget{
-		BaseWidget: base,
-		wadFile:    wadName,
-		scale:      scale,
-		stopChan:   make(chan struct{}),
+		BaseWidget:    base,
+		wadFile:       wadName,
+		bundledWadURL: bundledWadURL,
+		scale:         scale,
+		stopChan:      make(chan struct{}),
 	}
 
 	// Initialize DOOM in background (handles WAD download if needed)
@@ -87,7 +96,7 @@ func (w *DoomWidget) runDoom() {
 	}
 
 	// Get WAD file (may download with progress updates)
-	wadFile, err := GetWadFileWithProgress(w.wadFile, progressCallback, &w.isDownloading, &w.mu)
+	wadFile, err := GetWadFileWithProgress(w.wadFile, w.bundledWadURL, progressCallback, &w.isDownloading, &w.mu)
 	if err != nil {
 		log.Printf("[DOOM] Failed to get WAD file: %v", err)
 		w.mu.Lock()
@@ -220,7 +229,10 @@ func (w *DoomWidget) Render() (image.Image, error) {
 
 	// Show download error if any
 	if w.downloadError != nil {
-		w.drawText(img, "Download failed!", pos.W/2, pos.H/2-4)
+		text := "Download failed!"
+		textWidth := glyphs.MeasureText(text, glyphs.Font3x5)
+		textX := (pos.W - textWidth) / 2
+		glyphs.DrawText(img, text, textX, pos.H/2-4, glyphs.Font3x5, color.Gray{Y: 255})
 		return img, nil
 	}
 
@@ -241,8 +253,11 @@ func (w *DoomWidget) Render() (image.Image, error) {
 
 // drawProgressBar renders a download progress bar
 func (w *DoomWidget) drawProgressBar(img *image.Gray, progress float64, width, height int) {
-	// Draw title
-	w.drawText(img, "Downloading DOOM", width/2, 4)
+	// Draw title using 3×5 pixel font
+	title := "Downloading DOOM"
+	titleWidth := glyphs.MeasureText(title, glyphs.Font3x5)
+	titleX := (width - titleWidth) / 2
+	glyphs.DrawText(img, title, titleX, 4, glyphs.Font3x5, color.Gray{Y: 255})
 
 	// Progress bar dimensions
 	barWidth := width - 20
@@ -268,67 +283,11 @@ func (w *DoomWidget) drawProgressBar(img *image.Gray, progress float64, width, h
 		}
 	}
 
-	// Draw percentage text
+	// Draw percentage text using 3×5 pixel font
 	percentText := fmt.Sprintf("%.0f%%", progress*100)
-	w.drawText(img, percentText, width/2, barY+barHeight+6)
-}
-
-// drawText draws centered text on the image (simple 3x5 pixel font)
-func (w *DoomWidget) drawText(img *image.Gray, text string, centerX, y int) {
-	charWidth := 4
-	totalWidth := len(text) * charWidth
-	x := centerX - totalWidth/2
-
-	for i, ch := range text {
-		w.drawChar(img, ch, x+i*charWidth, y)
-	}
-}
-
-// drawChar draws a single character using 3x5 pixel patterns
-func (w *DoomWidget) drawChar(img *image.Gray, ch rune, x, y int) {
-	white := color.Gray{Y: 255}
-
-	patterns := map[rune][][]bool{
-		'D': {{true, true, false}, {true, false, true}, {true, false, true}, {true, false, true}, {true, true, false}},
-		'o': {{false, true, false}, {true, false, true}, {true, false, true}, {true, false, true}, {false, true, false}},
-		'w': {{true, false, true}, {true, false, true}, {true, false, true}, {true, true, true}, {true, false, true}},
-		'n': {{true, true, false}, {true, false, true}, {true, false, true}, {true, false, true}, {true, false, true}},
-		'l': {{true, false, false}, {true, false, false}, {true, false, false}, {true, false, false}, {true, true, true}},
-		'a': {{false, true, false}, {true, false, true}, {true, true, true}, {true, false, true}, {true, false, true}},
-		'd': {{false, false, true}, {false, false, true}, {false, true, true}, {true, false, true}, {false, true, true}},
-		'i': {{false, true, false}, {false, false, false}, {false, true, false}, {false, true, false}, {false, true, false}},
-		'g': {{false, true, true}, {true, false, false}, {true, false, true}, {true, false, true}, {false, true, true}},
-		'M': {{true, false, true}, {true, true, true}, {true, true, true}, {true, false, true}, {true, false, true}},
-		'O': {{false, true, false}, {true, false, true}, {true, false, true}, {true, false, true}, {false, true, false}},
-		' ': {{false, false, false}, {false, false, false}, {false, false, false}, {false, false, false}, {false, false, false}},
-		'%': {{true, false, true}, {false, false, true}, {false, true, false}, {true, false, false}, {true, false, true}},
-		'0': {{false, true, false}, {true, false, true}, {true, false, true}, {true, false, true}, {false, true, false}},
-		'1': {{false, true, false}, {true, true, false}, {false, true, false}, {false, true, false}, {true, true, true}},
-		'2': {{true, true, false}, {false, false, true}, {false, true, false}, {true, false, false}, {true, true, true}},
-		'3': {{true, true, true}, {false, false, true}, {false, true, true}, {false, false, true}, {true, true, true}},
-		'4': {{true, false, true}, {true, false, true}, {true, true, true}, {false, false, true}, {false, false, true}},
-		'5': {{true, true, true}, {true, false, false}, {true, true, true}, {false, false, true}, {true, true, true}},
-		'6': {{false, true, true}, {true, false, false}, {true, true, true}, {true, false, true}, {true, true, true}},
-		'7': {{true, true, true}, {false, false, true}, {false, true, false}, {false, true, false}, {false, true, false}},
-		'8': {{true, true, true}, {true, false, true}, {true, true, true}, {true, false, true}, {true, true, true}},
-		'9': {{true, true, true}, {true, false, true}, {true, true, true}, {false, false, true}, {true, true, false}},
-		'f': {{false, true, true}, {true, false, false}, {true, true, false}, {true, false, false}, {true, false, false}},
-		'e': {{true, true, true}, {true, false, false}, {true, true, false}, {true, false, false}, {true, true, true}},
-		'!': {{false, true, false}, {false, true, false}, {false, true, false}, {false, false, false}, {false, true, false}},
-	}
-
-	pattern, ok := patterns[ch]
-	if !ok {
-		return
-	}
-
-	for row := 0; row < len(pattern) && row < 5; row++ {
-		for col := 0; col < len(pattern[row]) && col < 3; col++ {
-			if pattern[row][col] {
-				img.SetGray(x+col, y+row, white)
-			}
-		}
-	}
+	textWidth := glyphs.MeasureText(percentText, glyphs.Font3x5)
+	textX := (width - textWidth) / 2
+	glyphs.DrawText(img, percentText, textX, barY+barHeight+6, glyphs.Font3x5, color.Gray{Y: 255})
 }
 
 // Update is called periodically

@@ -20,9 +20,8 @@ func TestVolumeWidget_BackgroundPolling(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-		},
+		Mode: "bar",
+		Bar:  &config.BarConfig{Direction: "horizontal"},
 	}
 
 	widget, err := NewVolumeWidget(cfg)
@@ -67,9 +66,7 @@ func TestVolumeWidget_StopCleanup(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "gauge",
-		},
+		Mode: "gauge",
 	}
 
 	widget, err := NewVolumeWidget(cfg)
@@ -103,9 +100,8 @@ func TestVolumeWidget_LongRunning(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-		},
+		Mode: "bar",
+		Bar:  &config.BarConfig{Direction: "horizontal"},
 	}
 
 	widget, err := NewVolumeWidget(cfg)
@@ -175,9 +171,7 @@ func TestVolumeWidget_HealthMetrics(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "gauge",
-		},
+		Mode: "gauge",
 	}
 
 	widget, err := NewVolumeWidget(cfg)
@@ -235,9 +229,8 @@ func TestVolumeWidget_NoMemoryLeak(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-		},
+		Mode: "bar",
+		Bar:  &config.BarConfig{Direction: "horizontal"},
 	}
 
 	// Create and destroy 100 widgets
@@ -272,10 +265,11 @@ func TestVolumeWidget_VolumeChange(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:     "bar_horizontal",
-			AutoHide:        true, // Enable auto-hide to test trigger mechanism
-			AutoHideTimeout: 1.0,  // 1 second timeout
+		Mode: "bar",
+		Bar:  &config.BarConfig{Direction: "horizontal"},
+		AutoHide: &config.AutoHideConfig{
+			Enabled: true, // Enable auto-hide to test trigger mechanism
+			Timeout: 1.0,  // 1 second timeout
 		},
 	}
 

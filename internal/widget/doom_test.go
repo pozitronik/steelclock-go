@@ -34,14 +34,11 @@ func TestNewDoomWidget(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			WadName: tmpFile,
-		},
+		Wad: tmpFile,
 	}
 
 	widget, err := NewDoomWidget(cfg)
@@ -85,14 +82,11 @@ func TestDoomWidgetRender_EmptyFrame(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			WadName: tmpFile,
-		},
+		Wad: tmpFile,
 	}
 
 	widget, _ := NewDoomWidget(cfg)
@@ -140,14 +134,11 @@ func TestDoomWidgetRender_DownloadProgress(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			WadName: tmpFile,
-		},
+		Wad: tmpFile,
 	}
 
 	widget, _ := NewDoomWidget(cfg)
@@ -215,14 +206,11 @@ func TestDoomWidgetRender_DownloadError(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			WadName: tmpFile,
-		},
+		Wad: tmpFile,
 	}
 
 	widget, _ := NewDoomWidget(cfg)
@@ -263,116 +251,6 @@ func TestDoomWidgetRender_DownloadError(t *testing.T) {
 
 	if !hasPixels {
 		t.Error("Error message should have visible pixels")
-	}
-}
-
-func TestDoomWidget_DrawText(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
-	}
-
-	cfg := config.WidgetConfig{
-		Type:    "doom",
-		ID:      "test_doom",
-		Enabled: config.BoolPtr(true),
-		Position: config.PositionConfig{
-			X: 0,
-			Y: 0,
-			W: 128,
-			H: 40,
-		},
-	}
-
-	widget, _ := NewDoomWidget(cfg)
-	defer widget.Stop()
-
-	img := image.NewGray(image.Rect(0, 0, 128, 40))
-
-	// Test drawing text
-	widget.drawText(img, "DOOM", 64, 10)
-
-	// Check that some pixels were set
-	hasPixels := false
-	for y := 10; y < 15; y++ {
-		for x := 50; x < 78; x++ {
-			if img.GrayAt(x, y).Y > 0 {
-				hasPixels = true
-				break
-			}
-		}
-		if hasPixels {
-			break
-		}
-	}
-
-	if !hasPixels {
-		t.Error("drawText should render visible characters")
-	}
-}
-
-func TestDoomWidget_DrawChar(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
-	}
-
-	cfg := config.WidgetConfig{
-		Type:    "doom",
-		ID:      "test_doom",
-		Enabled: config.BoolPtr(true),
-		Position: config.PositionConfig{
-			X: 0,
-			Y: 0,
-			W: 128,
-			H: 40,
-		},
-	}
-
-	widget, _ := NewDoomWidget(cfg)
-	defer widget.Stop()
-
-	img := image.NewGray(image.Rect(0, 0, 128, 40))
-
-	// Test drawing known character
-	widget.drawChar(img, 'D', 10, 10)
-
-	// Check that pixels were set for the character
-	hasPixels := false
-	for y := 10; y < 15; y++ {
-		for x := 10; x < 13; x++ {
-			if img.GrayAt(x, y).Y > 0 {
-				hasPixels = true
-				break
-			}
-		}
-		if hasPixels {
-			break
-		}
-	}
-
-	if !hasPixels {
-		t.Error("drawChar should render visible pixels for 'D'")
-	}
-
-	// Test unknown character (should not crash)
-	img2 := image.NewGray(image.Rect(0, 0, 128, 40))
-	widget.drawChar(img2, '€', 10, 10) // Unknown character
-
-	// Should be all black (no pixels set)
-	allBlack := true
-	for y := 10; y < 15; y++ {
-		for x := 10; x < 13; x++ {
-			if img2.GrayAt(x, y).Y > 0 {
-				allBlack = false
-				break
-			}
-		}
-		if !allBlack {
-			break
-		}
-	}
-
-	if !allBlack {
-		t.Error("Unknown character should not render anything")
 	}
 }
 
@@ -577,9 +455,7 @@ func TestDoomWidget_StopCleansUpGoroutines(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{
-			WadName: tmpFile,
-		},
+		Wad: tmpFile,
 	}
 
 	widget, err := NewDoomWidget(cfg)

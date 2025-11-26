@@ -16,14 +16,18 @@ func TestNewNetworkWidget(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			Interface:     &iface,
-			DisplayMode:   "text",
-			FontSize:      10,
-			RxColor:       255,
-			TxColor:       200,
-			MaxSpeedMbps:  1000,
-			HistoryLength: 30,
+		Mode:         "text",
+		Interface:    &iface,
+		MaxSpeedMbps: 1000,
+		Text: &config.TextConfig{
+			Size: 10,
+		},
+		Colors: &config.ColorsConfig{
+			Rx: config.IntPtr(255),
+			Tx: config.IntPtr(200),
+		},
+		Graph: &config.GraphConfig{
+			History: 30,
 		},
 	}
 
@@ -50,9 +54,7 @@ func TestNewNetworkWidget_Defaults(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			// Interface intentionally nil to test all interfaces mode
-		},
+		// Interface intentionally nil to test all interfaces mode
 	}
 
 	widget, err := NewNetworkWidget(cfg)
@@ -87,9 +89,7 @@ func TestNetworkWidget_Update(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "text",
-		},
+		Mode: "text",
 	}
 
 	widget, err := NewNetworkWidget(cfg)
@@ -128,9 +128,9 @@ func TestNetworkWidget_RenderText(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "text",
-			FontSize:    10,
+		Mode: "text",
+		Text: &config.TextConfig{
+			Size: 10,
 		},
 	}
 
@@ -161,11 +161,11 @@ func TestNetworkWidget_RenderBarHorizontal(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:  "bar_horizontal",
-			RxColor:      255,
-			TxColor:      200,
-			MaxSpeedMbps: 100,
+		Mode:         "bar_horizontal",
+		MaxSpeedMbps: 100,
+		Colors: &config.ColorsConfig{
+			Rx: config.IntPtr(255),
+			Tx: config.IntPtr(200),
 		},
 	}
 
@@ -195,10 +195,10 @@ func TestNetworkWidget_RenderBarVertical(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_vertical",
-			RxColor:     255,
-			TxColor:     200,
+		Mode: "bar_vertical",
+		Colors: &config.ColorsConfig{
+			Rx: config.IntPtr(255),
+			Tx: config.IntPtr(200),
 		},
 	}
 
@@ -228,11 +228,13 @@ func TestNetworkWidget_RenderGraph(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:   "graph",
-			RxColor:       255,
-			TxColor:       200,
-			HistoryLength: 30,
+		Mode: "graph",
+		Colors: &config.ColorsConfig{
+			Rx: config.IntPtr(255),
+			Tx: config.IntPtr(200),
+		},
+		Graph: &config.GraphConfig{
+			History: 30,
 		},
 	}
 
@@ -265,10 +267,8 @@ func TestNetworkWidget_AutoScale(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:  "bar_horizontal",
-			MaxSpeedMbps: -1, // Auto-scale
-		},
+		Mode:         "bar_horizontal",
+		MaxSpeedMbps: -1, // Auto-scale
 	}
 
 	widget, err := NewNetworkWidget(cfg)
@@ -300,10 +300,8 @@ func TestNetworkWidget_SpecificInterface(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			Interface:   &iface,
-			DisplayMode: "text",
-		},
+		Mode:      "text",
+		Interface: &iface,
 	}
 
 	widget, err := NewNetworkWidget(cfg)
@@ -327,13 +325,13 @@ func TestNetworkWidget_RenderGauge(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:   "gauge",
-			MaxSpeedMbps:  100,
-			RxColor:       255,
-			TxColor:       200,
-			RxNeedleColor: 255,
-			TxNeedleColor: 180,
+		Mode:         "gauge",
+		MaxSpeedMbps: 100,
+		Colors: &config.ColorsConfig{
+			Rx:       config.IntPtr(255),
+			Tx:       config.IntPtr(200),
+			RxNeedle: config.IntPtr(255),
+			TxNeedle: config.IntPtr(180),
 		},
 	}
 
@@ -363,11 +361,9 @@ func TestNetworkWidget_GaugeDefaults(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 64, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:  "gauge",
-			MaxSpeedMbps: 100,
-			// Don't specify needle colors to test defaults
-		},
+		Mode:         "gauge",
+		MaxSpeedMbps: 100,
+		// Don't specify needle colors to test defaults
 	}
 
 	widget, err := NewNetworkWidget(cfg)
@@ -405,11 +401,11 @@ func TestNetworkWidget_GaugeAutoScale(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 64, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:  "gauge",
-			MaxSpeedMbps: -1, // Auto-scale
-			RxColor:      255,
-			TxColor:      200,
+		Mode:         "gauge",
+		MaxSpeedMbps: -1, // Auto-scale
+		Colors: &config.ColorsConfig{
+			Rx: config.IntPtr(255),
+			Tx: config.IntPtr(200),
 		},
 	}
 
@@ -440,9 +436,7 @@ func TestNetworkWidget_ConcurrentAccess(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "text",
-		},
+		Mode: "text",
 	}
 
 	widget, err := NewNetworkWidget(cfg)

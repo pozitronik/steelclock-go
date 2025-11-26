@@ -15,13 +15,16 @@ func TestNewCPUWidget(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:     "text",
-			FontSize:        10,
-			HorizontalAlign: "center",
-			VerticalAlign:   "center",
-			FillColor:       255,
-			HistoryLength:   30,
+		Mode: "text",
+		Text: &config.TextConfig{
+			Size:  10,
+			Align: &config.AlignConfig{H: "center", V: "center"},
+		},
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
+		},
+		Graph: &config.GraphConfig{
+			History: 30,
 		},
 	}
 
@@ -48,10 +51,10 @@ func TestNewCPUWidget_PerCore(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_vertical",
-			PerCore:     true,
-			FillColor:   255,
+		Mode:    "bar_vertical",
+		PerCore: &config.PerCoreConfig{Enabled: true},
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
 		},
 	}
 
@@ -74,9 +77,7 @@ func TestNewCPUWidget_Defaults(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			// Intentionally leave fields empty to test defaults
-		},
+		// Intentionally leave fields empty to test defaults
 	}
 
 	widget, err := NewCPUWidget(cfg)
@@ -111,9 +112,7 @@ func TestCPUWidget_Update(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "text",
-		},
+		Mode: "text",
 	}
 
 	widget, err := NewCPUWidget(cfg)
@@ -129,7 +128,7 @@ func TestCPUWidget_Update(t *testing.T) {
 
 	// Verify currentUsage was set
 	widget.mu.RLock()
-	hasUsage := widget.currentUsage != nil
+	hasUsage := widget.hasData
 	widget.mu.RUnlock()
 
 	if !hasUsage {
@@ -146,10 +145,8 @@ func TestCPUWidget_Update_PerCore(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_vertical",
-			PerCore:     true,
-		},
+		Mode:    "bar_vertical",
+		PerCore: &config.PerCoreConfig{Enabled: true},
 	}
 
 	widget, err := NewCPUWidget(cfg)
@@ -162,13 +159,17 @@ func TestCPUWidget_Update_PerCore(t *testing.T) {
 		t.Errorf("Update() error = %v", err)
 	}
 
-	// For per-core mode, currentUsage should be []float64
+	// For per-core mode, currentUsagePerCore should be set
 	widget.mu.RLock()
-	_, ok := widget.currentUsage.([]float64)
+	hasData := widget.hasData
+	hasPerCoreData := len(widget.currentUsagePerCore) > 0
 	widget.mu.RUnlock()
 
-	if !ok {
-		t.Error("Update() with perCore=true should set currentUsage as []float64")
+	if !hasData {
+		t.Error("Update() with perCore=true should set hasData")
+	}
+	if !hasPerCoreData {
+		t.Error("Update() with perCore=true should set currentUsagePerCore")
 	}
 }
 
@@ -181,9 +182,9 @@ func TestCPUWidget_RenderText(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "text",
-			FontSize:    10,
+		Mode: "text",
+		Text: &config.TextConfig{
+			Size: 10,
 		},
 	}
 
@@ -223,9 +224,9 @@ func TestCPUWidget_RenderBarHorizontal(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-			FillColor:   255,
+		Mode: "bar_horizontal",
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
 		},
 	}
 
@@ -258,10 +259,10 @@ func TestCPUWidget_RenderBarVertical(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_vertical",
-			PerCore:     true, // Test with per-core mode
-			FillColor:   255,
+		Mode:    "bar_vertical",
+		PerCore: &config.PerCoreConfig{Enabled: true},
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
 		},
 	}
 
@@ -294,10 +295,12 @@ func TestCPUWidget_RenderGraph(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:   "graph",
-			FillColor:     255,
-			HistoryLength: 30,
+		Mode: "graph",
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
+		},
+		Graph: &config.GraphConfig{
+			History: 30,
 		},
 	}
 
@@ -333,10 +336,12 @@ func TestCPUWidget_RenderGraph_InsufficientHistory(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:   "graph",
-			FillColor:     255,
-			HistoryLength: 30,
+		Mode: "graph",
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
+		},
+		Graph: &config.GraphConfig{
+			History: 30,
 		},
 	}
 
@@ -371,10 +376,10 @@ func TestCPUWidget_RenderGauge(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 64, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:      "gauge",
-			GaugeColor:       200,
-			GaugeNeedleColor: 255,
+		Mode: "gauge",
+		Colors: &config.ColorsConfig{
+			Arc:    config.IntPtr(200),
+			Needle: config.IntPtr(255),
 		},
 	}
 
@@ -407,11 +412,11 @@ func TestCPUWidget_RenderGauge_PerCore(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 64, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:      "gauge",
-			PerCore:          true, // Should show average
-			GaugeColor:       200,
-			GaugeNeedleColor: 255,
+		Mode:    "gauge",
+		PerCore: &config.PerCoreConfig{Enabled: true},
+		Colors: &config.ColorsConfig{
+			Arc:    config.IntPtr(200),
+			Needle: config.IntPtr(255),
 		},
 	}
 
@@ -444,10 +449,8 @@ func TestCPUWidget_GaugeDefaults(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 64, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "gauge",
-			// Don't specify colors to test defaults
-		},
+		Mode: "gauge",
+		// Don't specify colors to test defaults
 	}
 
 	widget, err := NewCPUWidget(cfg)
@@ -488,9 +491,7 @@ func TestCPUWidget_ConcurrentAccess(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "text",
-		},
+		Mode: "text",
 	}
 
 	widget, err := NewCPUWidget(cfg)
@@ -538,10 +539,10 @@ func TestCPUWidget_RenderTextGrid(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 64,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "text",
-			PerCore:     true, // This triggers renderTextGrid
-			FontSize:    8,
+		Mode:    "text",
+		PerCore: &config.PerCoreConfig{Enabled: true},
+		Text: &config.TextConfig{
+			Size: 8,
 		},
 	}
 
@@ -574,10 +575,10 @@ func TestCPUWidget_RenderBarHorizontal_PerCore(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-			PerCore:     true, // Test per-core bars
-			FillColor:   255,
+		Mode:    "bar_horizontal",
+		PerCore: &config.PerCoreConfig{Enabled: true},
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
 		},
 	}
 
@@ -610,11 +611,13 @@ func TestCPUWidget_RenderGraph_PerCore(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:   "graph",
-			PerCore:       true,
-			FillColor:     255,
-			HistoryLength: 30,
+		Mode:    "graph",
+		PerCore: &config.PerCoreConfig{Enabled: true},
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
+		},
+		Graph: &config.GraphConfig{
+			History: 30,
 		},
 	}
 
@@ -650,10 +653,12 @@ func TestCPUWidget_RenderGraph_EmptyHistory(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:   "graph",
-			FillColor:     255,
-			HistoryLength: 30,
+		Mode: "graph",
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
+		},
+		Graph: &config.GraphConfig{
+			History: 30,
 		},
 	}
 
@@ -682,9 +687,9 @@ func TestCPUWidget_SmallSize(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 10, H: 10,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-			FillColor:   255,
+		Mode: "bar_horizontal",
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
 		},
 	}
 
@@ -718,9 +723,7 @@ func TestCPUWidget_ZeroSize(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 0, H: 0,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "text",
-		},
+		Mode: "text",
 	}
 
 	widget, err := NewCPUWidget(cfg)
@@ -754,9 +757,7 @@ func TestCPUWidget_InvalidDisplayMode(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "invalid_mode",
-		},
+		Mode: "invalid_mode",
 	}
 
 	widget, err := NewCPUWidget(cfg)
@@ -789,9 +790,9 @@ func TestCPUWidget_BeforeFirstUpdate(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "text",
-			FontSize:    10,
+		Mode: "text",
+		Text: &config.TextConfig{
+			Size: 10,
 		},
 	}
 

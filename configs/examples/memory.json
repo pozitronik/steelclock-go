@@ -1,42 +1,48 @@
 {
   "$schema": "../config.schema.json",
-  "game_name": "STEELCLOCK_MEMORY",
-  "game_display_name": "SteelClock - Memory Monitor",
   "refresh_rate_ms": 1000,
   "display": {
     "width": 128,
     "height": 40,
-    "background_color": 0
-  },
-  "layout": {
-    "type": "basic"
+    "background": 0
   },
   "widgets": [
     {
       "type": "memory",
-      "id": "memory_graph",
       "enabled": true,
-      "position": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 40,
-        "z_order": 0
+      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
+      "style": {"background": 0, "border": 255, "padding": 2},
+      "mode": "graph",
+      "bar": {
+        "direction": "horizontal",
+        "border": false,
+        "colors": {
+          "fill": 255
+        }
       },
-      "style": {
-        "background_color": 0,
-        "border": true,
-        "border_color": 255
+      "graph": {
+        "history": 60,
+        "filled": true,
+        "colors": {
+          "fill": 255
+        }
       },
-      "properties": {
-        "display_mode": "graph",
-        "update_interval": 1.0,
-        "history_length": 60,
-        "fill_color": 255,
-        "horizontal_align": "center",
-        "vertical_align": "center",
-        "padding": 2
-      }
+      "gauge": {
+        "show_ticks": true,
+        "colors": {
+          "fill": 255,
+          "arc": 200,
+          "needle": 255,
+          "ticks": 150
+        }
+      },
+      "text": {
+        "format": "%d%%",
+        "font": null,
+        "size": 10,
+        "align": {"h": "center", "v": "center"}
+      },
+      "update_interval": 1.0
     }
   ]
 }

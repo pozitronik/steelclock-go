@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
+	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
@@ -30,10 +31,9 @@ func NewErrorWidget(displayWidth, displayHeight int, message string) *ErrorWidge
 			W: displayWidth,
 			H: displayHeight,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     -1, // disabled
 		},
 	}
 
@@ -59,7 +59,6 @@ func (w *ErrorWidget) Update() error {
 // Render draws the error display with warning triangles
 func (w *ErrorWidget) Render() (image.Image, error) {
 	pos := w.GetPosition()
-	style := w.GetStyle()
 
 	// Create image with background
 	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
@@ -69,31 +68,37 @@ func (w *ErrorWidget) Render() (image.Image, error) {
 		return img, nil
 	}
 
-	c := color.Gray{Y: uint8(style.BorderColor)}
+	c := color.Gray{Y: 255} // White foreground for error display
 
-	// Draw warning triangles on left and right
-	// Triangle size
-	triangleSize := 10
+	// Draw warning triangles on left and right using glyph system
+	// Select icon size based on display height
+	var iconSet *glyphs.GlyphSet
 	if pos.H < 20 {
-		triangleSize = pos.H / 2
+		iconSet = glyphs.CommonIcons8x8
+	} else {
+		iconSet = glyphs.CommonIcons10x10
+	}
+
+	warningIcon := glyphs.GetIcon(iconSet, "warning")
+	if warningIcon == nil {
+		return img, nil // Fail gracefully if icon not found
 	}
 
 	// Left triangle
 	leftX := 5
 	centerY := pos.H / 2
-	bitmap.DrawWarningTriangle(img, leftX, centerY, triangleSize, c)
+	glyphs.DrawGlyph(img, warningIcon, leftX, centerY-warningIcon.Height/2, c)
 
 	// Right triangle
-	rightX := pos.W - 5 - triangleSize
-	bitmap.DrawWarningTriangle(img, rightX, centerY, triangleSize, c)
+	rightX := pos.W - 5 - warningIcon.Width
+	glyphs.DrawGlyph(img, warningIcon, rightX, centerY-warningIcon.Height/2, c)
 
 	// Draw message text centered between triangles
-	availableX := leftX + triangleSize + 5
-	availableW := (rightX) - (leftX + triangleSize + 5)
+	availableX := leftX + warningIcon.Width + 5
+	availableW := (rightX) - (leftX + warningIcon.Width + 5)
 
-	// Calculate text width (6 pixels per character including space)
-	charWidth := 6
-	textWidth := len(w.message) * charWidth
+	// Calculate text width using glyph system
+	textWidth := glyphs.MeasureText(w.message, glyphs.Font5x7)
 
 	// Center text in available space
 	textX := availableX + (availableW-textWidth)/2
@@ -101,272 +106,8 @@ func (w *ErrorWidget) Render() (image.Image, error) {
 		textX = availableX // Don't go past left boundary
 	}
 
-	// Draw text character by character using a simple 5x7 bitmap font
-	drawErrorText(img, w.message, textX, centerY-3, c)
+	// Draw text using 5×7 pixel font
+	glyphs.DrawText(img, w.message, textX, centerY-3, glyphs.Font5x7, c)
 
 	return img, nil
-}
-
-// drawErrorText draws text using a simple bitmap font
-func drawErrorText(img *image.Gray, text string, x, y int, c color.Gray) {
-	charWidth := 6 // 5 pixels + 1 space
-	charHeight := 7
-
-	currentX := x
-	bounds := img.Bounds()
-
-	for _, ch := range text {
-		// Get character bitmap
-		charBitmap := getCharBitmap(ch)
-
-		// Draw character
-		for dy := 0; dy < charHeight && y+dy >= 0 && y+dy < bounds.Max.Y; dy++ {
-			for dx := 0; dx < 5 && currentX+dx >= 0 && currentX+dx < bounds.Max.X; dx++ {
-				if charBitmap[dy][dx] {
-					img.Set(currentX+dx, y+dy, c)
-				}
-			}
-		}
-
-		currentX += charWidth
-	}
-}
-
-// charBitmaps is a map of character bitmaps for the 5x7 font
-var charBitmaps = map[rune][7][5]bool{
-	'A': {
-		{false, true, true, true, false},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, true, true, true, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-	},
-	'B': {
-		{true, true, true, true, false},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, true, true, true, false},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, true, true, true, false},
-	},
-	'C': {
-		{false, true, true, true, false},
-		{true, false, false, false, true},
-		{true, false, false, false, false},
-		{true, false, false, false, false},
-		{true, false, false, false, false},
-		{true, false, false, false, true},
-		{false, true, true, true, false},
-	},
-	'D': {
-		{true, true, true, true, false},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, true, true, true, false},
-	},
-	'E': {
-		{true, true, true, true, true},
-		{true, false, false, false, false},
-		{true, false, false, false, false},
-		{true, true, true, true, false},
-		{true, false, false, false, false},
-		{true, false, false, false, false},
-		{true, true, true, true, true},
-	},
-	'F': {
-		{true, true, true, true, true},
-		{true, false, false, false, false},
-		{true, false, false, false, false},
-		{true, true, true, true, false},
-		{true, false, false, false, false},
-		{true, false, false, false, false},
-		{true, false, false, false, false},
-	},
-	'G': {
-		{false, true, true, true, false},
-		{true, false, false, false, true},
-		{true, false, false, false, false},
-		{true, false, true, true, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{false, true, true, true, true},
-	},
-	'H': {
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, true, true, true, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-	},
-	'I': {
-		{false, true, true, true, false},
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-		{false, true, true, true, false},
-	},
-	'K': {
-		{true, false, false, false, true},
-		{true, false, false, true, false},
-		{true, false, true, false, false},
-		{true, true, false, false, false},
-		{true, false, true, false, false},
-		{true, false, false, true, false},
-		{true, false, false, false, true},
-	},
-	'L': {
-		{true, false, false, false, false},
-		{true, false, false, false, false},
-		{true, false, false, false, false},
-		{true, false, false, false, false},
-		{true, false, false, false, false},
-		{true, false, false, false, false},
-		{true, true, true, true, true},
-	},
-	'M': {
-		{true, false, false, false, true},
-		{true, true, false, true, true},
-		{true, false, true, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-	},
-	'N': {
-		{true, false, false, false, true},
-		{true, true, false, false, true},
-		{true, false, true, false, true},
-		{true, false, false, true, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-	},
-	'O': {
-		{false, true, true, true, false},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{false, true, true, true, false},
-	},
-	'P': {
-		{true, true, true, true, false},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, true, true, true, false},
-		{true, false, false, false, false},
-		{true, false, false, false, false},
-		{true, false, false, false, false},
-	},
-	'R': {
-		{true, true, true, true, false},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, true, true, true, false},
-		{true, false, true, false, false},
-		{true, false, false, true, false},
-		{true, false, false, false, true},
-	},
-	'S': {
-		{false, true, true, true, false},
-		{true, false, false, false, true},
-		{true, false, false, false, false},
-		{false, true, true, true, false},
-		{false, false, false, false, true},
-		{true, false, false, false, true},
-		{false, true, true, true, false},
-	},
-	'T': {
-		{true, true, true, true, true},
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-	},
-	'U': {
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{false, true, true, true, false},
-	},
-	'V': {
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{false, true, false, true, false},
-		{false, true, false, true, false},
-		{false, false, true, false, false},
-	},
-	'W': {
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{true, false, true, false, true},
-		{true, false, true, false, true},
-		{true, true, false, true, true},
-		{true, false, false, false, true},
-	},
-	'Y': {
-		{true, false, false, false, true},
-		{true, false, false, false, true},
-		{false, true, false, true, false},
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-	},
-	' ': {
-		{false, false, false, false, false},
-		{false, false, false, false, false},
-		{false, false, false, false, false},
-		{false, false, false, false, false},
-		{false, false, false, false, false},
-		{false, false, false, false, false},
-		{false, false, false, false, false},
-	},
-	'!': {
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-		{false, false, true, false, false},
-		{false, false, false, false, false},
-		{false, false, true, false, false},
-	},
-}
-
-// defaultCharBitmap is used for unknown characters
-var defaultCharBitmap = [7][5]bool{
-	{true, true, true, true, true},
-	{true, false, false, false, true},
-	{true, false, false, false, true},
-	{true, false, false, false, true},
-	{true, false, false, false, true},
-	{true, false, false, false, true},
-	{true, true, true, true, true},
-}
-
-// getCharBitmap returns a 5x7 bitmap for common characters
-func getCharBitmap(ch rune) [7][5]bool {
-	if btmp, ok := charBitmaps[ch]; ok {
-		return btmp
-	}
-	return defaultCharBitmap
 }

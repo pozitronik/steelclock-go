@@ -2,70 +2,73 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://steelclock.local/config.schema.json",
   "title": "SteelClock Configuration",
-  "description": "Configuration schema for SteelClock - display manager for SteelSeries APEX 7",
+  "description": "Configuration schema for SteelClock v2 - display manager for SteelSeries devices",
   "type": "object",
   "required": ["display", "widgets"],
   "properties": {
+    "schema_version": {
+      "type": "integer",
+      "description": "Schema version (2 for this schema)",
+      "const": 2
+    },
+    "game_name": {
+      "type": "string",
+      "description": "Internal game name for GameSense registration",
+      "default": "STEELCLOCK"
+    },
+    "game_display_name": {
+      "type": "string",
+      "description": "Display name shown in SteelSeries GG",
+      "default": "SteelClock"
+    },
     "refresh_rate_ms": {
       "type": "integer",
-      "description": "Display refresh rate in milliseconds (minimum 100ms = 10Hz)",
-      "minimum": 100,
+      "description": "Display refresh rate in milliseconds. GameSense: min 100ms (10Hz). Direct: min 30ms (33Hz).",
+      "minimum": 30,
       "default": 100
     },
     "unregister_on_exit": {
       "type": "boolean",
-      "description": "Whether to unregister from GameSense API on exit. Set to false to avoid timeout issues. Default: false",
+      "description": "Unregister from GameSense API on exit (may cause timeout)",
       "default": false
     },
-    "deinitialize_timer_length_ms": {
+    "deinitialize_timer_ms": {
       "type": "integer",
-      "description": "Custom timeout for game deactivation after last event in milliseconds. Valid range: 1000-60000 (1-60 seconds). If not specified, GameSense uses 15000ms (15 seconds).",
+      "description": "Timeout for game deactivation after last event (1000-60000ms)",
       "minimum": 1000,
       "maximum": 60000
     },
-    "event_batching_enabled": {
-      "type": "boolean",
-      "description": "Enable multiple event batching to reduce HTTP request overhead. Automatically falls back to single-frame mode if not supported by GameSense API. Default: false",
-      "default": false
+    "backend": {
+      "type": "string",
+      "description": "Backend: 'gamesense' (requires SteelSeries GG), 'direct' (USB HID), 'any' (try gamesense, fallback to direct)",
+      "enum": ["gamesense", "direct", "any"],
+      "default": "any"
     },
-    "event_batch_size": {
-      "type": "integer",
-      "description": "Maximum number of frames to batch in a single request when event_batching_enabled is true. Valid range: 1-100. Default: 10",
-      "minimum": 1,
-      "maximum": 100,
-      "default": 10
-    },
-    "supported_resolutions": {
-      "type": "array",
-      "description": "Additional display resolutions to render for multi-device support. Each resolution is rendered and sent in the same frame. If not specified, only the main display resolution is used.",
-      "items": {
-        "type": "object",
-        "required": ["width", "height"],
-        "properties": {
-          "width": {
-            "type": "integer",
-            "description": "Display width in pixels",
-            "minimum": 1
-          },
-          "height": {
-            "type": "integer",
-            "description": "Display height in pixels",
-            "minimum": 1
-          }
+    "direct_driver": {
+      "type": "object",
+      "description": "Direct USB HID driver configuration",
+      "properties": {
+        "vid": {
+          "type": "string",
+          "description": "USB Vendor ID in hex (e.g., '1038'). Auto-detect if omitted.",
+          "pattern": "^[0-9A-Fa-f]{1,4}$"
+        },
+        "pid": {
+          "type": "string",
+          "description": "USB Product ID in hex (e.g., '1612'). Auto-detect if omitted.",
+          "pattern": "^[0-9A-Fa-f]{1,4}$"
+        },
+        "interface": {
+          "type": "string",
+          "description": "USB interface identifier",
+          "default": "mi_01"
         }
       }
     },
     "bundled_font_url": {
-      "type": "string",
-      "description": "URL to download the bundled font if no system font is available. Default: https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf",
-      "format": "uri",
-      "default": "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf"
-    },
-    "bundled_wad_url": {
-      "type": "string",
-      "description": "URL to download the DOOM shareware WAD file if not found. Default: https://distro.ibiblio.org/slitaz/sources/packages/d/doom1.wad",
-      "format": "uri",
-      "default": "https://distro.ibiblio.org/slitaz/sources/packages/d/doom1.wad"
+      "type": ["string", "null"],
+      "description": "Custom URL for downloading bundled font (null = use default)",
+      "default": null
     },
     "display": {
       "type": "object",
@@ -82,7 +85,7 @@
           "description": "Display height in pixels",
           "default": 40
         },
-        "background_color": {
+        "background": {
           "type": "integer",
           "description": "Display background color (0=black, 255=white)",
           "minimum": 0,
@@ -91,978 +94,637 @@
         }
       }
     },
-    "layout": {
+    "defaults": {
       "type": "object",
-      "description": "Layout configuration (basic or viewport)",
+      "description": "Default values inherited by all widgets",
       "properties": {
-        "type": {
-          "type": "string",
-          "description": "Layout type",
-          "enum": ["basic", "viewport"],
-          "default": "basic"
+        "colors": {
+          "type": "object",
+          "description": "Named colors that widgets can reference with @name syntax",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          }
         },
-        "virtual_width": {
-          "type": "integer",
-          "description": "Virtual canvas width (for viewport mode)",
-          "minimum": 128
-        },
-        "virtual_height": {
-          "type": "integer",
-          "description": "Virtual canvas height (for viewport mode)",
-          "minimum": 40
+        "text": { "$ref": "#/definitions/textObject" },
+        "update_interval": {
+          "type": "number",
+          "description": "Default update interval in seconds",
+          "minimum": 0.01,
+          "default": 1.0
         }
       }
     },
     "widgets": {
       "type": "array",
       "description": "Array of widget configurations",
-      "items": {
-        "oneOf": [
-          {"$ref": "#/definitions/clockWidget"},
-          {"$ref": "#/definitions/cpuWidget"},
-          {"$ref": "#/definitions/memoryWidget"},
-          {"$ref": "#/definitions/networkWidget"},
-          {"$ref": "#/definitions/diskWidget"},
-          {"$ref": "#/definitions/keyboardWidget"},
-          {"$ref": "#/definitions/keyboardLayoutWidget"},
-          {"$ref": "#/definitions/volumeWidget"},
-          {"$ref": "#/definitions/volumeMeterWidget"},
-          {"$ref": "#/definitions/audioVisualizerWidget"},
-          {"$ref": "#/definitions/doomWidget"}
-        ]
-      }
+      "items": { "$ref": "#/definitions/widget" }
     }
   },
   "definitions": {
-    "widgetBase": {
-      "type": "object",
-      "required": ["type", "id", "position"],
-      "properties": {
-        "type": {
-          "type": "string",
-          "description": "Widget type"
-        },
-        "id": {
-          "type": "string",
-          "description": "Unique widget identifier"
-        },
-        "enabled": {
-          "type": "boolean",
-          "description": "Enable or disable this widget",
-          "default": true
-        },
-        "position": {
-          "$ref": "#/definitions/position"
-        },
-        "style": {
-          "$ref": "#/definitions/style"
-        }
-      }
-    },
     "position": {
       "type": "object",
       "description": "Widget position and size",
       "required": ["x", "y", "w", "h"],
       "properties": {
-        "x": {
-          "type": "integer",
-          "description": "X coordinate on canvas",
-          "minimum": 0
-        },
-        "y": {
-          "type": "integer",
-          "description": "Y coordinate on canvas"
-        },
-        "w": {
-          "type": "integer",
-          "description": "Widget width in pixels"
-        },
-        "h": {
-          "type": "integer",
-          "description": "Widget height in pixels"
-        },
-        "z_order": {
-          "type": "integer",
-          "description": "Stacking order (higher = on top)"
-        }
+        "x": { "type": "integer", "description": "X coordinate", "minimum": 0 },
+        "y": { "type": "integer", "description": "Y coordinate" },
+        "w": { "type": "integer", "description": "Width in pixels", "minimum": 1 },
+        "h": { "type": "integer", "description": "Height in pixels", "minimum": 1 },
+        "z": { "type": "integer", "description": "Z-order (higher = on top)", "default": 0 }
       }
     },
     "style": {
       "type": "object",
       "description": "Widget visual styling",
       "properties": {
-        "background_color": {
+        "background": {
           "type": "integer",
-          "description": "Background color (-1=transparent, 0=black, 255=white). Use -1 for transparent background to overlay widgets.",
+          "description": "Background color (-1=transparent, 0-255=grayscale)",
           "minimum": -1,
           "maximum": 255,
           "default": 0
         },
         "border": {
-          "type": "boolean",
-          "description": "Draw widget border",
-          "default": false
-        },
-        "border_color": {
           "type": "integer",
-          "description": "Border color (0-255)",
-          "minimum": 0,
+          "description": "Border: -1=disabled, 0-255=enabled with that color",
+          "minimum": -1,
           "maximum": 255,
-          "default": 255
-        }
-      }
-    },
-    "textProperties": {
-      "type": "object",
-      "description": "Text rendering properties",
-      "properties": {
-        "font": {
-          "type": "string",
-          "description": "Font name or path to TTF file (e.g., 'Arial', 'Consolas', 'Segoe UI Emoji')"
-        },
-        "font_size": {
-          "type": "integer",
-          "description": "Font size in pixels",
-          "minimum": 1,
-          "default": 10
-        },
-        "horizontal_align": {
-          "type": "string",
-          "description": "Horizontal text alignment",
-          "enum": ["left", "center", "right"],
-          "default": "center"
-        },
-        "vertical_align": {
-          "type": "string",
-          "description": "Vertical text alignment",
-          "enum": ["top", "center", "bottom"],
-          "default": "center"
+          "default": -1
         },
         "padding": {
           "type": "integer",
-          "description": "Padding from edges in pixels",
+          "description": "Padding from widget edges in pixels",
           "minimum": 0,
           "default": 0
         }
       }
     },
-    "autoHideProperties": {
+    "textObject": {
       "type": "object",
-      "description": "Auto-hide behavior properties (widget appears temporarily then hides)",
+      "description": "Text rendering properties",
       "properties": {
-        "auto_hide": {
-          "type": "boolean",
-          "description": "Enable auto-hide mode (widget starts hidden and appears on trigger)",
-          "default": false
+        "format": { "type": "string", "description": "Format string (widget-specific)" },
+        "font": { "type": ["string", "null"], "description": "Font name or TTF path (null = bundled font)", "default": null },
+        "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 10 },
+        "align": {
+          "type": "object",
+          "properties": {
+            "h": { "type": "string", "enum": ["left", "center", "right"], "default": "center" },
+            "v": { "type": "string", "enum": ["top", "center", "bottom"], "default": "center" }
+          }
         },
-        "auto_hide_timeout": {
-          "type": "number",
-          "description": "Seconds to wait before hiding widget after last trigger",
-          "minimum": 0.1,
-          "default": 2.0
-        }
+        "unit": { "type": "string", "description": "Display unit (widget-specific)" }
       }
     },
-    "clockWidget": {
-      "allOf": [
-        {"$ref": "#/definitions/widgetBase"},
-        {
-          "properties": {
-            "type": {"const": "clock"},
-            "properties": {
-              "type": "object",
-              "properties": {
-                "display_mode": {
-                  "type": "string",
-                  "description": "Display mode: text (digital) or clock_face (analog)",
-                  "enum": ["text", "clock_face"],
-                  "default": "text"
-                },
-                "format": {
-                  "type": "string",
-                  "description": "Time format for text mode (strftime syntax: %H:%M:%S, %I:%M %p, etc.)",
-                  "default": "%H:%M:%S"
-                },
-                "update_interval": {
-                  "type": "number",
-                  "description": "Update interval in seconds",
-                  "minimum": 0.1,
-                  "default": 1.0
-                },
-                "font": {"$ref": "#/definitions/textProperties/properties/font"},
-                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
-                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
-                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
-                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
-                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
-              }
-            }
-          }
-        }
-      ]
+    "autoHide": {
+      "type": "object",
+      "description": "Auto-hide behavior",
+      "properties": {
+        "enabled": { "type": "boolean", "description": "Enable auto-hide", "default": false },
+        "timeout": { "type": "number", "description": "Seconds before hiding", "minimum": 0.1, "default": 2.0 },
+        "on_silence": { "type": "boolean", "description": "Hide on audio silence (audio widgets)", "default": false },
+        "silence_time": { "type": "number", "description": "Silence duration before hiding", "minimum": 0.1, "default": 2.0 }
+      }
     },
-    "cpuWidget": {
+    "widget": {
+      "type": "object",
+      "required": ["type", "position"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom"]
+        },
+        "enabled": { "type": "boolean", "default": true },
+        "position": { "$ref": "#/definitions/position" },
+        "style": { "$ref": "#/definitions/style" },
+        "update_interval": { "type": "number", "description": "Update interval in seconds", "minimum": 0.01 },
+        "poll_interval": { "type": "number", "description": "Internal polling interval for volume/volume_meter widgets (seconds)", "minimum": 0.01, "default": 0.1 },
+        "text": { "$ref": "#/definitions/textObject" },
+        "auto_hide": { "$ref": "#/definitions/autoHide" }
+      },
       "allOf": [
-        {"$ref": "#/definitions/widgetBase"},
         {
-          "properties": {
-            "type": {"const": "cpu"},
+          "if": { "properties": { "type": { "const": "clock" } }, "required": ["type"] },
+          "then": {
             "properties": {
-              "type": "object",
-              "properties": {
-                "display_mode": {
-                  "type": "string",
-                  "description": "Display mode",
-                  "enum": ["text", "bar_horizontal", "bar_vertical", "graph", "gauge"],
-                  "default": "bar_horizontal"
-                },
-                "per_core": {
-                  "type": "boolean",
-                  "description": "Show per-core usage (multiple bars/values)",
-                  "default": false
-                },
-                "update_interval": {
-                  "type": "number",
-                  "description": "Update interval in seconds",
-                  "minimum": 0.1,
-                  "default": 1.0
-                },
-                "history_length": {
-                  "type": "integer",
-                  "description": "Number of samples for graph mode",
-                  "minimum": 2,
-                  "default": 30
-                },
-                "core_border": {
-                  "type": "boolean",
-                  "description": "Draw border around each core cell (text grid/graph grid/gauge grid) or bar",
-                  "default": false
-                },
-                "core_margin": {
-                  "type": "integer",
-                  "description": "Margin between core cells or bars when per_core is enabled",
-                  "minimum": 0,
-                  "default": 0
-                },
-                "fill_color": {
-                  "type": "integer",
-                  "description": "Bar/graph fill color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "gauge_color": {
-                  "type": "integer",
-                  "description": "Gauge arc and tick marks color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 200
-                },
-                "gauge_needle_color": {
-                  "type": "integer",
-                  "description": "Gauge needle color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "font": {"$ref": "#/definitions/textProperties/properties/font"},
-                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
-                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
-                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
-                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
-                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
-              }
-            }
-          }
-        }
-      ]
-    },
-    "memoryWidget": {
-      "allOf": [
-        {"$ref": "#/definitions/widgetBase"},
-        {
-          "properties": {
-            "type": {"const": "memory"},
-            "properties": {
-              "type": "object",
-              "properties": {
-                "display_mode": {
-                  "type": "string",
-                  "description": "Display mode",
-                  "enum": ["text", "bar_horizontal", "bar_vertical", "graph", "gauge"],
-                  "default": "bar_horizontal"
-                },
-                "update_interval": {
-                  "type": "number",
-                  "description": "Update interval in seconds",
-                  "minimum": 0.1,
-                  "default": 1.0
-                },
-                "history_length": {
-                  "type": "integer",
-                  "description": "Number of samples for graph mode",
-                  "minimum": 2,
-                  "default": 30
-                },
-                "bar_border": {
-                  "type": "boolean",
-                  "description": "Draw border around the bar",
-                  "default": false
-                },
-                "fill_color": {
-                  "type": "integer",
-                  "description": "Bar/graph fill color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "gauge_color": {
-                  "type": "integer",
-                  "description": "Gauge arc and tick marks color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 200
-                },
-                "gauge_needle_color": {
-                  "type": "integer",
-                  "description": "Gauge needle color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "font": {"$ref": "#/definitions/textProperties/properties/font"},
-                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
-                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
-                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
-                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
-                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
-              }
-            }
-          }
-        }
-      ]
-    },
-    "networkWidget": {
-      "allOf": [
-        {"$ref": "#/definitions/widgetBase"},
-        {
-          "properties": {
-            "type": {"const": "network"},
-            "properties": {
-              "type": "object",
-              "properties": {
-                "interface": {
-                  "type": "string",
-                  "description": "Network interface name (e.g., 'eth0', 'Ethernet', null=auto)",
-                  "default": "eth0"
-                },
-                "display_mode": {
-                  "type": "string",
-                  "description": "Display mode",
-                  "enum": ["text", "bar_horizontal", "bar_vertical", "graph", "gauge"],
-                  "default": "bar_horizontal"
-                },
-                "update_interval": {
-                  "type": "number",
-                  "description": "Update interval in seconds",
-                  "minimum": 0.1,
-                  "default": 1.0
-                },
-                "history_length": {
-                  "type": "integer",
-                  "description": "Number of samples for graph mode",
-                  "minimum": 2,
-                  "default": 30
-                },
-                "max_speed_mbps": {
-                  "type": "number",
-                  "description": "Max speed for scaling in Mbps (-1=auto)",
-                  "default": 100.0
-                },
-                "speed_unit": {
-                  "type": "string",
-                  "description": "Speed display unit (for text mode)",
-                  "enum": ["bps", "kbps", "mbps"],
-                  "default": "kbps"
-                },
-                "bar_border": {
-                  "type": "boolean",
-                  "description": "Draw border around bars",
-                  "default": false
-                },
-                "rx_color": {
-                  "type": "integer",
-                  "description": "RX (download) color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "tx_color": {
-                  "type": "integer",
-                  "description": "TX (upload) color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 128
-                },
-                "rx_needle_color": {
-                  "type": "integer",
-                  "description": "RX needle color for gauge mode (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "tx_needle_color": {
-                  "type": "integer",
-                  "description": "TX needle color for gauge mode (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 200
-                },
-                "font": {"$ref": "#/definitions/textProperties/properties/font"},
-                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
-                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
-                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
-                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
-                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
-              }
-            }
-          }
-        }
-      ]
-    },
-    "diskWidget": {
-      "allOf": [
-        {"$ref": "#/definitions/widgetBase"},
-        {
-          "properties": {
-            "type": {"const": "disk"},
-            "properties": {
-              "type": "object",
-              "properties": {
-                "disk_name": {
-                  "type": ["string", "null"],
-                  "description": "Disk name (Windows: 'PhysicalDrive0', Linux: 'sda', null=auto)",
-                  "default": null
-                },
-                "display_mode": {
-                  "type": "string",
-                  "description": "Display mode",
-                  "enum": ["text", "bar_horizontal", "bar_vertical", "graph"],
-                  "default": "bar_horizontal"
-                },
-                "update_interval": {
-                  "type": "number",
-                  "description": "Update interval in seconds",
-                  "minimum": 0.1,
-                  "default": 1.0
-                },
-                "history_length": {
-                  "type": "integer",
-                  "description": "Number of samples for graph mode",
-                  "minimum": 2,
-                  "default": 30
-                },
-                "max_speed_mbps": {
-                  "type": "number",
-                  "description": "Max speed for scaling in MB/s (-1=auto)",
-                  "default": -1
-                },
-                "bar_border": {
-                  "type": "boolean",
-                  "description": "Draw border around bars",
-                  "default": false
-                },
-                "read_color": {
-                  "type": "integer",
-                  "description": "Read color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "write_color": {
-                  "type": "integer",
-                  "description": "Write color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 200
-                },
-                "font": {"$ref": "#/definitions/textProperties/properties/font"},
-                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
-                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
-                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
-                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
-                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
-              }
-            }
-          }
-        }
-      ]
-    },
-    "keyboardWidget": {
-      "allOf": [
-        {"$ref": "#/definitions/widgetBase"},
-        {
-          "properties": {
-            "type": {"const": "keyboard"},
-            "properties": {
-              "type": "object",
-              "properties": {
-                "update_interval": {
-                  "type": "number",
-                  "description": "Update interval in seconds",
-                  "minimum": 0.1,
-                  "default": 0.2
-                },
-                "spacing": {
-                  "type": "integer",
-                  "description": "Spacing between indicators in pixels",
-                  "minimum": 0,
-                  "default": 3
-                },
-                "caps_lock_on": {
-                  "type": "string",
-                  "description": "Symbol for Caps Lock ON state",
-                  "default": "⬆"
-                },
-                "caps_lock_off": {
-                  "type": "string",
-                  "description": "Symbol for Caps Lock OFF state (empty=hide)",
-                  "default": ""
-                },
-                "num_lock_on": {
-                  "type": "string",
-                  "description": "Symbol for Num Lock ON state",
-                  "default": "🔒"
-                },
-                "num_lock_off": {
-                  "type": "string",
-                  "description": "Symbol for Num Lock OFF state (empty=hide)",
-                  "default": ""
-                },
-                "scroll_lock_on": {
-                  "type": "string",
-                  "description": "Symbol for Scroll Lock ON state",
-                  "default": "⬇"
-                },
-                "scroll_lock_off": {
-                  "type": "string",
-                  "description": "Symbol for Scroll Lock OFF state (empty=hide)",
-                  "default": ""
-                },
-                "indicator_color_on": {
-                  "type": "integer",
-                  "description": "Color for ON state (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "indicator_color_off": {
-                  "type": "integer",
-                  "description": "Color for OFF state (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 100
-                },
-                "font": {"$ref": "#/definitions/textProperties/properties/font"},
-                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
-                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
-                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
-                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
-                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
-              }
-            }
-          }
-        }
-      ]
-    },
-    "keyboardLayoutWidget": {
-      "allOf": [
-        {"$ref": "#/definitions/widgetBase"},
-        {
-          "properties": {
-            "type": {"const": "keyboard_layout"},
-            "properties": {
-              "type": "object",
-              "properties": {
-                "update_interval": {
-                  "type": "number",
-                  "description": "Update interval in seconds",
-                  "minimum": 0.1,
-                  "default": 0.2
-                },
-                "display_format": {
-                  "type": "string",
-                  "description": "Language code display format",
-                  "enum": ["iso639-1", "iso639-2", "full"],
-                  "default": "iso639-1"
-                },
-                "font": {"$ref": "#/definitions/textProperties/properties/font"},
-                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
-                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
-                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"}
-              }
-            }
-          }
-        }
-      ]
-    },
-    "volumeWidget": {
-      "allOf": [
-        {"$ref": "#/definitions/widgetBase"},
-        {
-          "properties": {
-            "type": {"const": "volume"},
-            "properties": {
-              "type": "object",
-              "properties": {
-                "display_mode": {
-                  "type": "string",
-                  "description": "Display mode: text, bar_horizontal, bar_vertical, gauge, triangle",
-                  "enum": ["text", "bar_horizontal", "bar_vertical", "gauge", "triangle"],
-                  "default": "bar_horizontal"
-                },
-                "update_interval": {
-                  "type": "number",
-                  "description": "Update interval in seconds",
-                  "minimum": 0.1,
-                  "default": 0.1
-                },
-                "fill_color": {
-                  "type": "integer",
-                  "description": "Fill color for bars and triangle (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "bar_border": {
-                  "type": "boolean",
-                  "description": "Draw border around bars",
-                  "default": false
-                },
-                "gauge_color": {
-                  "type": "integer",
-                  "description": "Gauge arc and tick color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 200
-                },
-                "gauge_needle_color": {
-                  "type": "integer",
-                  "description": "Gauge needle color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "triangle_fill_color": {
-                  "type": "integer",
-                  "description": "Triangle fill color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "triangle_border": {
-                  "type": "boolean",
-                  "description": "Draw border around triangle",
-                  "default": false
-                },
-                "font": {"$ref": "#/definitions/textProperties/properties/font"},
-                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
-                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
-                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
-                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
-                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
-              }
-            }
-          }
-        }
-      ]
-    },
-    "volumeMeterWidget": {
-      "allOf": [
-        {"$ref": "#/definitions/widgetBase"},
-        {
-          "properties": {
-            "type": {"const": "volume_meter"},
-            "properties": {
-              "type": "object",
-              "properties": {
-                "display_mode": {
-                  "type": "string",
-                  "description": "Display mode: text, bar_horizontal, bar_vertical, gauge",
-                  "enum": ["text", "bar_horizontal", "bar_vertical", "gauge"],
-                  "default": "bar_horizontal"
-                },
-                "update_interval": {
-                  "type": "number",
-                  "description": "Meter update interval in seconds (matches display refresh rate)",
-                  "minimum": 0.03,
-                  "default": 0.1
-                },
-                "fill_color": {
-                  "type": "integer",
-                  "description": "Main meter fill color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "clipping_color": {
-                  "type": "integer",
-                  "description": "Color when clipping is detected (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 200
-                },
-                "left_channel_color": {
-                  "type": "integer",
-                  "description": "Left channel color for stereo modes (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "right_channel_color": {
-                  "type": "integer",
-                  "description": "Right channel color for stereo modes (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 200
-                },
-                "stereo_mode": {
-                  "type": "boolean",
-                  "description": "Enable stereo mode to display left and right channels separately (works with all display modes)",
-                  "default": false
-                },
-                "bar_border": {
-                  "type": "boolean",
-                  "description": "Draw border around bars",
-                  "default": false
-                },
-                "gauge_color": {
-                  "type": "integer",
-                  "description": "Gauge arc and tick color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 200
-                },
-                "gauge_needle_color": {
-                  "type": "integer",
-                  "description": "Gauge needle color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "use_db_scale": {
-                  "type": "boolean",
-                  "description": "Use logarithmic dB scale instead of linear (-60dB to 0dB mapped to 0-100%)",
-                  "default": false
-                },
-                "show_clipping": {
-                  "type": "boolean",
-                  "description": "Show clipping indicator when peak exceeds threshold",
-                  "default": true
-                },
-                "clipping_threshold": {
-                  "type": "number",
-                  "description": "Peak level that triggers clipping indicator (0.0-1.0)",
-                  "minimum": 0.0,
-                  "maximum": 1.0,
-                  "default": 0.99
-                },
-                "silence_threshold": {
-                  "type": "number",
-                  "description": "Peak level below which is considered silence (0.0-1.0)",
-                  "minimum": 0.0,
-                  "maximum": 1.0,
-                  "default": 0.01
-                },
-                "decay_rate": {
-                  "type": "number",
-                  "description": "Peak decay rate in units per second (VU meter ballistics)",
-                  "minimum": 0.1,
-                  "default": 2.0
-                },
-                "show_peak_hold": {
-                  "type": "boolean",
-                  "description": "Show peak hold line (held maximum peak that decays slowly)",
-                  "default": true
-                },
-                "peak_hold_time": {
-                  "type": "number",
-                  "description": "How long to hold peak indicator in seconds",
-                  "minimum": 0.1,
-                  "default": 1.0
-                },
-                "auto_hide_on_silence": {
-                  "type": "boolean",
-                  "description": "Auto-hide widget when no audio detected (triggers auto_hide)",
-                  "default": false
-                },
-                "auto_hide_silence_time": {
-                  "type": "number",
-                  "description": "Time after last audio before hiding (seconds)",
-                  "minimum": 0.5,
-                  "default": 2.0
-                },
-                "font": {"$ref": "#/definitions/textProperties/properties/font"},
-                "font_size": {"$ref": "#/definitions/textProperties/properties/font_size"},
-                "horizontal_align": {"$ref": "#/definitions/textProperties/properties/horizontal_align"},
-                "vertical_align": {"$ref": "#/definitions/textProperties/properties/vertical_align"},
-                "padding": {"$ref": "#/definitions/textProperties/properties/padding"},
-                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
-                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
-              }
-            }
-          }
-        }
-      ]
-    },
-    "audioVisualizerWidget": {
-      "allOf": [
-        {"$ref": "#/definitions/widgetBase"},
-        {
-          "properties": {
-            "type": {"const": "audio_visualizer"},
-            "properties": {
-              "type": "object",
-              "properties": {
-                "display_mode": {
-                  "type": "string",
-                  "description": "Visualization mode: spectrum (frequency bars) or oscilloscope (waveform)",
-                  "enum": ["spectrum", "oscilloscope"],
-                  "default": "spectrum"
-                },
-                "update_interval": {
-                  "type": "number",
-                  "description": "Update interval in seconds (0.033 = ~30 FPS, 0.02 = ~50 FPS)",
-                  "minimum": 0.016,
-                  "default": 0.033
-                },
-                "bar_count": {
-                  "type": "integer",
-                  "description": "Number of frequency bars for spectrum mode",
-                  "minimum": 8,
-                  "maximum": 128,
-                  "default": 32
-                },
-                "frequency_scale": {
-                  "type": "string",
-                  "description": "Frequency scaling: logarithmic (like Winamp) or linear",
-                  "enum": ["logarithmic", "linear"],
-                  "default": "logarithmic"
-                },
-                "bar_style": {
-                  "type": "string",
-                  "description": "Bar rendering style: bars or line graph",
-                  "enum": ["bars", "line"],
-                  "default": "bars"
-                },
-                "smoothing": {
-                  "type": "number",
-                  "description": "Bar fall smoothing (0.0=instant drop, 1.0=very smooth)",
-                  "minimum": 0.0,
-                  "maximum": 1.0,
-                  "default": 0.7
-                },
-                "peak_hold": {
-                  "type": "boolean",
-                  "description": "Show peak indicators on top of bars",
-                  "default": true
-                },
-                "peak_hold_time": {
-                  "type": "number",
-                  "description": "How long to hold peak indicators in seconds",
-                  "minimum": 0.1,
-                  "default": 1.0
-                },
-                "waveform_style": {
-                  "type": "string",
-                  "description": "Oscilloscope waveform style: line or filled",
-                  "enum": ["line", "filled"],
-                  "default": "line"
-                },
-                "channel_mode": {
-                  "type": "string",
-                  "description": "Audio channel mode: mono, stereo_combined (overlay), or stereo_separated (split view)",
-                  "enum": ["mono", "stereo_combined", "stereo_separated"],
-                  "default": "stereo_combined"
-                },
-                "sample_count": {
-                  "type": "integer",
-                  "description": "Number of samples to display in oscilloscope mode",
-                  "minimum": 32,
-                  "maximum": 512,
-                  "default": 128
-                },
-                "frequency_compensation": {
-                  "type": "boolean",
-                  "description": "Apply frequency-dependent gain to balance spectrum (attenuates bass, boosts highs like Winamp)",
-                  "default": false
-                },
-                "spectrum_dynamic_scaling": {
-                  "type": "number",
-                  "description": "Per-bar dynamic gain strength to balance energy across frequency spectrum (0.0 = disabled, 1.0 = moderate, 2.0 = strong)",
-                  "minimum": 0.0,
-                  "maximum": 2.0,
-                  "default": 0.0
-                },
-                "spectrum_dynamic_scaling_window": {
-                  "type": "number",
-                  "description": "Time window in seconds for energy averaging (advanced tuning, smaller = more responsive)",
-                  "minimum": 0.1,
-                  "maximum": 5.0,
-                  "default": 0.5
-                },
-                "fill_color": {
-                  "type": "integer",
-                  "description": "Main visualization color (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "left_channel_color": {
-                  "type": "integer",
-                  "description": "Left channel color for stereo modes (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 255
-                },
-                "right_channel_color": {
-                  "type": "integer",
-                  "description": "Right channel color for stereo modes (0-255)",
-                  "minimum": 0,
-                  "maximum": 255,
-                  "default": 200
-                },
-                "auto_hide": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide"},
-                "auto_hide_timeout": {"$ref": "#/definitions/autoHideProperties/properties/auto_hide_timeout"}
-              }
-            }
-          }
-        }
-      ]
-    },
-    "doomWidget": {
-      "allOf": [
-        {"$ref": "#/definitions/widgetBase"},
-        {
-          "properties": {
-            "type": {"const": "doom"},
-            "properties": {
-              "type": "object",
-              "properties": {
-                "wad_name": {
-                  "type": "string",
-                  "description": "WAD filename in working directory (doom1.wad, doom.wad, doom2.wad, etc.). Auto-downloads shareware if not found.",
-                  "default": "doom1.wad"
+              "mode": { "type": "string", "description": "Display mode: text or analog clock face", "enum": ["text", "analog"], "default": "text" },
+              "analog": {
+                "type": "object",
+                "description": "Analog clock face settings",
+                "properties": {
+                  "show_seconds": { "type": "boolean", "description": "Show seconds hand", "default": true },
+                  "show_ticks": { "type": "boolean", "description": "Show hour tick marks", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "description": "Analog clock colors",
+                    "properties": {
+                      "face": { "type": "integer", "description": "Clock face outline color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "hour": { "type": "integer", "description": "Hour hand color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "minute": { "type": "integer", "description": "Minute hand color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "second": { "type": "integer", "description": "Second hand color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "ticks": { "type": "integer", "description": "Hour tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
+                    }
+                  }
                 }
               }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "cpu" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "mode": { "type": "string", "description": "Display mode for CPU usage", "enum": ["text", "bar", "graph", "gauge"], "default": "bar" },
+              "bar": {
+                "type": "object",
+                "description": "Bar mode settings",
+                "properties": {
+                  "direction": { "type": "string", "description": "Bar orientation", "enum": ["horizontal", "vertical"], "default": "horizontal" },
+                  "border": { "type": "boolean", "description": "Draw border around bars", "default": false },
+                  "colors": {
+                    "type": "object",
+                    "description": "Bar colors",
+                    "properties": {
+                      "fill": { "type": "integer", "description": "Bar fill color", "minimum": 0, "maximum": 255, "default": 255 }
+                    }
+                  }
+                }
+              },
+              "graph": {
+                "type": "object",
+                "description": "Graph mode settings",
+                "properties": {
+                  "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
+                  "filled": { "type": "boolean", "description": "Fill area under graph line", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "description": "Graph colors",
+                    "properties": {
+                      "fill": { "type": "integer", "description": "Graph fill/line color", "minimum": 0, "maximum": 255, "default": 255 }
+                    }
+                  }
+                }
+              },
+              "gauge": {
+                "type": "object",
+                "description": "Gauge mode settings",
+                "properties": {
+                  "show_ticks": { "type": "boolean", "description": "Show gauge tick marks", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "description": "Gauge colors",
+                    "properties": {
+                      "fill": { "type": "integer", "description": "Gauge fill color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "arc": { "type": "integer", "description": "Gauge arc outline color", "minimum": 0, "maximum": 255, "default": 200 },
+                      "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "ticks": { "type": "integer", "description": "Gauge tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
+                    }
+                  }
+                }
+              },
+              "per_core": {
+                "type": "object",
+                "description": "Per-core display settings",
+                "properties": {
+                  "enabled": { "type": "boolean", "description": "Show individual CPU cores", "default": false },
+                  "margin": { "type": "integer", "description": "Margin between core bars in pixels", "minimum": 0, "default": 0 },
+                  "border": { "type": "boolean", "description": "Draw border around each core bar", "default": false }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "memory" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "mode": { "type": "string", "description": "Display mode for memory usage", "enum": ["text", "bar", "graph", "gauge"], "default": "bar" },
+              "bar": {
+                "type": "object",
+                "description": "Bar mode settings",
+                "properties": {
+                  "direction": { "type": "string", "description": "Bar orientation", "enum": ["horizontal", "vertical"], "default": "horizontal" },
+                  "border": { "type": "boolean", "description": "Draw border around bar", "default": false },
+                  "colors": {
+                    "type": "object",
+                    "description": "Bar colors",
+                    "properties": {
+                      "fill": { "type": "integer", "description": "Bar fill color", "minimum": 0, "maximum": 255, "default": 255 }
+                    }
+                  }
+                }
+              },
+              "graph": {
+                "type": "object",
+                "description": "Graph mode settings",
+                "properties": {
+                  "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
+                  "filled": { "type": "boolean", "description": "Fill area under graph line", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "description": "Graph colors",
+                    "properties": {
+                      "fill": { "type": "integer", "description": "Graph fill/line color", "minimum": 0, "maximum": 255, "default": 255 }
+                    }
+                  }
+                }
+              },
+              "gauge": {
+                "type": "object",
+                "description": "Gauge mode settings",
+                "properties": {
+                  "show_ticks": { "type": "boolean", "description": "Show gauge tick marks", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "description": "Gauge colors",
+                    "properties": {
+                      "fill": { "type": "integer", "description": "Gauge fill color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "arc": { "type": "integer", "description": "Gauge arc outline color", "minimum": 0, "maximum": 255, "default": 200 },
+                      "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "ticks": { "type": "integer", "description": "Gauge tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "network" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "mode": { "type": "string", "description": "Display mode for network I/O", "enum": ["text", "bar", "graph", "gauge"], "default": "bar" },
+              "interface": { "type": ["string", "null"], "description": "Network interface name (null = auto-detect)", "default": null },
+              "max_speed_mbps": { "type": "number", "description": "Maximum speed in Mbps for scaling", "default": 100 },
+              "bar": {
+                "type": "object",
+                "description": "Bar mode settings",
+                "properties": {
+                  "direction": { "type": "string", "description": "Bar orientation", "enum": ["horizontal", "vertical"], "default": "horizontal" },
+                  "border": { "type": "boolean", "description": "Draw border around bars", "default": false },
+                  "colors": {
+                    "type": "object",
+                    "description": "Bar colors for RX/TX",
+                    "properties": {
+                      "rx": { "type": "integer", "description": "Receive (download) bar color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "description": "Transmit (upload) bar color", "minimum": 0, "maximum": 255, "default": 128 }
+                    }
+                  }
+                }
+              },
+              "graph": {
+                "type": "object",
+                "description": "Graph mode settings",
+                "properties": {
+                  "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
+                  "filled": { "type": "boolean", "description": "Fill area under graph lines", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "description": "Graph colors for RX/TX",
+                    "properties": {
+                      "rx": { "type": "integer", "description": "Receive (download) line color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "description": "Transmit (upload) line color", "minimum": 0, "maximum": 255, "default": 128 }
+                    }
+                  }
+                }
+              },
+              "gauge": {
+                "type": "object",
+                "description": "Gauge mode settings (dual gauge: outer for RX, inner for TX)",
+                "properties": {
+                  "colors": {
+                    "type": "object",
+                    "description": "Gauge colors for RX/TX",
+                    "properties": {
+                      "rx": { "type": "integer", "description": "Receive (download) arc color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "description": "Transmit (upload) arc color", "minimum": 0, "maximum": 255, "default": 128 },
+                      "rx_needle": { "type": "integer", "description": "Receive needle color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "tx_needle": { "type": "integer", "description": "Transmit needle color", "minimum": 0, "maximum": 255, "default": 180 }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "disk" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "mode": { "type": "string", "description": "Display mode for disk I/O", "enum": ["text", "bar", "graph"], "default": "bar" },
+              "disk": { "type": ["string", "null"], "description": "Disk/drive to monitor (auto-detect if omitted)" },
+              "max_speed_mbps": { "type": "number", "description": "Maximum speed in MB/s for scaling (-1 for auto)", "default": -1 },
+              "bar": {
+                "type": "object",
+                "description": "Bar mode settings",
+                "properties": {
+                  "direction": { "type": "string", "description": "Bar orientation", "enum": ["horizontal", "vertical"], "default": "horizontal" },
+                  "border": { "type": "boolean", "description": "Draw border around bars", "default": false },
+                  "colors": {
+                    "type": "object",
+                    "description": "Bar colors for read/write",
+                    "properties": {
+                      "read": { "type": "integer", "description": "Read bar color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "write": { "type": "integer", "description": "Write bar color", "minimum": 0, "maximum": 255, "default": 200 }
+                    }
+                  }
+                }
+              },
+              "graph": {
+                "type": "object",
+                "description": "Graph mode settings",
+                "properties": {
+                  "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
+                  "filled": { "type": "boolean", "description": "Fill area under graph lines", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "description": "Graph colors for read/write",
+                    "properties": {
+                      "read": { "type": "integer", "description": "Read line color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "write": { "type": "integer", "description": "Write line color", "minimum": 0, "maximum": 255, "default": 200 }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "volume" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "mode": { "type": "string", "description": "Display mode for system volume", "enum": ["text", "bar", "gauge", "triangle"], "default": "bar" },
+              "bar": {
+                "type": "object",
+                "description": "Bar mode settings",
+                "properties": {
+                  "direction": { "type": "string", "description": "Bar orientation", "enum": ["horizontal", "vertical"], "default": "horizontal" },
+                  "border": { "type": "boolean", "description": "Draw border around bar", "default": false },
+                  "colors": {
+                    "type": "object",
+                    "description": "Bar colors",
+                    "properties": {
+                      "fill": { "type": "integer", "description": "Bar fill color", "minimum": 0, "maximum": 255, "default": 255 }
+                    }
+                  }
+                }
+              },
+              "gauge": {
+                "type": "object",
+                "description": "Gauge mode settings",
+                "properties": {
+                  "show_ticks": { "type": "boolean", "description": "Show gauge tick marks", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "description": "Gauge colors",
+                    "properties": {
+                      "arc": { "type": "integer", "description": "Gauge arc outline color", "minimum": 0, "maximum": 255, "default": 200 },
+                      "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "ticks": { "type": "integer", "description": "Gauge tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
+                    }
+                  }
+                }
+              },
+              "triangle": {
+                "type": "object",
+                "description": "Triangle mode settings",
+                "properties": {
+                  "border": { "type": "boolean", "description": "Draw border around triangle", "default": false },
+                  "colors": {
+                    "type": "object",
+                    "description": "Triangle colors",
+                    "properties": {
+                      "fill": { "type": "integer", "description": "Triangle fill color", "minimum": 0, "maximum": 255, "default": 255 }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "volume_meter" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "mode": { "type": "string", "description": "Display mode for audio peak meter", "enum": ["text", "bar", "gauge"], "default": "bar" },
+              "bar": {
+                "type": "object",
+                "description": "Bar mode settings",
+                "properties": {
+                  "direction": { "type": "string", "description": "Bar orientation", "enum": ["horizontal", "vertical"], "default": "horizontal" },
+                  "colors": {
+                    "type": "object",
+                    "description": "Bar colors",
+                    "properties": {
+                      "fill": { "type": "integer", "description": "Bar fill color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "clipping": { "type": "integer", "description": "Clipping indicator color", "minimum": 0, "maximum": 255, "default": 200 },
+                      "peak": { "type": "integer", "description": "Peak hold indicator color", "minimum": 0, "maximum": 255, "default": 180 }
+                    }
+                  }
+                }
+              },
+              "gauge": {
+                "type": "object",
+                "description": "Gauge mode settings",
+                "properties": {
+                  "show_ticks": { "type": "boolean", "description": "Show gauge tick marks", "default": true },
+                  "colors": {
+                    "type": "object",
+                    "description": "Gauge colors",
+                    "properties": {
+                      "arc": { "type": "integer", "description": "Gauge arc outline color", "minimum": 0, "maximum": 255, "default": 200 },
+                      "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "ticks": { "type": "integer", "description": "Gauge tick marks color", "minimum": 0, "maximum": 255, "default": 150 },
+                      "clipping": { "type": "integer", "description": "Clipping needle color", "minimum": 0, "maximum": 255, "default": 200 },
+                      "peak": { "type": "integer", "description": "Peak hold indicator color", "minimum": 0, "maximum": 255, "default": 180 }
+                    }
+                  }
+                }
+              },
+              "text": {
+                "type": "object",
+                "description": "Text mode settings",
+                "properties": {
+                  "format": { "type": "string", "description": "Text format string", "default": "%d%%" },
+                  "font": { "type": ["string", "null"], "description": "Font file path (null = default)", "default": null },
+                  "size": { "type": "integer", "description": "Font size in points", "minimum": 6, "maximum": 72, "default": 10 },
+                  "align": {
+                    "type": "object",
+                    "description": "Text alignment",
+                    "properties": {
+                      "h": { "type": "string", "description": "Horizontal alignment", "enum": ["left", "center", "right"], "default": "center" },
+                      "v": { "type": "string", "description": "Vertical alignment", "enum": ["top", "center", "bottom"], "default": "center" }
+                    }
+                  }
+                }
+              },
+              "stereo": {
+                "type": "object",
+                "description": "Stereo channel settings",
+                "properties": {
+                  "enabled": { "type": "boolean", "description": "Show separate left/right channels", "default": false },
+                  "divider": { "type": "integer", "description": "Divider line color between left/right channels (-1=disabled, 0-255=color)", "minimum": -1, "maximum": 255, "default": 64 }
+                }
+              },
+              "metering": {
+                "type": "object",
+                "description": "Audio metering settings",
+                "properties": {
+                  "db_scale": { "type": "boolean", "description": "Use logarithmic dB scale instead of linear", "default": false },
+                  "decay_rate": { "type": "number", "description": "Peak decay rate in dB/second", "minimum": 0.1, "default": 2.0 },
+                  "silence_threshold": { "type": "number", "description": "Threshold below which audio is considered silent", "minimum": 0, "maximum": 1, "default": 0.01 }
+                }
+              },
+              "peak": {
+                "type": "object",
+                "description": "Peak hold indicator settings",
+                "properties": {
+                  "enabled": { "type": "boolean", "description": "Show peak hold indicators", "default": true },
+                  "hold_time": { "type": "number", "description": "Peak hold duration in seconds", "minimum": 0.1, "default": 1.0 }
+                }
+              },
+              "clipping": {
+                "type": "object",
+                "description": "Clipping detection settings",
+                "properties": {
+                  "enabled": { "type": "boolean", "description": "Enable clipping detection", "default": true },
+                  "threshold": { "type": "number", "description": "Clipping threshold (0.0-1.0)", "minimum": 0, "maximum": 1, "default": 0.99 }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "audio_visualizer" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "mode": { "type": "string", "description": "Display mode: spectrum analyzer or oscilloscope", "enum": ["spectrum", "oscilloscope"], "default": "spectrum" },
+              "spectrum": {
+                "type": "object",
+                "description": "Spectrum analyzer settings",
+                "properties": {
+                  "bars": { "type": "integer", "description": "Number of frequency bars", "minimum": 8, "maximum": 128, "default": 32 },
+                  "scale": { "type": "string", "description": "Frequency scale distribution", "enum": ["logarithmic", "linear"], "default": "logarithmic" },
+                  "style": { "type": "string", "description": "Rendering style", "enum": ["bars", "line"], "default": "bars" },
+                  "smoothing": { "type": "number", "description": "Fall-off smoothing factor (0=instant, 1=max smooth)", "minimum": 0, "maximum": 1, "default": 0.7 },
+                  "frequency_compensation": { "type": "boolean", "description": "Boost high frequencies for visual balance", "default": false },
+                  "dynamic_scaling": {
+                    "type": "object",
+                    "description": "Automatic amplitude scaling",
+                    "properties": {
+                      "strength": { "type": "number", "description": "Scaling strength (0=disabled)", "minimum": 0, "maximum": 2, "default": 0 },
+                      "window": { "type": "number", "description": "Rolling average window in seconds", "minimum": 0.1, "maximum": 5, "default": 0.5 }
+                    }
+                  },
+                  "peak": {
+                    "type": "object",
+                    "description": "Peak hold indicator settings",
+                    "properties": {
+                      "enabled": { "type": "boolean", "description": "Show peak hold indicators on bars", "default": true },
+                      "hold_time": { "type": "number", "description": "Peak hold duration in seconds", "minimum": 0.1, "default": 1.0 }
+                    }
+                  },
+                  "colors": {
+                    "type": "object",
+                    "description": "Spectrum colors",
+                    "properties": {
+                      "fill": { "type": "integer", "description": "Bar/line fill color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "left": { "type": "integer", "description": "Left channel color (stereo_separated)", "minimum": 0, "maximum": 255, "default": 255 },
+                      "right": { "type": "integer", "description": "Right channel color (stereo_separated)", "minimum": 0, "maximum": 255, "default": 200 }
+                    }
+                  }
+                }
+              },
+              "oscilloscope": {
+                "type": "object",
+                "description": "Oscilloscope settings",
+                "properties": {
+                  "style": { "type": "string", "description": "Waveform rendering style", "enum": ["line", "filled"], "default": "line" },
+                  "samples": { "type": "integer", "description": "Number of samples to display", "minimum": 32, "maximum": 512, "default": 128 },
+                  "colors": {
+                    "type": "object",
+                    "description": "Oscilloscope colors",
+                    "properties": {
+                      "fill": { "type": "integer", "description": "Waveform color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "left": { "type": "integer", "description": "Left channel color (stereo_separated)", "minimum": 0, "maximum": 255, "default": 255 },
+                      "right": { "type": "integer", "description": "Right channel color (stereo_separated)", "minimum": 0, "maximum": 255, "default": 200 }
+                    }
+                  }
+                }
+              },
+              "channel": { "type": "string", "description": "Audio channel mode", "enum": ["mono", "stereo_combined", "stereo_separated"], "default": "stereo_combined" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "keyboard" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "indicators": {
+                "type": "object",
+                "description": "Keyboard lock indicator settings",
+                "properties": {
+                  "caps": {
+                    "type": "object",
+                    "description": "Caps Lock indicator",
+                    "properties": {
+                      "on": { "type": ["string", "null"], "description": "Text when Caps Lock is on (null = embedded glyph)", "default": null },
+                      "off": { "type": ["string", "null"], "description": "Text when Caps Lock is off (null = embedded glyph)", "default": null }
+                    }
+                  },
+                  "num": {
+                    "type": "object",
+                    "description": "Num Lock indicator",
+                    "properties": {
+                      "on": { "type": ["string", "null"], "description": "Text when Num Lock is on (null = embedded glyph)", "default": null },
+                      "off": { "type": ["string", "null"], "description": "Text when Num Lock is off (null = embedded glyph)", "default": null }
+                    }
+                  },
+                  "scroll": {
+                    "type": "object",
+                    "description": "Scroll Lock indicator",
+                    "properties": {
+                      "on": { "type": ["string", "null"], "description": "Text when Scroll Lock is on (null = embedded glyph)", "default": null },
+                      "off": { "type": ["string", "null"], "description": "Text when Scroll Lock is off (null = embedded glyph)", "default": null }
+                    }
+                  }
+                }
+              },
+              "layout": {
+                "type": "object",
+                "description": "Indicator layout settings",
+                "properties": {
+                  "spacing": { "type": "integer", "description": "Spacing between indicators in pixels", "minimum": 0, "default": 3 },
+                  "separator": { "type": "string", "description": "Separator character between indicators", "default": "" }
+                }
+              },
+              "colors": {
+                "type": "object",
+                "description": "Indicator colors",
+                "properties": {
+                  "on": { "type": "integer", "description": "Color when indicator is active", "minimum": 0, "maximum": 255, "default": 255 },
+                  "off": { "type": "integer", "description": "Color when indicator is inactive", "minimum": 0, "maximum": 255, "default": 100 }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "keyboard_layout" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "format": { "type": "string", "description": "Language code format: iso639-1 (EN), iso639-2 (ENG), or full (English)", "enum": ["iso639-1", "iso639-2", "full"], "default": "iso639-1" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "doom" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "wad": { "type": "string", "description": "WAD file name (auto-downloads doom1.wad if not found)", "default": "doom1.wad" },
+              "bundled_wad_url": { "type": ["string", "null"], "description": "Custom URL for downloading DOOM shareware WAD (null = use default distro.ibiblio.org)", "default": null }
             }
           }
         }

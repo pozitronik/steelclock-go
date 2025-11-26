@@ -305,7 +305,7 @@ func TestErrorWidget_GetStyle(t *testing.T) {
 	widget := NewErrorWidget(128, 40, "TEST")
 	style := widget.GetStyle()
 
-	if style.BackgroundColor != 0 {
-		t.Errorf("GetStyle().BackgroundColor = %d, want 0", style.BackgroundColor)
+	if style.Background != 0 {
+		t.Errorf("GetStyle().Background = %d, want 0", style.Background)
 	}
 }

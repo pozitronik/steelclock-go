@@ -1,46 +1,51 @@
 {
   "$schema": "../config.schema.json",
-  "game_name": "STEELCLOCK_NETWORK",
-  "game_display_name": "SteelClock - Network Monitor",
   "refresh_rate_ms": 1000,
   "display": {
     "width": 128,
     "height": 40,
-    "background_color": 0
-  },
-  "layout": {
-    "type": "basic"
+    "background": 0
   },
   "widgets": [
     {
       "type": "network",
-      "id": "network_gauge",
       "enabled": true,
-      "position": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 40,
-        "z_order": 0
-      },
-      "style": {
-        "background_color": 0,
+      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
+      "style": {"background": 0, "border": -1, "padding": 2},
+      "mode": "gauge",
+      "interface": null,
+      "max_speed_mbps": 100.0,
+      "bar": {
+        "direction": "horizontal",
         "border": false,
-        "border_color": 255
+        "colors": {
+          "rx": 255,
+          "tx": 128
+        }
       },
-      "properties": {
-        "interface": null,
-        "display_mode": "gauge",
-        "update_interval": 1.0,
-        "max_speed_mbps": 100.0,
-        "rx_color": 255,
-        "tx_color": 128,
-        "rx_needle_color": 255,
-        "tx_needle_color": 200,
-        "horizontal_align": "center",
-        "vertical_align": "center",
-        "padding": 2
-      }
+      "graph": {
+        "history": 60,
+        "filled": true,
+        "colors": {
+          "rx": 255,
+          "tx": 128
+        }
+      },
+      "gauge": {
+        "colors": {
+          "rx": 255,
+          "tx": 128,
+          "rx_needle": 255,
+          "tx_needle": 180
+        }
+      },
+      "text": {
+        "format": "RX: %s TX: %s",
+        "font": null,
+        "size": 10,
+        "align": {"h": "center", "v": "center"}
+      },
+      "update_interval": 1.0
     }
   ]
 }

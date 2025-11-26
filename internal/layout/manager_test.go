@@ -29,16 +29,14 @@ func TestNewManager(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			Format:          "15:04",
-			FontSize:        12,
-			HorizontalAlign: "center",
-			VerticalAlign:   "center",
+		Text: &config.TextConfig{
+			Format: "15:04",
+			Size:   12,
+			Align:  &config.AlignConfig{H: "center", V: "center"},
 		},
 	}
 
@@ -72,16 +70,14 @@ func TestManagerComposite(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			Format:          "15:04",
-			FontSize:        12,
-			HorizontalAlign: "center",
-			VerticalAlign:   "center",
+		Text: &config.TextConfig{
+			Format: "15:04",
+			Size:   12,
+			Align:  &config.AlignConfig{H: "center", V: "center"},
 		},
 	}
 
@@ -132,16 +128,14 @@ func TestManagerCompositeMultipleWidgets(t *testing.T) {
 			W: 64,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          true,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     255,
 		},
-		Properties: config.WidgetProperties{
-			Format:          "15:04",
-			FontSize:        10,
-			HorizontalAlign: "center",
-			VerticalAlign:   "center",
+		Text: &config.TextConfig{
+			Format: "15:04",
+			Size:   10,
+			Align:  &config.AlignConfig{H: "center", V: "center"},
 		},
 	}
 
@@ -155,16 +149,14 @@ func TestManagerCompositeMultipleWidgets(t *testing.T) {
 			W: 64,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          true,
-			BorderColor:     255,
+		Style: &config.StyleConfig{
+			Background: 0,
+			Border:     255,
 		},
-		Properties: config.WidgetProperties{
-			Format:          "15:04:05",
-			FontSize:        10,
-			HorizontalAlign: "center",
-			VerticalAlign:   "center",
+		Text: &config.TextConfig{
+			Format: "15:04:05",
+			Size:   10,
+			Align:  &config.AlignConfig{H: "center", V: "center"},
 		},
 	}
 
@@ -214,11 +206,11 @@ func newMockWidgetWithRaceDetection(id string, x, y, w, h int) *mockWidgetWithRa
 		id: id,
 		position: config.PositionConfig{
 			X: x, Y: y, W: w, H: h,
-			ZOrder: 0,
+			Z: 0,
 		},
 		style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
+			Background: 0,
+			Border:     -1,
 		},
 	}
 }
@@ -374,11 +366,11 @@ func newMockWidgetSimple(name string, x, y, w, h, zOrder int) *mockWidgetSimple 
 		name: name,
 		position: config.PositionConfig{
 			X: x, Y: y, W: w, H: h,
-			ZOrder: zOrder,
+			Z: zOrder,
 		},
 		style: config.StyleConfig{
-			BackgroundColor: 0,
-			Border:          false,
+			Background: 0,
+			Border:     -1,
 		},
 	}
 }
@@ -423,9 +415,9 @@ func (m *mockWidgetSimple) GetStyle() config.StyleConfig {
 
 func TestComposite_EmptyWidgetList(t *testing.T) {
 	displayCfg := config.DisplayConfig{
-		Width:           128,
-		Height:          40,
-		BackgroundColor: 0,
+		Width:      128,
+		Height:     40,
+		Background: 0,
 	}
 
 	mgr := NewManager(displayCfg, []widget.Widget{})
@@ -446,9 +438,9 @@ func TestComposite_EmptyWidgetList(t *testing.T) {
 
 func TestComposite_HiddenWidget(t *testing.T) {
 	displayCfg := config.DisplayConfig{
-		Width:           128,
-		Height:          40,
-		BackgroundColor: 0,
+		Width:      128,
+		Height:     40,
+		Background: 0,
 	}
 
 	mockWidget := newMockWidgetSimple("hidden", 0, 0, 128, 40, 0)
@@ -481,9 +473,9 @@ func (m *mockWidgetWithNilRender) Render() (image.Image, error) {
 
 func TestComposite_WidgetRenderError(t *testing.T) {
 	displayCfg := config.DisplayConfig{
-		Width:           128,
-		Height:          40,
-		BackgroundColor: 0,
+		Width:      128,
+		Height:     40,
+		Background: 0,
 	}
 
 	mockWidget := newMockWidgetSimple("error", 0, 0, 128, 40, 0)
@@ -514,9 +506,9 @@ func (m *mockWidgetWithError) Render() (image.Image, error) {
 
 func TestComposite_ZOrderRespected(t *testing.T) {
 	displayCfg := config.DisplayConfig{
-		Width:           128,
-		Height:          40,
-		BackgroundColor: 0,
+		Width:      128,
+		Height:     40,
+		Background: 0,
 	}
 
 	// Create widgets with different z-orders
@@ -587,14 +579,14 @@ func TestComposite_ZOrderRespected(t *testing.T) {
 
 func TestComposite_TransparentBackground(t *testing.T) {
 	displayCfg := config.DisplayConfig{
-		Width:           128,
-		Height:          40,
-		BackgroundColor: 0,
+		Width:      128,
+		Height:     40,
+		Background: 0,
 	}
 
 	// Create widget with transparent background
 	widget1 := newMockWidgetSimple("transparent", 0, 0, 128, 40, 0)
-	widget1.style.BackgroundColor = -1 // Transparent background
+	widget1.style.Background = -1 // Transparent background
 
 	// Create image with some pixels set to 0 (background) and some to 255 (foreground)
 	widget1Img := image.NewGray(image.Rect(0, 0, 128, 40))
@@ -634,14 +626,14 @@ func TestComposite_TransparentBackground(t *testing.T) {
 
 func TestComposite_TransparentLayering(t *testing.T) {
 	displayCfg := config.DisplayConfig{
-		Width:           128,
-		Height:          40,
-		BackgroundColor: 50, // Gray background
+		Width:      128,
+		Height:     40,
+		Background: 50, // Gray background
 	}
 
 	// Bottom widget: opaque
 	widget1 := newMockWidgetSimple("bottom", 0, 0, 128, 40, 0)
-	widget1.style.BackgroundColor = 0
+	widget1.style.Background = 0
 	widget1Img := image.NewGray(image.Rect(0, 0, 128, 40))
 	for y := 0; y < 40; y++ {
 		for x := 0; x < 128; x++ {
@@ -652,7 +644,7 @@ func TestComposite_TransparentLayering(t *testing.T) {
 
 	// Top widget: transparent with holes
 	widget2 := newMockWidgetSimple("top", 0, 0, 128, 40, 1)
-	widget2.style.BackgroundColor = -1 // Transparent
+	widget2.style.Background = -1 // Transparent
 	widget2Img := image.NewGray(image.Rect(0, 0, 128, 40))
 	for y := 0; y < 40; y++ {
 		for x := 0; x < 128; x++ {
@@ -690,9 +682,9 @@ func TestComposite_TransparentLayering(t *testing.T) {
 
 func TestComposite_PartiallyOffscreen(t *testing.T) {
 	displayCfg := config.DisplayConfig{
-		Width:           128,
-		Height:          40,
-		BackgroundColor: 0,
+		Width:      128,
+		Height:     40,
+		Background: 0,
 	}
 
 	// Widget partially outside display bounds (should be clipped)
@@ -720,14 +712,14 @@ func TestComposite_PartiallyOffscreen(t *testing.T) {
 
 func TestCompositeWithTransparency_NonGrayImage(t *testing.T) {
 	displayCfg := config.DisplayConfig{
-		Width:           128,
-		Height:          40,
-		BackgroundColor: 0,
+		Width:      128,
+		Height:     40,
+		Background: 0,
 	}
 
 	// Widget with non-Gray image (should be skipped by compositeWithTransparency)
 	widget1 := newMockWidgetSimple("rgba", 0, 0, 64, 40, 0)
-	widget1.style.BackgroundColor = -1 // Transparent
+	widget1.style.Background = -1 // Transparent
 
 	// Create RGBA image instead of Gray
 	rgbaImg := image.NewRGBA(image.Rect(0, 0, 64, 40))

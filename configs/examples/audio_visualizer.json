@@ -1,40 +1,55 @@
 {
-  "game_name": "SteelClock",
-  "game_display_name": "SteelClock - Audio Visualizer",
+  "$schema": "../config.schema.json",
   "refresh_rate_ms": 33,
   "display": {
     "width": 128,
     "height": 40,
-    "background_color": 0
+    "background": 0
   },
   "widgets": [
     {
-      "id": "spectrum_analyzer",
       "type": "audio_visualizer",
       "enabled": true,
-      "position": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 40
-      },
-      "style": {
-        "background_color": 0,
-        "border": false
-      },
-      "properties": {
-        "display_mode": "spectrum",
-        "update_interval": 0.033,
-        "bar_count": 32,
-        "frequency_scale": "logarithmic",
-        "bar_style": "bars",
+      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
+      "style": {"background": 0, "border": -1, "padding": 0},
+      "mode": "spectrum",
+      "spectrum": {
+        "bars": 32,
+        "scale": "logarithmic",
+        "style": "bars",
         "smoothing": 0.7,
-        "peak_hold": true,
-        "peak_hold_time": 1.0,
         "frequency_compensation": true,
-        "spectrum_dynamic_scaling": 1.0,
-        "fill_color": 255
-      }
+        "dynamic_scaling": {
+          "strength": 1.0,
+          "window": 0.5
+        },
+        "peak": {
+          "enabled": true,
+          "hold_time": 1.0
+        },
+        "colors": {
+          "fill": 255,
+          "left": 255,
+          "right": 200
+        }
+      },
+      "oscilloscope": {
+        "style": "line",
+        "samples": 128,
+        "colors": {
+          "fill": 255,
+          "left": 255,
+          "right": 200
+        }
+      },
+      "channel": "stereo_combined",
+      "auto_hide": {
+        "enabled": false,
+        "timeout": 2.0,
+        "on_silence": false,
+        "silence_time": 2.0
+      },
+      "update_interval": 0.033
     }
   ]
 }

@@ -1,44 +1,51 @@
 {
   "$schema": "../config.schema.json",
-  "game_name": "STEELCLOCK_VOLUME",
-  "game_display_name": "SteelClock - Volume Indicator",
   "refresh_rate_ms": 100,
   "display": {
     "width": 128,
     "height": 40,
-    "background_color": 0
-  },
-  "layout": {
-    "type": "basic"
+    "background": 0
   },
   "widgets": [
     {
       "type": "volume",
-      "id": "volume_triangle",
       "enabled": true,
-      "position": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 40,
-        "z_order": 0
-      },
-      "style": {
-        "background_color": 0,
+      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
+      "style": {"background": 0, "border": -1, "padding": 2},
+      "mode": "triangle",
+      "bar": {
+        "direction": "horizontal",
         "border": false,
-        "border_color": 255
+        "colors": {
+          "fill": 255
+        }
       },
-      "properties": {
-        "display_mode": "triangle",
-        "update_interval": 0.1,
-        "triangle_fill_color": 255,
-        "triangle_border": true,
-        "horizontal_align": "center",
-        "vertical_align": "center",
-        "padding": 2,
-        "auto_hide": true,
-        "auto_hide_timeout": 3.0
-      }
+      "gauge": {
+        "show_ticks": true,
+        "colors": {
+          "arc": 200,
+          "needle": 255,
+          "ticks": 150
+        }
+      },
+      "triangle": {
+        "border": true,
+        "colors": {
+          "fill": 255
+        }
+      },
+      "text": {
+        "format": "%d%%",
+        "font": null,
+        "size": 10,
+        "align": {"h": "center", "v": "center"}
+      },
+      "auto_hide": {
+        "enabled": true,
+        "timeout": 3.0
+      },
+      "update_interval": 0.1,
+      "poll_interval": 0.1
     }
   ]
 }

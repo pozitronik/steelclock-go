@@ -63,9 +63,7 @@ func TestNewVolumeWidget(t *testing.T) {
 					W: 128,
 					H: 40,
 				},
-				Properties: config.WidgetProperties{
-					DisplayMode: tt.displayMode,
-				},
+				Mode: tt.displayMode,
 			}
 
 			widget, err := NewVolumeWidget(cfg)
@@ -97,7 +95,6 @@ func TestNewVolumeWidget_Defaults(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{},
 	}
 
 	widget, err := NewVolumeWidget(cfg)
@@ -143,9 +140,7 @@ func TestVolumeWidget_Update(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-		},
+		Mode: "bar_horizontal",
 	}
 
 	widget, err := NewVolumeWidget(cfg)
@@ -182,9 +177,9 @@ func TestVolumeWidget_RenderText(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "text",
-			FontSize:    10,
+		Mode: "text",
+		Text: &config.TextConfig{
+			Size: 10,
 		},
 	}
 
@@ -224,9 +219,9 @@ func TestVolumeWidget_RenderBarHorizontal(t *testing.T) {
 			W: 128,
 			H: 20,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-			FillColor:   255,
+		Mode: "bar_horizontal",
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
 		},
 	}
 
@@ -260,9 +255,9 @@ func TestVolumeWidget_RenderBarVertical(t *testing.T) {
 			W: 20,
 			H: 128,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_vertical",
-			FillColor:   255,
+		Mode: "bar_vertical",
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
 		},
 	}
 
@@ -296,10 +291,10 @@ func TestVolumeWidget_RenderGauge(t *testing.T) {
 			W: 64,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:      "gauge",
-			GaugeColor:       200,
-			GaugeNeedleColor: 255,
+		Mode: "gauge",
+		Colors: &config.ColorsConfig{
+			Arc:    config.IntPtr(200),
+			Needle: config.IntPtr(255),
 		},
 	}
 
@@ -333,10 +328,12 @@ func TestVolumeWidget_RenderTriangle(t *testing.T) {
 			W: 40,
 			H: 60,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:       "triangle",
-			TriangleFillColor: 255,
-			TriangleBorder:    true,
+		Mode: "triangle",
+		Style: &config.StyleConfig{
+			Border: 255,
+		},
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
 		},
 	}
 
@@ -374,10 +371,10 @@ func TestVolumeWidget_AutoHide(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:     "bar_horizontal",
-			AutoHide:        true,
-			AutoHideTimeout: 0.1, // 100ms for testing
+		Mode: "bar_horizontal",
+		AutoHide: &config.AutoHideConfig{
+			Enabled: true,
+			Timeout: 0.1, // 100ms for testing
 		},
 	}
 
@@ -438,9 +435,9 @@ func TestVolumeWidget_AllModes(t *testing.T) {
 					W: 64,
 					H: 64,
 				},
-				Properties: config.WidgetProperties{
-					DisplayMode: mode,
-					FontSize:    10,
+				Mode: mode,
+				Text: &config.TextConfig{
+					Size: 10,
 				},
 			}
 
@@ -475,9 +472,7 @@ func TestVolumeWidget_SmallSize(t *testing.T) {
 			W: 10,
 			H: 10,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-		},
+		Mode: "bar_horizontal",
 	}
 
 	widget, err := NewVolumeWidget(cfg)
@@ -510,14 +505,10 @@ func TestVolumeWidget_WithBorder(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Style: config.StyleConfig{
-			Border:      true,
-			BorderColor: 255,
+		Style: &config.StyleConfig{
+			Border: 255,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-			BarBorder:   true,
-		},
+		Mode: "bar_horizontal",
 	}
 
 	widget, err := NewVolumeWidget(cfg)
@@ -549,9 +540,7 @@ func TestVolumeWidget_ConcurrentAccess(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-		},
+		Mode: "bar_horizontal",
 	}
 
 	widget, err := NewVolumeWidget(cfg)
@@ -595,9 +584,7 @@ func TestVolumeWidget_Stop(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-		},
+		Mode: "bar_horizontal",
 	}
 
 	widget, err := NewVolumeWidget(cfg)
@@ -651,9 +638,7 @@ func TestVolumeWidget_RenderMuted(t *testing.T) {
 			W: 64,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-		},
+		Mode: "bar_horizontal",
 	}
 
 	widget, err := NewVolumeWidget(cfg)
@@ -698,10 +683,8 @@ func TestVolumeWidget_UpdateInterval(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:    "bar_horizontal",
-			UpdateInterval: 0.5, // 500ms
-		},
+		Mode:           "bar_horizontal",
+		UpdateInterval: 0.5, // 500ms
 	}
 
 	widget, err := NewVolumeWidget(cfg)

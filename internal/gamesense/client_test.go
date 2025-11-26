@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestNewClient(t *testing.T) {
@@ -573,5 +574,258 @@ func TestRemoveGame_Success(t *testing.T) {
 	err := client.RemoveGame()
 	if err != nil {
 		t.Errorf("RemoveGame() error = %v", err)
+	}
+}
+
+func TestGameName(t *testing.T) {
+	client := &Client{
+		gameName:        "MY_GAME",
+		gameDisplayName: "My Game",
+	}
+
+	if client.GameName() != "MY_GAME" {
+		t.Errorf("GameName() = %s, want MY_GAME", client.GameName())
+	}
+}
+
+func TestSupportsMultipleEvents_Supported(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/supports_multiple_game_events" && r.Method == "GET" {
+			w.WriteHeader(http.StatusOK)
+		}
+	}))
+	defer server.Close()
+
+	client := &Client{
+		baseURL:    server.URL,
+		gameName:   "TEST_GAME",
+		httpClient: &http.Client{},
+	}
+
+	if !client.SupportsMultipleEvents() {
+		t.Error("SupportsMultipleEvents() should return true when server returns 200")
+	}
+}
+
+func TestSupportsMultipleEvents_NotSupported(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/supports_multiple_game_events" {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	client := &Client{
+		baseURL:    server.URL,
+		gameName:   "TEST_GAME",
+		httpClient: &http.Client{},
+	}
+
+	if client.SupportsMultipleEvents() {
+		t.Error("SupportsMultipleEvents() should return false when server returns 404")
+	}
+}
+
+func TestSupportsMultipleEvents_ServerError(t *testing.T) {
+	client := &Client{
+		baseURL:    "http://localhost:1", // Invalid port
+		gameName:   "TEST_GAME",
+		httpClient: &http.Client{Timeout: 100 * time.Millisecond},
+	}
+
+	if client.SupportsMultipleEvents() {
+		t.Error("SupportsMultipleEvents() should return false on connection error")
+	}
+}
+
+func TestSendScreenDataMultiRes(t *testing.T) {
+	var receivedPayload map[string]interface{}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/game_event" {
+			_ = json.NewDecoder(r.Body).Decode(&receivedPayload)
+			w.WriteHeader(http.StatusOK)
+		}
+	}))
+	defer server.Close()
+
+	client := &Client{
+		baseURL:    server.URL,
+		gameName:   "TEST_GAME",
+		httpClient: &http.Client{},
+	}
+
+	resolutionData := map[string][]int{
+		"image-data-128x40": make([]int, 640),
+		"image-data-128x36": make([]int, 576),
+	}
+
+	err := client.SendScreenDataMultiRes("TEST_EVENT", resolutionData)
+	if err != nil {
+		t.Errorf("SendScreenDataMultiRes() error = %v", err)
+	}
+
+	// Verify payload structure
+	if receivedPayload["game"] != "TEST_GAME" {
+		t.Errorf("game = %v, want TEST_GAME", receivedPayload["game"])
+	}
+	if receivedPayload["event"] != "TEST_EVENT" {
+		t.Errorf("event = %v, want TEST_EVENT", receivedPayload["event"])
+	}
+
+	// Verify frame contains resolution data
+	data := receivedPayload["data"].(map[string]interface{})
+	frame := data["frame"].(map[string]interface{})
+	if _, ok := frame["image-data-128x40"]; !ok {
+		t.Error("frame should contain image-data-128x40")
+	}
+	if _, ok := frame["image-data-128x36"]; !ok {
+		t.Error("frame should contain image-data-128x36")
+	}
+}
+
+func TestSendScreenDataMultiRes_Empty(t *testing.T) {
+	client := &Client{
+		baseURL:    "http://localhost:1234",
+		gameName:   "TEST_GAME",
+		httpClient: &http.Client{},
+	}
+
+	err := client.SendScreenDataMultiRes("TEST_EVENT", map[string][]int{})
+	if err == nil {
+		t.Error("SendScreenDataMultiRes() with empty data should return error")
+	}
+}
+
+func TestSendMultipleScreenData(t *testing.T) {
+	var receivedPayload map[string]interface{}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/multiple_game_events" {
+			_ = json.NewDecoder(r.Body).Decode(&receivedPayload)
+			w.WriteHeader(http.StatusOK)
+		}
+	}))
+	defer server.Close()
+
+	client := &Client{
+		baseURL:    server.URL,
+		gameName:   "TEST_GAME",
+		httpClient: &http.Client{},
+	}
+
+	frames := [][]int{
+		make([]int, 640),
+		make([]int, 640),
+		make([]int, 640),
+	}
+
+	err := client.SendMultipleScreenData("TEST_EVENT", frames)
+	if err != nil {
+		t.Errorf("SendMultipleScreenData() error = %v", err)
+	}
+
+	// Verify payload structure
+	if receivedPayload["game"] != "TEST_GAME" {
+		t.Errorf("game = %v, want TEST_GAME", receivedPayload["game"])
+	}
+
+	events := receivedPayload["events"].([]interface{})
+	if len(events) != 3 {
+		t.Errorf("events length = %d, want 3", len(events))
+	}
+}
+
+func TestSendMultipleScreenData_Empty(t *testing.T) {
+	client := &Client{
+		baseURL:    "http://localhost:1234",
+		gameName:   "TEST_GAME",
+		httpClient: &http.Client{},
+	}
+
+	// Empty frames should return nil (no-op)
+	err := client.SendMultipleScreenData("TEST_EVENT", [][]int{})
+	if err != nil {
+		t.Errorf("SendMultipleScreenData() with empty frames should not error, got: %v", err)
+	}
+}
+
+func TestSendMultipleScreenData_InvalidSize(t *testing.T) {
+	client := &Client{
+		baseURL:    "http://localhost:1234",
+		gameName:   "TEST_GAME",
+		httpClient: &http.Client{},
+	}
+
+	frames := [][]int{
+		make([]int, 640),
+		make([]int, 100), // Invalid size
+	}
+
+	err := client.SendMultipleScreenData("TEST_EVENT", frames)
+	if err == nil {
+		t.Error("SendMultipleScreenData() with invalid bitmap size should return error")
+	}
+}
+
+func TestRegisterGame_WithDeinitializeTimer(t *testing.T) {
+	var receivedPayload map[string]interface{}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/game_metadata" {
+			_ = json.NewDecoder(r.Body).Decode(&receivedPayload)
+			w.WriteHeader(http.StatusOK)
+		}
+	}))
+	defer server.Close()
+
+	client := &Client{
+		baseURL:         server.URL,
+		gameName:        "TEST_GAME",
+		gameDisplayName: "Test Game",
+		httpClient:      &http.Client{},
+	}
+
+	err := client.RegisterGame("Developer", 15000)
+	if err != nil {
+		t.Fatalf("RegisterGame() error = %v", err)
+	}
+
+	// Verify deinitialize timer was included
+	timer, ok := receivedPayload["deinitialize_timer_length_ms"]
+	if !ok {
+		t.Error("RegisterGame() with timer > 0 should include deinitialize_timer_length_ms")
+	}
+	if timer.(float64) != 15000 {
+		t.Errorf("deinitialize_timer_length_ms = %v, want 15000", timer)
+	}
+}
+
+func TestRegisterGame_WithoutDeinitializeTimer(t *testing.T) {
+	var receivedPayload map[string]interface{}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/game_metadata" {
+			_ = json.NewDecoder(r.Body).Decode(&receivedPayload)
+			w.WriteHeader(http.StatusOK)
+		}
+	}))
+	defer server.Close()
+
+	client := &Client{
+		baseURL:         server.URL,
+		gameName:        "TEST_GAME",
+		gameDisplayName: "Test Game",
+		httpClient:      &http.Client{},
+	}
+
+	err := client.RegisterGame("Developer", 0)
+	if err != nil {
+		t.Fatalf("RegisterGame() error = %v", err)
+	}
+
+	// Verify deinitialize timer was NOT included when 0
+	if _, ok := receivedPayload["deinitialize_timer_length_ms"]; ok {
+		t.Error("RegisterGame() with timer = 0 should not include deinitialize_timer_length_ms")
 	}
 }

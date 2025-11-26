@@ -16,14 +16,18 @@ func TestNewDiskWidget(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DiskName:      &diskName,
-			DisplayMode:   "text",
-			FontSize:      10,
-			ReadColor:     255,
-			WriteColor:    200,
-			MaxSpeedMbps:  100,
-			HistoryLength: 30,
+		Mode:         "text",
+		Disk:         &diskName,
+		MaxSpeedMbps: 100,
+		Text: &config.TextConfig{
+			Size: 10,
+		},
+		Colors: &config.ColorsConfig{
+			Read:  config.IntPtr(255),
+			Write: config.IntPtr(200),
+		},
+		Graph: &config.GraphConfig{
+			History: 30,
 		},
 	}
 
@@ -50,10 +54,8 @@ func TestNewDiskWidget_AllDisks(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			// DiskName intentionally nil to monitor all disks
-			DisplayMode: "text",
-		},
+		Mode: "text",
+		// Disk intentionally nil to monitor all disks
 	}
 
 	widget, err := NewDiskWidget(cfg)
@@ -75,7 +77,6 @@ func TestNewDiskWidget_Defaults(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{},
 	}
 
 	widget, err := NewDiskWidget(cfg)
@@ -110,9 +111,7 @@ func TestDiskWidget_Update(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "text",
-		},
+		Mode: "text",
 	}
 
 	widget, err := NewDiskWidget(cfg)
@@ -151,9 +150,9 @@ func TestDiskWidget_RenderText(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "text",
-			FontSize:    10,
+		Mode: "text",
+		Text: &config.TextConfig{
+			Size: 10,
 		},
 	}
 
@@ -188,11 +187,11 @@ func TestDiskWidget_RenderBarHorizontal(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:  "bar_horizontal",
-			ReadColor:    255,
-			WriteColor:   200,
-			MaxSpeedMbps: 100,
+		Mode:         "bar_horizontal",
+		MaxSpeedMbps: 100,
+		Colors: &config.ColorsConfig{
+			Read:  config.IntPtr(255),
+			Write: config.IntPtr(200),
 		},
 	}
 
@@ -222,10 +221,10 @@ func TestDiskWidget_RenderBarVertical(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_vertical",
-			ReadColor:   255,
-			WriteColor:  200,
+		Mode: "bar_vertical",
+		Colors: &config.ColorsConfig{
+			Read:  config.IntPtr(255),
+			Write: config.IntPtr(200),
 		},
 	}
 
@@ -255,11 +254,13 @@ func TestDiskWidget_RenderGraph(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:   "graph",
-			ReadColor:     255,
-			WriteColor:    200,
-			HistoryLength: 30,
+		Mode: "graph",
+		Colors: &config.ColorsConfig{
+			Read:  config.IntPtr(255),
+			Write: config.IntPtr(200),
+		},
+		Graph: &config.GraphConfig{
+			History: 30,
 		},
 	}
 
@@ -292,9 +293,9 @@ func TestDiskWidget_RenderGraph_InsufficientHistory(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:   "graph",
-			HistoryLength: 30,
+		Mode: "graph",
+		Graph: &config.GraphConfig{
+			History: 30,
 		},
 	}
 
@@ -326,10 +327,8 @@ func TestDiskWidget_AutoScale(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:  "bar_horizontal",
-			MaxSpeedMbps: -1, // Auto-scale
-		},
+		Mode:         "bar_horizontal",
+		MaxSpeedMbps: -1, // Auto-scale
 	}
 
 	widget, err := NewDiskWidget(cfg)
@@ -360,10 +359,8 @@ func TestDiskWidget_SpecificDisk(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DiskName:    &diskName,
-			DisplayMode: "text",
-		},
+		Mode: "text",
+		Disk: &diskName,
 	}
 
 	widget, err := NewDiskWidget(cfg)
@@ -387,9 +384,7 @@ func TestDiskWidget_ConcurrentAccess(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "text",
-		},
+		Mode: "text",
 	}
 
 	widget, err := NewDiskWidget(cfg)
