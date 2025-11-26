@@ -31,6 +31,7 @@ var ValidWidgetTypes = map[string]bool{
 	"volume_meter":     true,
 	"audio_visualizer": true,
 	"doom":             true,
+	"winamp":           true,
 }
 
 // Validate checks that the configuration is valid
