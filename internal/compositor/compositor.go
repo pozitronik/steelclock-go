@@ -15,6 +15,17 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/widget"
 )
 
+const (
+	// HeartbeatInterval is how often to send heartbeat to GameSense API
+	HeartbeatInterval = 10 * time.Second
+
+	// MaxHeartbeatFailures is how many consecutive failures before triggering backend failure callback
+	MaxHeartbeatFailures = 2
+
+	// DefaultEventName is the GameSense event name for display updates
+	DefaultEventName = "STEELCLOCK_DISPLAY"
+)
+
 // Resolution represents a display resolution
 type Resolution struct {
 	Width  int
@@ -71,7 +82,7 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 		client:          client,
 		layoutManager:   layoutMgr,
 		refreshRate:     refreshRate,
-		eventName:       "STEELCLOCK_DISPLAY",
+		eventName:       DefaultEventName,
 		widgets:         widgets,
 		stopChan:        make(chan struct{}),
 		batchingEnabled: cfg.EventBatchingEnabled,
@@ -292,9 +303,7 @@ func (c *Compositor) heartbeatLoop() {
 	defer c.wg.Done()
 	defer logPanic("heartbeatLoop")
 
-	const maxFailures = 2 // Trigger callback after 2 consecutive failures (20 seconds)
-
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(HeartbeatInterval)
 	defer ticker.Stop()
 
 	for {
@@ -307,7 +316,7 @@ func (c *Compositor) heartbeatLoop() {
 
 				c.failureMu.Lock()
 				c.heartbeatFailures++
-				shouldNotify := c.heartbeatFailures >= maxFailures && !c.backendFailureCalled && c.OnBackendFailure != nil
+				shouldNotify := c.heartbeatFailures >= MaxHeartbeatFailures && !c.backendFailureCalled && c.OnBackendFailure != nil
 				if shouldNotify {
 					c.backendFailureCalled = true
 				}

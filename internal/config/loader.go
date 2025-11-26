@@ -12,6 +12,18 @@ const (
 	// Note: game_name and game_display_name MUST be different or GameSense API returns 400 error
 	DefaultGameName    = "STEELCLOCK"
 	DefaultGameDisplay = "SteelClock"
+
+	// DefaultDisplayWidth is the common OLED display width for SteelSeries devices
+	DefaultDisplayWidth = 128
+
+	// DefaultDisplayHeight is the common OLED display height for SteelSeries devices
+	DefaultDisplayHeight = 40
+
+	// DefaultRefreshRateMs is the default frame rate (10 FPS)
+	DefaultRefreshRateMs = 100
+
+	// BorderDisabled represents disabled border value
+	BorderDisabled = -1
 )
 
 // BoolPtr returns a pointer to a bool value
@@ -58,10 +70,10 @@ func CreateDefault() *Config {
 	cfg := &Config{
 		GameName:        DefaultGameName,
 		GameDisplayName: DefaultGameDisplay,
-		RefreshRateMs:   100,
+		RefreshRateMs:   DefaultRefreshRateMs,
 		Display: DisplayConfig{
-			Width:  128,
-			Height: 40,
+			Width:  DefaultDisplayWidth,
+			Height: DefaultDisplayHeight,
 		},
 		Widgets: []WidgetConfig{
 			{
@@ -71,13 +83,13 @@ func CreateDefault() *Config {
 				Position: PositionConfig{
 					X: 0,
 					Y: 0,
-					W: 128,
-					H: 40,
+					W: DefaultDisplayWidth,
+					H: DefaultDisplayHeight,
 					Z: 0,
 				},
 				Style: &StyleConfig{
 					Background: 0,
-					Border:     -1, // disabled
+					Border:     BorderDisabled,
 				},
 				Text: &TextConfig{
 					Format: "%H:%M:%S",
