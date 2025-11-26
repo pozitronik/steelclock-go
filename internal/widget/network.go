@@ -44,40 +44,16 @@ type NetworkWidget struct {
 // NewNetworkWidget creates a new network widget
 func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 	base := NewBaseWidget(cfg)
+	helper := NewConfigHelper(cfg)
 
-	displayMode := cfg.Mode
-	if displayMode == "" {
-		displayMode = "text"
-	}
+	// Extract common settings using helper
+	displayMode := helper.GetDisplayMode("text")
+	textSettings := helper.GetTextSettings()
+	padding := helper.GetPadding()
+	barSettings := helper.GetBarSettings()
+	graphSettings := helper.GetGraphSettings()
 
-	// Extract text settings
-	fontSize := 10
-	fontName := ""
-	horizAlign := "center"
-	vertAlign := "center"
-	padding := 0
-
-	if cfg.Text != nil {
-		if cfg.Text.Size > 0 {
-			fontSize = cfg.Text.Size
-		}
-		fontName = cfg.Text.Font
-		if cfg.Text.Align != nil {
-			if cfg.Text.Align.H != "" {
-				horizAlign = cfg.Text.Align.H
-			}
-			if cfg.Text.Align.V != "" {
-				vertAlign = cfg.Text.Align.V
-			}
-		}
-	}
-
-	// Extract padding from style
-	if cfg.Style != nil {
-		padding = cfg.Style.Padding
-	}
-
-	// Extract colors from mode-specific configs
+	// Extract network-specific colors (rx/tx)
 	rxColor := 255
 	txColor := 255
 	rxNeedleColor := 255
@@ -125,36 +101,10 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		maxSpeed = -1 // Auto-scale
 	}
 
-	// Extract graph settings
-	historyLen := 30
-	graphFilled := true // Default to filled
-	if cfg.Graph != nil {
-		if cfg.Graph.History > 0 {
-			historyLen = cfg.Graph.History
-		}
-		if cfg.Graph.Filled != nil {
-			graphFilled = *cfg.Graph.Filled
-		}
-	}
-
-	// Extract bar settings
-	barDirection := "horizontal"
-	barBorder := false
-	if cfg.Bar != nil {
-		if cfg.Bar.Direction != "" {
-			barDirection = cfg.Bar.Direction
-		}
-		barBorder = cfg.Bar.Border
-	}
-
 	// Load font for text mode
-	var fontFace font.Face
-	var err error
-	if displayMode == "text" {
-		fontFace, err = bitmap.LoadFont(fontName, fontSize)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load font: %w", err)
-		}
+	fontFace, err := helper.LoadFontForTextMode(displayMode)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
 
 	return &NetworkWidget{
@@ -162,20 +112,20 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		displayMode:   displayMode,
 		interfaceName: cfg.Interface,
 		maxSpeedMbps:  maxSpeed,
-		fontSize:      fontSize,
-		horizAlign:    horizAlign,
-		vertAlign:     vertAlign,
+		fontSize:      textSettings.FontSize,
+		horizAlign:    textSettings.HorizAlign,
+		vertAlign:     textSettings.VertAlign,
 		padding:       padding,
-		barDirection:  barDirection,
-		barBorder:     barBorder,
-		graphFilled:   graphFilled,
+		barDirection:  barSettings.Direction,
+		barBorder:     barSettings.Border,
+		graphFilled:   graphSettings.Filled,
 		rxColor:       uint8(rxColor),
 		txColor:       uint8(txColor),
 		rxNeedleColor: uint8(rxNeedleColor),
 		txNeedleColor: uint8(txNeedleColor),
-		historyLen:    historyLen,
-		rxHistory:     make([]float64, 0, historyLen),
-		txHistory:     make([]float64, 0, historyLen),
+		historyLen:    graphSettings.HistoryLen,
+		rxHistory:     make([]float64, 0, graphSettings.HistoryLen),
+		txHistory:     make([]float64, 0, graphSettings.HistoryLen),
 		fontFace:      fontFace,
 	}, nil
 }

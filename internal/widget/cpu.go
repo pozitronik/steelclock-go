@@ -48,112 +48,17 @@ type CPUWidget struct {
 // NewCPUWidget creates a new CPU widget
 func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 	base := NewBaseWidget(cfg)
+	helper := NewConfigHelper(cfg)
 
-	displayMode := cfg.Mode
-	if displayMode == "" {
-		displayMode = "text"
-	}
-
-	// Extract text settings
-	fontSize := 10
-	fontName := ""
-	horizAlign := "center"
-	vertAlign := "center"
-	padding := 0
-
-	if cfg.Text != nil {
-		if cfg.Text.Size > 0 {
-			fontSize = cfg.Text.Size
-		}
-		fontName = cfg.Text.Font
-		if cfg.Text.Align != nil {
-			if cfg.Text.Align.H != "" {
-				horizAlign = cfg.Text.Align.H
-			}
-			if cfg.Text.Align.V != "" {
-				vertAlign = cfg.Text.Align.V
-			}
-		}
-	}
-
-	// Extract padding from style
-	if cfg.Style != nil {
-		padding = cfg.Style.Padding
-	}
-
-	// Extract colors from mode-specific configs
-	fillColor := 255
-	gaugeColor := 200
-	gaugeNeedleColor := 255
-	gaugeShowTicks := true
-	gaugeTicksColor := 150
-
-	switch displayMode {
-	case "bar":
-		if cfg.Bar != nil && cfg.Bar.Colors != nil {
-			if cfg.Bar.Colors.Fill != nil {
-				fillColor = *cfg.Bar.Colors.Fill
-			}
-		}
-	case "graph":
-		if cfg.Graph != nil && cfg.Graph.Colors != nil {
-			if cfg.Graph.Colors.Fill != nil {
-				fillColor = *cfg.Graph.Colors.Fill
-			}
-		}
-	case "gauge":
-		if cfg.Gauge != nil {
-			if cfg.Gauge.ShowTicks != nil {
-				gaugeShowTicks = *cfg.Gauge.ShowTicks
-			}
-			if cfg.Gauge.Colors != nil {
-				if cfg.Gauge.Colors.Fill != nil {
-					fillColor = *cfg.Gauge.Colors.Fill
-				}
-				if cfg.Gauge.Colors.Arc != nil {
-					gaugeColor = *cfg.Gauge.Colors.Arc
-				}
-				if cfg.Gauge.Colors.Needle != nil {
-					gaugeNeedleColor = *cfg.Gauge.Colors.Needle
-				}
-				if cfg.Gauge.Colors.Ticks != nil {
-					gaugeTicksColor = *cfg.Gauge.Colors.Ticks
-				}
-			}
-		}
-	}
-
-	// Extract graph settings
-	historyLen := 30
-	graphFilled := true // Default to filled
-	if cfg.Graph != nil {
-		if cfg.Graph.History > 0 {
-			historyLen = cfg.Graph.History
-		}
-		if cfg.Graph.Filled != nil {
-			graphFilled = *cfg.Graph.Filled
-		}
-	}
-
-	// Extract per-core settings
-	perCore := false
-	coreBorder := false
-	coreMargin := 0
-	if cfg.PerCore != nil {
-		perCore = cfg.PerCore.Enabled
-		coreBorder = cfg.PerCore.Border
-		coreMargin = cfg.PerCore.Margin
-	}
-
-	// Extract bar settings
-	barDirection := "horizontal"
-	barBorder := false
-	if cfg.Bar != nil {
-		if cfg.Bar.Direction != "" {
-			barDirection = cfg.Bar.Direction
-		}
-		barBorder = cfg.Bar.Border
-	}
+	// Extract common settings using helper
+	displayMode := helper.GetDisplayMode("text")
+	textSettings := helper.GetTextSettings()
+	padding := helper.GetPadding()
+	barSettings := helper.GetBarSettings()
+	graphSettings := helper.GetGraphSettings()
+	gaugeSettings := helper.GetGaugeSettings()
+	fillColor := helper.GetFillColorForMode(displayMode)
+	perCore, coreBorder, coreMargin := helper.GetPerCoreSettings()
 
 	// Get core count
 	cores, err := cpu.Counts(true)
@@ -162,36 +67,33 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 	}
 
 	// Load font for text mode
-	var fontFace font.Face
-	if displayMode == "text" {
-		fontFace, err = bitmap.LoadFont(fontName, fontSize)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load font: %w", err)
-		}
+	fontFace, err := helper.LoadFontForTextMode(displayMode)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
 
 	return &CPUWidget{
 		BaseWidget:       base,
 		displayMode:      displayMode,
 		perCore:          perCore,
-		fontSize:         fontSize,
-		fontName:         fontName,
-		horizAlign:       horizAlign,
-		vertAlign:        vertAlign,
+		fontSize:         textSettings.FontSize,
+		fontName:         textSettings.FontName,
+		horizAlign:       textSettings.HorizAlign,
+		vertAlign:        textSettings.VertAlign,
 		padding:          padding,
 		coreBorder:       coreBorder,
 		coreMargin:       coreMargin,
-		barDirection:     barDirection,
-		barBorder:        barBorder,
-		graphFilled:      graphFilled,
+		barDirection:     barSettings.Direction,
+		barBorder:        barSettings.Border,
+		graphFilled:      graphSettings.Filled,
 		fillColor:        uint8(fillColor),
-		gaugeColor:       uint8(gaugeColor),
-		gaugeNeedleColor: uint8(gaugeNeedleColor),
-		gaugeShowTicks:   gaugeShowTicks,
-		gaugeTicksColor:  uint8(gaugeTicksColor),
-		historyLen:       historyLen,
-		historySingle:    make([]float64, 0, historyLen),
-		historyPerCore:   make([][]float64, 0, historyLen),
+		gaugeColor:       uint8(gaugeSettings.ArcColor),
+		gaugeNeedleColor: uint8(gaugeSettings.NeedleColor),
+		gaugeShowTicks:   gaugeSettings.ShowTicks,
+		gaugeTicksColor:  uint8(gaugeSettings.TicksColor),
+		historyLen:       graphSettings.HistoryLen,
+		historySingle:    make([]float64, 0, graphSettings.HistoryLen),
+		historyPerCore:   make([][]float64, 0, graphSettings.HistoryLen),
 		coreCount:        cores,
 		fontFace:         fontFace,
 	}, nil

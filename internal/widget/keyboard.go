@@ -41,33 +41,11 @@ type KeyboardWidget struct {
 // NewKeyboardWidget creates a new keyboard widget
 func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
 	base := NewBaseWidget(cfg)
+	helper := NewConfigHelper(cfg)
 
-	// Extract text settings
-	fontSize := 10
-	fontName := ""
-	horizAlign := "center"
-	vertAlign := "center"
-	padding := 0
-
-	if cfg.Text != nil {
-		if cfg.Text.Size > 0 {
-			fontSize = cfg.Text.Size
-		}
-		fontName = cfg.Text.Font
-		if cfg.Text.Align != nil {
-			if cfg.Text.Align.H != "" {
-				horizAlign = cfg.Text.Align.H
-			}
-			if cfg.Text.Align.V != "" {
-				vertAlign = cfg.Text.Align.V
-			}
-		}
-	}
-
-	// Extract padding from style
-	if cfg.Style != nil {
-		padding = cfg.Style.Padding
-	}
+	// Extract common settings using helper
+	textSettings := helper.GetTextSettings()
+	padding := helper.GetPadding()
 
 	// Color handling - only apply defaults when not explicitly set (nil)
 	// Allow 0 as valid value (black/invisible)
@@ -142,16 +120,16 @@ func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
 	}
 
 	// Load font (needed when any indicator uses text mode)
-	fontFace, err := bitmap.LoadFont(fontName, fontSize)
+	fontFace, err := bitmap.LoadFont(textSettings.FontName, textSettings.FontSize)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
 
 	return &KeyboardWidget{
 		BaseWidget:    base,
-		fontSize:      fontSize,
-		horizAlign:    horizAlign,
-		vertAlign:     vertAlign,
+		fontSize:      textSettings.FontSize,
+		horizAlign:    textSettings.HorizAlign,
+		vertAlign:     textSettings.VertAlign,
 		padding:       padding,
 		spacing:       spacing,
 		separator:     separator,

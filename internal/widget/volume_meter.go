@@ -94,20 +94,20 @@ type VolumeMeterWidget struct {
 //nolint:gocyclo // Complex initialization logic for different display modes
 func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	base := NewBaseWidget(cfg)
+	helper := NewConfigHelper(cfg)
+
+	// Extract common settings using helper
+	textSettings := helper.GetTextSettings()
+	padding := helper.GetPadding()
+	barSettings := helper.GetBarSettings()
+	gaugeSettings := helper.GetGaugeSettings()
 
 	// Display mode - translate schema mode to internal mode
-	displayMode := cfg.Mode
-	if displayMode == "" {
-		displayMode = "bar" // Default to bar mode
-	}
+	displayMode := helper.GetDisplayMode("bar")
 
 	// Handle "bar" mode by checking bar.direction
 	if displayMode == "bar" {
-		direction := "horizontal" // Default direction
-		if cfg.Bar != nil && cfg.Bar.Direction != "" {
-			direction = cfg.Bar.Direction
-		}
-		if direction == "vertical" {
+		if barSettings.Direction == "vertical" {
 			displayMode = "bar_vertical"
 		} else {
 			displayMode = "bar_horizontal"
@@ -130,38 +130,10 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	clippingColor := 200
 	leftChannelColor := 255
 	rightChannelColor := 200
-	gaugeColor := 200
-	gaugeNeedleColor := 255
-	gaugeShowTicks := true
-	gaugeTicksColor := 150
 
 	if cfg.Colors != nil {
 		if cfg.Colors.Fill != nil {
 			fillColor = *cfg.Colors.Fill
-		}
-		if cfg.Colors.Arc != nil {
-			gaugeColor = *cfg.Colors.Arc
-		}
-		if cfg.Colors.Needle != nil {
-			gaugeNeedleColor = *cfg.Colors.Needle
-		}
-	}
-
-	// Gauge-specific settings
-	if cfg.Gauge != nil {
-		if cfg.Gauge.ShowTicks != nil {
-			gaugeShowTicks = *cfg.Gauge.ShowTicks
-		}
-		if cfg.Gauge.Colors != nil {
-			if cfg.Gauge.Colors.Arc != nil {
-				gaugeColor = *cfg.Gauge.Colors.Arc
-			}
-			if cfg.Gauge.Colors.Needle != nil {
-				gaugeNeedleColor = *cfg.Gauge.Colors.Needle
-			}
-			if cfg.Gauge.Colors.Ticks != nil {
-				gaugeTicksColor = *cfg.Gauge.Colors.Ticks
-			}
 		}
 	}
 
@@ -229,50 +201,11 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		}
 	}
 
-	// Extract text settings
-	fontSize := 10
-	fontName := ""
-	horizontalAlign := "center"
-	verticalAlign := "center"
-	padding := 0
+	// Load font for text mode (ignore error - degrades gracefully)
+	fontFace, _ := helper.LoadFontForTextMode(displayMode)
 
-	if cfg.Text != nil {
-		if cfg.Text.Size > 0 {
-			fontSize = cfg.Text.Size
-		}
-		fontName = cfg.Text.Font
-		if cfg.Text.Align != nil {
-			if cfg.Text.Align.H != "" {
-				horizontalAlign = cfg.Text.Align.H
-			}
-			if cfg.Text.Align.V != "" {
-				verticalAlign = cfg.Text.Align.V
-			}
-		}
-	}
-
-	// Extract padding from style
-	if cfg.Style != nil {
-		padding = cfg.Style.Padding
-	}
-
-	// Load font for text mode
-	var fontFace font.Face
-	if displayMode == "text" {
-		face, err := bitmap.LoadFont(fontName, fontSize)
-		if err == nil {
-			fontFace = face
-		}
-	}
-
-	// Extract bar settings
-	barBorder := false
-	if cfg.Bar != nil {
-		barBorder = cfg.Bar.Border
-	}
-
-	// Also check style for border (handle nil pointer)
-	// border >= 0 means enabled with that color
+	// Border settings (combine bar and style)
+	barBorder := barSettings.Border
 	style := config.StyleConfig{Border: -1} // Default: disabled
 	if cfg.Style != nil {
 		style = *cfg.Style
@@ -296,12 +229,12 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		rightChannelColor:   uint8(rightChannelColor),
 		barBorder:           barBorder,
 		borderColor:         uint8(borderColor),
-		gaugeColor:          uint8(gaugeColor),
-		gaugeNeedleColor:    uint8(gaugeNeedleColor),
-		gaugeShowTicks:      gaugeShowTicks,
-		gaugeTicksColor:     uint8(gaugeTicksColor),
-		horizontalAlign:     horizontalAlign,
-		verticalAlign:       verticalAlign,
+		gaugeColor:          uint8(gaugeSettings.ArcColor),
+		gaugeNeedleColor:    uint8(gaugeSettings.NeedleColor),
+		gaugeShowTicks:      gaugeSettings.ShowTicks,
+		gaugeTicksColor:     uint8(gaugeSettings.TicksColor),
+		horizontalAlign:     textSettings.HorizAlign,
+		verticalAlign:       textSettings.VertAlign,
 		padding:             padding,
 		stereoMode:          stereoMode,
 		useDBScale:          useDBScale,

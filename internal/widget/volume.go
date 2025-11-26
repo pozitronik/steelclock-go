@@ -61,118 +61,34 @@ type VolumeWidget struct {
 // NewVolumeWidget creates a new volume widget
 func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 	base := NewBaseWidget(cfg)
+	helper := NewConfigHelper(cfg)
 
-	displayMode := cfg.Mode
-	if displayMode == "" {
-		displayMode = "bar"
-	}
+	// Extract common settings using helper
+	displayMode := helper.GetDisplayMode("bar")
+	textSettings := helper.GetTextSettings()
+	padding := helper.GetPadding()
+	barSettings := helper.GetBarSettings()
+	gaugeSettings := helper.GetGaugeSettings()
+	triangleSettings := helper.GetTriangleSettings()
+	fillColor := helper.GetFillColorForMode(displayMode)
 
-	// Extract colors from mode-specific configs
-	fillColor := 255
-	gaugeColor := 200
-	gaugeNeedleColor := 255
-	gaugeShowTicks := true
-	gaugeTicksColor := 150
-	triangleFillColor := 255
-
-	switch displayMode {
-	case "bar":
-		if cfg.Bar != nil && cfg.Bar.Colors != nil {
-			if cfg.Bar.Colors.Fill != nil {
-				fillColor = *cfg.Bar.Colors.Fill
-			}
-		}
-	case "gauge":
-		if cfg.Gauge != nil {
-			if cfg.Gauge.ShowTicks != nil {
-				gaugeShowTicks = *cfg.Gauge.ShowTicks
-			}
-			if cfg.Gauge.Colors != nil {
-				if cfg.Gauge.Colors.Arc != nil {
-					gaugeColor = *cfg.Gauge.Colors.Arc
-				}
-				if cfg.Gauge.Colors.Needle != nil {
-					gaugeNeedleColor = *cfg.Gauge.Colors.Needle
-				}
-				if cfg.Gauge.Colors.Ticks != nil {
-					gaugeTicksColor = *cfg.Gauge.Colors.Ticks
-				}
-			}
-		}
-	case "triangle":
-		if cfg.Triangle != nil && cfg.Triangle.Colors != nil {
-			if cfg.Triangle.Colors.Fill != nil {
-				triangleFillColor = *cfg.Triangle.Colors.Fill
-			}
-		}
-	}
-
-	// Extract text settings
-	fontSize := 10
-	fontName := ""
-	horizAlign := "center"
-	vertAlign := "center"
-	padding := 0
-
-	if cfg.Text != nil {
-		if cfg.Text.Size > 0 {
-			fontSize = cfg.Text.Size
-		}
-		fontName = cfg.Text.Font
-		if cfg.Text.Align != nil {
-			if cfg.Text.Align.H != "" {
-				horizAlign = cfg.Text.Align.H
-			}
-			if cfg.Text.Align.V != "" {
-				vertAlign = cfg.Text.Align.V
-			}
-		}
-	}
-
-	// Extract padding from style
-	if cfg.Style != nil {
-		padding = cfg.Style.Padding
-	}
-
-	// Extract bar settings
-	barDirection := "horizontal"
-	barBorder := false
-	if cfg.Bar != nil {
-		if cfg.Bar.Direction != "" {
-			barDirection = cfg.Bar.Direction
-		}
-		barBorder = cfg.Bar.Border
-	}
-
-	// Extract triangle settings
-	triangleBorder := false
-	if cfg.Triangle != nil {
-		triangleBorder = cfg.Triangle.Border
-	}
-
-	// Load font for text mode
-	var fontFace font.Face
-	if displayMode == "text" {
-		face, err := bitmap.LoadFont(fontName, fontSize)
-		if err == nil {
-			fontFace = face
-		}
-	}
+	// Load font for text mode (ignore error - volume widget degrades gracefully)
+	fontFace, _ := helper.LoadFontForTextMode(displayMode)
 
 	w := &VolumeWidget{
 		BaseWidget:        base,
 		displayMode:       displayMode,
 		fillColor:         uint8(fillColor),
-		barDirection:      barDirection,
-		barBorder:         barBorder,
-		gaugeColor:        uint8(gaugeColor),
-		gaugeNeedleColor:  uint8(gaugeNeedleColor),
-		gaugeShowTicks:    gaugeShowTicks,
-		gaugeTicksColor:   uint8(gaugeTicksColor),
-		triangleFillColor: uint8(triangleFillColor),
-		triangleBorder:    triangleBorder,
-		horizAlign:        horizAlign,
-		vertAlign:         vertAlign,
+		barDirection:      barSettings.Direction,
+		barBorder:         barSettings.Border,
+		gaugeColor:        uint8(gaugeSettings.ArcColor),
+		gaugeNeedleColor:  uint8(gaugeSettings.NeedleColor),
+		gaugeShowTicks:    gaugeSettings.ShowTicks,
+		gaugeTicksColor:   uint8(gaugeSettings.TicksColor),
+		triangleFillColor: uint8(triangleSettings.FillColor),
+		triangleBorder:    triangleSettings.Border,
+		horizAlign:        textSettings.HorizAlign,
+		vertAlign:         textSettings.VertAlign,
 		padding:           padding,
 		lastSuccessTime:   time.Now(), // Initialize to prevent false "stuck" detection
 		face:              fontFace,
