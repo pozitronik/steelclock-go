@@ -14,7 +14,6 @@ const (
 	WM_USER   = 0x0400
 	WM_WA_IPC = WM_USER
 
-	// IPC commands - see wa_ipc.h
 	IPC_GETVERSION       = 0   // Returns Winamp version (0x5xyy for 5.xy)
 	IPC_ISPLAYING        = 104 // Returns playback status: 0=stopped, 1=playing, 3=paused
 	IPC_GETOUTPUTTIME    = 105 // wParam=0: position in ms, wParam=1: track length in seconds
@@ -90,7 +89,7 @@ func (c *windowsClient) GetCurrentTitle() string {
 	return c.getTitleFromWindowTitle(hwnd)
 }
 
-// getTitleFromWindowTitle extracts the track title from Winamp's window title
+// getTitleFromWindowTitle extracts the track title from Winamp's window title.
 // Window title format is typically: "N. Artist - Title - Winamp" or "Artist - Title - Winamp"
 func (c *windowsClient) getTitleFromWindowTitle(hwnd uintptr) string {
 	// Get window title length

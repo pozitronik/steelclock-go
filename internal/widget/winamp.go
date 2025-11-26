@@ -208,17 +208,17 @@ func (w *WinampWidget) Update() error {
 	// Detect status changes
 	statusChanged := info.Status != w.previousStatus
 
-	// Check for play event (transition to playing)
+	// Check for play event (transition to playing state)
 	if w.autoShowOnPlay && statusChanged && info.Status == winamp.StatusPlaying {
 		w.TriggerAutoHide()
 	}
 
-	// Check for pause event (transition to paused)
+	// Check for pause event (transition to paused state)
 	if w.autoShowOnPause && statusChanged && info.Status == winamp.StatusPaused {
 		w.TriggerAutoHide()
 	}
 
-	// Check for stop event (transition to stopped)
+	// Check for stop event (transition to stopped state)
 	if w.autoShowOnStop && statusChanged && info.Status == winamp.StatusStopped {
 		w.TriggerAutoHide()
 	}
@@ -312,7 +312,7 @@ func (w *WinampWidget) updateContinuousScroll(movement float64, textWidth, conte
 			w.scrollOffset += totalWidth
 		}
 	case "up", "down":
-		// For vertical scrolling, use the same logic but it applies to Y
+		// For vertical scrolling, use the same logic, but it applies to Y
 		if w.scrollDirection == "up" {
 			w.scrollOffset += movement
 		} else {
