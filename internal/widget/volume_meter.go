@@ -621,11 +621,16 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 	// Draw two bars: top half = left, bottom half = right
 	halfHeight := pos.H / 2
 
+	fillColor := w.fillColor
+	if isClipping && w.showClipping {
+		fillColor = w.clippingColor
+	}
+
 	// Left channel (top)
 	leftWidth := int(float64(pos.W) * channelPeaks[0])
 	for y := 0; y < halfHeight; y++ {
 		for x := 0; x < leftWidth; x++ {
-			img.SetGray(x, y, color.Gray{Y: w.fillColor})
+			img.SetGray(x, y, color.Gray{Y: fillColor})
 		}
 	}
 
@@ -633,7 +638,7 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 	rightWidth := int(float64(pos.W) * channelPeaks[1])
 	for y := halfHeight; y < pos.H; y++ {
 		for x := 0; x < rightWidth; x++ {
-			img.SetGray(x, y, color.Gray{Y: w.fillColor})
+			img.SetGray(x, y, color.Gray{Y: fillColor})
 		}
 	}
 
@@ -733,11 +738,16 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 	// Draw two bars: left half = left channel, right half = right channel
 	halfWidth := pos.W / 2
 
+	fillColor := w.fillColor
+	if isClipping && w.showClipping {
+		fillColor = w.clippingColor
+	}
+
 	// Left channel (left half)
 	leftHeight := int(float64(pos.H) * channelPeaks[0])
 	for y := pos.H - leftHeight; y < pos.H; y++ {
 		for x := 0; x < halfWidth; x++ {
-			img.SetGray(x, y, color.Gray{Y: w.fillColor})
+			img.SetGray(x, y, color.Gray{Y: fillColor})
 		}
 	}
 
@@ -745,7 +755,7 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 	rightHeight := int(float64(pos.H) * channelPeaks[1])
 	for y := pos.H - rightHeight; y < pos.H; y++ {
 		for x := halfWidth; x < pos.W; x++ {
-			img.SetGray(x, y, color.Gray{Y: w.fillColor})
+			img.SetGray(x, y, color.Gray{Y: fillColor})
 		}
 	}
 
