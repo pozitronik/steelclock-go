@@ -480,10 +480,9 @@ Same structure as CPU widget, without `per_core`.
   },
   "text": {
     "format": "%d%%",
-    "colors": {
-      "fill": 255,
-      "clipping": 200
-    }
+    "font": null,
+    "size": 10,
+    "align": {"h": "center", "v": "center"}
   },
   "stereo": {
     "enabled": true,
@@ -511,10 +510,10 @@ Same structure as CPU widget, without `per_core`.
 
 | Object | Properties |
 |--------|------------|
-| `bar.colors` | `fill`, `clipping` |
-| `gauge.colors` | `arc`, `needle`, `ticks`, `clipping` |
-| `text.colors` | `fill`, `clipping` |
-| `stereo` | `enabled`, `divider` |
+| `bar.colors` | `fill`, `clipping` (bar mode only) |
+| `gauge.colors` | `arc`, `needle`, `ticks`, `clipping` (gauge mode only) |
+| `text` | `format`, `font`, `size`, `align` (no colors - uses font glyphs) |
+| `stereo` | `enabled`, `divider` (divider only applies to bar/gauge modes) |
 | `metering` | `db_scale`, `decay_rate`, `silence_threshold` |
 | `peak` | `enabled`, `hold_time` |
 | `clipping` | `enabled`, `threshold` |

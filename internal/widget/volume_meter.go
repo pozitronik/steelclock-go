@@ -123,36 +123,32 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		return nil, fmt.Errorf("invalid display mode: %s (valid: text, bar, gauge)", displayMode)
 	}
 
-	// Extract colors from mode-specific sections (consistent with volume widget pattern)
+	// Extract colors based on active display mode only
 	fillColor := 255
 	clippingColor := 200
 
-	// Bar colors
-	if cfg.Bar != nil && cfg.Bar.Colors != nil {
-		if cfg.Bar.Colors.Fill != nil {
-			fillColor = *cfg.Bar.Colors.Fill
-		}
-		if cfg.Bar.Colors.Clipping != nil {
-			clippingColor = *cfg.Bar.Colors.Clipping
-		}
-	}
-
-	// Gauge colors (clipping color can also come from gauge.colors.clipping)
-	if cfg.Gauge != nil && cfg.Gauge.Colors != nil {
-		if cfg.Gauge.Colors.Clipping != nil {
-			clippingColor = *cfg.Gauge.Colors.Clipping
+	// Bar mode colors (for bar_horizontal and bar_vertical)
+	if displayMode == "bar_horizontal" || displayMode == "bar_vertical" {
+		if cfg.Bar != nil && cfg.Bar.Colors != nil {
+			if cfg.Bar.Colors.Fill != nil {
+				fillColor = *cfg.Bar.Colors.Fill
+			}
+			if cfg.Bar.Colors.Clipping != nil {
+				clippingColor = *cfg.Bar.Colors.Clipping
+			}
 		}
 	}
 
-	// Text colors (for text mode)
-	if cfg.Text != nil && cfg.Text.Colors != nil {
-		if cfg.Text.Colors.Fill != nil {
-			fillColor = *cfg.Text.Colors.Fill
-		}
-		if cfg.Text.Colors.Clipping != nil {
-			clippingColor = *cfg.Text.Colors.Clipping
+	// Gauge mode colors
+	if displayMode == "gauge" {
+		if cfg.Gauge != nil && cfg.Gauge.Colors != nil {
+			if cfg.Gauge.Colors.Clipping != nil {
+				clippingColor = *cfg.Gauge.Colors.Clipping
+			}
 		}
 	}
+
+	// Text mode doesn't use fill colors - text is rendered via font glyphs
 
 	// Clipping settings (no color field - moved to mode colors)
 	clippingThreshold := 0.99
@@ -703,6 +699,15 @@ func (w *VolumeMeterWidget) renderTextStereo(img *image.Gray, channelPeaks []flo
 	}
 
 	bitmap.DrawAlignedText(img, text, w.face, w.horizontalAlign, w.verticalAlign, w.padding)
+
+	// Draw separator between channels (if enabled)
+	if w.stereoDivider >= 0 {
+		pos := w.GetPosition()
+		halfWidth := pos.W / 2
+		for y := 0; y < pos.H; y++ {
+			img.SetGray(halfWidth, y, color.Gray{Y: uint8(w.stereoDivider)})
+		}
+	}
 }
 
 // renderBarVerticalStereo renders vertical bars in stereo mode (left/right channels)

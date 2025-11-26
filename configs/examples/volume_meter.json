@@ -33,11 +33,7 @@
         "format": "%d%%",
         "font": null,
         "size": 10,
-        "align": {"h": "center", "v": "center"},
-        "colors": {
-          "fill": 255,
-          "clipping": 200
-        }
+        "align": {"h": "center", "v": "center"}
       },
       "stereo": {
         "enabled": true,

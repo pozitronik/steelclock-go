@@ -126,12 +126,11 @@ type StyleConfig struct {
 
 // TextConfig represents text rendering properties
 type TextConfig struct {
-	Format string            `json:"format,omitempty"`
-	Font   string            `json:"font,omitempty"`
-	Size   int               `json:"size,omitempty"`
-	Align  *AlignConfig      `json:"align,omitempty"`
-	Unit   string            `json:"unit,omitempty"`
-	Colors *ModeColorsConfig `json:"colors,omitempty"`
+	Format string       `json:"format,omitempty"`
+	Font   string       `json:"font,omitempty"`
+	Size   int          `json:"size,omitempty"`
+	Align  *AlignConfig `json:"align,omitempty"`
+	Unit   string       `json:"unit,omitempty"`
 }
 
 // AlignConfig represents text alignment

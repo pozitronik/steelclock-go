@@ -555,14 +555,6 @@
                       "h": { "type": "string", "description": "Horizontal alignment", "enum": ["left", "center", "right"], "default": "center" },
                       "v": { "type": "string", "description": "Vertical alignment", "enum": ["top", "center", "bottom"], "default": "center" }
                     }
-                  },
-                  "colors": {
-                    "type": "object",
-                    "description": "Text colors",
-                    "properties": {
-                      "fill": { "type": "integer", "description": "Text color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "clipping": { "type": "integer", "description": "Clipping text color", "minimum": 0, "maximum": 255, "default": 200 }
-                    }
                   }
                 }
               },
