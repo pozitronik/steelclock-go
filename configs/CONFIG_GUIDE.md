@@ -64,23 +64,23 @@ Supported IDEs: VS Code, JetBrains IDEs, Visual Studio, Sublime Text, and others
 
 ### Global Settings
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `schema_version` | integer | 2 | Schema version (must be 2) |
-| `game_name` | string | "STEELCLOCK" | Internal game name for GameSense |
-| `game_display_name` | string | "SteelClock" | Display name in SteelSeries GG |
-| `refresh_rate_ms` | integer | 100 | Display refresh rate (see notes) |
-| `backend` | string | "gamesense" | Backend: "gamesense", "direct", "any" |
-| `unregister_on_exit` | boolean | false | Unregister on exit (may timeout) |
-| `deinitialize_timer_ms` | integer | 15000 | Game deactivation timeout (1000-60000ms) |
+| Property                | Type    | Default      | Description                              |
+|-------------------------|---------|--------------|------------------------------------------|
+| `schema_version`        | integer | 2            | Schema version (must be 2)               |
+| `game_name`             | string  | "STEELCLOCK" | Internal game name for GameSense         |
+| `game_display_name`     | string  | "SteelClock" | Display name in SteelSeries GG           |
+| `refresh_rate_ms`       | integer | 100          | Display refresh rate (see notes)         |
+| `backend`               | string  | "gamesense"  | Backend: "gamesense", "direct", "any"    |
+| `unregister_on_exit`    | boolean | false        | Unregister on exit (may timeout)         |
+| `deinitialize_timer_ms` | integer | 15000        | Game deactivation timeout (1000-60000ms) |
 
 ### Backend Configuration
 
-| Backend | Description | Min Refresh | Max Refresh |
-|---------|-------------|-------------|-------------|
-| `gamesense` | SteelSeries GG API (default) | 100ms (10Hz) | 100ms |
-| `direct` | USB HID (Windows only) | ~16ms (60Hz) | 30ms (33Hz) |
-| `any` | Try gamesense, fallback to direct | - | - |
+| Backend     | Description                       | Min Refresh  | Max Refresh |
+|-------------|-----------------------------------|--------------|-------------|
+| `gamesense` | SteelSeries GG API (default)      | 100ms (10Hz) | 100ms       |
+| `direct`    | USB HID (Windows only)            | ~16ms (60Hz) | 30ms (33Hz) |
+| `any`       | Try gamesense, fallback to direct | -            | -           |
 
 **Direct Driver Config:**
 
@@ -104,11 +104,11 @@ If omitted, auto-detects from known devices (Apex 7, Apex Pro, etc.).
 }
 ```
 
-| Property | Type | Range | Default | Description |
-|----------|------|-------|---------|-------------|
-| `width` | integer | - | 128 | Display width in pixels |
-| `height` | integer | - | 40 | Display height in pixels |
-| `background` | integer | 0-255 | 0 | Background color (0=black) |
+| Property     | Type    | Range | Default | Description                |
+|--------------|---------|-------|---------|----------------------------|
+| `width`      | integer | -     | 128     | Display width in pixels    |
+| `height`     | integer | -     | 40      | Display height in pixels   |
+| `background` | integer | 0-255 | 0       | Background color (0=black) |
 
 ### Defaults Configuration
 
@@ -136,19 +136,19 @@ Widgets can reference default colors with `@name` syntax: `"fill": "@primary"`.
 
 SteelClock supports these widget types:
 
-| Type | Description | Modes |
-|------|-------------|-------|
-| `clock` | Time display | text, analog |
-| `cpu` | CPU usage monitor | text, bar, graph, gauge |
-| `memory` | RAM usage monitor | text, bar, graph, gauge |
-| `network` | Network I/O monitor | text, bar, graph, gauge |
-| `disk` | Disk I/O monitor | text, bar, graph |
-| `volume` | System volume | text, bar, gauge, triangle |
-| `volume_meter` | Audio peak meter | text, bar, gauge |
-| `audio_visualizer` | Spectrum/oscilloscope | spectrum, oscilloscope |
-| `keyboard` | Lock key indicators | - |
-| `keyboard_layout` | Current keyboard layout | - |
-| `doom` | DOOM game | - |
+| Type               | Description             | Modes                      |
+|--------------------|-------------------------|----------------------------|
+| `clock`            | Time display            | text, analog               |
+| `cpu`              | CPU usage monitor       | text, bar, graph, gauge    |
+| `memory`           | RAM usage monitor       | text, bar, graph, gauge    |
+| `network`          | Network I/O monitor     | text, bar, graph, gauge    |
+| `disk`             | Disk I/O monitor        | text, bar, graph           |
+| `volume`           | System volume           | text, bar, gauge, triangle |
+| `volume_meter`     | Audio peak meter        | text, bar, gauge           |
+| `audio_visualizer` | Spectrum/oscilloscope   | spectrum, oscilloscope     |
+| `keyboard`         | Lock key indicators     | -                          |
+| `keyboard_layout`  | Current keyboard layout | -                          |
+| `doom`             | DOOM game               | -                          |
 
 ## Common Properties
 
@@ -169,13 +169,13 @@ SteelClock supports these widget types:
 
 Note: Colors are defined within mode-specific objects (e.g., `bar.colors`, `graph.colors`, `gauge.colors`).
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `type` | string | Yes | Widget type |
-| `enabled` | boolean | No | Enable widget (default: true) |
-| `mode` | string | Depends | Display mode (widget-specific) |
-| `update_interval` | number | No | Update interval in seconds (default: 1.0) |
-| `poll_interval` | number | No | Internal polling interval for volume/volume_meter widgets in seconds (default: 0.1) |
+| Property          | Type    | Required | Description                                                                         |
+|-------------------|---------|----------|-------------------------------------------------------------------------------------|
+| `type`            | string  | Yes      | Widget type                                                                         |
+| `enabled`         | boolean | No       | Enable widget (default: true)                                                       |
+| `mode`            | string  | Depends  | Display mode (widget-specific)                                                      |
+| `update_interval` | number  | No       | Update interval in seconds (default: 1.0)                                           |
+| `poll_interval`   | number  | No       | Internal polling interval for volume/volume_meter widgets in seconds (default: 0.1) |
 
 ### Position Object
 
@@ -189,13 +189,13 @@ Note: Colors are defined within mode-specific objects (e.g., `bar.colors`, `grap
 }
 ```
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `x` | integer | X coordinate (pixels) |
-| `y` | integer | Y coordinate (pixels) |
-| `w` | integer | Width (pixels) |
-| `h` | integer | Height (pixels) |
-| `z` | integer | Z-order (higher = on top) |
+| Property | Type    | Description               |
+|----------|---------|---------------------------|
+| `x`      | integer | X coordinate (pixels)     |
+| `y`      | integer | Y coordinate (pixels)     |
+| `w`      | integer | Width (pixels)            |
+| `h`      | integer | Height (pixels)           |
+| `z`      | integer | Z-order (higher = on top) |
 
 ### Style Object
 
@@ -207,11 +207,11 @@ Note: Colors are defined within mode-specific objects (e.g., `bar.colors`, `grap
 }
 ```
 
-| Property | Type | Range | Default | Description |
-|----------|------|-------|---------|-------------|
-| `background` | integer | -1 to 255 | 0 | -1=transparent, 0-255=grayscale |
-| `border` | integer | -1 to 255 | -1 | -1=disabled, 0-255=border color |
-| `padding` | integer | 0+ | 0 | Padding from widget edges in pixels |
+| Property     | Type    | Range     | Default | Description                         |
+|--------------|---------|-----------|---------|-------------------------------------|
+| `background` | integer | -1 to 255 | 0       | -1=transparent, 0-255=grayscale     |
+| `border`     | integer | -1 to 255 | -1      | -1=disabled, 0-255=border color     |
+| `padding`    | integer | 0+        | 0       | Padding from widget edges in pixels |
 
 ### Text Object
 
@@ -224,13 +224,13 @@ Note: Colors are defined within mode-specific objects (e.g., `bar.colors`, `grap
 }
 ```
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `format` | string | Format string (widget-specific) |
-| `font` | string | Font name or TTF path |
-| `size` | integer | Font size in pixels |
-| `align.h` | string | "left", "center", "right" |
-| `align.v` | string | "top", "center", "bottom" |
+| Property  | Type    | Description                     |
+|-----------|---------|---------------------------------|
+| `format`  | string  | Format string (widget-specific) |
+| `font`    | string  | Font name or TTF path           |
+| `size`    | integer | Font size in pixels             |
+| `align.h` | string  | "left", "center", "right"       |
+| `align.v` | string  | "top", "center", "bottom"       |
 
 ### Auto-Hide Object
 
@@ -242,11 +242,11 @@ Note: Colors are defined within mode-specific objects (e.g., `bar.colors`, `grap
 }
 ```
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `enabled` | boolean | false | Enable auto-hide |
-| `timeout` | number | 2.0 | Seconds before hiding |
-| `on_silence` | boolean | false | Hide on audio silence |
+| Property     | Type    | Default | Description           |
+|--------------|---------|---------|-----------------------|
+| `enabled`    | boolean | false   | Enable auto-hide      |
+| `timeout`    | number  | 2.0     | Seconds before hiding |
+| `on_silence` | boolean | false   | Hide on audio silence |
 
 ### Mode-Specific Objects
 
@@ -359,14 +359,14 @@ Widgets with multiple modes use mode-named objects:
 }
 ```
 
-| Property | Description |
-|----------|-------------|
-| `per_core.enabled` | Show per-core usage |
-| `per_core.margin` | Margin between core bars |
-| `bar.colors.fill` | Bar fill color |
-| `graph.colors.fill` | Graph fill color |
-| `gauge.colors.arc` | Gauge arc color |
-| `gauge.colors.needle` | Gauge needle color |
+| Property              | Description              |
+|-----------------------|--------------------------|
+| `per_core.enabled`    | Show per-core usage      |
+| `per_core.margin`     | Margin between core bars |
+| `bar.colors.fill`     | Bar fill color           |
+| `graph.colors.fill`   | Graph fill color         |
+| `gauge.colors.arc`    | Gauge arc color          |
+| `gauge.colors.needle` | Gauge needle color       |
 
 ### Memory Widget
 
@@ -397,16 +397,16 @@ Same structure as CPU widget, without `per_core`.
 }
 ```
 
-| Property | Description |
-|----------|-------------|
-| `interface` | Network interface (null=auto) |
-| `max_speed_mbps` | Max speed for scaling (-1=auto) |
-| `gauge.colors.rx` | RX (download) arc color |
-| `gauge.colors.tx` | TX (upload) arc color |
-| `gauge.colors.rx_needle` | RX needle color |
-| `gauge.colors.tx_needle` | TX needle color |
-| `graph.colors.rx` | RX graph fill color |
-| `graph.colors.tx` | TX graph fill color |
+| Property                 | Description                     |
+|--------------------------|---------------------------------|
+| `interface`              | Network interface (null=auto)   |
+| `max_speed_mbps`         | Max speed for scaling (-1=auto) |
+| `gauge.colors.rx`        | RX (download) arc color         |
+| `gauge.colors.tx`        | TX (upload) arc color           |
+| `gauge.colors.rx_needle` | RX needle color                 |
+| `gauge.colors.tx_needle` | TX needle color                 |
+| `graph.colors.rx`        | RX graph fill color             |
+| `graph.colors.tx`        | TX graph fill color             |
 
 ### Disk Widget
 
@@ -510,15 +510,15 @@ Same structure as CPU widget, without `per_core`.
 }
 ```
 
-| Object | Properties |
-|--------|------------|
-| `bar.colors` | `fill`, `clipping`, `peak` (bar mode only) |
-| `gauge.colors` | `arc`, `needle`, `ticks`, `clipping`, `peak` (gauge mode only) |
-| `text` | `format`, `font`, `size`, `align` (no colors - uses font glyphs) |
-| `stereo` | `enabled`, `divider` (divider applies to all modes) |
-| `metering` | `db_scale`, `decay_rate`, `silence_threshold` |
-| `peak` | `enabled`, `hold_time` (color configured in mode colors) |
-| `clipping` | `enabled`, `threshold` (color configured in mode colors) |
+| Object         | Properties                                                       |
+|----------------|------------------------------------------------------------------|
+| `bar.colors`   | `fill`, `clipping`, `peak` (bar mode only)                       |
+| `gauge.colors` | `arc`, `needle`, `ticks`, `clipping`, `peak` (gauge mode only)   |
+| `text`         | `format`, `font`, `size`, `align` (no colors - uses font glyphs) |
+| `stereo`       | `enabled`, `divider` (divider applies to all modes)              |
+| `metering`     | `db_scale`, `decay_rate`, `silence_threshold`                    |
+| `peak`         | `enabled`, `hold_time` (color configured in mode colors)         |
+| `clipping`     | `enabled`, `threshold` (color configured in mode colors)         |
 
 ### Audio Visualizer Widget
 
@@ -554,14 +554,14 @@ Same structure as CPU widget, without `per_core`.
 }
 ```
 
-| Property | Options | Description |
-|----------|---------|-------------|
-| `spectrum.bars` | 8-128 | Number of frequency bars |
-| `spectrum.scale` | logarithmic, linear | Frequency distribution |
-| `spectrum.style` | bars, line | Rendering style |
-| `spectrum.smoothing` | 0.0-1.0 | Fall-off smoothing |
-| `spectrum.peak.enabled` | true/false | Show peak hold indicators |
-| `spectrum.peak.hold_time` | 0.1+ | Peak hold duration in seconds |
+| Property                  | Options             | Description                   |
+|---------------------------|---------------------|-------------------------------|
+| `spectrum.bars`           | 8-128               | Number of frequency bars      |
+| `spectrum.scale`          | logarithmic, linear | Frequency distribution        |
+| `spectrum.style`          | bars, line          | Rendering style               |
+| `spectrum.smoothing`      | 0.0-1.0             | Fall-off smoothing            |
+| `spectrum.peak.enabled`   | true/false          | Show peak hold indicators     |
+| `spectrum.peak.hold_time` | 0.1+                | Peak hold duration in seconds |
 
 #### Oscilloscope Mode
 
@@ -583,11 +583,11 @@ Same structure as CPU widget, without `per_core`.
 }
 ```
 
-| Property | Options | Description |
-|----------|---------|-------------|
-| `oscilloscope.style` | line, filled | Waveform style |
-| `oscilloscope.samples` | 32-512 | Sample count |
-| `channel` | mono, stereo_combined, stereo_separated | Channel mode |
+| Property               | Options                                 | Description    |
+|------------------------|-----------------------------------------|----------------|
+| `oscilloscope.style`   | line, filled                            | Waveform style |
+| `oscilloscope.samples` | 32-512                                  | Sample count   |
+| `channel`              | mono, stereo_combined, stereo_separated | Channel mode   |
 
 ### Keyboard Widget
 
@@ -631,11 +631,11 @@ Same structure as CPU widget, without `per_core`.
 }
 ```
 
-| Format | Example |
-|--------|---------|
-| `iso639-1` | EN, RU, DE |
-| `iso639-2` | ENG, RUS, DEU |
-| `full` | English, Русский |
+| Format     | Example          |
+|------------|------------------|
+| `iso639-1` | EN, RU, DE       |
+| `iso639-2` | ENG, RUS, DEU    |
+| `full`     | English, Русский |
 
 ### DOOM Widget
 
@@ -784,13 +784,13 @@ Same structure as CPU widget, without `per_core`.
 
 ### Performance
 
-| Content | Recommended Interval |
-|---------|---------------------|
-| Clock | 1.0s |
-| CPU/Memory | 1.0s |
-| Network/Disk | 1.0s |
-| Keyboard | 0.2s |
-| Audio | 0.033s (30 FPS) |
+| Content      | Recommended Interval |
+|--------------|----------------------|
+| Clock        | 1.0s                 |
+| CPU/Memory   | 1.0s                 |
+| Network/Disk | 1.0s                 |
+| Keyboard     | 0.2s                 |
+| Audio        | 0.033s (30 FPS)      |
 
 ### Visual Design
 
