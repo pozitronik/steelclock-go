@@ -183,6 +183,7 @@ func validateConfig(cfg *Config) error {
 		"clock": true, "cpu": true, "memory": true,
 		"network": true, "disk": true, "keyboard": true, "keyboard_layout": true,
 		"volume": true, "volume_meter": true, "audio_visualizer": true, "doom": true,
+		"winamp": true,
 	}
 
 	// Track widget counts for auto-generating IDs
@@ -196,7 +197,7 @@ func validateConfig(cfg *Config) error {
 			return fmt.Errorf("widget[%d]: type is required", i)
 		}
 		if !validTypes[w.Type] {
-			return fmt.Errorf("widget[%d]: invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, keyboard_layout, volume, volume_meter, audio_visualizer, doom)", i, w.Type)
+			return fmt.Errorf("widget[%d]: invalid type '%s' (valid: clock, cpu, memory, network, disk, keyboard, keyboard_layout, volume, volume_meter, audio_visualizer, doom, winamp)", i, w.Type)
 		}
 
 		// Auto-generate ID based on type and index
