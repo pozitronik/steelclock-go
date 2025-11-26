@@ -63,32 +63,16 @@ type WinampWidget struct {
 // NewWinampWidget creates a new Winamp widget
 func NewWinampWidget(cfg config.WidgetConfig) (*WinampWidget, error) {
 	base := NewBaseWidget(cfg)
+	helper := NewConfigHelper(cfg)
 
-	// Extract text settings
-	fontSize := 12
-	fontName := ""
-	horizAlign := "center"
-	vertAlign := "center"
-	padding := 0
+	// Extract text settings using helper
+	textSettings := helper.GetTextSettings()
+	padding := helper.GetPadding()
 
-	if cfg.Text != nil {
-		if cfg.Text.Size > 0 {
-			fontSize = cfg.Text.Size
-		}
-		fontName = cfg.Text.Font
-		if cfg.Text.Align != nil {
-			if cfg.Text.Align.H != "" {
-				horizAlign = cfg.Text.Align.H
-			}
-			if cfg.Text.Align.V != "" {
-				vertAlign = cfg.Text.Align.V
-			}
-		}
-	}
-
-	// Extract style padding
-	if cfg.Style != nil {
-		padding = cfg.Style.Padding
+	// Use larger default font for winamp
+	fontSize := textSettings.FontSize
+	if fontSize == 10 { // default value
+		fontSize = 12
 	}
 
 	// Extract format from text.format (consistent with other widgets)
@@ -158,7 +142,7 @@ func NewWinampWidget(cfg config.WidgetConfig) (*WinampWidget, error) {
 	}
 
 	// Load font
-	fontFace, err := bitmap.LoadFont(fontName, fontSize)
+	fontFace, err := bitmap.LoadFont(textSettings.FontName, fontSize)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
@@ -167,9 +151,9 @@ func NewWinampWidget(cfg config.WidgetConfig) (*WinampWidget, error) {
 		BaseWidget:            base,
 		format:                format,
 		fontSize:              fontSize,
-		fontName:              fontName,
-		horizAlign:            horizAlign,
-		vertAlign:             vertAlign,
+		fontName:              textSettings.FontName,
+		horizAlign:            textSettings.HorizAlign,
+		vertAlign:             textSettings.VertAlign,
 		padding:               padding,
 		placeholderMode:       placeholderMode,
 		placeholderText:       placeholderText,
@@ -552,14 +536,14 @@ func (w *WinampWidget) renderScrollingText(img *image.Gray, text string, offset 
 		}
 	} else {
 		// Vertical scrolling (up/down)
-		textX := contentX
+		var textX int
 		switch w.horizAlign {
-		case "left":
-			textX = contentX
 		case "right":
 			textX = contentX + contentW - textWidth
-		default: // center
+		case "center":
 			textX = contentX + (contentW-textWidth)/2
+		default: // left
+			textX = contentX
 		}
 
 		scrollY := textY - int(offset)
