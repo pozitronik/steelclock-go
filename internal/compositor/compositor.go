@@ -15,6 +15,17 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/widget"
 )
 
+const (
+	// HeartbeatInterval is how often to send heartbeat to GameSense API
+	HeartbeatInterval = 10 * time.Second
+
+	// MaxHeartbeatFailures is how many consecutive failures before triggering backend failure callback
+	MaxHeartbeatFailures = 2
+
+	// DefaultEventName is the GameSense event name for display updates
+	DefaultEventName = "STEELCLOCK_DISPLAY"
+)
+
 // Resolution represents a display resolution
 type Resolution struct {
 	Width  int
@@ -37,6 +48,9 @@ type Compositor struct {
 	bufferMu        sync.Mutex
 	resolutions     []Resolution // All resolutions to render (main + supported)
 
+	// Pre-allocated buffers for ImageToBytes to reduce allocations in render loop
+	bitmapBuffers map[string][]int
+
 	// Backend failure handling
 	OnBackendFailure     func()     // Callback when backend fails (called once per failure)
 	heartbeatFailures    int        // Consecutive heartbeat failure count
@@ -56,17 +70,26 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 		resolutions = append(resolutions, Resolution{Width: res.Width, Height: res.Height})
 	}
 
+	// Pre-allocate bitmap buffers for each resolution
+	bitmapBuffers := make(map[string][]int)
+	for _, res := range resolutions {
+		bufferSize := (res.Width*res.Height + 7) / 8
+		key := fmt.Sprintf("image-data-%dx%d", res.Width, res.Height)
+		bitmapBuffers[key] = make([]int, bufferSize)
+	}
+
 	comp := &Compositor{
 		client:          client,
 		layoutManager:   layoutMgr,
 		refreshRate:     refreshRate,
-		eventName:       "STEELCLOCK_DISPLAY",
+		eventName:       DefaultEventName,
 		widgets:         widgets,
 		stopChan:        make(chan struct{}),
 		batchingEnabled: cfg.EventBatchingEnabled,
 		batchSize:       cfg.EventBatchSize,
 		frameBuffer:     make([][]int, 0, cfg.EventBatchSize),
 		resolutions:     resolutions,
+		bitmapBuffers:   bitmapBuffers,
 	}
 
 	log.Printf("Rendering for %d resolution(s):", len(resolutions))
@@ -76,17 +99,12 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 
 	// Check if batching is supported by API (only if enabled in config)
 	if comp.batchingEnabled {
-		if gsClient, ok := client.(*gamesense.Client); ok {
-			comp.batchSupported = gsClient.SupportsMultipleEvents()
-			if !comp.batchSupported {
-				log.Println("Event batching disabled: not supported by GameSense API")
-				comp.batchingEnabled = false
-			} else {
-				log.Printf("Event batching enabled with batch size: %d", comp.batchSize)
-			}
-		} else {
-			log.Println("Event batching disabled: client does not support feature detection")
+		comp.batchSupported = client.SupportsMultipleEvents()
+		if !comp.batchSupported {
+			log.Println("Event batching disabled: not supported by client")
 			comp.batchingEnabled = false
+		} else {
+			log.Printf("Event batching enabled with batch size: %d", comp.batchSize)
 		}
 	}
 
@@ -208,14 +226,15 @@ func (c *Compositor) renderFrame() error {
 		return fmt.Errorf("composite failed: %w", err)
 	}
 
-	// Render at all resolutions
+	// Render at all resolutions using pre-allocated buffers
 	resolutionData := make(map[string][]int)
 	for _, res := range c.resolutions {
-		bitmapData, err := bitmap.ImageToBytes(canvas, res.Width, res.Height)
+		key := fmt.Sprintf("image-data-%dx%d", res.Width, res.Height)
+		buffer := c.bitmapBuffers[key]
+		bitmapData, err := bitmap.ImageToBytes(canvas, res.Width, res.Height, buffer)
 		if err != nil {
 			return fmt.Errorf("image conversion failed for %dx%d: %w", res.Width, res.Height, err)
 		}
-		key := fmt.Sprintf("image-data-%dx%d", res.Width, res.Height)
 		resolutionData[key] = bitmapData
 	}
 
@@ -235,16 +254,8 @@ func (c *Compositor) renderFrame() error {
 	}
 
 	// Send immediately if batching disabled
-	if gsClient, ok := c.client.(*gamesense.Client); ok {
-		if err := gsClient.SendScreenDataMultiRes(c.eventName, resolutionData); err != nil {
-			return fmt.Errorf("send failed: %w", err)
-		}
-	} else {
-		// Fallback to single resolution for non-Client implementations
-		mainKey := fmt.Sprintf("image-data-%dx%d", c.resolutions[0].Width, c.resolutions[0].Height)
-		if err := c.client.SendScreenData(c.eventName, resolutionData[mainKey]); err != nil {
-			return fmt.Errorf("send failed: %w", err)
-		}
+	if err := c.client.SendScreenDataMultiRes(c.eventName, resolutionData); err != nil {
+		return fmt.Errorf("send failed: %w", err)
 	}
 
 	return nil
@@ -265,10 +276,8 @@ func (c *Compositor) flushBatch() error {
 	c.bufferMu.Unlock()
 
 	// Send batch
-	if gsClient, ok := c.client.(*gamesense.Client); ok {
-		if err := gsClient.SendMultipleScreenData(c.eventName, framesToSend); err != nil {
-			return fmt.Errorf("batch send failed: %w", err)
-		}
+	if err := c.client.SendMultipleScreenData(c.eventName, framesToSend); err != nil {
+		return fmt.Errorf("batch send failed: %w", err)
 	}
 
 	return nil
@@ -279,9 +288,7 @@ func (c *Compositor) heartbeatLoop() {
 	defer c.wg.Done()
 	defer logPanic("heartbeatLoop")
 
-	const maxFailures = 2 // Trigger callback after 2 consecutive failures (20 seconds)
-
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(HeartbeatInterval)
 	defer ticker.Stop()
 
 	for {
@@ -294,7 +301,7 @@ func (c *Compositor) heartbeatLoop() {
 
 				c.failureMu.Lock()
 				c.heartbeatFailures++
-				shouldNotify := c.heartbeatFailures >= maxFailures && !c.backendFailureCalled && c.OnBackendFailure != nil
+				shouldNotify := c.heartbeatFailures >= MaxHeartbeatFailures && !c.backendFailureCalled && c.OnBackendFailure != nil
 				if shouldNotify {
 					c.backendFailureCalled = true
 				}

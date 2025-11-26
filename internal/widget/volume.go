@@ -36,6 +36,7 @@ type VolumeWidget struct {
 	horizAlign        string
 	vertAlign         string
 	padding           int
+	pollInterval      time.Duration // Configurable internal polling rate
 
 	mu         sync.RWMutex
 	volume     float64 // 0-100
@@ -61,133 +62,50 @@ type VolumeWidget struct {
 // NewVolumeWidget creates a new volume widget
 func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 	base := NewBaseWidget(cfg)
+	helper := NewConfigHelper(cfg)
 
-	displayMode := cfg.Mode
-	if displayMode == "" {
-		displayMode = "bar"
-	}
+	// Extract common settings using helper
+	displayMode := helper.GetDisplayMode("bar")
+	textSettings := helper.GetTextSettings()
+	padding := helper.GetPadding()
+	barSettings := helper.GetBarSettings()
+	gaugeSettings := helper.GetGaugeSettings()
+	triangleSettings := helper.GetTriangleSettings()
+	fillColor := helper.GetFillColorForMode(displayMode)
 
-	// Extract colors from mode-specific configs
-	fillColor := 255
-	gaugeColor := 200
-	gaugeNeedleColor := 255
-	gaugeShowTicks := true
-	gaugeTicksColor := 150
-	triangleFillColor := 255
+	// Load font for text mode (ignore error - volume widget degrades gracefully)
+	fontFace, _ := helper.LoadFontForTextMode(displayMode)
 
-	switch displayMode {
-	case "bar":
-		if cfg.Bar != nil && cfg.Bar.Colors != nil {
-			if cfg.Bar.Colors.Fill != nil {
-				fillColor = *cfg.Bar.Colors.Fill
-			}
-		}
-	case "gauge":
-		if cfg.Gauge != nil {
-			if cfg.Gauge.ShowTicks != nil {
-				gaugeShowTicks = *cfg.Gauge.ShowTicks
-			}
-			if cfg.Gauge.Colors != nil {
-				if cfg.Gauge.Colors.Arc != nil {
-					gaugeColor = *cfg.Gauge.Colors.Arc
-				}
-				if cfg.Gauge.Colors.Needle != nil {
-					gaugeNeedleColor = *cfg.Gauge.Colors.Needle
-				}
-				if cfg.Gauge.Colors.Ticks != nil {
-					gaugeTicksColor = *cfg.Gauge.Colors.Ticks
-				}
-			}
-		}
-	case "triangle":
-		if cfg.Triangle != nil && cfg.Triangle.Colors != nil {
-			if cfg.Triangle.Colors.Fill != nil {
-				triangleFillColor = *cfg.Triangle.Colors.Fill
-			}
-		}
-	}
-
-	// Extract text settings
-	fontSize := 10
-	fontName := ""
-	horizAlign := "center"
-	vertAlign := "center"
-	padding := 0
-
-	if cfg.Text != nil {
-		if cfg.Text.Size > 0 {
-			fontSize = cfg.Text.Size
-		}
-		fontName = cfg.Text.Font
-		if cfg.Text.Align != nil {
-			if cfg.Text.Align.H != "" {
-				horizAlign = cfg.Text.Align.H
-			}
-			if cfg.Text.Align.V != "" {
-				vertAlign = cfg.Text.Align.V
-			}
-		}
-	}
-
-	// Extract padding from style
-	if cfg.Style != nil {
-		padding = cfg.Style.Padding
-	}
-
-	// Extract bar settings
-	barDirection := "horizontal"
-	barBorder := false
-	if cfg.Bar != nil {
-		if cfg.Bar.Direction != "" {
-			barDirection = cfg.Bar.Direction
-		}
-		barBorder = cfg.Bar.Border
-	}
-
-	// Extract triangle settings
-	triangleBorder := false
-	if cfg.Triangle != nil {
-		triangleBorder = cfg.Triangle.Border
-	}
-
-	// Load font for text mode
-	var fontFace font.Face
-	if displayMode == "text" {
-		face, err := bitmap.LoadFont(fontName, fontSize)
-		if err == nil {
-			fontFace = face
-		}
+	// Get poll interval from config, fall back to default
+	pollInterval := time.Duration(config.DefaultPollInterval * float64(time.Second))
+	if cfg.PollInterval > 0 {
+		pollInterval = time.Duration(cfg.PollInterval * float64(time.Second))
 	}
 
 	w := &VolumeWidget{
 		BaseWidget:        base,
 		displayMode:       displayMode,
 		fillColor:         uint8(fillColor),
-		barDirection:      barDirection,
-		barBorder:         barBorder,
-		gaugeColor:        uint8(gaugeColor),
-		gaugeNeedleColor:  uint8(gaugeNeedleColor),
-		gaugeShowTicks:    gaugeShowTicks,
-		gaugeTicksColor:   uint8(gaugeTicksColor),
-		triangleFillColor: uint8(triangleFillColor),
-		triangleBorder:    triangleBorder,
-		horizAlign:        horizAlign,
-		vertAlign:         vertAlign,
+		barDirection:      barSettings.Direction,
+		barBorder:         barSettings.Border,
+		gaugeColor:        uint8(gaugeSettings.ArcColor),
+		gaugeNeedleColor:  uint8(gaugeSettings.NeedleColor),
+		gaugeShowTicks:    gaugeSettings.ShowTicks,
+		gaugeTicksColor:   uint8(gaugeSettings.TicksColor),
+		triangleFillColor: uint8(triangleSettings.FillColor),
+		triangleBorder:    triangleSettings.Border,
+		horizAlign:        textSettings.HorizAlign,
+		vertAlign:         textSettings.VertAlign,
 		padding:           padding,
+		pollInterval:      pollInterval,
 		lastSuccessTime:   time.Now(), // Initialize to prevent false "stuck" detection
 		face:              fontFace,
 		stopChan:          make(chan struct{}),
 	}
 
-	// Initialize volume reader BEFORE starting goroutine
-	// This ensures widget creation fails if no audio device exists (fail-fast pattern)
-	reader, err := newVolumeReader()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize volume reader: %w", err)
-	}
-	w.reader = reader
-
 	// Start single background goroutine for polling volume
+	// Note: Reader is created INSIDE the goroutine due to Windows COM thread affinity -
+	// COM objects must be created and used on the same thread
 	w.wg.Add(1)
 	go w.pollVolumeBackground()
 
@@ -206,7 +124,15 @@ func (w *VolumeWidget) pollVolumeBackground() {
 		}
 	}()
 
-	// Reader already initialized in NewVolumeWidget (fail-fast pattern)
+	// Create reader on this goroutine due to Windows COM thread affinity -
+	// COM objects must be created and used on the same thread
+	reader, err := newVolumeReader()
+	if err != nil {
+		log.Printf("[VOLUME] Failed to initialize volume reader: %v", err)
+		return
+	}
+	w.reader = reader
+
 	// Ensure cleanup when goroutine exits
 	defer func() {
 		if w.reader != nil {
@@ -215,9 +141,11 @@ func (w *VolumeWidget) pollVolumeBackground() {
 		}
 	}()
 
-	// Poll every 100ms for responsive display
-	ticker := time.NewTicker(100 * time.Millisecond)
+	ticker := time.NewTicker(w.pollInterval)
 	defer ticker.Stop()
+
+	// Do initial poll immediately (ticker won't fire until first interval)
+	w.pollOnce()
 
 	for {
 		select {
@@ -225,35 +153,45 @@ func (w *VolumeWidget) pollVolumeBackground() {
 			return
 
 		case <-ticker.C:
-			// Call volume reader
-			volume, muted, err := w.reader.GetVolume()
-
-			w.mu.Lock()
-			if err != nil {
-				// Update error tracking
-				w.failedCalls++
-				w.consecutiveErrors++
-				w.mu.Unlock()
-				continue
-			}
-
-			// Update success tracking
-			w.successfulCalls++
-			w.lastSuccessTime = time.Now()
-			w.consecutiveErrors = 0
-
-			// Update cached volume
-			changed := volume != w.lastVolume || muted != w.isMuted
-			if changed {
-				w.lastVolume = volume
-				// Trigger auto-hide timer (widget becomes visible)
-				w.TriggerAutoHide()
-			}
-			w.volume = volume
-			w.isMuted = muted
-			w.mu.Unlock()
+			w.pollOnce()
 		}
 	}
+}
+
+// pollOnce performs a single volume poll and updates the widget state
+func (w *VolumeWidget) pollOnce() {
+	// Call volume reader
+	volume, muted, err := w.reader.GetVolume()
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	w.totalCalls++
+
+	if err != nil {
+		// Log first error and state changes for debugging
+		if w.consecutiveErrors == 0 {
+			log.Printf("[VOLUME] Error reading volume: %v", err)
+		}
+		w.failedCalls++
+		w.consecutiveErrors++
+		return
+	}
+
+	// Update success tracking
+	w.successfulCalls++
+	w.lastSuccessTime = time.Now()
+	w.consecutiveErrors = 0
+
+	// Update cached volume
+	changed := volume != w.lastVolume || muted != w.isMuted
+	if changed {
+		w.lastVolume = volume
+		// Trigger auto-hide timer (widget becomes visible)
+		w.TriggerAutoHide()
+	}
+	w.volume = volume
+	w.isMuted = muted
 }
 
 // Update is called periodically but just returns immediately

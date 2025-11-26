@@ -79,6 +79,7 @@ type WidgetConfig struct {
 	Colors         *ColorsConfig   `json:"colors,omitempty"`
 	AutoHide       *AutoHideConfig `json:"auto_hide,omitempty"`
 	UpdateInterval float64         `json:"update_interval,omitempty"`
+	PollInterval   float64         `json:"poll_interval,omitempty"` // Internal polling rate for volume/volume_meter (seconds)
 
 	// Widget-specific configurations
 	PerCore    *PerCoreConfig    `json:"per_core,omitempty"`   // CPU widget
@@ -208,9 +209,15 @@ type ModeColorsConfig struct {
 	Read  *int `json:"read,omitempty"`
 	Write *int `json:"write,omitempty"`
 
-	// Audio visualizer stereo channels
+	// Audio visualizer stereo channels (separated mode)
 	Left  *int `json:"left,omitempty"`
 	Right *int `json:"right,omitempty"`
+
+	// Volume meter clipping indicator
+	Clipping *int `json:"clipping,omitempty"`
+
+	// Volume meter peak hold indicator
+	Peak *int `json:"peak,omitempty"`
 }
 
 // BarConfig represents bar mode settings
@@ -280,9 +287,8 @@ type PerCoreConfig struct {
 
 // StereoConfig represents stereo settings for volume meter
 type StereoConfig struct {
-	Enabled    bool `json:"enabled,omitempty"`
-	LeftColor  *int `json:"left_color,omitempty"`
-	RightColor *int `json:"right_color,omitempty"`
+	Enabled bool `json:"enabled,omitempty"`
+	Divider *int `json:"divider,omitempty"` // Divider color between left/right channels (0-255, -1=disabled)
 }
 
 // MeteringConfig represents VU meter metering settings
@@ -302,7 +308,6 @@ type PeakConfig struct {
 type ClippingConfig struct {
 	Enabled   bool    `json:"enabled,omitempty"`
 	Threshold float64 `json:"threshold,omitempty"`
-	Color     *int    `json:"color,omitempty"`
 }
 
 // IndicatorsConfig represents keyboard indicator settings

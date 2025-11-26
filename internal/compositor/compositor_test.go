@@ -133,6 +133,25 @@ func (m *mockGameSenseAPI) RemoveGame() error {
 	return m.removeGameErr
 }
 
+func (m *mockGameSenseAPI) SupportsMultipleEvents() bool {
+	return false
+}
+
+func (m *mockGameSenseAPI) SendScreenDataMultiRes(_ string, resolutionData map[string][]int) error {
+	// Find 128x40 resolution (standard test resolution)
+	if data, ok := resolutionData["image-data-128x40"]; ok {
+		return m.SendScreenData("", data)
+	}
+	return nil
+}
+
+func (m *mockGameSenseAPI) SendMultipleScreenData(_ string, frames [][]int) error {
+	if len(frames) > 0 {
+		return m.SendScreenData("", frames[len(frames)-1])
+	}
+	return nil
+}
+
 func (m *mockGameSenseAPI) GetSendScreenDataCalls() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()

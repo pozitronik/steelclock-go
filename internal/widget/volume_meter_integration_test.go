@@ -20,9 +20,8 @@ func TestVolumeMeterWidget_BackgroundPolling(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-		},
+		Mode: "bar",
+		Bar:  &config.BarConfig{Direction: "horizontal"},
 	}
 
 	widget, err := NewVolumeMeterWidget(cfg)
@@ -73,9 +72,7 @@ func TestVolumeMeterWidget_StopCleanup(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "gauge",
-		},
+		Mode: "gauge",
 	}
 
 	widget, err := NewVolumeMeterWidget(cfg)
@@ -109,9 +106,7 @@ func TestVolumeMeterWidget_LongRunning(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "vu_meter",
-		},
+		Mode: "bar",
 	}
 
 	widget, err := NewVolumeMeterWidget(cfg)
@@ -183,9 +178,8 @@ func TestVolumeMeterWidget_StereoChannels(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "stereo_bars",
-		},
+		Mode:   "bar",
+		Stereo: &config.StereoConfig{Enabled: true},
 	}
 
 	widget, err := NewVolumeMeterWidget(cfg)
@@ -241,10 +235,11 @@ func TestVolumeMeterWidget_ClippingIndicator(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:       "bar_horizontal",
-			ShowClipping:      true,
-			ClippingThreshold: 0.95,
+		Mode: "bar",
+		Bar:  &config.BarConfig{Direction: "horizontal"},
+		Clipping: &config.ClippingConfig{
+			Enabled:   true,
+			Threshold: 0.95,
 		},
 	}
 
@@ -285,11 +280,9 @@ func TestVolumeMeterWidget_DBScaleDisplay(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "text",
-			UseDBScale:  true,
-			FontSize:    10,
-		},
+		Mode:     "text",
+		Metering: &config.MeteringConfig{DBScale: true},
+		Text:     &config.TextConfig{Size: 10},
 	}
 
 	widget, err := NewVolumeMeterWidget(cfg)
@@ -332,9 +325,8 @@ func TestVolumeMeterWidget_NoMemoryLeak(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "bar_horizontal",
-		},
+		Mode: "bar",
+		Bar:  &config.BarConfig{Direction: "horizontal"},
 	}
 
 	// Create and destroy 100 widgets
@@ -369,12 +361,15 @@ func TestVolumeMeterWidget_AutoHideOnSilence(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:         "bar_horizontal",
-			AutoHide:            true,
-			AutoHideOnSilence:   true,
-			AutoHideSilenceTime: 1.0,
-			SilenceThreshold:    0.01,
+		Mode: "bar",
+		Bar:  &config.BarConfig{Direction: "horizontal"},
+		AutoHide: &config.AutoHideConfig{
+			Enabled:     true,
+			OnSilence:   true,
+			SilenceTime: 1.0,
+		},
+		Metering: &config.MeteringConfig{
+			SilenceThreshold: 0.01,
 		},
 	}
 

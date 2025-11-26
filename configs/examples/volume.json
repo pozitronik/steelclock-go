@@ -44,7 +44,8 @@
         "enabled": true,
         "timeout": 3.0
       },
-      "update_interval": 0.1
+      "update_interval": 0.1,
+      "poll_interval": 0.1
     }
   ]
 }

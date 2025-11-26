@@ -14,8 +14,11 @@ type API interface {
 	RegisterGame(developer string, deinitializeTimerMs int) error
 	BindScreenEvent(eventName, deviceType string) error
 	SendScreenData(eventName string, bitmapData []int) error
+	SendScreenDataMultiRes(eventName string, resolutionData map[string][]int) error
 	SendHeartbeat() error
 	RemoveGame() error
+	SupportsMultipleEvents() bool
+	SendMultipleScreenData(eventName string, frames [][]int) error
 }
 
 // Client is a GameSense API client

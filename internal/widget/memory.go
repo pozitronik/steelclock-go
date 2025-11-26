@@ -30,7 +30,7 @@ type MemoryWidget struct {
 	gaugeTicksColor  uint8
 	historyLen       int
 	currentUsage     float64
-	history          []float64
+	history          *RingBuffer[float64] // Ring buffer for graph history - O(1) push with zero allocations
 	fontFace         font.Face
 	mu               sync.RWMutex // Protects currentUsage and history
 }
@@ -38,131 +38,41 @@ type MemoryWidget struct {
 // NewMemoryWidget creates a new memory widget
 func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 	base := NewBaseWidget(cfg)
+	helper := NewConfigHelper(cfg)
 
-	displayMode := cfg.Mode
-	if displayMode == "" {
-		displayMode = "text"
-	}
-
-	// Extract text settings
-	fontSize := 10
-	fontName := ""
-	horizAlign := "center"
-	vertAlign := "center"
-	padding := 0
-
-	if cfg.Text != nil {
-		if cfg.Text.Size > 0 {
-			fontSize = cfg.Text.Size
-		}
-		fontName = cfg.Text.Font
-		if cfg.Text.Align != nil {
-			if cfg.Text.Align.H != "" {
-				horizAlign = cfg.Text.Align.H
-			}
-			if cfg.Text.Align.V != "" {
-				vertAlign = cfg.Text.Align.V
-			}
-		}
-	}
-
-	// Extract padding from style
-	if cfg.Style != nil {
-		padding = cfg.Style.Padding
-	}
-
-	// Extract colors from mode-specific configs
-	fillColor := 255
-	gaugeColor := 200
-	gaugeNeedleColor := 255
-	gaugeShowTicks := true
-	gaugeTicksColor := 150
-
-	switch displayMode {
-	case "bar":
-		if cfg.Bar != nil && cfg.Bar.Colors != nil {
-			if cfg.Bar.Colors.Fill != nil {
-				fillColor = *cfg.Bar.Colors.Fill
-			}
-		}
-	case "graph":
-		if cfg.Graph != nil && cfg.Graph.Colors != nil {
-			if cfg.Graph.Colors.Fill != nil {
-				fillColor = *cfg.Graph.Colors.Fill
-			}
-		}
-	case "gauge":
-		if cfg.Gauge != nil {
-			if cfg.Gauge.ShowTicks != nil {
-				gaugeShowTicks = *cfg.Gauge.ShowTicks
-			}
-			if cfg.Gauge.Colors != nil {
-				if cfg.Gauge.Colors.Fill != nil {
-					fillColor = *cfg.Gauge.Colors.Fill
-				}
-				if cfg.Gauge.Colors.Arc != nil {
-					gaugeColor = *cfg.Gauge.Colors.Arc
-				}
-				if cfg.Gauge.Colors.Needle != nil {
-					gaugeNeedleColor = *cfg.Gauge.Colors.Needle
-				}
-				if cfg.Gauge.Colors.Ticks != nil {
-					gaugeTicksColor = *cfg.Gauge.Colors.Ticks
-				}
-			}
-		}
-	}
-
-	// Extract graph settings
-	historyLen := 30
-	graphFilled := true // Default to filled
-	if cfg.Graph != nil {
-		if cfg.Graph.History > 0 {
-			historyLen = cfg.Graph.History
-		}
-		if cfg.Graph.Filled != nil {
-			graphFilled = *cfg.Graph.Filled
-		}
-	}
-
-	// Extract bar settings
-	barDirection := "horizontal"
-	barBorder := false
-	if cfg.Bar != nil {
-		if cfg.Bar.Direction != "" {
-			barDirection = cfg.Bar.Direction
-		}
-		barBorder = cfg.Bar.Border
-	}
+	// Extract common settings using helper
+	displayMode := helper.GetDisplayMode("text")
+	textSettings := helper.GetTextSettings()
+	padding := helper.GetPadding()
+	barSettings := helper.GetBarSettings()
+	graphSettings := helper.GetGraphSettings()
+	gaugeSettings := helper.GetGaugeSettings()
+	fillColor := helper.GetFillColorForMode(displayMode)
 
 	// Load font for text mode
-	var fontFace font.Face
-	var err error
-	if displayMode == "text" {
-		fontFace, err = bitmap.LoadFont(fontName, fontSize)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load font: %w", err)
-		}
+	fontFace, err := helper.LoadFontForTextMode(displayMode)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
 
 	return &MemoryWidget{
 		BaseWidget:       base,
 		displayMode:      displayMode,
-		fontSize:         fontSize,
-		fontName:         fontName,
-		horizAlign:       horizAlign,
-		vertAlign:        vertAlign,
+		fontSize:         textSettings.FontSize,
+		fontName:         textSettings.FontName,
+		horizAlign:       textSettings.HorizAlign,
+		vertAlign:        textSettings.VertAlign,
 		padding:          padding,
-		barDirection:     barDirection,
-		barBorder:        barBorder,
-		graphFilled:      graphFilled,
+		barDirection:     barSettings.Direction,
+		barBorder:        barSettings.Border,
+		graphFilled:      graphSettings.Filled,
 		fillColor:        uint8(fillColor),
-		gaugeColor:       uint8(gaugeColor),
-		gaugeNeedleColor: uint8(gaugeNeedleColor),
-		gaugeShowTicks:   gaugeShowTicks,
-		gaugeTicksColor:  uint8(gaugeTicksColor),
-		historyLen:       historyLen,
-		history:          make([]float64, 0, historyLen),
+		gaugeColor:       uint8(gaugeSettings.ArcColor),
+		gaugeNeedleColor: uint8(gaugeSettings.NeedleColor),
+		gaugeShowTicks:   gaugeSettings.ShowTicks,
+		gaugeTicksColor:  uint8(gaugeSettings.TicksColor),
+		historyLen:       graphSettings.HistoryLen,
+		history:          NewRingBuffer[float64](graphSettings.HistoryLen),
 		fontFace:         fontFace,
 	}, nil
 }
@@ -185,12 +95,9 @@ func (w *MemoryWidget) Update() error {
 		w.currentUsage = 100
 	}
 
-	// Add to history for graph mode
+	// Add to history for graph mode (ring buffer handles capacity automatically)
 	if w.displayMode == "graph" {
-		w.history = append(w.history, w.currentUsage)
-		if len(w.history) > w.historyLen {
-			w.history = w.history[1:]
-		}
+		w.history.Push(w.currentUsage)
 	}
 	w.mu.Unlock()
 
@@ -228,7 +135,7 @@ func (w *MemoryWidget) Render() (image.Image, error) {
 			bitmap.DrawHorizontalBar(img, contentX, contentY, contentW, contentH, w.currentUsage, w.fillColor, w.barBorder)
 		}
 	case "graph":
-		bitmap.DrawGraph(img, contentX, contentY, contentW, contentH, w.history, w.historyLen, w.fillColor, w.graphFilled)
+		bitmap.DrawGraph(img, contentX, contentY, contentW, contentH, w.history.ToSlice(), w.historyLen, w.fillColor, w.graphFilled)
 	case "gauge":
 		w.renderGauge(img, pos)
 	}

@@ -39,42 +39,24 @@ type ClockWidget struct {
 // NewClockWidget creates a new clock widget
 func NewClockWidget(cfg config.WidgetConfig) (*ClockWidget, error) {
 	base := NewBaseWidget(cfg)
+	helper := NewConfigHelper(cfg)
 
-	// Extract text settings (with defaults from loader)
+	// Extract common settings using helper
+	displayMode := helper.GetDisplayMode("text")
+	textSettings := helper.GetTextSettings()
+	padding := helper.GetPadding()
+
+	// Clock-specific: time format (defaults to 12 for clock, override helper's default of 10)
 	format := "15:04:05" // Default Go time format (HH:MM:SS)
 	fontSize := 12
-	fontName := ""
-	horizAlign := "center"
-	vertAlign := "center"
-	padding := 0
-
+	fontName := textSettings.FontName
 	if cfg.Text != nil {
 		if cfg.Text.Format != "" {
-			// Convert Python strftime to Go format
 			format = convertStrftimeToGo(cfg.Text.Format)
 		}
 		if cfg.Text.Size > 0 {
 			fontSize = cfg.Text.Size
 		}
-		fontName = cfg.Text.Font
-		if cfg.Text.Align != nil {
-			if cfg.Text.Align.H != "" {
-				horizAlign = cfg.Text.Align.H
-			}
-			if cfg.Text.Align.V != "" {
-				vertAlign = cfg.Text.Align.V
-			}
-		}
-	}
-
-	// Extract padding from style
-	if cfg.Style != nil {
-		padding = cfg.Style.Padding
-	}
-
-	displayMode := cfg.Mode
-	if displayMode == "" {
-		displayMode = "text" // Default to text display
 	}
 
 	// Analog mode settings
@@ -120,8 +102,8 @@ func NewClockWidget(cfg config.WidgetConfig) (*ClockWidget, error) {
 		format:      format,
 		fontSize:    fontSize,
 		fontName:    fontName,
-		horizAlign:  horizAlign,
-		vertAlign:   vertAlign,
+		horizAlign:  textSettings.HorizAlign,
+		vertAlign:   textSettings.VertAlign,
 		padding:     padding,
 		displayMode: displayMode,
 		fontFace:    fontFace,

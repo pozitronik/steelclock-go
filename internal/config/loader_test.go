@@ -229,9 +229,9 @@ func TestValidateConfig_MissingGameName(t *testing.T) {
 	applyDefaults(cfg)
 
 	// Validation should now succeed since defaults are applied
-	err := validateConfig(cfg)
+	err := Validate(cfg)
 	if err != nil {
-		t.Errorf("validateConfig() should succeed after applying defaults, got error: %v", err)
+		t.Errorf("Validate() should succeed after applying defaults, got error: %v", err)
 	}
 
 	// Verify default was applied
@@ -265,9 +265,9 @@ func TestValidateConfig_MissingGameDisplayName(t *testing.T) {
 	applyDefaults(cfg)
 
 	// Validation should now succeed since defaults are applied
-	err := validateConfig(cfg)
+	err := Validate(cfg)
 	if err != nil {
-		t.Errorf("validateConfig() should succeed after applying defaults, got error: %v", err)
+		t.Errorf("Validate() should succeed after applying defaults, got error: %v", err)
 	}
 
 	// Verify default was applied
@@ -308,9 +308,9 @@ func TestValidateConfig_InvalidDisplayDimensions(t *testing.T) {
 				},
 			}
 
-			err := validateConfig(cfg)
+			err := Validate(cfg)
 			if err == nil {
-				t.Errorf("validateConfig() should return error for %s", tt.name)
+				t.Errorf("Validate() should return error for %s", tt.name)
 			}
 		})
 	}
@@ -335,9 +335,9 @@ func TestValidateConfig_InvalidRefreshRate(t *testing.T) {
 		},
 	}
 
-	err := validateConfig(cfg)
+	err := Validate(cfg)
 	if err == nil {
-		t.Error("validateConfig() should return error for zero refresh_rate_ms")
+		t.Error("Validate() should return error for zero refresh_rate_ms")
 	}
 }
 
@@ -380,12 +380,12 @@ func TestValidateConfig_DeinitializeTimer(t *testing.T) {
 				},
 			}
 
-			err := validateConfig(cfg)
+			err := Validate(cfg)
 			if tt.shouldErr && err == nil {
-				t.Errorf("validateConfig() should return error for deinitialize_timer_ms=%d", tt.timerMs)
+				t.Errorf("Validate() should return error for deinitialize_timer_ms=%d", tt.timerMs)
 			}
 			if !tt.shouldErr && err != nil {
-				t.Errorf("validateConfig() should not return error for deinitialize_timer_ms=%d, got: %v", tt.timerMs, err)
+				t.Errorf("Validate() should not return error for deinitialize_timer_ms=%d, got: %v", tt.timerMs, err)
 			}
 		})
 	}
@@ -430,12 +430,12 @@ func TestValidateConfig_EventBatchSize(t *testing.T) {
 				},
 			}
 
-			err := validateConfig(cfg)
+			err := Validate(cfg)
 			if tt.shouldErr && err == nil {
-				t.Errorf("validateConfig() should return error for event_batch_size=%d", tt.batchSize)
+				t.Errorf("Validate() should return error for event_batch_size=%d", tt.batchSize)
 			}
 			if !tt.shouldErr && err != nil {
-				t.Errorf("validateConfig() should not return error for event_batch_size=%d, got: %v", tt.batchSize, err)
+				t.Errorf("Validate() should not return error for event_batch_size=%d, got: %v", tt.batchSize, err)
 			}
 		})
 	}
@@ -480,12 +480,12 @@ func TestValidateConfig_SupportedResolutions(t *testing.T) {
 				},
 			}
 
-			err := validateConfig(cfg)
+			err := Validate(cfg)
 			if tt.shouldErr && err == nil {
-				t.Errorf("validateConfig() should return error for resolutions=%v", tt.resolutions)
+				t.Errorf("Validate() should return error for resolutions=%v", tt.resolutions)
 			}
 			if !tt.shouldErr && err != nil {
-				t.Errorf("validateConfig() should not return error for resolutions=%v, got: %v", tt.resolutions, err)
+				t.Errorf("Validate() should not return error for resolutions=%v, got: %v", tt.resolutions, err)
 			}
 		})
 	}
@@ -504,9 +504,9 @@ func TestValidateConfig_NoWidgets(t *testing.T) {
 		Widgets:       []WidgetConfig{},
 	}
 
-	err := validateConfig(cfg)
+	err := Validate(cfg)
 	if err == nil {
-		t.Error("validateConfig() should return error for no widgets")
+		t.Error("Validate() should return error for no widgets")
 	}
 }
 
@@ -530,9 +530,9 @@ func TestValidateConfig_NoEnabledWidgets(t *testing.T) {
 		},
 	}
 
-	err := validateConfig(cfg)
+	err := Validate(cfg)
 	if err != nil {
-		t.Errorf("validateConfig() should allow config with all widgets disabled (will show error at runtime), got error: %v", err)
+		t.Errorf("Validate() should allow config with all widgets disabled (will show error at runtime), got error: %v", err)
 	}
 }
 
@@ -555,9 +555,9 @@ func TestValidateConfig_MissingWidgetType(t *testing.T) {
 		},
 	}
 
-	err := validateConfig(cfg)
+	err := Validate(cfg)
 	if err == nil {
-		t.Error("validateConfig() should return error for missing widget type")
+		t.Error("Validate() should return error for missing widget type")
 	}
 }
 
@@ -580,9 +580,9 @@ func TestValidateConfig_InvalidWidgetType(t *testing.T) {
 		},
 	}
 
-	err := validateConfig(cfg)
+	err := Validate(cfg)
 	if err == nil {
-		t.Error("validateConfig() should return error for invalid widget type")
+		t.Error("Validate() should return error for invalid widget type")
 	}
 }
 
