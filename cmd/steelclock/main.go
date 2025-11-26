@@ -22,6 +22,14 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/widget"
 )
 
+// FIXME: Global mutable state makes testing difficult and creates tight coupling.
+// Consider encapsulating this state in an App struct with methods like:
+//   type App struct { comp, client, trayMgr, ... }
+//   func NewApp() *App
+//   func (a *App) Start() error
+//   func (a *App) Stop()
+//   func (a *App) ReloadConfig() error
+// This would allow for better testability and dependency injection.
 var (
 	comp           *compositor.Compositor
 	client         gamesense.API // Can be *gamesense.Client or *driver.Client

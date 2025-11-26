@@ -323,6 +323,7 @@ func (w *VolumeMeterWidget) updateMeter() {
 	}
 
 	if err != nil {
+		// FIXME: Silent error swallowing - see volume.go for suggested improvements.
 		w.failedCalls++
 		w.consecutiveErrors++
 		return

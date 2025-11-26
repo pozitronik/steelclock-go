@@ -146,7 +146,13 @@ func (w *VolumeWidget) pollVolumeBackground() {
 
 			w.mu.Lock()
 			if err != nil {
-				// Update error tracking
+				// FIXME: Silent error swallowing - errors are counted but never logged or reported.
+				// Consider:
+				// 1. Log errors at debug level (with rate limiting to avoid spam)
+				// 2. Expose error state via a method like LastError() for external monitoring
+				// 3. Add a health check method that returns error count/rate
+				// 4. Only log on state change (first error, recovery after errors)
+				// Example: if w.consecutiveErrors == 0 { log.Printf("[VOLUME] Error: %v", err) }
 				w.failedCalls++
 				w.consecutiveErrors++
 				w.mu.Unlock()

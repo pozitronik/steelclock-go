@@ -98,6 +98,9 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 	}
 
 	// Check if batching is supported by API (only if enabled in config)
+	// FIXME: Type assertion to concrete type breaks interface abstraction.
+	// Consider extending gamesense.API interface to include SupportsMultipleEvents()
+	// or creating a separate BatchAPI interface for batch operations.
 	if comp.batchingEnabled {
 		if gsClient, ok := client.(*gamesense.Client); ok {
 			comp.batchSupported = gsClient.SupportsMultipleEvents()
@@ -259,6 +262,7 @@ func (c *Compositor) renderFrame() error {
 	}
 
 	// Send immediately if batching disabled
+	// FIXME: Type assertion to access SendScreenDataMultiRes - see FIXME in NewCompositor
 	if gsClient, ok := c.client.(*gamesense.Client); ok {
 		if err := gsClient.SendScreenDataMultiRes(c.eventName, resolutionData); err != nil {
 			return fmt.Errorf("send failed: %w", err)
@@ -289,6 +293,7 @@ func (c *Compositor) flushBatch() error {
 	c.bufferMu.Unlock()
 
 	// Send batch
+	// FIXME: Type assertion to access SendMultipleScreenData - see FIXME in NewCompositor
 	if gsClient, ok := c.client.(*gamesense.Client); ok {
 		if err := gsClient.SendMultipleScreenData(c.eventName, framesToSend); err != nil {
 			return fmt.Errorf("batch send failed: %w", err)
