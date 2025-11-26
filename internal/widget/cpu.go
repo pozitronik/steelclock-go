@@ -35,14 +35,15 @@ type CPUWidget struct {
 	gaugeTicksColor  uint8
 	historyLen       int
 	// Separate typed fields instead of interface{} to avoid runtime type assertions
-	currentUsageSingle  float64     // Aggregate CPU usage (when perCore=false)
-	currentUsagePerCore []float64   // Per-core CPU usage (when perCore=true)
-	historySingle       []float64   // Aggregate history (when perCore=false)
-	historyPerCore      [][]float64 // Per-core history (when perCore=true)
-	hasData             bool        // Indicates if currentUsage has been set
-	coreCount           int
-	fontFace            font.Face
-	mu                  sync.RWMutex // Protects currentUsage and history
+	currentUsageSingle  float64   // Aggregate CPU usage (when perCore=false)
+	currentUsagePerCore []float64 // Per-core CPU usage (when perCore=true)
+	// Ring buffers for graph history - O(1) push with zero allocations
+	historySingle  *RingBuffer[float64]   // Aggregate history (when perCore=false)
+	historyPerCore *RingBuffer[[]float64] // Per-core history (when perCore=true)
+	hasData        bool                   // Indicates if currentUsage has been set
+	coreCount      int
+	fontFace       font.Face
+	mu             sync.RWMutex // Protects currentUsage and history
 }
 
 // NewCPUWidget creates a new CPU widget
@@ -92,8 +93,8 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 		gaugeShowTicks:   gaugeSettings.ShowTicks,
 		gaugeTicksColor:  uint8(gaugeSettings.TicksColor),
 		historyLen:       graphSettings.HistoryLen,
-		historySingle:    make([]float64, 0, graphSettings.HistoryLen),
-		historyPerCore:   make([][]float64, 0, graphSettings.HistoryLen),
+		historySingle:    NewRingBuffer[float64](graphSettings.HistoryLen),
+		historyPerCore:   NewRingBuffer[[]float64](graphSettings.HistoryLen),
 		coreCount:        cores,
 		fontFace:         fontFace,
 	}, nil
@@ -122,15 +123,9 @@ func (w *CPUWidget) Update() error {
 		w.currentUsagePerCore = percentages
 		w.hasData = true
 
-		// Add to history
-		// FIXME: Consider using a ring buffer instead of slice append/trim.
-		// Current approach causes slice growth followed by trimming, which may
-		// lead to unnecessary allocations. A ring buffer would avoid this overhead.
+		// Add to history (ring buffer handles capacity automatically)
 		if w.displayMode == "graph" {
-			w.historyPerCore = append(w.historyPerCore, percentages)
-			if len(w.historyPerCore) > w.historyLen {
-				w.historyPerCore = w.historyPerCore[1:]
-			}
+			w.historyPerCore.Push(percentages)
 		}
 		w.mu.Unlock()
 	} else {
@@ -157,14 +152,9 @@ func (w *CPUWidget) Update() error {
 		w.currentUsageSingle = usage
 		w.hasData = true
 
-		// Add to history
-		// FIXME: Consider using a ring buffer instead of slice append/trim.
-		// See comment above for per-core history.
+		// Add to history (ring buffer handles capacity automatically)
 		if w.displayMode == "graph" {
-			w.historySingle = append(w.historySingle, usage)
-			if len(w.historySingle) > w.historyLen {
-				w.historySingle = w.historySingle[1:]
-			}
+			w.historySingle.Push(usage)
 		}
 		w.mu.Unlock()
 	}
@@ -312,12 +302,12 @@ func (w *CPUWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 	defer w.mu.RUnlock()
 
 	if w.perCore {
-		if len(w.historyPerCore) < 2 {
+		if w.historyPerCore.Len() < 2 {
 			return
 		}
 
 		// Get core count from first history entry
-		firstEntry := w.historyPerCore[0]
+		firstEntry := w.historyPerCore.Get(0)
 		numCores := len(firstEntry)
 
 		// Calculate grid dimensions
@@ -331,10 +321,11 @@ func (w *CPUWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 		cellHeight := (height - totalMarginHeight) / rows
 
 		// Transpose history: convert from [time][core] to [core][time]
+		historySlice := w.historyPerCore.ToSlice()
 		coreHistories := make([][]float64, numCores)
 		for i := 0; i < numCores; i++ {
-			coreHistories[i] = make([]float64, len(w.historyPerCore))
-			for t, cores := range w.historyPerCore {
+			coreHistories[i] = make([]float64, len(historySlice))
+			for t, cores := range historySlice {
 				if i < len(cores) {
 					coreHistories[i][t] = cores[i]
 				}
@@ -357,10 +348,10 @@ func (w *CPUWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 			bitmap.DrawGraph(img, cellX, cellY, cellWidth, cellHeight, coreHistories[i], w.historyLen, w.fillColor, w.graphFilled)
 		}
 	} else {
-		if len(w.historySingle) < 2 {
+		if w.historySingle.Len() < 2 {
 			return
 		}
-		bitmap.DrawGraph(img, x, y, width, height, w.historySingle, w.historyLen, w.fillColor, w.graphFilled)
+		bitmap.DrawGraph(img, x, y, width, height, w.historySingle.ToSlice(), w.historyLen, w.fillColor, w.graphFilled)
 	}
 }
 

@@ -30,7 +30,7 @@ type MemoryWidget struct {
 	gaugeTicksColor  uint8
 	historyLen       int
 	currentUsage     float64
-	history          []float64
+	history          *RingBuffer[float64] // Ring buffer for graph history - O(1) push with zero allocations
 	fontFace         font.Face
 	mu               sync.RWMutex // Protects currentUsage and history
 }
@@ -72,7 +72,7 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 		gaugeShowTicks:   gaugeSettings.ShowTicks,
 		gaugeTicksColor:  uint8(gaugeSettings.TicksColor),
 		historyLen:       graphSettings.HistoryLen,
-		history:          make([]float64, 0, graphSettings.HistoryLen),
+		history:          NewRingBuffer[float64](graphSettings.HistoryLen),
 		fontFace:         fontFace,
 	}, nil
 }
@@ -95,15 +95,9 @@ func (w *MemoryWidget) Update() error {
 		w.currentUsage = 100
 	}
 
-	// Add to history for graph mode
-	// FIXME: Consider using a ring buffer instead of slice append/trim.
-	// Current approach causes slice growth followed by trimming, which may
-	// lead to unnecessary allocations. A ring buffer would avoid this overhead.
+	// Add to history for graph mode (ring buffer handles capacity automatically)
 	if w.displayMode == "graph" {
-		w.history = append(w.history, w.currentUsage)
-		if len(w.history) > w.historyLen {
-			w.history = w.history[1:]
-		}
+		w.history.Push(w.currentUsage)
 	}
 	w.mu.Unlock()
 
@@ -141,7 +135,7 @@ func (w *MemoryWidget) Render() (image.Image, error) {
 			bitmap.DrawHorizontalBar(img, contentX, contentY, contentW, contentH, w.currentUsage, w.fillColor, w.barBorder)
 		}
 	case "graph":
-		bitmap.DrawGraph(img, contentX, contentY, contentW, contentH, w.history, w.historyLen, w.fillColor, w.graphFilled)
+		bitmap.DrawGraph(img, contentX, contentY, contentW, contentH, w.history.ToSlice(), w.historyLen, w.fillColor, w.graphFilled)
 	case "gauge":
 		w.renderGauge(img, pos)
 	}
