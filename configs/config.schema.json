@@ -514,7 +514,15 @@
                 "description": "Bar mode settings",
                 "properties": {
                   "direction": { "type": "string", "description": "Bar orientation", "enum": ["horizontal", "vertical"], "default": "horizontal" },
-                  "border": { "type": "boolean", "description": "Draw border around bars", "default": false }
+                  "border": { "type": "boolean", "description": "Draw border around bars", "default": false },
+                  "colors": {
+                    "type": "object",
+                    "description": "Bar colors",
+                    "properties": {
+                      "fill": { "type": "integer", "description": "Bar fill color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "clipping": { "type": "integer", "description": "Clipping indicator color", "minimum": 0, "maximum": 255, "default": 200 }
+                    }
+                  }
                 }
               },
               "gauge": {
@@ -528,7 +536,33 @@
                     "properties": {
                       "arc": { "type": "integer", "description": "Gauge arc outline color", "minimum": 0, "maximum": 255, "default": 200 },
                       "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "ticks": { "type": "integer", "description": "Gauge tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
+                      "ticks": { "type": "integer", "description": "Gauge tick marks color", "minimum": 0, "maximum": 255, "default": 150 },
+                      "clipping": { "type": "integer", "description": "Clipping needle color", "minimum": 0, "maximum": 255, "default": 200 }
+                    }
+                  }
+                }
+              },
+              "text": {
+                "type": "object",
+                "description": "Text mode settings",
+                "properties": {
+                  "format": { "type": "string", "description": "Text format string", "default": "%d%%" },
+                  "font": { "type": ["string", "null"], "description": "Font file path (null = default)", "default": null },
+                  "size": { "type": "integer", "description": "Font size in points", "minimum": 6, "maximum": 72, "default": 10 },
+                  "align": {
+                    "type": "object",
+                    "description": "Text alignment",
+                    "properties": {
+                      "h": { "type": "string", "description": "Horizontal alignment", "enum": ["left", "center", "right"], "default": "center" },
+                      "v": { "type": "string", "description": "Vertical alignment", "enum": ["top", "center", "bottom"], "default": "center" }
+                    }
+                  },
+                  "colors": {
+                    "type": "object",
+                    "description": "Text colors",
+                    "properties": {
+                      "fill": { "type": "integer", "description": "Text color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "clipping": { "type": "integer", "description": "Clipping text color", "minimum": 0, "maximum": 255, "default": 200 }
                     }
                   }
                 }
@@ -537,9 +571,7 @@
                 "type": "object",
                 "description": "Stereo channel settings",
                 "properties": {
-                  "enabled": { "type": "boolean", "description": "Show separate left/right channels", "default": false },
-                  "left_color": { "type": "integer", "description": "Left channel color", "minimum": 0, "maximum": 255, "default": 255 },
-                  "right_color": { "type": "integer", "description": "Right channel color", "minimum": 0, "maximum": 255, "default": 200 }
+                  "enabled": { "type": "boolean", "description": "Show separate left/right channels", "default": false }
                 }
               },
               "metering": {
@@ -564,17 +596,7 @@
                 "description": "Clipping detection settings",
                 "properties": {
                   "enabled": { "type": "boolean", "description": "Enable clipping detection", "default": true },
-                  "threshold": { "type": "number", "description": "Clipping threshold (0.0-1.0)", "minimum": 0, "maximum": 1, "default": 0.99 },
-                  "color": { "type": "integer", "description": "Clipping indicator color", "minimum": 0, "maximum": 255, "default": 200 }
-                }
-              },
-              "colors": {
-                "type": "object",
-                "description": "Volume meter colors",
-                "properties": {
-                  "fill": { "type": "integer", "description": "Meter fill color", "minimum": 0, "maximum": 255, "default": 255 },
-                  "arc": { "type": "integer", "description": "Gauge arc color", "minimum": 0, "maximum": 255, "default": 200 },
-                  "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 }
+                  "threshold": { "type": "number", "description": "Clipping threshold (0.0-1.0)", "minimum": 0, "maximum": 1, "default": 0.99 }
                 }
               }
             }

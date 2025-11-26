@@ -33,20 +33,18 @@ type meterReader interface {
 // VolumeMeterWidget displays realtime audio output levels
 type VolumeMeterWidget struct {
 	*BaseWidget
-	displayMode       string
-	fillColor         uint8
-	clippingColor     uint8
-	leftChannelColor  uint8
-	rightChannelColor uint8
-	barBorder         bool
-	borderColor       uint8
-	gaugeColor        uint8
-	gaugeNeedleColor  uint8
-	gaugeShowTicks    bool
-	gaugeTicksColor   uint8
-	horizontalAlign   string
-	verticalAlign     string
-	padding           int
+	displayMode      string
+	fillColor        uint8
+	clippingColor    uint8
+	barBorder        bool
+	borderColor      uint8
+	gaugeColor       uint8
+	gaugeNeedleColor uint8
+	gaugeShowTicks   bool
+	gaugeTicksColor  uint8
+	horizontalAlign  string
+	verticalAlign    string
+	padding          int
 
 	// Meter configuration
 	pollInterval        time.Duration // Configurable internal polling rate
@@ -126,19 +124,38 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		return nil, fmt.Errorf("invalid display mode: %s (valid: text, bar, gauge)", displayMode)
 	}
 
-	// Extract colors
+	// Extract colors from mode-specific sections (consistent with volume widget pattern)
 	fillColor := 255
 	clippingColor := 200
-	leftChannelColor := 255
-	rightChannelColor := 200
 
-	if cfg.Colors != nil {
-		if cfg.Colors.Fill != nil {
-			fillColor = *cfg.Colors.Fill
+	// Bar colors
+	if cfg.Bar != nil && cfg.Bar.Colors != nil {
+		if cfg.Bar.Colors.Fill != nil {
+			fillColor = *cfg.Bar.Colors.Fill
+		}
+		if cfg.Bar.Colors.Clipping != nil {
+			clippingColor = *cfg.Bar.Colors.Clipping
 		}
 	}
 
-	// Clipping settings (includes color)
+	// Gauge colors (clipping color can also come from gauge.colors.clipping)
+	if cfg.Gauge != nil && cfg.Gauge.Colors != nil {
+		if cfg.Gauge.Colors.Clipping != nil {
+			clippingColor = *cfg.Gauge.Colors.Clipping
+		}
+	}
+
+	// Text colors (for text mode)
+	if cfg.Text != nil && cfg.Text.Colors != nil {
+		if cfg.Text.Colors.Fill != nil {
+			fillColor = *cfg.Text.Colors.Fill
+		}
+		if cfg.Text.Colors.Clipping != nil {
+			clippingColor = *cfg.Text.Colors.Clipping
+		}
+	}
+
+	// Clipping settings (no color field - moved to mode colors)
 	clippingThreshold := 0.99
 	showClipping := false
 
@@ -147,22 +164,13 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		if cfg.Clipping.Threshold > 0 {
 			clippingThreshold = cfg.Clipping.Threshold
 		}
-		if cfg.Clipping.Color != nil {
-			clippingColor = *cfg.Clipping.Color
-		}
 	}
 
-	// Stereo settings (includes channel colors)
+	// Stereo settings (no color fields - moved to bar.colors)
 	stereoMode := false
 
 	if cfg.Stereo != nil {
 		stereoMode = cfg.Stereo.Enabled
-		if cfg.Stereo.LeftColor != nil {
-			leftChannelColor = *cfg.Stereo.LeftColor
-		}
-		if cfg.Stereo.RightColor != nil {
-			rightChannelColor = *cfg.Stereo.RightColor
-		}
 	}
 
 	// Metering settings
@@ -232,8 +240,6 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		displayMode:         displayMode,
 		fillColor:           uint8(fillColor),
 		clippingColor:       uint8(clippingColor),
-		leftChannelColor:    uint8(leftChannelColor),
-		rightChannelColor:   uint8(rightChannelColor),
 		barBorder:           barBorder,
 		borderColor:         uint8(borderColor),
 		gaugeColor:          uint8(gaugeSettings.ArcColor),
@@ -441,7 +447,15 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 	}
 
 	pos := w.GetPosition()
-	img := image.NewGray(image.Rect(0, 0, pos.W, pos.H))
+	style := w.GetStyle()
+
+	// Create base image with background color
+	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
+
+	// Draw border if enabled (border >= 0 means enabled with that color)
+	if style.Border >= 0 {
+		bitmap.DrawBorder(img, uint8(style.Border))
+	}
 
 	// Check if we should render in stereo mode
 	if w.stereoMode && len(channelPeaks) >= 2 {
@@ -637,7 +651,7 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 	leftWidth := int(float64(pos.W) * channelPeaks[0])
 	for y := 0; y < halfHeight; y++ {
 		for x := 0; x < leftWidth; x++ {
-			img.SetGray(x, y, color.Gray{Y: w.leftChannelColor})
+			img.SetGray(x, y, color.Gray{Y: w.fillColor})
 		}
 	}
 
@@ -645,7 +659,7 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 	rightWidth := int(float64(pos.W) * channelPeaks[1])
 	for y := halfHeight; y < pos.H; y++ {
 		for x := 0; x < rightWidth; x++ {
-			img.SetGray(x, y, color.Gray{Y: w.rightChannelColor})
+			img.SetGray(x, y, color.Gray{Y: w.fillColor})
 		}
 	}
 
@@ -743,7 +757,7 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 	leftHeight := int(float64(pos.H) * channelPeaks[0])
 	for y := pos.H - leftHeight; y < pos.H; y++ {
 		for x := 0; x < halfWidth; x++ {
-			img.SetGray(x, y, color.Gray{Y: w.leftChannelColor})
+			img.SetGray(x, y, color.Gray{Y: w.fillColor})
 		}
 	}
 
@@ -751,7 +765,7 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 	rightHeight := int(float64(pos.H) * channelPeaks[1])
 	for y := pos.H - rightHeight; y < pos.H; y++ {
 		for x := halfWidth; x < pos.W; x++ {
-			img.SetGray(x, y, color.Gray{Y: w.rightChannelColor})
+			img.SetGray(x, y, color.Gray{Y: w.fillColor})
 		}
 	}
 

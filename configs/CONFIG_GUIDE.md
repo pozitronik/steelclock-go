@@ -463,12 +463,31 @@ Same structure as CPU widget, without `per_core`.
   "position": {"x": 0, "y": 0, "w": 128, "h": 40},
   "mode": "bar",
   "bar": {
-    "direction": "vertical"
+    "direction": "vertical",
+    "border": false,
+    "colors": {
+      "fill": 255,
+      "clipping": 200
+    }
+  },
+  "gauge": {
+    "show_ticks": true,
+    "colors": {
+      "arc": 200,
+      "needle": 255,
+      "ticks": 150,
+      "clipping": 200
+    }
+  },
+  "text": {
+    "format": "%d%%",
+    "colors": {
+      "fill": 255,
+      "clipping": 200
+    }
   },
   "stereo": {
-    "enabled": true,
-    "left_color": 255,
-    "right_color": 200
+    "enabled": true
   },
   "metering": {
     "db_scale": false,
@@ -481,8 +500,7 @@ Same structure as CPU widget, without `per_core`.
   },
   "clipping": {
     "enabled": true,
-    "threshold": 0.99,
-    "color": 200
+    "threshold": 0.99
   },
   "auto_hide": {
     "on_silence": true
@@ -493,10 +511,13 @@ Same structure as CPU widget, without `per_core`.
 
 | Object | Properties |
 |--------|------------|
-| `stereo` | `enabled`, `left_color`, `right_color` |
+| `bar.colors` | `fill`, `clipping` |
+| `gauge.colors` | `arc`, `needle`, `ticks`, `clipping` |
+| `text.colors` | `fill`, `clipping` |
+| `stereo` | `enabled` |
 | `metering` | `db_scale`, `decay_rate`, `silence_threshold` |
 | `peak` | `enabled`, `hold_time` |
-| `clipping` | `enabled`, `threshold`, `color` |
+| `clipping` | `enabled`, `threshold` |
 
 ### Audio Visualizer Widget
 

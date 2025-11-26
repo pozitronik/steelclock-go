@@ -126,11 +126,12 @@ type StyleConfig struct {
 
 // TextConfig represents text rendering properties
 type TextConfig struct {
-	Format string       `json:"format,omitempty"`
-	Font   string       `json:"font,omitempty"`
-	Size   int          `json:"size,omitempty"`
-	Align  *AlignConfig `json:"align,omitempty"`
-	Unit   string       `json:"unit,omitempty"`
+	Format string            `json:"format,omitempty"`
+	Font   string            `json:"font,omitempty"`
+	Size   int               `json:"size,omitempty"`
+	Align  *AlignConfig      `json:"align,omitempty"`
+	Unit   string            `json:"unit,omitempty"`
+	Colors *ModeColorsConfig `json:"colors,omitempty"`
 }
 
 // AlignConfig represents text alignment
@@ -209,9 +210,12 @@ type ModeColorsConfig struct {
 	Read  *int `json:"read,omitempty"`
 	Write *int `json:"write,omitempty"`
 
-	// Audio visualizer stereo channels
+	// Audio visualizer stereo channels (separated mode)
 	Left  *int `json:"left,omitempty"`
 	Right *int `json:"right,omitempty"`
+
+	// Volume meter clipping indicator
+	Clipping *int `json:"clipping,omitempty"`
 }
 
 // BarConfig represents bar mode settings
@@ -281,9 +285,7 @@ type PerCoreConfig struct {
 
 // StereoConfig represents stereo settings for volume meter
 type StereoConfig struct {
-	Enabled    bool `json:"enabled,omitempty"`
-	LeftColor  *int `json:"left_color,omitempty"`
-	RightColor *int `json:"right_color,omitempty"`
+	Enabled bool `json:"enabled,omitempty"`
 }
 
 // MeteringConfig represents VU meter metering settings
@@ -303,7 +305,6 @@ type PeakConfig struct {
 type ClippingConfig struct {
 	Enabled   bool    `json:"enabled,omitempty"`
 	Threshold float64 `json:"threshold,omitempty"`
-	Color     *int    `json:"color,omitempty"`
 }
 
 // IndicatorsConfig represents keyboard indicator settings
