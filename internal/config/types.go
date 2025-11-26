@@ -79,6 +79,7 @@ type WidgetConfig struct {
 	Colors         *ColorsConfig   `json:"colors,omitempty"`
 	AutoHide       *AutoHideConfig `json:"auto_hide,omitempty"`
 	UpdateInterval float64         `json:"update_interval,omitempty"`
+	PollInterval   float64         `json:"poll_interval,omitempty"` // Internal polling rate for volume/volume_meter (seconds)
 
 	// Widget-specific configurations
 	PerCore    *PerCoreConfig    `json:"per_core,omitempty"`   // CPU widget

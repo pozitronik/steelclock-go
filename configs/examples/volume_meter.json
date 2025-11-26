@@ -61,7 +61,8 @@
         "on_silence": false,
         "silence_time": 2.0
       },
-      "update_interval": 0.05
+      "update_interval": 0.05,
+      "poll_interval": 0.05
     }
   ]
 }

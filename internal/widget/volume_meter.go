@@ -49,6 +49,7 @@ type VolumeMeterWidget struct {
 	padding           int
 
 	// Meter configuration
+	pollInterval        time.Duration // Configurable internal polling rate
 	stereoMode          bool
 	useDBScale          bool
 	showClipping        bool
@@ -201,6 +202,12 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		}
 	}
 
+	// Get poll interval from config, fall back to default
+	pollInterval := time.Duration(config.DefaultPollInterval * float64(time.Second))
+	if cfg.PollInterval > 0 {
+		pollInterval = time.Duration(cfg.PollInterval * float64(time.Second))
+	}
+
 	// Load font for text mode (ignore error - degrades gracefully)
 	fontFace, _ := helper.LoadFontForTextMode(displayMode)
 
@@ -236,6 +243,7 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		horizontalAlign:     textSettings.HorizAlign,
 		verticalAlign:       textSettings.VertAlign,
 		padding:             padding,
+		pollInterval:        pollInterval,
 		stereoMode:          stereoMode,
 		useDBScale:          useDBScale,
 		showClipping:        showClipping,
@@ -287,8 +295,11 @@ func (w *VolumeMeterWidget) pollMeterBackground() {
 		}
 	}()
 
-	ticker := time.NewTicker(w.GetUpdateInterval())
+	ticker := time.NewTicker(w.pollInterval)
 	defer ticker.Stop()
+
+	// Do initial poll immediately (ticker won't fire until first interval)
+	w.updateMeter()
 
 	for {
 		select {

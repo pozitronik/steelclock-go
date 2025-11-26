@@ -36,6 +36,7 @@ type VolumeWidget struct {
 	horizAlign        string
 	vertAlign         string
 	padding           int
+	pollInterval      time.Duration // Configurable internal polling rate
 
 	mu         sync.RWMutex
 	volume     float64 // 0-100
@@ -75,6 +76,12 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 	// Load font for text mode (ignore error - volume widget degrades gracefully)
 	fontFace, _ := helper.LoadFontForTextMode(displayMode)
 
+	// Get poll interval from config, fall back to default
+	pollInterval := time.Duration(config.DefaultPollInterval * float64(time.Second))
+	if cfg.PollInterval > 0 {
+		pollInterval = time.Duration(cfg.PollInterval * float64(time.Second))
+	}
+
 	w := &VolumeWidget{
 		BaseWidget:        base,
 		displayMode:       displayMode,
@@ -90,6 +97,7 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		horizAlign:        textSettings.HorizAlign,
 		vertAlign:         textSettings.VertAlign,
 		padding:           padding,
+		pollInterval:      pollInterval,
 		lastSuccessTime:   time.Now(), // Initialize to prevent false "stuck" detection
 		face:              fontFace,
 		stopChan:          make(chan struct{}),
@@ -131,8 +139,11 @@ func (w *VolumeWidget) pollVolumeBackground() {
 		}
 	}()
 
-	ticker := time.NewTicker(w.GetUpdateInterval())
+	ticker := time.NewTicker(w.pollInterval)
 	defer ticker.Stop()
+
+	// Do initial poll immediately (ticker won't fire until first interval)
+	w.pollOnce()
 
 	for {
 		select {
@@ -140,41 +151,47 @@ func (w *VolumeWidget) pollVolumeBackground() {
 			return
 
 		case <-ticker.C:
-			// Call volume reader
-			volume, muted, err := w.reader.GetVolume()
-
-			w.mu.Lock()
-			if err != nil {
-				// FIXME: Silent error swallowing - errors are counted but never logged or reported.
-				// Consider:
-				// 1. Log errors at debug level (with rate limiting to avoid spam)
-				// 2. Expose error state via a method like LastError() for external monitoring
-				// 3. Add a health check method that returns error count/rate
-				// 4. Only log on state change (first error, recovery after errors)
-				// Example: if w.consecutiveErrors == 0 { log.Printf("[VOLUME] Error: %v", err) }
-				w.failedCalls++
-				w.consecutiveErrors++
-				w.mu.Unlock()
-				continue
-			}
-
-			// Update success tracking
-			w.successfulCalls++
-			w.lastSuccessTime = time.Now()
-			w.consecutiveErrors = 0
-
-			// Update cached volume
-			changed := volume != w.lastVolume || muted != w.isMuted
-			if changed {
-				w.lastVolume = volume
-				// Trigger auto-hide timer (widget becomes visible)
-				w.TriggerAutoHide()
-			}
-			w.volume = volume
-			w.isMuted = muted
-			w.mu.Unlock()
+			w.pollOnce()
 		}
 	}
+}
+
+// pollOnce performs a single volume poll and updates the widget state
+func (w *VolumeWidget) pollOnce() {
+	// Call volume reader
+	volume, muted, err := w.reader.GetVolume()
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if err != nil {
+		// FIXME: Silent error swallowing - errors are counted but never logged or reported.
+		// Consider:
+		// 1. Log errors at debug level (with rate limiting to avoid spam)
+		// 2. Expose error state via a method like LastError() for external monitoring
+		// 3. Add a health check method that returns error count/rate
+		// 4. Only log on state change (first error, recovery after errors)
+		// Example: if w.consecutiveErrors == 0 { log.Printf("[VOLUME] Error: %v", err) }
+		w.failedCalls++
+		w.consecutiveErrors++
+		return
+	}
+
+	// Update success tracking
+	w.totalCalls++
+	w.successfulCalls++
+	w.lastSuccessTime = time.Now()
+	w.consecutiveErrors = 0
+
+	// Update cached volume
+	changed := volume != w.lastVolume || muted != w.isMuted
+	if changed {
+		w.lastVolume = volume
+		// Trigger auto-hide timer (widget becomes visible)
+		w.TriggerAutoHide()
+	}
+	w.volume = volume
+	w.isMuted = muted
 }
 
 // Update is called periodically but just returns immediately

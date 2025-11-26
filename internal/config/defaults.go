@@ -23,6 +23,10 @@ const (
 	// DefaultUpdateInterval is the default widget update interval in seconds
 	DefaultUpdateInterval = 1.0
 
+	// DefaultPollInterval is the default internal polling interval for volume widgets in seconds
+	// Fast polling (100ms) ensures volume changes are detected quickly for responsive UI
+	DefaultPollInterval = 0.1
+
 	// DefaultFontSize is the default text font size
 	DefaultFontSize = 10
 
@@ -192,6 +196,8 @@ func applyTypeSpecificDefaults(w *WidgetConfig) {
 		return
 	case "audio_visualizer":
 		applyAudioVisualizerDefaults(w)
+	case "volume":
+		applyVolumeDefaults(w)
 	case "volume_meter":
 		applyVolumeMeterDefaults(w)
 	}
@@ -341,8 +347,37 @@ func applyAudioVisualizerDefaults(w *WidgetConfig) {
 	}
 }
 
+// applyVolumeDefaults sets default values for volume widgets
+func applyVolumeDefaults(w *WidgetConfig) {
+	if w.PollInterval == 0 {
+		w.PollInterval = DefaultPollInterval
+	}
+
+	if w.Mode == "" {
+		w.Mode = "bar"
+	}
+
+	if w.Colors == nil {
+		w.Colors = &ColorsConfig{}
+	}
+	if w.Colors.Fill == nil {
+		w.Colors.Fill = IntPtr(255)
+	}
+
+	if w.Bar == nil {
+		w.Bar = &BarConfig{}
+	}
+	if w.Bar.Direction == "" {
+		w.Bar.Direction = "horizontal"
+	}
+}
+
 // applyVolumeMeterDefaults sets default values for volume meter widgets
 func applyVolumeMeterDefaults(w *WidgetConfig) {
+	if w.PollInterval == 0 {
+		w.PollInterval = DefaultPollInterval
+	}
+
 	if w.Mode == "" {
 		w.Mode = "bar"
 	}

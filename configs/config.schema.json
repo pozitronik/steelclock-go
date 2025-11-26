@@ -200,6 +200,7 @@
         "position": { "$ref": "#/definitions/position" },
         "style": { "$ref": "#/definitions/style" },
         "update_interval": { "type": "number", "description": "Update interval in seconds", "minimum": 0.01 },
+        "poll_interval": { "type": "number", "description": "Internal polling interval for volume/volume_meter widgets (seconds)", "minimum": 0.01, "default": 0.1 },
         "text": { "$ref": "#/definitions/textObject" },
         "auto_hide": { "$ref": "#/definitions/autoHide" }
       },

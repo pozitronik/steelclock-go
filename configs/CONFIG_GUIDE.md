@@ -174,7 +174,8 @@ Note: Colors are defined within mode-specific objects (e.g., `bar.colors`, `grap
 | `type` | string | Yes | Widget type |
 | `enabled` | boolean | No | Enable widget (default: true) |
 | `mode` | string | Depends | Display mode (widget-specific) |
-| `update_interval` | number | No | Update interval in seconds |
+| `update_interval` | number | No | Update interval in seconds (default: 1.0) |
+| `poll_interval` | number | No | Internal polling interval for volume/volume_meter widgets in seconds (default: 0.1) |
 
 ### Position Object
 
@@ -447,7 +448,8 @@ Same structure as CPU widget, without `per_core`.
   "auto_hide": {
     "enabled": true,
     "timeout": 2.0
-  }
+  },
+  "poll_interval": 0.1
 }
 ```
 
@@ -484,7 +486,8 @@ Same structure as CPU widget, without `per_core`.
   },
   "auto_hide": {
     "on_silence": true
-  }
+  },
+  "poll_interval": 0.05
 }
 ```
 
