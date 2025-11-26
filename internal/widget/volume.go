@@ -103,15 +103,9 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		stopChan:          make(chan struct{}),
 	}
 
-	// Initialize volume reader BEFORE starting goroutine
-	// This ensures widget creation fails if no audio device exists (fail-fast pattern)
-	reader, err := newVolumeReader()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize volume reader: %w", err)
-	}
-	w.reader = reader
-
 	// Start single background goroutine for polling volume
+	// Note: Reader is created INSIDE the goroutine due to Windows COM thread affinity -
+	// COM objects must be created and used on the same thread
 	w.wg.Add(1)
 	go w.pollVolumeBackground()
 
@@ -130,7 +124,15 @@ func (w *VolumeWidget) pollVolumeBackground() {
 		}
 	}()
 
-	// Reader already initialized in NewVolumeWidget (fail-fast pattern)
+	// Create reader on this goroutine due to Windows COM thread affinity -
+	// COM objects must be created and used on the same thread
+	reader, err := newVolumeReader()
+	if err != nil {
+		log.Printf("[VOLUME] Failed to initialize volume reader: %v", err)
+		return
+	}
+	w.reader = reader
+
 	// Ensure cleanup when goroutine exits
 	defer func() {
 		if w.reader != nil {
@@ -164,21 +166,19 @@ func (w *VolumeWidget) pollOnce() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	w.totalCalls++
+
 	if err != nil {
-		// FIXME: Silent error swallowing - errors are counted but never logged or reported.
-		// Consider:
-		// 1. Log errors at debug level (with rate limiting to avoid spam)
-		// 2. Expose error state via a method like LastError() for external monitoring
-		// 3. Add a health check method that returns error count/rate
-		// 4. Only log on state change (first error, recovery after errors)
-		// Example: if w.consecutiveErrors == 0 { log.Printf("[VOLUME] Error: %v", err) }
+		// Log first error and state changes for debugging
+		if w.consecutiveErrors == 0 {
+			log.Printf("[VOLUME] Error reading volume: %v", err)
+		}
 		w.failedCalls++
 		w.consecutiveErrors++
 		return
 	}
 
 	// Update success tracking
-	w.totalCalls++
 	w.successfulCalls++
 	w.lastSuccessTime = time.Now()
 	w.consecutiveErrors = 0

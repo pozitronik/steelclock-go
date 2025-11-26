@@ -160,6 +160,7 @@ func (vr *VolumeReaderWCA) Close() {
 }
 
 // newVolumeReader creates a platform-specific volume reader (Windows implementation using go-wca)
+// Each widget gets its own reader instance to ensure proper lifecycle management
 func newVolumeReader() (volumeReader, error) {
-	return GetSharedVolumeReader()
+	return NewVolumeReaderWCA()
 }

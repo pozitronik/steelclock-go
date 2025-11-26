@@ -260,15 +260,9 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		stopChan:            make(chan struct{}),
 	}
 
-	// Initialize meter reader BEFORE starting goroutine
-	// This ensures widget creation fails if no audio device exists (fail-fast pattern)
-	reader, err := newMeterReader()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize meter reader: %w", err)
-	}
-	w.reader = reader
-
 	// Start background polling goroutine
+	// Note: Reader is created INSIDE the goroutine due to Windows COM thread affinity -
+	// COM objects must be created and used on the same thread
 	w.wg.Add(1)
 	go w.pollMeterBackground()
 
@@ -286,7 +280,15 @@ func (w *VolumeMeterWidget) pollMeterBackground() {
 		}
 	}()
 
-	// Reader already initialized in NewVolumeMeterWidget (fail-fast pattern)
+	// Create reader on this goroutine due to Windows COM thread affinity -
+	// COM objects must be created and used on the same thread
+	reader, err := newMeterReader()
+	if err != nil {
+		log.Printf("[VOLUME-METER] Failed to initialize meter reader: %v", err)
+		return
+	}
+	w.reader = reader
+
 	// Ensure cleanup when goroutine exits
 	defer func() {
 		if w.reader != nil {
@@ -333,7 +335,10 @@ func (w *VolumeMeterWidget) updateMeter() {
 	}
 
 	if err != nil {
-		// FIXME: Silent error swallowing - see volume.go for suggested improvements.
+		// Log first error for debugging
+		if w.consecutiveErrors == 0 {
+			log.Printf("[VOLUME-METER] Error reading meter: %v", err)
+		}
 		w.failedCalls++
 		w.consecutiveErrors++
 		return
