@@ -34,11 +34,15 @@ type CPUWidget struct {
 	gaugeShowTicks   bool
 	gaugeTicksColor  uint8
 	historyLen       int
-	currentUsage     interface{} // float64 or []float64
-	history          []interface{}
-	coreCount        int
-	fontFace         font.Face
-	mu               sync.RWMutex // Protects currentUsage and history
+	// Separate typed fields instead of interface{} to avoid runtime type assertions
+	currentUsageSingle  float64     // Aggregate CPU usage (when perCore=false)
+	currentUsagePerCore []float64   // Per-core CPU usage (when perCore=true)
+	historySingle       []float64   // Aggregate history (when perCore=false)
+	historyPerCore      [][]float64 // Per-core history (when perCore=true)
+	hasData             bool        // Indicates if currentUsage has been set
+	coreCount           int
+	fontFace            font.Face
+	mu                  sync.RWMutex // Protects currentUsage and history
 }
 
 // NewCPUWidget creates a new CPU widget
@@ -186,7 +190,8 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 		gaugeShowTicks:   gaugeShowTicks,
 		gaugeTicksColor:  uint8(gaugeTicksColor),
 		historyLen:       historyLen,
-		history:          make([]interface{}, 0, historyLen),
+		historySingle:    make([]float64, 0, historyLen),
+		historyPerCore:   make([][]float64, 0, historyLen),
 		coreCount:        cores,
 		fontFace:         fontFace,
 	}, nil
@@ -212,13 +217,14 @@ func (w *CPUWidget) Update() error {
 		}
 
 		w.mu.Lock()
-		w.currentUsage = percentages
+		w.currentUsagePerCore = percentages
+		w.hasData = true
 
 		// Add to history
 		if w.displayMode == "graph" {
-			w.history = append(w.history, percentages)
-			if len(w.history) > w.historyLen {
-				w.history = w.history[1:]
+			w.historyPerCore = append(w.historyPerCore, percentages)
+			if len(w.historyPerCore) > w.historyLen {
+				w.historyPerCore = w.historyPerCore[1:]
 			}
 		}
 		w.mu.Unlock()
@@ -243,13 +249,14 @@ func (w *CPUWidget) Update() error {
 		}
 
 		w.mu.Lock()
-		w.currentUsage = usage
+		w.currentUsageSingle = usage
+		w.hasData = true
 
 		// Add to history
 		if w.displayMode == "graph" {
-			w.history = append(w.history, usage)
-			if len(w.history) > w.historyLen {
-				w.history = w.history[1:]
+			w.historySingle = append(w.historySingle, usage)
+			if len(w.historySingle) > w.historyLen {
+				w.historySingle = w.historySingle[1:]
 			}
 		}
 		w.mu.Unlock()
@@ -300,16 +307,14 @@ func (w *CPUWidget) renderText(img *image.Gray) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	if w.currentUsage == nil {
+	if !w.hasData {
 		return
 	}
 
 	if w.perCore {
-		cores := w.currentUsage.([]float64)
-		w.renderTextGrid(img, cores)
+		w.renderTextGrid(img, w.currentUsagePerCore)
 	} else {
-		usage := w.currentUsage.(float64)
-		text := fmt.Sprintf("%.0f", usage)
+		text := fmt.Sprintf("%.0f", w.currentUsageSingle)
 		bitmap.DrawAlignedText(img, text, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
 	}
 }
@@ -357,12 +362,12 @@ func (w *CPUWidget) renderBarHorizontal(img *image.Gray, x, y, width, height int
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	if w.currentUsage == nil {
+	if !w.hasData {
 		return
 	}
 
 	if w.perCore {
-		cores := w.currentUsage.([]float64)
+		cores := w.currentUsagePerCore
 		coreHeight := (height - (len(cores)-1)*w.coreMargin) / len(cores)
 
 		for i, usage := range cores {
@@ -370,8 +375,7 @@ func (w *CPUWidget) renderBarHorizontal(img *image.Gray, x, y, width, height int
 			bitmap.DrawHorizontalBar(img, x, coreY, width, coreHeight, usage, w.fillColor, w.barBorder || w.coreBorder)
 		}
 	} else {
-		usage := w.currentUsage.(float64)
-		bitmap.DrawHorizontalBar(img, x, y, width, height, usage, w.fillColor, w.barBorder)
+		bitmap.DrawHorizontalBar(img, x, y, width, height, w.currentUsageSingle, w.fillColor, w.barBorder)
 	}
 }
 
@@ -379,12 +383,12 @@ func (w *CPUWidget) renderBarVertical(img *image.Gray, x, y, width, height int) 
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	if w.currentUsage == nil {
+	if !w.hasData {
 		return
 	}
 
 	if w.perCore {
-		cores := w.currentUsage.([]float64)
+		cores := w.currentUsagePerCore
 		coreWidth := (width - (len(cores)-1)*w.coreMargin) / len(cores)
 
 		for i, usage := range cores {
@@ -392,8 +396,7 @@ func (w *CPUWidget) renderBarVertical(img *image.Gray, x, y, width, height int) 
 			bitmap.DrawVerticalBar(img, coreX, y, coreWidth, height, usage, w.fillColor, w.barBorder || w.coreBorder)
 		}
 	} else {
-		usage := w.currentUsage.(float64)
-		bitmap.DrawVerticalBar(img, x, y, width, height, usage, w.fillColor, w.barBorder)
+		bitmap.DrawVerticalBar(img, x, y, width, height, w.currentUsageSingle, w.fillColor, w.barBorder)
 	}
 }
 
@@ -401,13 +404,13 @@ func (w *CPUWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	if len(w.history) < 2 {
-		return
-	}
-
 	if w.perCore {
+		if len(w.historyPerCore) < 2 {
+			return
+		}
+
 		// Get core count from first history entry
-		firstEntry := w.history[0].([]float64)
+		firstEntry := w.historyPerCore[0]
 		numCores := len(firstEntry)
 
 		// Calculate grid dimensions
@@ -423,9 +426,8 @@ func (w *CPUWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 		// Transpose history: convert from [time][core] to [core][time]
 		coreHistories := make([][]float64, numCores)
 		for i := 0; i < numCores; i++ {
-			coreHistories[i] = make([]float64, len(w.history))
-			for t, item := range w.history {
-				cores := item.([]float64)
+			coreHistories[i] = make([]float64, len(w.historyPerCore))
+			for t, cores := range w.historyPerCore {
 				if i < len(cores) {
 					coreHistories[i][t] = cores[i]
 				}
@@ -448,12 +450,10 @@ func (w *CPUWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 			bitmap.DrawGraph(img, cellX, cellY, cellWidth, cellHeight, coreHistories[i], w.historyLen, w.fillColor, w.graphFilled)
 		}
 	} else {
-		// Single value history
-		history := make([]float64, len(w.history))
-		for i, item := range w.history {
-			history[i] = item.(float64)
+		if len(w.historySingle) < 2 {
+			return
 		}
-		bitmap.DrawGraph(img, x, y, width, height, history, w.historyLen, w.fillColor, w.graphFilled)
+		bitmap.DrawGraph(img, x, y, width, height, w.historySingle, w.historyLen, w.fillColor, w.graphFilled)
 	}
 }
 
@@ -461,12 +461,12 @@ func (w *CPUWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	if w.currentUsage == nil {
+	if !w.hasData {
 		return
 	}
 
 	if w.perCore {
-		cores := w.currentUsage.([]float64)
+		cores := w.currentUsagePerCore
 		numCores := len(cores)
 
 		// Calculate grid dimensions
@@ -495,7 +495,6 @@ func (w *CPUWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
 			bitmap.DrawGauge(img, cellX, cellY, cellWidth, cellHeight, usage, w.gaugeColor, w.gaugeNeedleColor, w.gaugeShowTicks, w.gaugeTicksColor)
 		}
 	} else {
-		usage := w.currentUsage.(float64)
-		bitmap.DrawGauge(img, 0, 0, pos.W, pos.H, usage, w.gaugeColor, w.gaugeNeedleColor, w.gaugeShowTicks, w.gaugeTicksColor)
+		bitmap.DrawGauge(img, 0, 0, pos.W, pos.H, w.currentUsageSingle, w.gaugeColor, w.gaugeNeedleColor, w.gaugeShowTicks, w.gaugeTicksColor)
 	}
 }

@@ -128,7 +128,7 @@ func TestCPUWidget_Update(t *testing.T) {
 
 	// Verify currentUsage was set
 	widget.mu.RLock()
-	hasUsage := widget.currentUsage != nil
+	hasUsage := widget.hasData
 	widget.mu.RUnlock()
 
 	if !hasUsage {
@@ -159,13 +159,17 @@ func TestCPUWidget_Update_PerCore(t *testing.T) {
 		t.Errorf("Update() error = %v", err)
 	}
 
-	// For per-core mode, currentUsage should be []float64
+	// For per-core mode, currentUsagePerCore should be set
 	widget.mu.RLock()
-	_, ok := widget.currentUsage.([]float64)
+	hasData := widget.hasData
+	hasPerCoreData := len(widget.currentUsagePerCore) > 0
 	widget.mu.RUnlock()
 
-	if !ok {
-		t.Error("Update() with perCore=true should set currentUsage as []float64")
+	if !hasData {
+		t.Error("Update() with perCore=true should set hasData")
+	}
+	if !hasPerCoreData {
+		t.Error("Update() with perCore=true should set currentUsagePerCore")
 	}
 }
 
