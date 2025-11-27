@@ -247,16 +247,26 @@ func (w *WinampWidget) Update() error {
 	w.currentText = w.formatOutput(info)
 
 	// Check for track change and trigger auto-show
+	// Only consider it a track change if:
+	// 1. Title actually changed
+	// 2. New title is not empty (empty title means stopping/transitioning, not a new track)
+	// 3. Status didn't just change (avoids false triggers during stop/pause transitions
+	//    when Winamp updates title before status)
+	// 4. Current status is not Stopped (can't have a "new track" when stopped - handles
+	//    timing where title updates before status during stop transition)
 	if info.Title != w.previousTitle {
-		w.previousTitle = info.Title
-		// Reset scroll position on track change
-		w.scrollOffset = 0
-		w.scrollDirection2 = 1
-		w.scrollPauseUntil = time.Time{}
-		// Trigger auto-show if enabled
-		if w.autoShowOnTrackChange {
-			w.TriggerAutoHide()
+		if info.Title != "" && !statusChanged && info.Status != winamp.StatusStopped {
+			// Reset scroll position on track change
+			w.scrollOffset = 0
+			w.scrollDirection2 = 1
+			w.scrollPauseUntil = time.Time{}
+			// Trigger auto-show if enabled
+			if w.autoShowOnTrackChange {
+				w.TriggerAutoHide()
+			}
 		}
+		// Always update previousTitle to avoid re-triggering
+		w.previousTitle = info.Title
 	}
 
 	return nil
