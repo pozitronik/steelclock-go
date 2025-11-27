@@ -56,21 +56,24 @@ type App struct {
 	lastGoodConfig *config.Config
 	retryCancel    chan struct{}
 	currentBackend string
+	isFirstStart   bool // Track first startup for splash animation
 }
 
 // NewApp creates a new application instance (legacy single-config mode)
 func NewApp(configPath string) *App {
 	return &App{
-		configPath:  configPath,
-		retryCancel: make(chan struct{}),
+		configPath:   configPath,
+		retryCancel:  make(chan struct{}),
+		isFirstStart: true,
 	}
 }
 
 // NewAppWithProfiles creates a new application instance with profile support
 func NewAppWithProfiles(profileMgr *config.ProfileManager) *App {
 	return &App{
-		profileMgr:  profileMgr,
-		retryCancel: make(chan struct{}),
+		profileMgr:   profileMgr,
+		retryCancel:  make(chan struct{}),
+		isFirstStart: true,
 	}
 }
 
@@ -191,6 +194,20 @@ func (a *App) stopInternal(isFinalShutdown bool) {
 	}
 
 	if a.client != nil {
+		// Show exit message on final shutdown
+		if isFinalShutdown {
+			displayWidth := config.DefaultDisplayWidth
+			displayHeight := config.DefaultDisplayHeight
+			if a.lastGoodConfig != nil {
+				displayWidth = a.lastGoodConfig.Display.Width
+				displayHeight = a.lastGoodConfig.Display.Height
+			}
+			splash := NewSplashRenderer(a.client, displayWidth, displayHeight)
+			if err := splash.ShowExitMessage(); err != nil {
+				log.Printf("Warning: Exit message failed: %v", err)
+			}
+		}
+
 		shouldUnregister := a.lastGoodConfig != nil && a.lastGoodConfig.UnregisterOnExit
 
 		if shouldUnregister && isFinalShutdown {
@@ -298,12 +315,35 @@ func (a *App) SwitchProfile(path string) error {
 
 	log.Printf("Loaded config: %s (%s) with %d widgets", newCfg.GameName, newCfg.GameDisplayName, len(newCfg.Widgets))
 
-	// Stop current instance
+	// Get profile name for transition banner
+	activeProfile := a.profileMgr.GetActiveProfile()
+	profileName := "Unknown"
+	if activeProfile != nil {
+		profileName = activeProfile.Name
+	}
+
+	// Stop compositor first to free the display
 	log.Println("Stopping current instance...")
 	a.Stop()
 
+	// Show transition banner (compositor stopped, display is free)
+	a.mu.Lock()
+	if a.client != nil {
+		displayWidth := config.DefaultDisplayWidth
+		displayHeight := config.DefaultDisplayHeight
+		if a.lastGoodConfig != nil {
+			displayWidth = a.lastGoodConfig.Display.Width
+			displayHeight = a.lastGoodConfig.Display.Height
+		}
+		splash := NewSplashRenderer(a.client, displayWidth, displayHeight)
+		if err := splash.ShowTransitionBanner(profileName); err != nil {
+			log.Printf("Warning: Transition banner failed: %v", err)
+		}
+	}
+	a.mu.Unlock()
+
 	log.Println("Waiting for GameSense API to settle...")
-	time.Sleep(2 * time.Second)
+	time.Sleep(500 * time.Millisecond)
 
 	// Start with new config
 	log.Println("Starting with new profile...")
@@ -313,8 +353,7 @@ func (a *App) SwitchProfile(path string) error {
 		return a.handleStartupError(err, newCfg)
 	}
 
-	activeProfile := a.profileMgr.GetActiveProfile()
-	log.Printf("Profile switched successfully to: %s", activeProfile.Name)
+	log.Printf("Profile switched successfully to: %s", profileName)
 	log.Println("========================================")
 	return nil
 }
@@ -372,6 +411,15 @@ func (a *App) startWithConfig(cfg *config.Config) error {
 		}
 	} else {
 		log.Printf("Reusing existing %s client", a.currentBackend)
+	}
+
+	// Show startup animation on first start
+	if a.isFirstStart {
+		splash := NewSplashRenderer(a.client, cfg.Display.Width, cfg.Display.Height)
+		if err := splash.ShowStartupAnimation(); err != nil {
+			log.Printf("Warning: Startup animation failed: %v", err)
+		}
+		a.isFirstStart = false
 	}
 
 	widgets, err := widget.CreateWidgets(cfg.Widgets)
