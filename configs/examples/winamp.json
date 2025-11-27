@@ -1,7 +1,5 @@
 {
   "$schema": "../config.schema.json",
-  "game_name": "STEELCLOCK",
-  "game_display_name": "SteelClock",
   "refresh_rate_ms": 100,
   "display": {
     "width": 128,
