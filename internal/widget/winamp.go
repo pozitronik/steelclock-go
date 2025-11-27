@@ -288,7 +288,7 @@ func (w *WinampWidget) updateScrollPosition(now time.Time) {
 
 	switch w.scrollMode {
 	case "continuous":
-		w.updateContinuousScroll(movement, textWidth, contentWidth)
+		w.updateContinuousScroll(movement, textWidth)
 	case "bounce":
 		w.updateBounceScroll(movement, textWidth, contentWidth, now)
 	case "pause_ends":
@@ -297,7 +297,7 @@ func (w *WinampWidget) updateScrollPosition(now time.Time) {
 }
 
 // updateContinuousScroll handles continuous/marquee scrolling
-func (w *WinampWidget) updateContinuousScroll(movement float64, textWidth, contentWidth int) {
+func (w *WinampWidget) updateContinuousScroll(movement float64, textWidth int) {
 	totalWidth := float64(textWidth + w.scrollGap)
 
 	switch w.scrollDirection {
