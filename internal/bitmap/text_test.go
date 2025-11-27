@@ -842,3 +842,168 @@ func TestDrawTextAtPosition_ConcurrentAccess(t *testing.T) {
 		<-done
 	}
 }
+
+// TestCalculateTextPosition tests text position calculation with various alignments
+func TestCalculateTextPosition(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	tests := []struct {
+		name       string
+		text       string
+		contentX   int
+		contentY   int
+		contentW   int
+		contentH   int
+		horizAlign string
+		vertAlign  string
+	}{
+		{"center-center", "Test", 10, 10, 100, 30, "center", "center"},
+		{"left-top", "Test", 10, 10, 100, 30, "left", "top"},
+		{"right-bottom", "Test", 10, 10, 100, 30, "right", "bottom"},
+		{"left-center", "Test", 10, 10, 100, 30, "left", "center"},
+		{"right-top", "Test", 10, 10, 100, 30, "right", "top"},
+		{"center-bottom", "Test", 10, 10, 100, 30, "center", "bottom"},
+		{"empty text", "", 10, 10, 100, 30, "center", "center"},
+		{"long text", "This is a very long text", 10, 10, 50, 30, "center", "center"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			x, y := CalculateTextPosition(tt.text, face, tt.contentX, tt.contentY, tt.contentW, tt.contentH, tt.horizAlign, tt.vertAlign)
+
+			// X should be within or near content area for non-overflowing text
+			if tt.text != "" && len(tt.text) < 10 {
+				if x < tt.contentX-50 || x > tt.contentX+tt.contentW+50 {
+					t.Errorf("X position %d seems unreasonable for content area starting at %d", x, tt.contentX)
+				}
+			}
+
+			// Y should be reasonable (positive and not extremely large)
+			if y < 0 || y > 1000 {
+				t.Errorf("Y position %d seems unreasonable", y)
+			}
+		})
+	}
+}
+
+// TestCalculateTextPosition_HorizontalAlignment verifies horizontal alignment behavior
+func TestCalculateTextPosition_HorizontalAlignment(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	contentX := 10
+	contentW := 100
+
+	leftX, _ := CalculateTextPosition("Test", face, contentX, 10, contentW, 30, "left", "center")
+	centerX, _ := CalculateTextPosition("Test", face, contentX, 10, contentW, 30, "center", "center")
+	rightX, _ := CalculateTextPosition("Test", face, contentX, 10, contentW, 30, "right", "center")
+
+	// Left should be at or near contentX
+	if leftX != contentX {
+		t.Errorf("Left alignment: X = %d, want %d", leftX, contentX)
+	}
+
+	// Center should be between left and right
+	if centerX <= leftX || centerX >= rightX {
+		t.Errorf("Center alignment: X = %d should be between left (%d) and right (%d)", centerX, leftX, rightX)
+	}
+
+	// Right should be greater than center
+	if rightX <= centerX {
+		t.Errorf("Right alignment: X = %d should be > center (%d)", rightX, centerX)
+	}
+}
+
+// TestCalculateTextPosition_VerticalAlignment verifies vertical alignment behavior
+func TestCalculateTextPosition_VerticalAlignment(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	contentY := 10
+	contentH := 50
+
+	_, topY := CalculateTextPosition("Test", face, 10, contentY, 100, contentH, "center", "top")
+	_, centerY := CalculateTextPosition("Test", face, 10, contentY, 100, contentH, "center", "center")
+	_, bottomY := CalculateTextPosition("Test", face, 10, contentY, 100, contentH, "center", "bottom")
+
+	// Top should be smallest Y (closest to top)
+	if topY >= centerY {
+		t.Errorf("Top alignment: Y = %d should be < center (%d)", topY, centerY)
+	}
+
+	// Center should be between top and bottom
+	if centerY <= topY || centerY >= bottomY {
+		t.Errorf("Center alignment: Y = %d should be between top (%d) and bottom (%d)", centerY, topY, bottomY)
+	}
+
+	// Bottom should be largest Y
+	if bottomY <= centerY {
+		t.Errorf("Bottom alignment: Y = %d should be > center (%d)", bottomY, centerY)
+	}
+}
+
+// TestCalculateTextPosition_ConsistencyWithDrawAlignedText verifies position matches DrawAlignedText
+func TestCalculateTextPosition_ConsistencyWithDrawAlignedText(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	// Create two images - one drawn with DrawAlignedText, one with DrawTextAtPosition using calculated coords
+	img1 := NewGrayscaleImage(128, 40, 0)
+	img2 := NewGrayscaleImage(128, 40, 0)
+
+	padding := 5
+	text := "Test"
+
+	// Draw using DrawAlignedText
+	DrawAlignedText(img1, text, face, "center", "center", padding)
+
+	// Calculate position and draw using DrawTextAtPosition
+	contentX := padding
+	contentY := padding
+	contentW := 128 - padding*2
+	contentH := 40 - padding*2
+	x, y := CalculateTextPosition(text, face, contentX, contentY, contentW, contentH, "center", "center")
+	DrawTextAtPosition(img2, text, face, x, y, 0, 0, 128, 40)
+
+	// Compare images - they should be identical
+	for py := 0; py < 40; py++ {
+		for px := 0; px < 128; px++ {
+			if img1.GrayAt(px, py).Y != img2.GrayAt(px, py).Y {
+				t.Errorf("Images differ at (%d, %d): DrawAlignedText=%d, calculated=%d",
+					px, py, img1.GrayAt(px, py).Y, img2.GrayAt(px, py).Y)
+				return
+			}
+		}
+	}
+}
+
+// TestCalculateTextPosition_InvalidAlignment tests default behavior for invalid alignments
+func TestCalculateTextPosition_InvalidAlignment(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	// Should not panic and should default to center
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("CalculateTextPosition panicked with invalid alignment: %v", r)
+		}
+	}()
+
+	x, y := CalculateTextPosition("Test", face, 10, 10, 100, 30, "invalid", "invalid")
+
+	// Should return reasonable values (defaulting to center)
+	if x < 0 || y < 0 {
+		t.Errorf("Invalid alignment returned negative position: x=%d, y=%d", x, y)
+	}
+}

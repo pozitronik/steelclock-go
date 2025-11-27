@@ -8,27 +8,22 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-// DrawAlignedText draws text on an image with alignment and padding
-func DrawAlignedText(img *image.Gray, text string, face font.Face, horizAlign, vertAlign string, padding int) {
-	// Protect font face access - font.Face is not thread-safe
+// CalculateTextPosition calculates the X,Y position for aligned text within a content area.
+// Returns the baseline position for drawing text with the given alignment.
+// contentX, contentY define the top-left of the content area.
+// contentW, contentH define the size of the content area.
+func CalculateTextPosition(text string, face font.Face, contentX, contentY, contentW, contentH int, horizAlign, vertAlign string) (x, y int) {
 	fontMutex.Lock()
 	defer fontMutex.Unlock()
 
-	bounds := img.Bounds()
-	width := bounds.Dx()
-	height := bounds.Dy()
+	return calculateTextPositionUnsafe(text, face, contentX, contentY, contentW, contentH, horizAlign, vertAlign)
+}
 
-	// Measure text
+// calculateTextPositionUnsafe is the internal implementation without mutex (caller must hold lock)
+func calculateTextPositionUnsafe(text string, face font.Face, contentX, contentY, contentW, contentH int, horizAlign, vertAlign string) (x, y int) {
 	textWidth, textHeight := measureTextUnsafe(text, face)
 
-	// Calculate available space
-	contentX := padding
-	contentY := padding
-	contentW := width - padding*2
-	contentH := height - padding*2
-
 	// Calculate X position
-	var x int
 	switch horizAlign {
 	case "left":
 		x = contentX
@@ -42,7 +37,6 @@ func DrawAlignedText(img *image.Gray, text string, face font.Face, horizAlign, v
 	metrics := face.Metrics()
 	ascent := metrics.Ascent.Ceil()
 
-	var y int
 	switch vertAlign {
 	case "top":
 		y = contentY + ascent
@@ -51,6 +45,28 @@ func DrawAlignedText(img *image.Gray, text string, face font.Face, horizAlign, v
 	default: // center
 		y = contentY + (contentH-textHeight)/2 + ascent
 	}
+
+	return x, y
+}
+
+// DrawAlignedText draws text on an image with alignment and padding
+func DrawAlignedText(img *image.Gray, text string, face font.Face, horizAlign, vertAlign string, padding int) {
+	// Protect font face access - font.Face is not thread-safe
+	fontMutex.Lock()
+	defer fontMutex.Unlock()
+
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	// Calculate content area
+	contentX := padding
+	contentY := padding
+	contentW := width - padding*2
+	contentH := height - padding*2
+
+	// Calculate position using shared logic
+	x, y := calculateTextPositionUnsafe(text, face, contentX, contentY, contentW, contentH, horizAlign, vertAlign)
 
 	// Draw text
 	point := fixed.Point26_6{

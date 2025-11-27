@@ -493,59 +493,36 @@ func (w *WinampWidget) renderScrollingText(img *image.Gray, text string, offset 
 		return
 	}
 
-	// Calculate Y position for text baseline
-	metrics := w.fontFace.Metrics()
-	ascent := metrics.Ascent.Ceil()
-	textHeight := (metrics.Ascent + metrics.Descent).Ceil()
-
-	var textY int
-	switch w.vertAlign {
-	case "top":
-		textY = contentY + ascent
-	case "bottom":
-		textY = contentY + contentH - textHeight + ascent
-	default: // center
-		textY = contentY + (contentH-textHeight)/2 + ascent
-	}
+	// Calculate aligned position using bitmap helper
+	textX, textY := bitmap.CalculateTextPosition(text, w.fontFace, contentX, contentY, contentW, contentH, w.horizAlign, w.vertAlign)
 
 	// Handle horizontal scrolling
 	if w.scrollDirection == "left" || w.scrollDirection == "right" {
-		// Draw text at offset position
-		textX := contentX - int(offset)
+		// Apply horizontal scroll offset
+		scrollX := textX - int(offset)
 
-		// For continuous mode, we may need to draw text twice for seamless loop
+		// For continuous mode, draw text twice for seamless loop
 		if w.scrollMode == "continuous" {
-			// Draw first instance
-			bitmap.DrawTextAtPosition(img, text, w.fontFace, textX, textY, contentX, contentY, contentW, contentH)
+			bitmap.DrawTextAtPosition(img, text, w.fontFace, scrollX, textY, contentX, contentY, contentW, contentH)
 
 			// Draw second instance for seamless loop
 			if w.scrollDirection == "left" {
-				textX2 := textX + textWidth + w.scrollGap
+				textX2 := scrollX + textWidth + w.scrollGap
 				if textX2 < contentX+contentW {
 					bitmap.DrawTextAtPosition(img, text, w.fontFace, textX2, textY, contentX, contentY, contentW, contentH)
 				}
 			} else {
-				textX2 := textX - textWidth - w.scrollGap
+				textX2 := scrollX - textWidth - w.scrollGap
 				if textX2+textWidth > contentX {
 					bitmap.DrawTextAtPosition(img, text, w.fontFace, textX2, textY, contentX, contentY, contentW, contentH)
 				}
 			}
 		} else {
 			// For bounce and pause_ends modes, just draw once
-			bitmap.DrawTextAtPosition(img, text, w.fontFace, textX, textY, contentX, contentY, contentW, contentH)
+			bitmap.DrawTextAtPosition(img, text, w.fontFace, scrollX, textY, contentX, contentY, contentW, contentH)
 		}
 	} else {
-		// Vertical scrolling (up/down)
-		var textX int
-		switch w.horizAlign {
-		case "right":
-			textX = contentX + contentW - textWidth
-		case "center":
-			textX = contentX + (contentW-textWidth)/2
-		default: // left
-			textX = contentX
-		}
-
+		// Vertical scrolling - apply offset to Y
 		scrollY := textY - int(offset)
 		bitmap.DrawTextAtPosition(img, text, w.fontFace, textX, scrollY, contentX, contentY, contentW, contentH)
 	}
