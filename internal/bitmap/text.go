@@ -219,3 +219,119 @@ func DrawBorder(img *image.Gray, borderColor uint8) {
 		img.Set(width-1, y, c)
 	}
 }
+
+// SmartDrawAlignedText draws text using either TTF font or internal font based on the fontFace.
+// If fontFace is nil and fontName is an internal font name, uses internal font rendering.
+// Otherwise, uses TTF font rendering.
+func SmartDrawAlignedText(img *image.Gray, text string, fontFace font.Face, fontName string, horizAlign, vertAlign string, padding int) {
+	if fontFace == nil && IsInternalFont(fontName) {
+		glyphSet := GetInternalFontByName(fontName)
+		DrawAlignedInternalText(img, text, glyphSet, horizAlign, vertAlign, padding)
+		return
+	}
+
+	// Fall back to TTF rendering
+	if fontFace != nil {
+		DrawAlignedText(img, text, fontFace, horizAlign, vertAlign, padding)
+	}
+}
+
+// SmartDrawTextInRect draws text within a rectangle using either TTF font or internal font.
+// If fontFace is nil and fontName is an internal font name, uses internal font rendering.
+// Otherwise, uses TTF font rendering.
+func SmartDrawTextInRect(img *image.Gray, text string, fontFace font.Face, fontName string, x, y, width, height int, horizAlign, vertAlign string, padding int) {
+	if fontFace == nil && IsInternalFont(fontName) {
+		glyphSet := GetInternalFontByName(fontName)
+		DrawInternalTextInRect(img, text, glyphSet, x, y, width, height, horizAlign, vertAlign, padding)
+		return
+	}
+
+	// Fall back to TTF rendering
+	if fontFace != nil {
+		DrawTextInRect(img, text, fontFace, x, y, width, height, horizAlign, vertAlign, padding)
+	}
+}
+
+// SmartMeasureText measures text width using either TTF font or internal font.
+// If fontFace is nil and fontName is an internal font name, uses internal font.
+// Returns width and height.
+func SmartMeasureText(text string, fontFace font.Face, fontName string) (int, int) {
+	if fontFace == nil && IsInternalFont(fontName) {
+		glyphSet := GetInternalFontByName(fontName)
+		if glyphSet == nil {
+			return 0, 0
+		}
+		width := MeasureInternalText(text, glyphSet)
+		return width, glyphSet.GlyphHeight
+	}
+
+	// Fall back to TTF measurement
+	if fontFace != nil {
+		return MeasureText(text, fontFace)
+	}
+
+	return 0, 0
+}
+
+// SmartCalculateTextPosition calculates text position using either TTF font or internal font.
+// If fontFace is nil and fontName is an internal font name, uses internal font.
+// Returns x, y position for text drawing (baseline for TTF, top-left for internal).
+func SmartCalculateTextPosition(text string, fontFace font.Face, fontName string, contentX, contentY, contentW, contentH int, horizAlign, vertAlign string) (x, y int) {
+	if fontFace == nil && IsInternalFont(fontName) {
+		glyphSet := GetInternalFontByName(fontName)
+		if glyphSet == nil {
+			return contentX, contentY
+		}
+		// Calculate position for internal font (top-left based)
+		textWidth := MeasureInternalText(text, glyphSet)
+		textHeight := glyphSet.GlyphHeight
+
+		// Calculate X position
+		switch horizAlign {
+		case "left":
+			x = contentX
+		case "right":
+			x = contentX + contentW - textWidth
+		default: // center
+			x = contentX + (contentW-textWidth)/2
+		}
+
+		// Calculate Y position (top-left, not baseline)
+		switch vertAlign {
+		case "top":
+			y = contentY
+		case "bottom":
+			y = contentY + contentH - textHeight
+		default: // center
+			y = contentY + (contentH-textHeight)/2
+		}
+
+		return x, y
+	}
+
+	// Fall back to TTF positioning
+	if fontFace != nil {
+		return CalculateTextPosition(text, fontFace, contentX, contentY, contentW, contentH, horizAlign, vertAlign)
+	}
+
+	return contentX, contentY
+}
+
+// SmartDrawTextAtPosition draws text at a specific position with clipping.
+// If fontFace is nil and fontName is an internal font name, uses internal font.
+func SmartDrawTextAtPosition(img *image.Gray, text string, fontFace font.Face, fontName string, x, y, clipX, clipY, clipW, clipH int) {
+	if fontFace == nil && IsInternalFont(fontName) {
+		glyphSet := GetInternalFontByName(fontName)
+		if glyphSet == nil {
+			return
+		}
+		// Draw internal font with clipping
+		DrawInternalTextClipped(img, text, glyphSet, x, y, clipX, clipY, clipW, clipH, color.Gray{Y: 255})
+		return
+	}
+
+	// Fall back to TTF rendering
+	if fontFace != nil {
+		DrawTextAtPosition(img, text, fontFace, x, y, clipX, clipY, clipW, clipH)
+	}
+}

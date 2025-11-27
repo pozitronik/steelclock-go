@@ -17,6 +17,7 @@ import (
 type KeyboardWidget struct {
 	*BaseWidget
 	fontSize      int
+	fontName      string
 	horizAlign    string
 	vertAlign     string
 	padding       int
@@ -130,6 +131,7 @@ func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
 	return &KeyboardWidget{
 		BaseWidget:    base,
 		fontSize:      textSettings.FontSize,
+		fontName:      textSettings.FontName,
 		horizAlign:    textSettings.HorizAlign,
 		vertAlign:     textSettings.VertAlign,
 		padding:       padding,
@@ -209,7 +211,7 @@ func (w *KeyboardWidget) renderText(img *image.Gray, capsState, numState, scroll
 	}
 
 	// Draw text
-	bitmap.DrawAlignedText(img, text, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+	bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 }
 
 // renderIcons renders keyboard indicators as icons

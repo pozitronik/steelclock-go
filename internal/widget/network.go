@@ -19,6 +19,7 @@ type NetworkWidget struct {
 	interfaceName *string
 	maxSpeedMbps  float64
 	fontSize      int
+	fontName      string
 	horizAlign    string
 	vertAlign     string
 	padding       int
@@ -113,6 +114,7 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		interfaceName: cfg.Interface,
 		maxSpeedMbps:  maxSpeed,
 		fontSize:      textSettings.FontSize,
+		fontName:      textSettings.FontName,
 		horizAlign:    textSettings.HorizAlign,
 		vertAlign:     textSettings.VertAlign,
 		padding:       padding,
@@ -231,7 +233,7 @@ func (w *NetworkWidget) renderText(img *image.Gray) {
 	defer w.mu.RUnlock()
 
 	text := fmt.Sprintf("↓%.1f ↑%.1f", w.currentRxMbps, w.currentTxMbps)
-	bitmap.DrawAlignedText(img, text, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+	bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 }
 
 func (w *NetworkWidget) renderBarHorizontal(img *image.Gray, x, y, width, height int) {

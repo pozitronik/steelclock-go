@@ -73,10 +73,12 @@ func (w *ErrorWidget) Render() (image.Image, error) {
 	// Draw warning triangles on left and right using glyph system
 	// Select icon size based on display height
 	var iconSet *glyphs.GlyphSet
-	if pos.H < 20 {
-		iconSet = glyphs.CommonIcons8x8
+	if pos.H >= 24 {
+		iconSet = glyphs.CommonIcons24x24
+	} else if pos.H >= 16 {
+		iconSet = glyphs.CommonIcons16x16
 	} else {
-		iconSet = glyphs.CommonIcons10x10
+		iconSet = glyphs.CommonIcons12x12
 	}
 
 	warningIcon := glyphs.GetIcon(iconSet, "warning")

@@ -33,6 +33,7 @@ type VolumeWidget struct {
 	gaugeTicksColor   uint8
 	triangleFillColor uint8
 	triangleBorder    bool
+	fontName          string
 	horizAlign        string
 	vertAlign         string
 	padding           int
@@ -94,6 +95,7 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		gaugeTicksColor:   uint8(gaugeSettings.TicksColor),
 		triangleFillColor: uint8(triangleSettings.FillColor),
 		triangleBorder:    triangleSettings.Border,
+		fontName:          textSettings.FontName,
 		horizAlign:        textSettings.HorizAlign,
 		vertAlign:         textSettings.VertAlign,
 		padding:           padding,
@@ -252,7 +254,8 @@ func (w *VolumeWidget) Render() (image.Image, error) {
 
 // renderText renders volume as text
 func (w *VolumeWidget) renderText(img *image.Gray) {
-	if w.face == nil {
+	// Skip rendering if no font available (neither TTF nor internal)
+	if w.face == nil && !bitmap.IsInternalFont(w.fontName) {
 		return
 	}
 
@@ -262,7 +265,7 @@ func (w *VolumeWidget) renderText(img *image.Gray) {
 	}
 
 	// Draw text with configured alignment
-	bitmap.DrawAlignedText(img, text, w.face, w.horizAlign, w.vertAlign, w.padding)
+	bitmap.SmartDrawAlignedText(img, text, w.face, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 }
 
 // renderBarHorizontal renders volume as horizontal bar

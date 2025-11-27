@@ -35,8 +35,16 @@ func SetBundledFontURL(url string) {
 	}
 }
 
-// LoadFont loads a TrueType font
+// LoadFont loads a TrueType font or returns nil for internal bitmap fonts.
+// When fontName is an internal font name (e.g., "pixel3x5", "pixel5x7", "3x5", "5x7"),
+// this function returns (nil, nil) to signal that internal font rendering should be used.
+// Callers should check: if face == nil && IsInternalFont(fontName), use internal rendering.
 func LoadFont(fontName string, size int) (font.Face, error) {
+	// Check if this is an internal font name - signal to use internal rendering
+	if fontName != "" && IsInternalFont(fontName) {
+		return nil, nil
+	}
+
 	var fontPath string
 
 	// Try to resolve font path if font name is specified

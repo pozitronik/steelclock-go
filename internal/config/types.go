@@ -132,7 +132,7 @@ type StyleConfig struct {
 // TextConfig represents text rendering properties
 type TextConfig struct {
 	Format string       `json:"format,omitempty"`
-	Font   string       `json:"font,omitempty"`
+	Font   string       `json:"font,omitempty"` // Font name: TTF font name/path or built-in: "pixel3x5", "pixel5x7"
 	Size   int          `json:"size,omitempty"`
 	Align  *AlignConfig `json:"align,omitempty"`
 	Unit   string       `json:"unit,omitempty"`

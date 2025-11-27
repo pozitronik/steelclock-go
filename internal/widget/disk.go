@@ -19,6 +19,7 @@ type DiskWidget struct {
 	diskName         *string
 	maxSpeedMbps     float64
 	fontSize         int
+	fontName         string
 	horizAlign       string
 	vertAlign        string
 	padding          int
@@ -93,6 +94,7 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 		diskName:     cfg.Disk,
 		maxSpeedMbps: maxSpeed,
 		fontSize:     textSettings.FontSize,
+		fontName:     textSettings.FontName,
 		horizAlign:   textSettings.HorizAlign,
 		vertAlign:    textSettings.VertAlign,
 		padding:      padding,
@@ -204,7 +206,7 @@ func (w *DiskWidget) renderText(img *image.Gray) {
 	defer w.mu.RUnlock()
 
 	text := fmt.Sprintf("R%.1f W%.1f", w.currentReadMbps, w.currentWriteMbps)
-	bitmap.DrawAlignedText(img, text, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+	bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 }
 
 func (w *DiskWidget) renderBarHorizontal(img *image.Gray, x, y, width, height int) {

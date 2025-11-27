@@ -41,6 +41,7 @@ type VolumeMeterWidget struct {
 	gaugeNeedleColor uint8
 	gaugeShowTicks   bool
 	gaugeTicksColor  uint8
+	fontName         string
 	horizontalAlign  string
 	verticalAlign    string
 	padding          int
@@ -236,6 +237,7 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		gaugeNeedleColor:    uint8(gaugeSettings.NeedleColor),
 		gaugeShowTicks:      gaugeSettings.ShowTicks,
 		gaugeTicksColor:     uint8(gaugeSettings.TicksColor),
+		fontName:            textSettings.FontName,
 		horizontalAlign:     textSettings.HorizAlign,
 		verticalAlign:       textSettings.VertAlign,
 		padding:             padding,
@@ -526,7 +528,7 @@ func (w *VolumeMeterWidget) renderText(img *image.Gray, peak float64, isClipping
 		text += " CLIP"
 	}
 
-	bitmap.DrawAlignedText(img, text, w.face, w.horizontalAlign, w.verticalAlign, w.padding)
+	bitmap.SmartDrawAlignedText(img, text, w.face, w.fontName, w.horizontalAlign, w.verticalAlign, w.padding)
 }
 
 // renderBarHorizontal renders horizontal bar display
@@ -712,7 +714,7 @@ func (w *VolumeMeterWidget) renderTextStereo(img *image.Gray, channelPeaks []flo
 		text += " CLIP"
 	}
 
-	bitmap.DrawAlignedText(img, text, w.face, w.horizontalAlign, w.verticalAlign, w.padding)
+	bitmap.SmartDrawAlignedText(img, text, w.face, w.fontName, w.horizontalAlign, w.verticalAlign, w.padding)
 
 	// Draw separator between channels (if enabled)
 	if w.stereoDivider >= 0 {

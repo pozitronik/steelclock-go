@@ -271,17 +271,17 @@ var Font3x5 = &GlyphSet{
 		},
 
 		// Lowercase letters a-z
-		'a': {
+		'a': { // x-height
 			Width: 3, Height: 5,
 			Data: [][]bool{
+				{false, false, false},
 				{false, true, false},
 				{true, false, true},
 				{true, true, true},
 				{true, false, true},
-				{true, false, true},
 			},
 		},
-		'd': {
+		'd': { // ascender - full height
 			Width: 3, Height: 5,
 			Data: [][]bool{
 				{false, false, true},
@@ -291,37 +291,37 @@ var Font3x5 = &GlyphSet{
 				{false, true, true},
 			},
 		},
-		'e': {
+		'e': { // x-height
 			Width: 3, Height: 5,
 			Data: [][]bool{
+				{false, false, false},
+				{false, true, false},
 				{true, true, true},
+				{true, false, false},
+				{false, true, false},
+			},
+		},
+		'f': { // ascender - full height
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{false, true, true},
 				{true, false, false},
 				{true, true, false},
 				{true, false, false},
-				{true, true, true},
+				{true, false, false},
 			},
 		},
-		'f': {
+		'g': { // descender
 			Width: 3, Height: 5,
 			Data: [][]bool{
+				{false, false, false},
 				{false, true, true},
-				{true, false, false},
-				{true, true, false},
-				{true, false, false},
-				{true, false, false},
-			},
-		},
-		'g': {
-			Width: 3, Height: 5,
-			Data: [][]bool{
-				{false, true, true},
-				{true, false, false},
-				{true, false, true},
 				{true, false, true},
 				{false, true, true},
+				{false, false, true},
 			},
 		},
-		'i': {
+		'i': { // special - dot above
 			Width: 3, Height: 5,
 			Data: [][]bool{
 				{false, true, false},
@@ -331,44 +331,204 @@ var Font3x5 = &GlyphSet{
 				{false, true, false},
 			},
 		},
-		'l': {
+		'l': { // ascender - full height
 			Width: 3, Height: 5,
 			Data: [][]bool{
-				{true, false, false},
-				{true, false, false},
-				{true, false, false},
-				{true, false, false},
-				{true, true, true},
+				{false, true, false},
+				{false, true, false},
+				{false, true, false},
+				{false, true, false},
+				{false, true, false},
 			},
 		},
-		'n': {
+		'n': { // x-height
 			Width: 3, Height: 5,
 			Data: [][]bool{
+				{false, false, false},
 				{true, true, false},
 				{true, false, true},
 				{true, false, true},
 				{true, false, true},
-				{true, false, true},
 			},
 		},
-		'o': {
+		'o': { // x-height
 			Width: 3, Height: 5,
 			Data: [][]bool{
+				{false, false, false},
 				{false, true, false},
 				{true, false, true},
 				{true, false, true},
+				{false, true, false},
+			},
+		},
+		'b': { // ascender - full height
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{true, false, false},
+				{true, false, false},
+				{true, true, false},
+				{true, false, true},
+				{true, true, false},
+			},
+		},
+		'c': { // x-height
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{false, false, false},
+				{false, true, true},
+				{true, false, false},
+				{true, false, false},
+				{false, true, true},
+			},
+		},
+		'h': { // ascender - full height
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{true, false, false},
+				{true, false, false},
+				{true, true, false},
+				{true, false, true},
+				{true, false, true},
+			},
+		},
+		'j': { // descender with dot
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{false, false, true},
+				{false, false, false},
+				{false, false, true},
+				{false, false, true},
+				{false, true, false},
+			},
+		},
+		'k': { // ascender - full height
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{true, false, false},
+				{true, false, false},
+				{true, false, true},
+				{true, true, false},
+				{true, false, true},
+			},
+		},
+		'm': { // x-height
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{false, false, false},
+				{true, false, true},
+				{true, true, true},
+				{true, false, true},
+				{true, false, true},
+			},
+		},
+		'p': { // descender
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{false, false, false},
+				{true, true, false},
+				{true, false, true},
+				{true, true, false},
+				{true, false, false},
+			},
+		},
+		'q': { // descender
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{false, false, false},
+				{false, true, true},
+				{true, false, true},
+				{false, true, true},
+				{false, false, true},
+			},
+		},
+		'r': { // x-height
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{false, false, false},
+				{true, false, true},
+				{true, true, false},
+				{true, false, false},
+				{true, false, false},
+			},
+		},
+		's': { // x-height
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{false, false, false},
+				{false, true, true},
+				{true, false, false},
+				{false, false, true},
+				{true, true, false},
+			},
+		},
+		't': { // ascender - full height
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{false, true, false},
+				{true, true, true},
+				{false, true, false},
+				{false, true, false},
+				{false, false, true},
+			},
+		},
+		'u': { // x-height
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{false, false, false},
+				{true, false, true},
+				{true, false, true},
+				{true, false, true},
+				{false, true, true},
+			},
+		},
+		'v': { // x-height
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{false, false, false},
+				{true, false, true},
+				{true, false, true},
 				{true, false, true},
 				{false, true, false},
 			},
 		},
-		'w': {
+		'w': { // x-height
 			Width: 3, Height: 5,
 			Data: [][]bool{
-				{true, false, true},
+				{false, false, false},
 				{true, false, true},
 				{true, false, true},
 				{true, true, true},
 				{true, false, true},
+			},
+		},
+		'x': { // x-height
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{false, false, false},
+				{true, false, true},
+				{false, true, false},
+				{false, true, false},
+				{true, false, true},
+			},
+		},
+		'y': { // descender
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{false, false, false},
+				{true, false, true},
+				{true, false, true},
+				{false, true, true},
+				{false, true, false},
+			},
+		},
+		'z': { // x-height
+			Width: 3, Height: 5,
+			Data: [][]bool{
+				{false, false, false},
+				{true, true, true},
+				{false, false, true},
+				{true, false, false},
+				{true, true, true},
 			},
 		},
 

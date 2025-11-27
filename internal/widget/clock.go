@@ -158,7 +158,7 @@ func (w *ClockWidget) Render() (image.Image, error) {
 		w.mu.RLock()
 		timeStr := w.currentTime
 		w.mu.RUnlock()
-		bitmap.DrawAlignedText(img, timeStr, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+		bitmap.SmartDrawAlignedText(img, timeStr, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 	}
 
 	return img, nil

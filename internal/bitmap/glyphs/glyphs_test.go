@@ -486,10 +486,9 @@ func TestKeyboardIcons_Dimensions(t *testing.T) {
 
 func TestCommonIcons_Existence(t *testing.T) {
 	iconSets := []*GlyphSet{
-		CommonIcons8x8,
-		CommonIcons10x10,
 		CommonIcons12x12,
 		CommonIcons16x16,
+		CommonIcons24x24,
 	}
 
 	for _, iconSet := range iconSets {
@@ -512,10 +511,9 @@ func TestCommonIcons_Dimensions(t *testing.T) {
 		iconSet      *GlyphSet
 		expectedSize int
 	}{
-		{CommonIcons8x8, 8},
-		{CommonIcons10x10, 10},
 		{CommonIcons12x12, 12},
 		{CommonIcons16x16, 16},
+		{CommonIcons24x24, 24},
 	}
 
 	for _, tt := range tests {

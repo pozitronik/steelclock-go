@@ -42,7 +42,7 @@ func TestValidWidgetTypes(t *testing.T) {
 	expectedTypes := []string{
 		"clock", "cpu", "memory", "network", "disk",
 		"keyboard", "keyboard_layout", "volume", "volume_meter",
-		"audio_visualizer", "doom",
+		"audio_visualizer", "doom", "winamp",
 	}
 
 	for _, wt := range expectedTypes {

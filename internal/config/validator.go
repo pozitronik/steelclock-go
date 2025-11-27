@@ -133,7 +133,7 @@ func validateWidgetType(index int, w *WidgetConfig) error {
 	}
 
 	if !ValidWidgetTypes[w.Type] {
-		validTypes := "clock, cpu, memory, network, disk, keyboard, keyboard_layout, volume, volume_meter, audio_visualizer, doom"
+		validTypes := "clock, cpu, memory, network, disk, keyboard, keyboard_layout, volume, volume_meter, audio_visualizer, doom, winamp"
 		return fmt.Errorf("widget[%d]: invalid type '%s' (valid: %s)", index, w.Type, validTypes)
 	}
 

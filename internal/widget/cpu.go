@@ -212,7 +212,7 @@ func (w *CPUWidget) renderText(img *image.Gray) {
 		w.renderTextGrid(img, w.currentUsagePerCore)
 	} else {
 		text := fmt.Sprintf("%.0f", w.currentUsageSingle)
-		bitmap.DrawAlignedText(img, text, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+		bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 	}
 }
 
@@ -251,7 +251,7 @@ func (w *CPUWidget) renderTextGrid(img *image.Gray, cores []float64) {
 		text := fmt.Sprintf("%.0f", usage)
 
 		// Draw text centered in the cell using explicit coordinates
-		bitmap.DrawTextInRect(img, text, w.fontFace, cellX, cellY, cellWidth, cellHeight, "center", "center", 0)
+		bitmap.SmartDrawTextInRect(img, text, w.fontFace, w.fontName, cellX, cellY, cellWidth, cellHeight, "center", "center", 0)
 	}
 }
 
