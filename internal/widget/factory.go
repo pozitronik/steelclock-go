@@ -36,6 +36,8 @@ func CreateWidget(cfg config.WidgetConfig) (Widget, error) {
 		return NewAudioVisualizerWidget(cfg)
 	case "doom":
 		return NewDoomWidget(cfg)
+	case "winamp":
+		return NewWinampWidget(cfg)
 	default:
 		return nil, fmt.Errorf("unknown widget type: %s", cfg.Type)
 	}

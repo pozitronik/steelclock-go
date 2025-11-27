@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"sync"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
@@ -32,6 +33,7 @@ type KeyboardWidget struct {
 	scrollLockOff string
 	colorOn       uint8
 	colorOff      uint8
+	mu            sync.RWMutex // protects state fields below
 	capsState     bool
 	numState      bool
 	scrollState   bool
@@ -159,32 +161,39 @@ func (w *KeyboardWidget) Render() (image.Image, error) {
 		bitmap.DrawBorder(img, uint8(style.Border))
 	}
 
+	// Copy state under lock to avoid race conditions
+	w.mu.RLock()
+	capsState := w.capsState
+	numState := w.numState
+	scrollState := w.scrollState
+	w.mu.RUnlock()
+
 	// Determine rendering mode based on indicator configurations
 	allIcons := w.capsUseIcon && w.numUseIcon && w.scrollUseIcon
 	allText := !w.capsUseIcon && !w.numUseIcon && !w.scrollUseIcon
 
 	if allIcons {
-		w.renderIcons(img)
+		w.renderIcons(img, capsState, numState, scrollState)
 	} else if allText {
-		w.renderText(img)
+		w.renderText(img, capsState, numState, scrollState)
 	} else {
-		w.renderMixed(img)
+		w.renderMixed(img, capsState, numState, scrollState)
 	}
 
 	return img, nil
 }
 
 // renderText renders keyboard indicators as text
-func (w *KeyboardWidget) renderText(img *image.Gray) {
+func (w *KeyboardWidget) renderText(img *image.Gray, capsState, numState, scrollState bool) {
 	// Build indicator text
 	indicators := []struct {
 		state bool
 		on    string
 		off   string
 	}{
-		{w.capsState, w.capsLockOn, w.capsLockOff},
-		{w.numState, w.numLockOn, w.numLockOff},
-		{w.scrollState, w.scrollLockOn, w.scrollLockOff},
+		{capsState, w.capsLockOn, w.capsLockOff},
+		{numState, w.numLockOn, w.numLockOff},
+		{scrollState, w.scrollLockOn, w.scrollLockOff},
 	}
 
 	text := ""
@@ -204,7 +213,7 @@ func (w *KeyboardWidget) renderText(img *image.Gray) {
 }
 
 // renderIcons renders keyboard indicators as icons
-func (w *KeyboardWidget) renderIcons(img *image.Gray) {
+func (w *KeyboardWidget) renderIcons(img *image.Gray, capsState, numState, scrollState bool) {
 	// Get image bounds
 	bounds := img.Bounds()
 	imgWidth := bounds.Dx()
@@ -215,9 +224,9 @@ func (w *KeyboardWidget) renderIcons(img *image.Gray) {
 		state    bool
 		iconType string
 	}{
-		{w.capsState, "arrow_up"},     // Caps Lock - up arrow (uppercase)
-		{w.numState, "lock"},          // Num Lock - lock icon
-		{w.scrollState, "arrow_down"}, // Scroll Lock - down arrow
+		{capsState, "arrow_up"},     // Caps Lock - up arrow (uppercase)
+		{numState, "lock"},          // Num Lock - lock icon
+		{scrollState, "arrow_down"}, // Scroll Lock - down arrow
 	}
 	iconCount := len(indicators)
 
@@ -344,7 +353,7 @@ func (w *KeyboardWidget) renderIcons(img *image.Gray) {
 }
 
 // renderMixed renders keyboard indicators in mixed mode (some text, some icons)
-func (w *KeyboardWidget) renderMixed(img *image.Gray) {
+func (w *KeyboardWidget) renderMixed(img *image.Gray, capsState, numState, scrollState bool) {
 	// Get image bounds
 	bounds := img.Bounds()
 	imgWidth := bounds.Dx()
@@ -362,9 +371,9 @@ func (w *KeyboardWidget) renderMixed(img *image.Gray) {
 	}
 
 	indicators := []indicator{
-		{w.capsState, w.capsUseIcon, "arrow_up", w.capsLockOn, w.capsLockOff},
-		{w.numState, w.numUseIcon, "lock", w.numLockOn, w.numLockOff},
-		{w.scrollState, w.scrollUseIcon, "arrow_down", w.scrollLockOn, w.scrollLockOff},
+		{capsState, w.capsUseIcon, "arrow_up", w.capsLockOn, w.capsLockOff},
+		{numState, w.numUseIcon, "lock", w.numLockOn, w.numLockOff},
+		{scrollState, w.scrollUseIcon, "arrow_down", w.scrollLockOn, w.scrollLockOff},
 	}
 
 	// Determine icon size for icon-mode indicators (same logic as renderIcons)

@@ -149,6 +149,7 @@ SteelClock supports these widget types:
 | `keyboard`         | Lock key indicators     | -                          |
 | `keyboard_layout`  | Current keyboard layout | -                          |
 | `doom`             | DOOM game               | -                          |
+| `winamp`           | Winamp media player     | -                          |
 
 ## Common Properties
 
@@ -646,6 +647,94 @@ Same structure as CPU widget, without `per_core`.
   "wad": "doom1.wad"
 }
 ```
+
+### Winamp Widget
+
+Displays information from Winamp media player. Windows only (shows placeholder on other platforms).
+
+```json
+{
+  "type": "winamp",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.2,
+  "text": {
+    "format": "{title}",
+    "size": 12,
+    "align": {"h": "center", "v": "center"}
+  },
+  "winamp": {
+    "placeholder": {
+      "mode": "icon",
+      "text": "No Winamp"
+    }
+  },
+  "scroll": {
+    "enabled": true,
+    "direction": "left",
+    "speed": 30,
+    "mode": "continuous",
+    "gap": 20
+  },
+  "auto_show": {
+    "on_track_change": true,
+    "on_play": false,
+    "on_pause": false,
+    "on_stop": false,
+    "on_seek": false
+  }
+}
+```
+
+#### Format Placeholders
+
+| Placeholder          | Description                                          |
+|----------------------|------------------------------------------------------|
+| `{title}`            | Track title from playlist                            |
+| `{filename}`         | File name without path                               |
+| `{filepath}`         | Full file path                                       |
+| `{position}`         | Current position (MM:SS)                             |
+| `{duration}`         | Track duration (MM:SS)                               |
+| `{position_ms}`      | Current position in milliseconds                     |
+| `{duration_s}`       | Track duration in seconds                            |
+| `{bitrate}`          | Audio bitrate in kbps                                |
+| `{samplerate}`       | Sample rate in Hz                                    |
+| `{channels}`         | Number of audio channels                             |
+| `{status}`           | Playback status (Playing/Paused/Stopped)             |
+| `{track_num}`        | Current track number in playlist                     |
+| `{playlist_length}`  | Total tracks in playlist                             |
+| `{shuffle}`          | "S" if shuffle enabled, empty otherwise              |
+| `{repeat}`           | "R" if repeat enabled, empty otherwise               |
+| `{version}`          | Winamp version string                                |
+
+#### Placeholder Configuration
+
+| Property | Description                                              |
+|----------|----------------------------------------------------------|
+| `mode`   | `icon` (Winamp icon) or `text` (custom text)             |
+| `text`   | Text to display when mode is `text` (default: No Winamp) |
+
+#### Scroll Configuration
+
+| Property    | Description                                                              |
+|-------------|--------------------------------------------------------------------------|
+| `enabled`   | Enable text scrolling                                                    |
+| `direction` | Scroll direction: `left`, `right`, `up`, `down`                          |
+| `speed`     | Scroll speed in pixels per second (default: 30)                          |
+| `mode`      | `continuous` (loop), `bounce` (reverse at edges), `pause_ends` (pause)   |
+| `pause_ms`  | Pause duration at ends in ms (for bounce/pause_ends modes, default: 1000)|
+| `gap`       | Gap between text repetitions in pixels (for continuous mode, default: 20)|
+
+#### Auto-Show Events
+
+Works with `auto_hide` to show the widget when specific events occur:
+
+| Property          | Description                                | Default |
+|-------------------|--------------------------------------------|---------|
+| `on_track_change` | Show when track changes                    | true    |
+| `on_play`         | Show when playback starts                  | false   |
+| `on_pause`        | Show when playback is paused               | false   |
+| `on_stop`         | Show when playback stops                   | false   |
+| `on_seek`         | Show when user seeks to different position | false   |
 
 ## Examples
 

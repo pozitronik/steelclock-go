@@ -9,6 +9,7 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/layout"
+	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
 )
 
@@ -89,87 +90,6 @@ func (m *mockWidget) GetRenderCalls() int {
 	return m.renderCalls
 }
 
-// mockGameSenseAPI implements gamesense.GameSenseAPI for testing
-type mockGameSenseAPI struct {
-	mu                  sync.Mutex
-	sendScreenDataCalls int
-	sendHeartbeatCalls  int
-	sendScreenDataErr   error
-	sendHeartbeatErr    error
-	lastBitmapData      []int
-	registerGameErr     error
-	bindScreenEventErr  error
-	removeGameErr       error
-}
-
-func newMockGameSenseAPI() *mockGameSenseAPI {
-	return &mockGameSenseAPI{}
-}
-
-func (m *mockGameSenseAPI) RegisterGame(_ string, _ int) error {
-	return m.registerGameErr
-}
-
-func (m *mockGameSenseAPI) BindScreenEvent(_, _ string) error {
-	return m.bindScreenEventErr
-}
-
-func (m *mockGameSenseAPI) SendScreenData(_ string, bitmapData []int) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.sendScreenDataCalls++
-	m.lastBitmapData = bitmapData
-	return m.sendScreenDataErr
-}
-
-func (m *mockGameSenseAPI) SendHeartbeat() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.sendHeartbeatCalls++
-	return m.sendHeartbeatErr
-}
-
-func (m *mockGameSenseAPI) RemoveGame() error {
-	return m.removeGameErr
-}
-
-func (m *mockGameSenseAPI) SupportsMultipleEvents() bool {
-	return false
-}
-
-func (m *mockGameSenseAPI) SendScreenDataMultiRes(_ string, resolutionData map[string][]int) error {
-	// Find 128x40 resolution (standard test resolution)
-	if data, ok := resolutionData["image-data-128x40"]; ok {
-		return m.SendScreenData("", data)
-	}
-	return nil
-}
-
-func (m *mockGameSenseAPI) SendMultipleScreenData(_ string, frames [][]int) error {
-	if len(frames) > 0 {
-		return m.SendScreenData("", frames[len(frames)-1])
-	}
-	return nil
-}
-
-func (m *mockGameSenseAPI) GetSendScreenDataCalls() int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.sendScreenDataCalls
-}
-
-func (m *mockGameSenseAPI) GetSendHeartbeatCalls() int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.sendHeartbeatCalls
-}
-
-func (m *mockGameSenseAPI) GetLastBitmapData() []int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.lastBitmapData
-}
-
 // Helper to create layout manager
 func createLayoutManager(widgets []widget.Widget) *layout.Manager {
 	displayCfg := config.DisplayConfig{
@@ -182,7 +102,7 @@ func createLayoutManager(widgets []widget.Widget) *layout.Manager {
 
 // TestNewCompositor tests compositor creation
 func TestNewCompositor(t *testing.T) {
-	client := newMockGameSenseAPI()
+	client := testutil.NewTestClient()
 	widgets := []widget.Widget{
 		newMockWidget("widget1", 0, 0, 64, 40),
 	}
@@ -229,7 +149,7 @@ func TestNewCompositor(t *testing.T) {
 
 // TestCompositor_StartStop tests starting and stopping the compositor
 func TestCompositor_StartStop(t *testing.T) {
-	client := newMockGameSenseAPI()
+	client := testutil.NewTestClient()
 	widgets := []widget.Widget{
 		newMockWidget("widget1", 0, 0, 64, 40),
 	}
@@ -264,15 +184,15 @@ func TestCompositor_StartStop(t *testing.T) {
 	}
 
 	// Verify frames were sent
-	sendCalls := client.GetSendScreenDataCalls()
-	if sendCalls < 1 {
-		t.Errorf("SendScreenData calls = %d, want at least 1", sendCalls)
+	frameCount := client.FrameCount()
+	if frameCount < 1 {
+		t.Errorf("Frame count = %d, want at least 1", frameCount)
 	}
 }
 
 // TestCompositor_RenderFrame tests single frame rendering
 func TestCompositor_RenderFrame(t *testing.T) {
-	client := newMockGameSenseAPI()
+	client := testutil.NewTestClient()
 
 	// Create widget with known render result
 	mockW := newMockWidget("widget1", 0, 0, 128, 40)
@@ -297,14 +217,14 @@ func TestCompositor_RenderFrame(t *testing.T) {
 		t.Fatalf("renderFrame() error = %v", err)
 	}
 
-	// Verify SendScreenData was called
-	if client.GetSendScreenDataCalls() != 1 {
-		t.Errorf("SendScreenData calls = %d, want 1", client.GetSendScreenDataCalls())
+	// Verify frame was captured
+	if client.FrameCount() != 1 {
+		t.Errorf("Frame count = %d, want 1", client.FrameCount())
 	}
 
 	// Verify bitmap data was sent
-	bitmapData := client.GetLastBitmapData()
-	if len(bitmapData) == 0 {
+	lastFrame := client.LastFrame()
+	if lastFrame == nil || len(lastFrame.Data) == 0 {
 		t.Error("No bitmap data was sent")
 	}
 
@@ -316,8 +236,8 @@ func TestCompositor_RenderFrame(t *testing.T) {
 
 // TestCompositor_RenderFrame_SendError tests error handling during send
 func TestCompositor_RenderFrame_SendError(t *testing.T) {
-	client := newMockGameSenseAPI()
-	client.sendScreenDataErr = errors.New("send error")
+	client := testutil.NewTestClient()
+	client.SetSendError(errors.New("send error"), 0) // Fail all sends
 
 	mockW := newMockWidget("widget1", 0, 0, 128, 40)
 	widgets := []widget.Widget{mockW}
@@ -341,7 +261,7 @@ func TestCompositor_RenderFrame_SendError(t *testing.T) {
 
 // TestCompositor_MultipleWidgets tests compositor with multiple widgets
 func TestCompositor_MultipleWidgets(t *testing.T) {
-	client := newMockGameSenseAPI()
+	client := testutil.NewTestClient()
 
 	widget1 := newMockWidget("widget1", 0, 0, 64, 40)
 	widget2 := newMockWidget("widget2", 64, 0, 64, 40)
@@ -380,14 +300,14 @@ func TestCompositor_MultipleWidgets(t *testing.T) {
 	}
 
 	// Verify frames were sent
-	if client.GetSendScreenDataCalls() < 1 {
-		t.Errorf("SendScreenData calls = %d, want at least 1", client.GetSendScreenDataCalls())
+	if client.FrameCount() < 1 {
+		t.Errorf("Frame count = %d, want at least 1", client.FrameCount())
 	}
 }
 
 // TestCompositor_WidgetUpdateError tests handling of widget update errors
 func TestCompositor_WidgetUpdateError(t *testing.T) {
-	client := newMockGameSenseAPI()
+	client := testutil.NewTestClient()
 
 	mockW := newMockWidget("widget1", 0, 0, 128, 40)
 	mockW.updateErr = errors.New("update error")
@@ -422,7 +342,7 @@ func TestCompositor_WidgetUpdateError(t *testing.T) {
 
 // TestCompositor_Heartbeat tests heartbeat loop
 func TestCompositor_Heartbeat(t *testing.T) {
-	client := newMockGameSenseAPI()
+	client := testutil.NewTestClient()
 	mockW := newMockWidget("widget1", 0, 0, 128, 40)
 	widgets := []widget.Widget{mockW}
 	layoutMgr := createLayoutManager(widgets)
@@ -456,7 +376,7 @@ func TestCompositor_Heartbeat(t *testing.T) {
 
 // TestCompositor_FastRefreshRate tests with very fast refresh rate
 func TestCompositor_FastRefreshRate(t *testing.T) {
-	client := newMockGameSenseAPI()
+	client := testutil.NewTestClient()
 
 	mockW := newMockWidget("widget1", 0, 0, 128, 40)
 	widgets := []widget.Widget{mockW}
@@ -481,16 +401,21 @@ func TestCompositor_FastRefreshRate(t *testing.T) {
 
 	comp.Stop()
 
-	// With 10ms refresh rate, should have many calls in 200ms
-	sendCalls := client.GetSendScreenDataCalls()
-	if sendCalls < 5 {
-		t.Errorf("SendScreenData calls = %d, want at least 5 with fast refresh", sendCalls)
+	// With 10ms refresh rate, should have many frames in 200ms
+	frameCount := client.FrameCount()
+	if frameCount < 5 {
+		t.Errorf("Frame count = %d, want at least 5 with fast refresh", frameCount)
 	}
+
+	// Verify timing stats
+	stats := client.CalculateTimingStats()
+	t.Logf("Fast refresh: %d frames, avg interval %v, FPS %.1f",
+		stats.FrameCount, stats.AvgInterval, stats.AverageFPS)
 }
 
 // TestCompositor_SlowRefreshRate tests with slow refresh rate
 func TestCompositor_SlowRefreshRate(t *testing.T) {
-	client := newMockGameSenseAPI()
+	client := testutil.NewTestClient()
 
 	mockW := newMockWidget("widget1", 0, 0, 128, 40)
 	widgets := []widget.Widget{mockW}
@@ -516,15 +441,19 @@ func TestCompositor_SlowRefreshRate(t *testing.T) {
 	comp.Stop()
 
 	// With 200ms refresh rate, should have few calls in 300ms
-	sendCalls := client.GetSendScreenDataCalls()
-	if sendCalls > 3 {
-		t.Logf("SendScreenData calls = %d (acceptable for slow refresh)", sendCalls)
+	frameCount := client.FrameCount()
+	if frameCount > 3 {
+		t.Logf("Frame count = %d (acceptable for slow refresh)", frameCount)
 	}
+
+	// Verify timing
+	stats := client.CalculateTimingStats()
+	t.Logf("Slow refresh: %d frames, avg interval %v", stats.FrameCount, stats.AvgInterval)
 }
 
 // TestCompositor_NoWidgets tests compositor with no widgets
 func TestCompositor_NoWidgets(t *testing.T) {
-	client := newMockGameSenseAPI()
+	client := testutil.NewTestClient()
 
 	var widgets []widget.Widget // No widgets
 	layoutMgr := createLayoutManager(widgets)
@@ -548,14 +477,20 @@ func TestCompositor_NoWidgets(t *testing.T) {
 	comp.Stop()
 
 	// Should still send frames (blank frames)
-	if client.GetSendScreenDataCalls() < 1 {
-		t.Errorf("SendScreenData calls = %d, want at least 1 even with no widgets", client.GetSendScreenDataCalls())
+	if client.FrameCount() < 1 {
+		t.Errorf("Frame count = %d, want at least 1 even with no widgets", client.FrameCount())
+	}
+
+	// Verify frames are blank
+	lastFrame := client.LastFrame()
+	if lastFrame != nil && !testutil.IsBlankFrame(lastFrame.Data) {
+		t.Error("Frame should be blank with no widgets")
 	}
 }
 
 // TestCompositor_StopWithoutStart tests stopping before starting
 func TestCompositor_StopWithoutStart(t *testing.T) {
-	client := newMockGameSenseAPI()
+	client := testutil.NewTestClient()
 	mockW := newMockWidget("widget1", 0, 0, 128, 40)
 	widgets := []widget.Widget{mockW}
 	layoutMgr := createLayoutManager(widgets)
@@ -576,7 +511,7 @@ func TestCompositor_StopWithoutStart(t *testing.T) {
 
 // TestCompositor_MultipleStartStop tests multiple start/stop cycles
 func TestCompositor_MultipleStartStop(t *testing.T) {
-	client := newMockGameSenseAPI()
+	client := testutil.NewTestClient()
 
 	mockW := newMockWidget("widget1", 0, 0, 128, 40)
 	widgets := []widget.Widget{mockW}
@@ -606,7 +541,7 @@ func TestCompositor_MultipleStartStop(t *testing.T) {
 
 // TestCompositor_WidgetDifferentUpdateIntervals tests widgets with different update rates
 func TestCompositor_WidgetDifferentUpdateIntervals(t *testing.T) {
-	client := newMockGameSenseAPI()
+	client := testutil.NewTestClient()
 
 	fastWidget := newMockWidget("fast", 0, 0, 64, 40)
 	fastWidget.updateInterval = 50 * time.Millisecond
@@ -643,4 +578,83 @@ func TestCompositor_WidgetDifferentUpdateIntervals(t *testing.T) {
 	if fastCalls <= slowCalls {
 		t.Errorf("Fast widget calls (%d) should be more than slow widget calls (%d)", fastCalls, slowCalls)
 	}
+}
+
+// TestCompositor_FrameContentVerification tests that frame content can be verified
+func TestCompositor_FrameContentVerification(t *testing.T) {
+	client := testutil.NewTestClient()
+
+	// Create widget that renders white pixels
+	mockW := newMockWidget("widget1", 0, 0, 128, 40)
+	img := image.NewGray(image.Rect(0, 0, 128, 40))
+	// Fill with white
+	for y := 0; y < 40; y++ {
+		for x := 0; x < 128; x++ {
+			img.Set(x, y, image.White)
+		}
+	}
+	mockW.renderResult = img
+
+	widgets := []widget.Widget{mockW}
+	layoutMgr := createLayoutManager(widgets)
+	cfg := &config.Config{
+		RefreshRateMs: 100,
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
+	}
+
+	comp := NewCompositor(client, layoutMgr, widgets, cfg)
+
+	_ = comp.renderFrame()
+
+	// Verify frame is full (all white)
+	lastFrame := client.LastFrame()
+	if lastFrame == nil {
+		t.Fatal("No frame captured")
+	}
+
+	if !testutil.IsFullFrame(lastFrame.Data) {
+		pixelCount := testutil.CountSetPixels(lastFrame.Data)
+		t.Errorf("Expected full white frame, got %d pixels set", pixelCount)
+	}
+}
+
+// TestCompositor_ErrorRecovery tests that compositor recovers from transient errors
+func TestCompositor_ErrorRecovery(t *testing.T) {
+	client := testutil.NewTestClient()
+
+	mockW := newMockWidget("widget1", 0, 0, 128, 40)
+	widgets := []widget.Widget{mockW}
+	layoutMgr := createLayoutManager(widgets)
+	cfg := &config.Config{
+		RefreshRateMs: 50,
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
+	}
+
+	comp := NewCompositor(client, layoutMgr, widgets, cfg)
+
+	// Inject error for first 3 sends, then recover
+	client.SetSendError(errors.New("transient error"), 3)
+
+	err := comp.Start()
+	if err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+
+	// Wait for recovery
+	time.Sleep(400 * time.Millisecond)
+
+	comp.Stop()
+
+	// Should have captured frames after error recovery
+	if client.FrameCount() == 0 {
+		t.Error("Expected frames after error recovery")
+	}
+
+	t.Logf("Captured %d frames after transient errors", client.FrameCount())
 }

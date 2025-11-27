@@ -19,9 +19,15 @@ const (
 
 // Update updates the keyboard state
 func (w *KeyboardWidget) Update() error {
-	w.capsState = isKeyToggled(VkCapital)
-	w.numState = isKeyToggled(VkNumlock)
-	w.scrollState = isKeyToggled(VkScroll)
+	caps := isKeyToggled(VkCapital)
+	num := isKeyToggled(VkNumlock)
+	scroll := isKeyToggled(VkScroll)
+
+	w.mu.Lock()
+	w.capsState = caps
+	w.numState = num
+	w.scrollState = scroll
+	w.mu.Unlock()
 	return nil
 }
 
