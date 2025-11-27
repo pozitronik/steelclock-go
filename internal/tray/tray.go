@@ -6,34 +6,60 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 
 	"github.com/getlantern/systray"
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
+// Note: runtime is still used by handleEditConfig for runtime.GOOS
+
 //go:embed icon.ico
 var iconData []byte
 
 // Manager handles system tray icon and menu
 type Manager struct {
-	configPath      string
+	// Legacy mode (single config file)
+	configPath string
+
+	// Profile mode
+	profileMgr *config.ProfileManager
+
+	// Callbacks
 	onReload        func() error
 	onExit          func()
-	menuEdit        *systray.MenuItem
-	menuReload      *systray.MenuItem
-	menuExit        *systray.MenuItem
-	readyChan       chan struct{} // Signals when tray is initialized
-	onReadyCallback func()        // Called when tray is ready
+	onProfileSwitch func(path string) error
+
+	// Menu items
+	profileMenuItems []*systray.MenuItem
+	menuEdit         *systray.MenuItem
+	menuReload       *systray.MenuItem
+	menuExit         *systray.MenuItem
+
+	// State
+	readyChan       chan struct{}
+	onReadyCallback func()
 }
 
-// NewManager creates a new tray manager
+// NewManager creates a new tray manager for single config mode (legacy)
 func NewManager(configPath string, onReload func() error, onExit func()) *Manager {
 	return &Manager{
 		configPath: configPath,
 		onReload:   onReload,
 		onExit:     onExit,
 		readyChan:  make(chan struct{}),
+	}
+}
+
+// NewManagerWithProfiles creates a new tray manager with profile support
+func NewManagerWithProfiles(profileMgr *config.ProfileManager, onReload func() error, onProfileSwitch func(path string) error, onExit func()) *Manager {
+	return &Manager{
+		profileMgr:      profileMgr,
+		onReload:        onReload,
+		onProfileSwitch: onProfileSwitch,
+		onExit:          onExit,
+		readyChan:       make(chan struct{}),
 	}
 }
 
@@ -44,27 +70,62 @@ func (m *Manager) Run() {
 
 // onReady is called when systray is ready
 func (m *Manager) onReady() {
-	// Set icon and tooltip
 	systray.SetIcon(getIcon())
 	systray.SetTitle("SteelClock")
 	systray.SetTooltip("SteelClock - SteelSeries Display")
 
-	// Create menu items
-	m.menuEdit = systray.AddMenuItem("Edit Config", "Open config.json in default editor")
-	m.menuReload = systray.AddMenuItem("Reload Config", "Reload configuration from config.json")
-	systray.AddSeparator()
-	m.menuExit = systray.AddMenuItem("Exit", "Exit SteelClock")
+	if m.profileMgr != nil {
+		m.buildProfileMenu()
+	} else {
+		m.buildLegacyMenu()
+	}
 
-	// Signal that tray is ready
 	close(m.readyChan)
 
-	// Call ready callback if set
 	if m.onReadyCallback != nil {
 		go m.onReadyCallback()
 	}
 
-	// Handle menu clicks
 	go m.handleMenuClicks()
+}
+
+// buildLegacyMenu creates the legacy single-config menu
+func (m *Manager) buildLegacyMenu() {
+	m.menuEdit = systray.AddMenuItem("Edit Config", "Open config file in default editor")
+	m.menuReload = systray.AddMenuItem("Reload Config", "Reload configuration")
+	systray.AddSeparator()
+	m.menuExit = systray.AddMenuItem("Exit", "Exit SteelClock")
+}
+
+// buildProfileMenu creates the profile-aware menu
+func (m *Manager) buildProfileMenu() {
+	profiles := m.profileMgr.GetProfiles()
+	activeProfile := m.profileMgr.GetActiveProfile()
+
+	// Add profile menu items
+	for _, profile := range profiles {
+		menuItem := systray.AddMenuItem(profile.Name, profile.Path)
+
+		// Mark active profile with checkmark
+		if activeProfile != nil && profile.Path == activeProfile.Path {
+			menuItem.Check()
+		}
+
+		m.profileMenuItems = append(m.profileMenuItems, menuItem)
+	}
+
+	// Separator after profiles
+	if len(profiles) > 0 {
+		systray.AddSeparator()
+	}
+
+	// Edit and Reload items
+	m.menuEdit = systray.AddMenuItem("Edit Active Config", "Open active config file in default editor")
+	m.menuReload = systray.AddMenuItem("Reload Active Config", "Reload current configuration")
+
+	// Separator before Exit
+	systray.AddSeparator()
+	m.menuExit = systray.AddMenuItem("Exit", "Exit SteelClock")
 }
 
 // onQuit is called when systray is quitting
@@ -76,23 +137,106 @@ func (m *Manager) onQuit() {
 
 // handleMenuClicks processes menu item clicks
 func (m *Manager) handleMenuClicks() {
+	// Build select cases once - menu structure doesn't change at runtime
+	// Cases: [edit, reload, exit, profile0, profile1, ...]
+	cases := make([]reflect.SelectCase, 0, 3+len(m.profileMenuItems))
+
+	// Add fixed menu items
+	cases = append(cases, reflect.SelectCase{
+		Dir:  reflect.SelectRecv,
+		Chan: reflect.ValueOf(m.menuEdit.ClickedCh),
+	})
+	cases = append(cases, reflect.SelectCase{
+		Dir:  reflect.SelectRecv,
+		Chan: reflect.ValueOf(m.menuReload.ClickedCh),
+	})
+	cases = append(cases, reflect.SelectCase{
+		Dir:  reflect.SelectRecv,
+		Chan: reflect.ValueOf(m.menuExit.ClickedCh),
+	})
+
+	// Add profile menu items
+	for _, item := range m.profileMenuItems {
+		cases = append(cases, reflect.SelectCase{
+			Dir:  reflect.SelectRecv,
+			Chan: reflect.ValueOf(item.ClickedCh),
+		})
+	}
+
 	for {
-		select {
-		case <-m.menuEdit.ClickedCh:
+		// Wait for any channel to receive
+		chosen, _, _ := reflect.Select(cases)
+
+		switch chosen {
+		case 0: // Edit
 			m.handleEditConfig()
-		case <-m.menuReload.ClickedCh:
+		case 1: // Reload
 			m.handleReloadConfig()
-		case <-m.menuExit.ClickedCh:
+		case 2: // Exit
 			systray.Quit()
 			return
+		default: // Profile item (index = chosen - 3)
+			profileIndex := chosen - 3
+			m.handleProfileSwitch(profileIndex)
+		}
+	}
+}
+
+// handleProfileSwitch handles clicking on a profile menu item
+func (m *Manager) handleProfileSwitch(index int) {
+	if m.profileMgr == nil {
+		return
+	}
+
+	profiles := m.profileMgr.GetProfiles()
+	if index < 0 || index >= len(profiles) {
+		return
+	}
+
+	profile := profiles[index]
+	activeProfile := m.profileMgr.GetActiveProfile()
+
+	// Don't switch if already active
+	if activeProfile != nil && profile.Path == activeProfile.Path {
+		return
+	}
+
+	log.Printf("Switching to profile: %s (%s)", profile.Name, profile.Path)
+
+	if m.onProfileSwitch != nil {
+		if err := m.onProfileSwitch(profile.Path); err != nil {
+			log.Printf("Failed to switch profile: %v", err)
+			return
+		}
+	}
+
+	// Update checkmarks
+	for i, item := range m.profileMenuItems {
+		if i == index {
+			item.Check()
+		} else {
+			item.Uncheck()
 		}
 	}
 }
 
 // handleEditConfig opens config file in default editor
 func (m *Manager) handleEditConfig() {
-	// Get absolute path
-	absPath, err := filepath.Abs(m.configPath)
+	var absPath string
+	var err error
+
+	if m.profileMgr != nil {
+		activeProfile := m.profileMgr.GetActiveProfile()
+		if activeProfile != nil {
+			absPath, err = filepath.Abs(activeProfile.Path)
+		} else {
+			log.Println("No active profile to edit")
+			return
+		}
+	} else {
+		absPath, err = filepath.Abs(m.configPath)
+	}
+
 	if err != nil {
 		log.Printf("Failed to get absolute path: %v", err)
 		return
@@ -135,6 +279,20 @@ func (m *Manager) handleReloadConfig() {
 		}
 	}
 
+	// Refresh profile name in case config_name changed
+	if m.profileMgr != nil {
+		activeProfile := m.profileMgr.GetActiveProfile()
+		if activeProfile != nil {
+			m.profileMgr.RefreshProfile(activeProfile.Path)
+			// Update menu item text
+			for i, profile := range m.profileMgr.GetProfiles() {
+				if i < len(m.profileMenuItems) {
+					m.profileMenuItems[i].SetTitle(profile.Name)
+				}
+			}
+		}
+	}
+
 	log.Println("Configuration reloaded successfully")
 }
 
@@ -153,17 +311,33 @@ func (m *Manager) WaitReady() {
 	<-m.readyChan
 }
 
+// UpdateActiveProfile updates the checkmark to reflect the current active profile
+func (m *Manager) UpdateActiveProfile() {
+	if m.profileMgr == nil {
+		return
+	}
+
+	activeProfile := m.profileMgr.GetActiveProfile()
+	profiles := m.profileMgr.GetProfiles()
+
+	for i, profile := range profiles {
+		if i < len(m.profileMenuItems) {
+			if activeProfile != nil && profile.Path == activeProfile.Path {
+				m.profileMenuItems[i].Check()
+			} else {
+				m.profileMenuItems[i].Uncheck()
+			}
+		}
+	}
+}
+
 // getIcon returns the tray icon bytes
-// Returns embedded icon data
 func getIcon() []byte {
 	if len(iconData) > 0 {
 		log.Println("Using embedded tray icon")
 		return iconData
 	}
 
-	// Fallback: return empty/default icon
 	log.Println("No embedded icon found, using default system icon")
 	return []byte{}
 }
-
-// ValidateConfig checks if config file exists and is valid

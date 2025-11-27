@@ -1,5 +1,6 @@
 {
-  "$schema": "../config.schema.json",
+  "$schema": "schema/config.schema.json",
+  "config_name": "Disk I/O",
   "refresh_rate_ms": 1000,
   "display": {
     "width": 128,
@@ -8,39 +9,31 @@
   },
   "widgets": [
     {
-      "type": "network",
+      "type": "disk",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": -1, "padding": 2},
-      "mode": "gauge",
-      "interface": null,
-      "max_speed_mbps": 100.0,
+      "style": {"background": 0, "border": 255, "padding": 2},
+      "mode": "graph",
+      "disk": null,
+      "max_speed_mbps": -1,
       "bar": {
         "direction": "horizontal",
         "border": false,
         "colors": {
-          "rx": 255,
-          "tx": 128
+          "read": 255,
+          "write": 200
         }
       },
       "graph": {
         "history": 60,
         "filled": true,
         "colors": {
-          "rx": 255,
-          "tx": 128
-        }
-      },
-      "gauge": {
-        "colors": {
-          "rx": 255,
-          "tx": 128,
-          "rx_needle": 255,
-          "tx_needle": 180
+          "read": 255,
+          "write": 200
         }
       },
       "text": {
-        "format": "RX: %s TX: %s",
+        "format": "R: %s W: %s",
         "font": null,
         "size": 10,
         "align": {"h": "center", "v": "center"}

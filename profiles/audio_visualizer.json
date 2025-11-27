@@ -1,5 +1,6 @@
 {
-  "$schema": "../config.schema.json",
+  "$schema": "schema/config.schema.json",
+  "config_name": "Audio Visualizer",
   "refresh_rate_ms": 33,
   "display": {
     "width": 128,

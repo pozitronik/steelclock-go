@@ -1,5 +1,6 @@
 {
-  "$schema": "../config.schema.json",
+  "$schema": "schema/config.schema.json",
+  "config_name": "Volume",
   "refresh_rate_ms": 100,
   "display": {
     "width": 128,

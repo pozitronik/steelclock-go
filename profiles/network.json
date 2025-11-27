@@ -1,5 +1,6 @@
 {
-  "$schema": "../config.schema.json",
+  "$schema": "schema/config.schema.json",
+  "config_name": "Network Monitor",
   "refresh_rate_ms": 1000,
   "display": {
     "width": 128,
@@ -8,36 +9,39 @@
   },
   "widgets": [
     {
-      "type": "memory",
+      "type": "network",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": 255, "padding": 2},
-      "mode": "graph",
+      "style": {"background": 0, "border": -1, "padding": 2},
+      "mode": "gauge",
+      "interface": null,
+      "max_speed_mbps": 100.0,
       "bar": {
         "direction": "horizontal",
         "border": false,
         "colors": {
-          "fill": 255
+          "rx": 255,
+          "tx": 128
         }
       },
       "graph": {
         "history": 60,
         "filled": true,
         "colors": {
-          "fill": 255
+          "rx": 255,
+          "tx": 128
         }
       },
       "gauge": {
-        "show_ticks": true,
         "colors": {
-          "fill": 255,
-          "arc": 200,
-          "needle": 255,
-          "ticks": 150
+          "rx": 255,
+          "tx": 128,
+          "rx_needle": 255,
+          "tx_needle": 180
         }
       },
       "text": {
-        "format": "%d%%",
+        "format": "RX: %s TX: %s",
         "font": null,
         "size": 10,
         "align": {"h": "center", "v": "center"}

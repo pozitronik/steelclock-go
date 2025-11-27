@@ -3,6 +3,7 @@ package config
 // Config represents the complete SteelClock configuration (v2 schema)
 type Config struct {
 	SchemaVersion        int                 `json:"schema_version,omitempty"`
+	ConfigName           string              `json:"config_name,omitempty"` // Display name for profile selection menu
 	GameName             string              `json:"game_name"`
 	GameDisplayName      string              `json:"game_display_name"`
 	RefreshRateMs        int                 `json:"refresh_rate_ms"`

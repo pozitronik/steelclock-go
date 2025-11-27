@@ -1,5 +1,6 @@
 {
-  "$schema": "../config.schema.json",
+  "$schema": "schema/config.schema.json",
+  "config_name": "DOOM",
   "refresh_rate_ms": 50,
   "display": {
     "width": 128,

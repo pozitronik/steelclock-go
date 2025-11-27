@@ -1,5 +1,6 @@
 {
-  "$schema": "../config.schema.json",
+  "$schema": "schema/config.schema.json",
+  "config_name": "Clock",
   "refresh_rate_ms": 1000,
   "display": {
     "width": 128,

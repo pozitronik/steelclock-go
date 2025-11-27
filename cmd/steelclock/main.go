@@ -9,18 +9,38 @@ import (
 	"path/filepath"
 
 	"github.com/pozitronik/steelclock-go/internal/app"
+	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
 var logFile *os.File
 
 func main() {
-	configPathFlag := flag.String("config", "config.json", "Path to configuration file")
+	configPathFlag := flag.String("config", "", "Path to configuration file (overrides profile system)")
 	flag.Parse()
 
 	setupLogging()
 	defer closeLogging()
 
-	application := app.NewApp(*configPathFlag)
+	// Get current working directory for config search
+	baseDir, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Failed to get current working directory: %v", err)
+	}
+
+	// If explicit config path is provided, use legacy single-config mode
+	if *configPathFlag != "" {
+		application := app.NewApp(*configPathFlag)
+		application.Run()
+		return
+	}
+
+	// Use profile manager for multi-config mode
+	profileMgr := config.NewProfileManager(baseDir)
+	if err := profileMgr.LoadProfiles(); err != nil {
+		log.Printf("Warning: Failed to load profiles: %v", err)
+	}
+
+	application := app.NewAppWithProfiles(profileMgr)
 	application.Run()
 }
 
