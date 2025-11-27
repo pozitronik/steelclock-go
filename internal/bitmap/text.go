@@ -144,7 +144,20 @@ func DrawTextAtPosition(img *image.Gray, text string, face font.Face, x, y, clip
 		Dot:  point,
 	}
 
-	// Draw each character, checking if it falls within clip bounds
+	// Get font metrics for vertical bounds checking
+	metrics := face.Metrics()
+	ascent := metrics.Ascent.Ceil()
+	descent := metrics.Descent.Ceil()
+
+	// Check if text is completely outside vertical clip bounds
+	// y is the baseline position, so text extends from (y - ascent) to (y + descent)
+	textTop := y - ascent
+	textBottom := y + descent
+	if textBottom < clipY || textTop >= clipY+clipH {
+		return // Text is completely above or below clip area
+	}
+
+	// Draw each character, checking if it falls within horizontal clip bounds
 	for _, r := range text {
 		// Get glyph bounds
 		advance, ok := face.GlyphAdvance(r)
@@ -155,7 +168,7 @@ func DrawTextAtPosition(img *image.Gray, text string, face font.Face, x, y, clip
 		charX := drawer.Dot.X.Ceil()
 		charWidth := advance.Ceil()
 
-		// Skip if completely outside clip area
+		// Skip if completely outside horizontal clip area
 		if charX+charWidth < clipX || charX >= clipX+clipW {
 			drawer.Dot.X += advance
 			continue

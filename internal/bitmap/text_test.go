@@ -619,3 +619,226 @@ func TestDrawTextInRect_InvalidAlignment(t *testing.T) {
 		})
 	}
 }
+
+// TestDrawTextAtPosition tests basic text positioning with clipping
+func TestDrawTextAtPosition(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	tests := []struct {
+		name                       string
+		x, y                       int
+		clipX, clipY, clipW, clipH int
+	}{
+		{"centered in clip area", 20, 20, 10, 10, 100, 30},
+		{"at clip origin", 10, 20, 10, 10, 100, 30},
+		{"at clip edge", 100, 20, 10, 10, 100, 30},
+		{"full image clip", 10, 20, 0, 0, 128, 40},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := NewGrayscaleImage(128, 40, 0)
+
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("DrawTextAtPosition() panicked: %v", r)
+				}
+			}()
+
+			DrawTextAtPosition(img, "Test", face, tt.x, tt.y, tt.clipX, tt.clipY, tt.clipW, tt.clipH)
+		})
+	}
+}
+
+// TestDrawTextAtPosition_HorizontalClipping tests horizontal clipping
+func TestDrawTextAtPosition_HorizontalClipping(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	img := NewGrayscaleImage(128, 40, 0)
+
+	// Draw text that starts before clip area (should be partially clipped)
+	DrawTextAtPosition(img, "Hello World", face, -20, 20, 0, 0, 128, 40)
+
+	// Draw text that extends past clip area (should be partially clipped)
+	img2 := NewGrayscaleImage(128, 40, 0)
+	DrawTextAtPosition(img2, "Hello World", face, 100, 20, 0, 0, 128, 40)
+
+	// Both should complete without panic
+	if img == nil || img2 == nil {
+		t.Error("DrawTextAtPosition() returned nil image")
+	}
+}
+
+// TestDrawTextAtPosition_VerticalClipping tests vertical clipping
+func TestDrawTextAtPosition_VerticalClipping(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	tests := []struct {
+		name   string
+		y      int
+		clipY  int
+		clipH  int
+		expect string // "visible", "above", "below"
+	}{
+		{"text in clip area", 25, 10, 30, "visible"},
+		{"text above clip area", 5, 20, 20, "above"},
+		{"text below clip area", 50, 10, 20, "below"},
+		{"text at top edge", 15, 10, 30, "visible"},
+		{"text at bottom edge", 35, 10, 30, "visible"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := NewGrayscaleImage(128, 40, 0)
+
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("DrawTextAtPosition() panicked: %v", r)
+				}
+			}()
+
+			DrawTextAtPosition(img, "Test", face, 10, tt.y, 0, tt.clipY, 128, tt.clipH)
+
+			// Count non-zero pixels to verify if text was drawn
+			nonZeroPixels := 0
+			bounds := img.Bounds()
+			for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+				for x := bounds.Min.X; x < bounds.Max.X; x++ {
+					if img.GrayAt(x, y).Y > 0 {
+						nonZeroPixels++
+					}
+				}
+			}
+
+			if tt.expect == "above" || tt.expect == "below" {
+				if nonZeroPixels > 0 {
+					t.Errorf("Expected no pixels drawn when text is %s clip area, got %d pixels", tt.expect, nonZeroPixels)
+				}
+			}
+		})
+	}
+}
+
+// TestDrawTextAtPosition_CompletelyOutside tests text completely outside clip area
+func TestDrawTextAtPosition_CompletelyOutside(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	tests := []struct {
+		name                       string
+		x, y                       int
+		clipX, clipY, clipW, clipH int
+	}{
+		{"completely left", -100, 20, 0, 0, 128, 40},
+		{"completely right", 200, 20, 0, 0, 128, 40},
+		{"completely above", 50, -50, 0, 0, 128, 40},
+		{"completely below", 50, 100, 0, 0, 128, 40},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := NewGrayscaleImage(128, 40, 0)
+
+			DrawTextAtPosition(img, "Test", face, tt.x, tt.y, tt.clipX, tt.clipY, tt.clipW, tt.clipH)
+
+			// Count non-zero pixels - should be zero for completely outside
+			nonZeroPixels := 0
+			bounds := img.Bounds()
+			for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+				for x := bounds.Min.X; x < bounds.Max.X; x++ {
+					if img.GrayAt(x, y).Y > 0 {
+						nonZeroPixels++
+					}
+				}
+			}
+
+			if nonZeroPixels > 0 {
+				t.Errorf("Expected no pixels drawn when text is %s, got %d pixels", tt.name, nonZeroPixels)
+			}
+		})
+	}
+}
+
+// TestDrawTextAtPosition_EmptyClipArea tests with zero-size clip area
+func TestDrawTextAtPosition_EmptyClipArea(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	tests := []struct {
+		name         string
+		clipW, clipH int
+	}{
+		{"zero width", 0, 40},
+		{"zero height", 128, 0},
+		{"zero both", 0, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := NewGrayscaleImage(128, 40, 0)
+
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("DrawTextAtPosition() panicked with %s: %v", tt.name, r)
+				}
+			}()
+
+			DrawTextAtPosition(img, "Test", face, 50, 20, 0, 0, tt.clipW, tt.clipH)
+		})
+	}
+}
+
+// TestDrawTextAtPosition_ScrollingSimulation simulates scrolling text
+func TestDrawTextAtPosition_ScrollingSimulation(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	// Simulate horizontal scrolling
+	for offset := -50; offset <= 150; offset += 10 {
+		img := NewGrayscaleImage(128, 40, 0)
+		DrawTextAtPosition(img, "Scrolling Text Test", face, offset, 20, 10, 5, 108, 30)
+	}
+
+	// Simulate vertical scrolling
+	for offset := -20; offset <= 60; offset += 5 {
+		img := NewGrayscaleImage(128, 40, 0)
+		DrawTextAtPosition(img, "Vertical Scroll", face, 20, offset, 10, 5, 108, 30)
+	}
+}
+
+// TestDrawTextAtPosition_ConcurrentAccess tests thread safety
+func TestDrawTextAtPosition_ConcurrentAccess(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	done := make(chan bool, 10)
+
+	for i := 0; i < 10; i++ {
+		go func(offset int) {
+			img := NewGrayscaleImage(128, 40, 0)
+			DrawTextAtPosition(img, "Concurrent Test", face, offset, 20, 0, 0, 128, 40)
+			done <- true
+		}(i * 10)
+	}
+
+	for i := 0; i < 10; i++ {
+		<-done
+	}
+}
