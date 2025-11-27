@@ -107,7 +107,7 @@ func (c *windowsClient) getTitleFromWindowTitle(hwnd uintptr) string {
 	getWindowText.Call(
 		hwnd,
 		uintptr(unsafe.Pointer(&buf[0])),
-		uintptr(length+1),
+		length+1,
 	)
 
 	title := syscall.UTF16ToString(buf)
