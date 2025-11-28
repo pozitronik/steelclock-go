@@ -98,7 +98,8 @@ func TestSplashRenderer_RenderStartupFrame(t *testing.T) {
 func TestSplashRenderer_RenderTransitionFrame(t *testing.T) {
 	splash := NewSplashRenderer(nil, 128, 40)
 
-	profileNames := []string{"Default", "Gaming", "A Very Long Profile Name"}
+	// Include "Winamp" to test the special slogan rendering
+	profileNames := []string{"Default", "Gaming", "A Very Long Profile Name", "Winamp", "winamp"}
 	testProgress := []float64{0.0, 0.1, 0.5, 0.9, 1.0}
 
 	for _, name := range profileNames {

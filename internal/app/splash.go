@@ -3,6 +3,7 @@ package app
 import (
 	"image"
 	"image/color"
+	"strings"
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
@@ -217,6 +218,12 @@ func (s *SplashRenderer) renderStartupFrame(progress float64) *image.Gray {
 func (s *SplashRenderer) renderTransitionFrame(profileName string, progress float64) *image.Gray {
 	img := image.NewGray(image.Rect(0, 0, s.width, s.height))
 
+	// Special case: Winamp gets its iconic slogan on two lines
+	if strings.EqualFold(profileName, "Winamp") {
+		s.renderWinampSlogan(img, progress)
+		return img
+	}
+
 	font := glyphs.Font5x7
 
 	// Profile name centered
@@ -287,6 +294,102 @@ func (s *SplashRenderer) renderTransitionFrame(profileName string, progress floa
 	}
 
 	return img
+}
+
+// renderWinampSlogan renders Winamp's iconic slogan on two lines
+// "It really whips" / "the llama's ass!"
+func (s *SplashRenderer) renderWinampSlogan(img *image.Gray, progress float64) {
+	font := glyphs.Font5x7
+	line1 := "It really whips"
+	line2 := "the llama's ass!"
+
+	lineSpacing := 2
+	totalHeight := font.GlyphHeight*2 + lineSpacing
+
+	// Center both lines vertically
+	startY := (s.height - totalHeight) / 2
+
+	line1Width := glyphs.MeasureText(line1, font)
+	line2Width := glyphs.MeasureText(line2, font)
+	line1X := (s.width - line1Width) / 2
+	line2X := (s.width - line2Width) / 2
+	line1Y := startY
+	line2Y := startY + font.GlyphHeight + lineSpacing
+
+	// Phase 1 (0-0.2): Slide in from right
+	// Phase 2 (0.2-0.8): Hold
+	// Phase 3 (0.8-1.0): Fade out
+
+	var brightness uint8
+	var offsetX int
+
+	if progress < 0.2 {
+		slideProgress := progress / 0.2
+		offsetX = int(float64(s.width) * (1 - slideProgress))
+		brightness = 255
+	} else if progress < 0.8 {
+		offsetX = 0
+		brightness = 255
+	} else {
+		fadeProgress := (progress - 0.8) / 0.2
+		offsetX = 0
+		brightness = uint8(255 * (1 - fadeProgress))
+	}
+
+	// Draw decorative lines
+	if brightness > 50 {
+		lineColor := color.Gray{Y: brightness / 2}
+		decorY1 := line1Y - 4
+		decorY2 := line2Y + font.GlyphHeight + 3
+
+		// Use wider of the two lines for decoration width
+		maxWidth := line1Width
+		if line2Width > maxWidth {
+			maxWidth = line2Width
+		}
+		lineStart := (s.width-maxWidth)/2 - 10
+		lineEnd := (s.width+maxWidth)/2 + 10
+		if lineStart < 5 {
+			lineStart = 5
+		}
+		if lineEnd > s.width-5 {
+			lineEnd = s.width - 5
+		}
+
+		for x := lineStart; x < lineEnd; x++ {
+			if x+offsetX >= 0 && x+offsetX < s.width {
+				if decorY1 >= 0 && decorY1 < s.height {
+					img.Set(x+offsetX, decorY1, lineColor)
+				}
+				if decorY2 >= 0 && decorY2 < s.height {
+					img.Set(x+offsetX, decorY2, lineColor)
+				}
+			}
+		}
+	}
+
+	// Draw both lines
+	textColor := color.Gray{Y: brightness}
+
+	// Line 1
+	drawX := line1X + offsetX
+	for _, ch := range line1 {
+		glyph := glyphs.GetGlyph(font, ch)
+		if glyph != nil {
+			glyphs.DrawGlyph(img, glyph, drawX, line1Y, textColor)
+			drawX += glyph.Width + 1
+		}
+	}
+
+	// Line 2
+	drawX = line2X + offsetX
+	for _, ch := range line2 {
+		glyph := glyphs.GetGlyph(font, ch)
+		if glyph != nil {
+			glyphs.DrawGlyph(img, glyph, drawX, line2Y, textColor)
+			drawX += glyph.Width + 1
+		}
+	}
 }
 
 // renderExitFrame renders a single frame of the exit animation
