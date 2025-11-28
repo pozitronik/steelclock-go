@@ -15,7 +15,7 @@
       "text": {
         "format": "{title}",
         "font": null,
-        "size": 12,
+        "size": 16,
         "align": { "h": "center", "v": "center" }
       },
       "winamp": {
@@ -38,7 +38,7 @@
         "on_seek": false
       },
       "auto_hide": {
-        "enabled": true,
+        "enabled": false,
         "timeout": 5,
         "on_show": "always"
       }

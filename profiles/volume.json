@@ -12,8 +12,8 @@
       "type": "volume",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": -1, "padding": 2},
-      "mode": "triangle",
+      "style": {"background": 0, "border": -1, "padding": 0},
+      "mode": "gauge",
       "bar": {
         "direction": "horizontal",
         "border": false,
@@ -29,20 +29,14 @@
           "ticks": 150
         }
       },
-      "triangle": {
-        "border": true,
-        "colors": {
-          "fill": 255
-        }
-      },
       "text": {
         "format": "%d%%",
         "font": null,
-        "size": 10,
+        "size": 16,
         "align": {"h": "center", "v": "center"}
       },
       "auto_hide": {
-        "enabled": true,
+        "enabled": false,
         "timeout": 3.0
       },
       "update_interval": 0.1,

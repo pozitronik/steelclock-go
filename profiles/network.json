@@ -12,10 +12,11 @@
       "type": "network",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": -1, "padding": 2},
-      "mode": "gauge",
+      "style": {"background": 0, "border": -1, "padding": 0},
+      "mode": "text",
       "interface": null,
-      "max_speed_mbps": 100.0,
+      "unit": "auto",
+      "max_speed_mbps": -1,
       "bar": {
         "direction": "horizontal",
         "border": false,
@@ -37,16 +38,18 @@
           "rx": 255,
           "tx": 128,
           "rx_needle": 255,
-          "tx_needle": 180
+          "tx_needle": 255,
+          "ticks": 200
         }
       },
       "text": {
         "format": "RX: %s TX: %s",
-        "font": null,
-        "size": 10,
+        "font": "pixel5x7",
+        "show_unit": true,
+        "size": 16,
         "align": {"h": "center", "v": "center"}
       },
-      "update_interval": 1.0
+      "update_interval": 0.2
     }
   ]
 }

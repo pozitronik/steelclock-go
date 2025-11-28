@@ -12,8 +12,8 @@
       "type": "cpu",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": -1, "padding": 2},
-      "mode": "gauge",
+      "style": {"background": 0, "border": -1, "padding": 0},
+      "mode": "graph",
       "bar": {
         "direction": "horizontal",
         "border": false,
@@ -22,7 +22,7 @@
         }
       },
       "graph": {
-        "history": 60,
+        "history": 128,
         "filled": true,
         "colors": {
           "fill": 255
@@ -48,7 +48,7 @@
         "size": 10,
         "align": {"h": "center", "v": "center"}
       },
-      "update_interval": 1.0
+      "update_interval": 0.5
     }
   ]
 }
