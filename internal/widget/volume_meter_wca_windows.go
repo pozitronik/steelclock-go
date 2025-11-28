@@ -68,11 +68,12 @@ func getChannelsPeakValues(ami *wca.IAudioMeterInformation, channelCount uint32,
 // MeterReaderWCA manages Windows Core Audio meter using go-wca library
 // with proper COM lifecycle (initialize once, not per call)
 type MeterReaderWCA struct {
-	mu          sync.Mutex
-	initialized bool
-	ami         *wca.IAudioMeterInformation
-	mmd         *wca.IMMDevice
-	mmde        *wca.IMMDeviceEnumerator
+	mu              sync.Mutex
+	initialized     bool
+	ami             *wca.IAudioMeterInformation
+	mmd             *wca.IMMDevice
+	mmde            *wca.IMMDeviceEnumerator
+	consecutiveErrs int // Track consecutive errors for device change detection
 }
 
 // NewMeterReaderWCA creates a meter reader using go-wca with proper lifecycle
@@ -137,7 +138,62 @@ func (mr *MeterReaderWCA) initialize() error {
 	return nil
 }
 
+// Reinitialize recreates the meter reader with a new device
+// Call this when device change is detected
+func (mr *MeterReaderWCA) Reinitialize() error {
+	mr.mu.Lock()
+	defer mr.mu.Unlock()
+
+	// Cleanup old resources
+	mr.cleanup()
+	mr.initialized = false
+	mr.consecutiveErrs = 0
+
+	log.Printf("[METER-WCA] Reinitializing after device change...")
+
+	// Reinitialize COM and get new device
+	err := EnsureCOMInitialized()
+	if err != nil {
+		return fmt.Errorf("failed to reinitialize COM: %w", err)
+	}
+
+	// Create device enumerator
+	mmde, err := CreateDeviceEnumerator()
+	if err != nil {
+		return err
+	}
+	mr.mmde = mmde
+
+	// Get default audio endpoint
+	mmd, err := GetDefaultRenderDevice(mmde)
+	if err != nil {
+		mr.cleanup()
+		return err
+	}
+	mr.mmd = mmd
+
+	// Activate IAudioMeterInformation
+	var ami *wca.IAudioMeterInformation
+	if err := mmd.Activate(wca.IID_IAudioMeterInformation, wca.CLSCTX_ALL, nil, &ami); err != nil {
+		mr.cleanup()
+		return fmt.Errorf("Activate IAudioMeterInformation failed: %w", err)
+	}
+	mr.ami = ami
+
+	mr.initialized = true
+	log.Printf("[METER-WCA] Reinitialized successfully")
+	return nil
+}
+
+// NeedsReinitialize returns true if the reader needs to be reinitialized
+func (mr *MeterReaderWCA) NeedsReinitialize() bool {
+	mr.mu.Lock()
+	defer mr.mu.Unlock()
+	return !mr.initialized || mr.consecutiveErrs >= 3
+}
+
 // GetMeterData reads current audio meter values
+// Automatically detects device changes and marks for reinitialization
 func (mr *MeterReaderWCA) GetMeterData(clippingThreshold, silenceThreshold float64) (*MeterData, error) {
 	mr.mu.Lock()
 	defer mr.mu.Unlock()
@@ -151,8 +207,16 @@ func (mr *MeterReaderWCA) GetMeterData(clippingThreshold, silenceThreshold float
 	// Get overall peak value (0.0 - 1.0)
 	var peak float32
 	if err := mr.ami.GetPeakValue(&peak); err != nil {
+		mr.consecutiveErrs++
+		if mr.consecutiveErrs >= 3 {
+			log.Printf("[METER-WCA] Multiple consecutive errors detected, device may have changed")
+			mr.initialized = false // Mark for reinitialization
+		}
 		return nil, fmt.Errorf("GetPeakValue failed: %w", err)
 	}
+
+	// Reset error counter on successful read
+	mr.consecutiveErrs = 0
 	data.Peak = float64(peak)
 
 	// Check for clipping and audio presence

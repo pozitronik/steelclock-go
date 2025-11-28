@@ -30,6 +30,13 @@ type meterReader interface {
 	Close()
 }
 
+// reinitializableMeterReader extends meterReader with reinitialize capability
+type reinitializableMeterReader interface {
+	meterReader
+	Reinitialize() error
+	NeedsReinitialize() bool
+}
+
 // VolumeMeterWidget displays realtime audio output levels
 type VolumeMeterWidget struct {
 	*BaseWidget
@@ -320,6 +327,17 @@ func (w *VolumeMeterWidget) updateMeter() {
 	w.mu.Lock()
 	w.totalCalls++
 	w.mu.Unlock()
+
+	// Check if reader needs reinitialization (device may have changed)
+	if reinitReader, ok := w.reader.(reinitializableMeterReader); ok {
+		if reinitReader.NeedsReinitialize() {
+			log.Printf("[VOLUME-METER] Reader needs reinitialization, attempting...")
+			if err := reinitReader.Reinitialize(); err != nil {
+				log.Printf("[VOLUME-METER] Failed to reinitialize: %v", err)
+				// Continue anyway, will retry next cycle
+			}
+		}
+	}
 
 	// Read meter data
 	data, err := w.reader.GetMeterData(w.clippingThreshold, w.silenceThreshold)

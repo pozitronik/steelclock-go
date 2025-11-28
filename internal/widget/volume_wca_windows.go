@@ -10,39 +10,45 @@ import (
 	"github.com/moutend/go-wca/pkg/wca"
 )
 
-// Shared volume reader instance (singleton)
+// Shared volume reader instance (recreatable singleton)
 var (
-	sharedVolumeReader     *VolumeReaderWCA
-	sharedVolumeReaderOnce sync.Once
-	sharedVolumeReaderErr  error
+	sharedVolumeReader    *VolumeReaderWCA
+	sharedVolumeReaderMu  sync.Mutex
+	sharedVolumeReaderErr error
 )
 
 // GetSharedVolumeReader returns the shared VolumeReaderWCA instance
+// This can recreate the instance if it was previously invalidated
 func GetSharedVolumeReader() (*VolumeReaderWCA, error) {
-	sharedVolumeReaderOnce.Do(func() {
-		vr := &VolumeReaderWCA{}
-		if err := vr.initialize(); err != nil {
-			sharedVolumeReaderErr = fmt.Errorf("failed to initialize: %w", err)
-			return
-		}
-		sharedVolumeReader = vr
-	})
+	sharedVolumeReaderMu.Lock()
+	defer sharedVolumeReaderMu.Unlock()
 
-	if sharedVolumeReaderErr != nil {
+	// Return existing instance if valid
+	if sharedVolumeReader != nil && sharedVolumeReader.initialized {
+		return sharedVolumeReader, nil
+	}
+
+	// Create new instance
+	vr := &VolumeReaderWCA{}
+	if err := vr.initialize(); err != nil {
+		sharedVolumeReaderErr = fmt.Errorf("failed to initialize: %w", err)
 		return nil, sharedVolumeReaderErr
 	}
 
+	sharedVolumeReader = vr
+	sharedVolumeReaderErr = nil
 	return sharedVolumeReader, nil
 }
 
 // VolumeReaderWCA manages Windows Core Audio using go-wca library
 // with proper COM lifecycle (initialize once, not per call)
 type VolumeReaderWCA struct {
-	mu          sync.Mutex
-	initialized bool
-	aev         *wca.IAudioEndpointVolume
-	mmd         *wca.IMMDevice
-	mmde        *wca.IMMDeviceEnumerator
+	mu              sync.Mutex
+	initialized     bool
+	aev             *wca.IAudioEndpointVolume
+	mmd             *wca.IMMDevice
+	mmde            *wca.IMMDeviceEnumerator
+	consecutiveErrs int // Track consecutive errors for device change detection
 }
 
 // NewVolumeReaderWCA creates a volume reader using go-wca with proper lifecycle
@@ -107,7 +113,62 @@ func (vr *VolumeReaderWCA) initialize() error {
 	return nil
 }
 
+// Reinitialize recreates the volume reader with a new device
+// Call this when device change is detected
+func (vr *VolumeReaderWCA) Reinitialize() error {
+	vr.mu.Lock()
+	defer vr.mu.Unlock()
+
+	// Cleanup old resources
+	vr.cleanup()
+	vr.initialized = false
+	vr.consecutiveErrs = 0
+
+	log.Printf("[VOLUME-WCA] Reinitializing after device change...")
+
+	// Reinitialize COM and get new device
+	err := EnsureCOMInitialized()
+	if err != nil {
+		return fmt.Errorf("failed to reinitialize COM: %w", err)
+	}
+
+	// Create device enumerator
+	mmde, err := CreateDeviceEnumerator()
+	if err != nil {
+		return err
+	}
+	vr.mmde = mmde
+
+	// Get default audio endpoint
+	mmd, err := GetDefaultRenderDevice(mmde)
+	if err != nil {
+		vr.cleanup()
+		return err
+	}
+	vr.mmd = mmd
+
+	// Activate IAudioEndpointVolume
+	var aev *wca.IAudioEndpointVolume
+	if err := mmd.Activate(wca.IID_IAudioEndpointVolume, wca.CLSCTX_ALL, nil, &aev); err != nil {
+		vr.cleanup()
+		return fmt.Errorf("Activate failed: %w", err)
+	}
+	vr.aev = aev
+
+	vr.initialized = true
+	log.Printf("[VOLUME-WCA] Reinitialized successfully")
+	return nil
+}
+
+// NeedsReinitialize returns true if the reader needs to be reinitialized
+func (vr *VolumeReaderWCA) NeedsReinitialize() bool {
+	vr.mu.Lock()
+	defer vr.mu.Unlock()
+	return !vr.initialized || vr.consecutiveErrs >= 3
+}
+
 // GetVolume reads the current master volume level (0-100) and mute status
+// Automatically detects device changes and marks for reinitialization
 func (vr *VolumeReaderWCA) GetVolume() (volume float64, muted bool, err error) {
 	vr.mu.Lock()
 	defer vr.mu.Unlock()
@@ -119,14 +180,27 @@ func (vr *VolumeReaderWCA) GetVolume() (volume float64, muted bool, err error) {
 	// Get master volume level (0.0 - 1.0 scalar)
 	var level float32
 	if err := vr.aev.GetMasterVolumeLevelScalar(&level); err != nil {
+		vr.consecutiveErrs++
+		if vr.consecutiveErrs >= 3 {
+			log.Printf("[VOLUME-WCA] Multiple consecutive errors detected, device may have changed")
+			vr.initialized = false // Mark for reinitialization
+		}
 		return 0, false, fmt.Errorf("GetMasterVolumeLevelScalar failed: %w", err)
 	}
 
 	// Get mute status
 	var isMuted bool
 	if err := vr.aev.GetMute(&isMuted); err != nil {
+		vr.consecutiveErrs++
+		if vr.consecutiveErrs >= 3 {
+			log.Printf("[VOLUME-WCA] Multiple consecutive errors detected, device may have changed")
+			vr.initialized = false // Mark for reinitialization
+		}
 		return 0, false, fmt.Errorf("GetMute failed: %w", err)
 	}
+
+	// Reset error counter on success
+	vr.consecutiveErrs = 0
 
 	// Convert to 0-100 scale
 	volume = float64(level) * 100.0

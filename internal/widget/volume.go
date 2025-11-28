@@ -20,6 +20,13 @@ type volumeReader interface {
 	Close()
 }
 
+// reinitializableVolumeReader extends volumeReader with reinitialize capability
+type reinitializableVolumeReader interface {
+	volumeReader
+	Reinitialize() error
+	NeedsReinitialize() bool
+}
+
 // VolumeWidget displays system volume level
 type VolumeWidget struct {
 	*BaseWidget
@@ -162,6 +169,17 @@ func (w *VolumeWidget) pollVolumeBackground() {
 
 // pollOnce performs a single volume poll and updates the widget state
 func (w *VolumeWidget) pollOnce() {
+	// Check if reader needs reinitialization (device may have changed)
+	if reinitReader, ok := w.reader.(reinitializableVolumeReader); ok {
+		if reinitReader.NeedsReinitialize() {
+			log.Printf("[VOLUME] Reader needs reinitialization, attempting...")
+			if err := reinitReader.Reinitialize(); err != nil {
+				log.Printf("[VOLUME] Failed to reinitialize: %v", err)
+				// Continue anyway, will retry next cycle
+			}
+		}
+	}
+
 	// Call volume reader
 	volume, muted, err := w.reader.GetVolume()
 
