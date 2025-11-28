@@ -6,9 +6,13 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/moutend/go-wca/pkg/wca"
 )
+
+// Cooldown period between reinitializations to prevent rapid loops
+const volumeReinitCooldown = 10 * time.Second
 
 // Shared volume reader instance (recreatable singleton)
 var (
@@ -48,7 +52,8 @@ type VolumeReaderWCA struct {
 	aev             *wca.IAudioEndpointVolume
 	mmd             *wca.IMMDevice
 	mmde            *wca.IMMDeviceEnumerator
-	consecutiveErrs int // Track consecutive errors for device change detection
+	consecutiveErrs int       // Track consecutive errors for device change detection
+	lastReinitTime  time.Time // Track last reinit to enforce cooldown
 }
 
 // NewVolumeReaderWCA creates a volume reader using go-wca with proper lifecycle
@@ -119,6 +124,14 @@ func (vr *VolumeReaderWCA) Reinitialize() error {
 	vr.mu.Lock()
 	defer vr.mu.Unlock()
 
+	// Enforce cooldown to prevent rapid reinitialization loops
+	timeSinceLastReinit := time.Since(vr.lastReinitTime)
+	if timeSinceLastReinit < volumeReinitCooldown {
+		remaining := volumeReinitCooldown - timeSinceLastReinit
+		log.Printf("[VOLUME-WCA] Reinit skipped - cooldown active (%.1fs remaining)", remaining.Seconds())
+		return nil // Not an error, just skipped
+	}
+
 	// Cleanup old resources
 	vr.cleanup()
 	vr.initialized = false
@@ -129,12 +142,14 @@ func (vr *VolumeReaderWCA) Reinitialize() error {
 	// Reinitialize COM and get new device
 	err := EnsureCOMInitialized()
 	if err != nil {
+		vr.lastReinitTime = time.Now() // Update time even on failure
 		return fmt.Errorf("failed to reinitialize COM: %w", err)
 	}
 
 	// Create device enumerator
 	mmde, err := CreateDeviceEnumerator()
 	if err != nil {
+		vr.lastReinitTime = time.Now()
 		return err
 	}
 	vr.mmde = mmde
@@ -143,6 +158,7 @@ func (vr *VolumeReaderWCA) Reinitialize() error {
 	mmd, err := GetDefaultRenderDevice(mmde)
 	if err != nil {
 		vr.cleanup()
+		vr.lastReinitTime = time.Now()
 		return err
 	}
 	vr.mmd = mmd
@@ -151,11 +167,13 @@ func (vr *VolumeReaderWCA) Reinitialize() error {
 	var aev *wca.IAudioEndpointVolume
 	if err := mmd.Activate(wca.IID_IAudioEndpointVolume, wca.CLSCTX_ALL, nil, &aev); err != nil {
 		vr.cleanup()
+		vr.lastReinitTime = time.Now()
 		return fmt.Errorf("Activate failed: %w", err)
 	}
 	vr.aev = aev
 
 	vr.initialized = true
+	vr.lastReinitTime = time.Now()
 	log.Printf("[VOLUME-WCA] Reinitialized successfully")
 	return nil
 }

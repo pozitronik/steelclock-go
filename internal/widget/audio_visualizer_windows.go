@@ -856,11 +856,15 @@ func (w *AudioVisualizerWidget) drawWaveform(img *image.Gray, samples []float32,
 	}
 }
 
+// Cooldown period between reinitializations to prevent rapid loops
+const audioCaptureReinitCooldown = 10 * time.Second
+
 // Shared audio capture instance (recreatable singleton)
 var (
-	sharedAudioCapture    *AudioCaptureWCA
-	sharedAudioCaptureMu  sync.Mutex
-	sharedAudioCaptureErr error
+	sharedAudioCapture        *AudioCaptureWCA
+	sharedAudioCaptureMu      sync.Mutex
+	sharedAudioCaptureErr     error
+	sharedAudioLastReinitTime time.Time // Track last reinit to enforce cooldown
 )
 
 // GetSharedAudioCapture returns the shared AudioCaptureWCA instance
@@ -892,6 +896,14 @@ func ReinitializeSharedAudioCapture() error {
 	sharedAudioCaptureMu.Lock()
 	defer sharedAudioCaptureMu.Unlock()
 
+	// Enforce cooldown to prevent rapid reinitialization loops
+	timeSinceLastReinit := time.Since(sharedAudioLastReinitTime)
+	if timeSinceLastReinit < audioCaptureReinitCooldown {
+		remaining := audioCaptureReinitCooldown - timeSinceLastReinit
+		log.Printf("[AUDIO-CAPTURE] Reinit skipped - cooldown active (%.1fs remaining)", remaining.Seconds())
+		return nil // Not an error, just skipped
+	}
+
 	// Clean up old instance
 	if sharedAudioCapture != nil {
 		sharedAudioCapture.cleanup()
@@ -903,11 +915,13 @@ func ReinitializeSharedAudioCapture() error {
 	if err := ac.initialize(); err != nil {
 		sharedAudioCaptureErr = fmt.Errorf("failed to reinitialize: %w", err)
 		sharedAudioCapture = nil
+		sharedAudioLastReinitTime = time.Now() // Still update time to prevent rapid retry
 		return sharedAudioCaptureErr
 	}
 
 	sharedAudioCapture = ac
 	sharedAudioCaptureErr = nil
+	sharedAudioLastReinitTime = time.Now()
 	log.Printf("[AUDIO-CAPTURE] Reinitialized after device change")
 	return nil
 }

@@ -7,11 +7,15 @@ import (
 	"log"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/go-ole/go-ole"
 	"github.com/moutend/go-wca/pkg/wca"
 )
+
+// Cooldown period between reinitializations to prevent rapid loops
+const meterReinitCooldown = 10 * time.Second
 
 // Direct COM calls for IAudioMeterInformation methods not implemented in go-wca
 // These use syscall to directly call the vtable methods
@@ -73,7 +77,8 @@ type MeterReaderWCA struct {
 	ami             *wca.IAudioMeterInformation
 	mmd             *wca.IMMDevice
 	mmde            *wca.IMMDeviceEnumerator
-	consecutiveErrs int // Track consecutive errors for device change detection
+	consecutiveErrs int       // Track consecutive errors for device change detection
+	lastReinitTime  time.Time // Track last reinit to enforce cooldown
 }
 
 // NewMeterReaderWCA creates a meter reader using go-wca with proper lifecycle
@@ -144,6 +149,14 @@ func (mr *MeterReaderWCA) Reinitialize() error {
 	mr.mu.Lock()
 	defer mr.mu.Unlock()
 
+	// Enforce cooldown to prevent rapid reinitialization loops
+	timeSinceLastReinit := time.Since(mr.lastReinitTime)
+	if timeSinceLastReinit < meterReinitCooldown {
+		remaining := meterReinitCooldown - timeSinceLastReinit
+		log.Printf("[METER-WCA] Reinit skipped - cooldown active (%.1fs remaining)", remaining.Seconds())
+		return nil // Not an error, just skipped
+	}
+
 	// Cleanup old resources
 	mr.cleanup()
 	mr.initialized = false
@@ -154,12 +167,14 @@ func (mr *MeterReaderWCA) Reinitialize() error {
 	// Reinitialize COM and get new device
 	err := EnsureCOMInitialized()
 	if err != nil {
+		mr.lastReinitTime = time.Now() // Update time even on failure
 		return fmt.Errorf("failed to reinitialize COM: %w", err)
 	}
 
 	// Create device enumerator
 	mmde, err := CreateDeviceEnumerator()
 	if err != nil {
+		mr.lastReinitTime = time.Now()
 		return err
 	}
 	mr.mmde = mmde
@@ -168,6 +183,7 @@ func (mr *MeterReaderWCA) Reinitialize() error {
 	mmd, err := GetDefaultRenderDevice(mmde)
 	if err != nil {
 		mr.cleanup()
+		mr.lastReinitTime = time.Now()
 		return err
 	}
 	mr.mmd = mmd
@@ -176,11 +192,13 @@ func (mr *MeterReaderWCA) Reinitialize() error {
 	var ami *wca.IAudioMeterInformation
 	if err := mmd.Activate(wca.IID_IAudioMeterInformation, wca.CLSCTX_ALL, nil, &ami); err != nil {
 		mr.cleanup()
+		mr.lastReinitTime = time.Now()
 		return fmt.Errorf("Activate IAudioMeterInformation failed: %w", err)
 	}
 	mr.ami = ami
 
 	mr.initialized = true
+	mr.lastReinitTime = time.Now()
 	log.Printf("[METER-WCA] Reinitialized successfully")
 	return nil
 }
