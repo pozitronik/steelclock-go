@@ -141,18 +141,8 @@ func validateWidgetType(index int, w *WidgetConfig) error {
 }
 
 // validateWidgetProperties validates type-specific widget properties
-func validateWidgetProperties(index int, w *WidgetConfig) error {
-	switch w.Type {
-	case "network":
-		if w.Interface == nil || *w.Interface == "" {
-			return fmt.Errorf("widget[%d] (%s): interface is required", index, w.ID)
-		}
-
-	case "disk":
-		if w.Disk == nil || *w.Disk == "" {
-			return fmt.Errorf("widget[%d] (%s): disk is required", index, w.ID)
-		}
-	}
-
+func validateWidgetProperties(_ int, _ *WidgetConfig) error {
+	// Network and disk widgets support auto-detection when interface/disk is omitted
+	// (sums all interfaces/disks), so no validation required
 	return nil
 }

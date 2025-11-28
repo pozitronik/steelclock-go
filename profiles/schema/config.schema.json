@@ -356,7 +356,7 @@
           "then": {
             "properties": {
               "mode": { "type": "string", "description": "Display mode for network I/O", "enum": ["text", "bar", "graph", "gauge"], "default": "bar" },
-              "interface": { "type": ["string", "null"], "description": "Network interface name (null = auto-detect)", "default": null },
+              "interface": { "type": ["string", "null"], "description": "Network interface name (sum all interfaces if omitted)", "default": null },
               "max_speed_mbps": { "type": "number", "description": "Maximum speed in Mbps for scaling", "default": 100 },
               "bar": {
                 "type": "object",
@@ -414,7 +414,7 @@
           "then": {
             "properties": {
               "mode": { "type": "string", "description": "Display mode for disk I/O", "enum": ["text", "bar", "graph"], "default": "bar" },
-              "disk": { "type": ["string", "null"], "description": "Disk/drive to monitor (auto-detect if omitted)" },
+              "disk": { "type": ["string", "null"], "description": "Disk/drive to monitor (sum all disks if omitted)" },
               "max_speed_mbps": { "type": "number", "description": "Maximum speed in MB/s for scaling (-1 for auto)", "default": -1 },
               "bar": {
                 "type": "object",
