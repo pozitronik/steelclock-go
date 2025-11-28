@@ -26,8 +26,8 @@ type DiskWidget struct {
 	barDirection     string
 	barBorder        bool
 	graphFilled      bool
-	readColor        uint8
-	writeColor       uint8
+	readColor        int // -1 means transparent (skip drawing)
+	writeColor       int // -1 means transparent (skip drawing)
 	historyLen       int
 	lastRead         uint64
 	lastWrite        uint64
@@ -101,8 +101,8 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 		barDirection: barSettings.Direction,
 		barBorder:    barSettings.Border,
 		graphFilled:  graphSettings.Filled,
-		readColor:    uint8(readColor),
-		writeColor:   uint8(writeColor),
+		readColor:    readColor,
+		writeColor:   writeColor,
 		historyLen:   graphSettings.HistoryLen,
 		readHistory:  make([]float64, 0, graphSettings.HistoryLen),
 		writeHistory: make([]float64, 0, graphSettings.HistoryLen),
@@ -228,8 +228,13 @@ func (w *DiskWidget) renderBarHorizontal(img *image.Gray, x, y, width, height in
 	readPercent := (w.currentReadMbps / maxSpeed) * 100
 	writePercent := (w.currentWriteMbps / maxSpeed) * 100
 
-	bitmap.DrawHorizontalBar(img, x, y, width, halfH, readPercent, w.readColor, w.barBorder)
-	bitmap.DrawHorizontalBar(img, x, y+halfH, width, height-halfH, writePercent, w.writeColor, w.barBorder)
+	// Only draw if color is not transparent (-1)
+	if w.readColor >= 0 {
+		bitmap.DrawHorizontalBar(img, x, y, width, halfH, readPercent, uint8(w.readColor), w.barBorder)
+	}
+	if w.writeColor >= 0 {
+		bitmap.DrawHorizontalBar(img, x, y+halfH, width, height-halfH, writePercent, uint8(w.writeColor), w.barBorder)
+	}
 }
 
 func (w *DiskWidget) renderBarVertical(img *image.Gray, x, y, width, height int) {
@@ -250,8 +255,13 @@ func (w *DiskWidget) renderBarVertical(img *image.Gray, x, y, width, height int)
 	readPercent := (w.currentReadMbps / maxSpeed) * 100
 	writePercent := (w.currentWriteMbps / maxSpeed) * 100
 
-	bitmap.DrawVerticalBar(img, x, y, halfW, height, readPercent, w.readColor, w.barBorder)
-	bitmap.DrawVerticalBar(img, x+halfW, y, width-halfW, height, writePercent, w.writeColor, w.barBorder)
+	// Only draw if color is not transparent (-1)
+	if w.readColor >= 0 {
+		bitmap.DrawVerticalBar(img, x, y, halfW, height, readPercent, uint8(w.readColor), w.barBorder)
+	}
+	if w.writeColor >= 0 {
+		bitmap.DrawVerticalBar(img, x+halfW, y, width-halfW, height, writePercent, uint8(w.writeColor), w.barBorder)
+	}
 }
 
 func (w *DiskWidget) renderGraph(img *image.Gray, x, y, width, height int) {
@@ -287,7 +297,11 @@ func (w *DiskWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 		writePercent[i] = (w.writeHistory[i] / maxSpeed) * 100
 	}
 
-	// Draw both graphs (Read and Write overlaid)
-	bitmap.DrawGraph(img, x, y, width, height, readPercent, w.historyLen, w.readColor, w.graphFilled)
-	bitmap.DrawGraph(img, x, y, width, height, writePercent, w.historyLen, w.writeColor, w.graphFilled)
+	// Draw both graphs (Read and Write overlaid) if color is not transparent
+	if w.readColor >= 0 {
+		bitmap.DrawGraph(img, x, y, width, height, readPercent, w.historyLen, uint8(w.readColor), w.graphFilled)
+	}
+	if w.writeColor >= 0 {
+		bitmap.DrawGraph(img, x, y, width, height, writePercent, w.historyLen, uint8(w.writeColor), w.graphFilled)
+	}
 }

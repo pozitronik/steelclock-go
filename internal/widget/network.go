@@ -26,10 +26,10 @@ type NetworkWidget struct {
 	barDirection  string
 	barBorder     bool
 	graphFilled   bool
-	rxColor       uint8
-	txColor       uint8
-	rxNeedleColor uint8
-	txNeedleColor uint8
+	rxColor       int // -1 means transparent (skip drawing)
+	txColor       int // -1 means transparent (skip drawing)
+	rxNeedleColor int // -1 means transparent (skip drawing)
+	txNeedleColor int // -1 means transparent (skip drawing)
 	historyLen    int
 	lastRx        uint64
 	lastTx        uint64
@@ -121,10 +121,10 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		barDirection:  barSettings.Direction,
 		barBorder:     barSettings.Border,
 		graphFilled:   graphSettings.Filled,
-		rxColor:       uint8(rxColor),
-		txColor:       uint8(txColor),
-		rxNeedleColor: uint8(rxNeedleColor),
-		txNeedleColor: uint8(txNeedleColor),
+		rxColor:       rxColor,
+		txColor:       txColor,
+		rxNeedleColor: rxNeedleColor,
+		txNeedleColor: txNeedleColor,
 		historyLen:    graphSettings.HistoryLen,
 		rxHistory:     make([]float64, 0, graphSettings.HistoryLen),
 		txHistory:     make([]float64, 0, graphSettings.HistoryLen),
@@ -255,8 +255,13 @@ func (w *NetworkWidget) renderBarHorizontal(img *image.Gray, x, y, width, height
 	rxPercent := (w.currentRxMbps / maxSpeed) * 100
 	txPercent := (w.currentTxMbps / maxSpeed) * 100
 
-	bitmap.DrawHorizontalBar(img, x, y, width, halfH, rxPercent, w.rxColor, w.barBorder)
-	bitmap.DrawHorizontalBar(img, x, y+halfH, width, height-halfH, txPercent, w.txColor, w.barBorder)
+	// Only draw if color is not transparent (-1)
+	if w.rxColor >= 0 {
+		bitmap.DrawHorizontalBar(img, x, y, width, halfH, rxPercent, uint8(w.rxColor), w.barBorder)
+	}
+	if w.txColor >= 0 {
+		bitmap.DrawHorizontalBar(img, x, y+halfH, width, height-halfH, txPercent, uint8(w.txColor), w.barBorder)
+	}
 }
 
 func (w *NetworkWidget) renderBarVertical(img *image.Gray, x, y, width, height int) {
@@ -277,8 +282,13 @@ func (w *NetworkWidget) renderBarVertical(img *image.Gray, x, y, width, height i
 	rxPercent := (w.currentRxMbps / maxSpeed) * 100
 	txPercent := (w.currentTxMbps / maxSpeed) * 100
 
-	bitmap.DrawVerticalBar(img, x, y, halfW, height, rxPercent, w.rxColor, w.barBorder)
-	bitmap.DrawVerticalBar(img, x+halfW, y, width-halfW, height, txPercent, w.txColor, w.barBorder)
+	// Only draw if color is not transparent (-1)
+	if w.rxColor >= 0 {
+		bitmap.DrawVerticalBar(img, x, y, halfW, height, rxPercent, uint8(w.rxColor), w.barBorder)
+	}
+	if w.txColor >= 0 {
+		bitmap.DrawVerticalBar(img, x+halfW, y, width-halfW, height, txPercent, uint8(w.txColor), w.barBorder)
+	}
 }
 
 func (w *NetworkWidget) renderGraph(img *image.Gray, x, y, width, height int) {
@@ -314,9 +324,13 @@ func (w *NetworkWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 		txPercent[i] = (w.txHistory[i] / maxSpeed) * 100
 	}
 
-	// Draw both graphs (RX and TX overlaid)
-	bitmap.DrawGraph(img, x, y, width, height, rxPercent, w.historyLen, w.rxColor, w.graphFilled)
-	bitmap.DrawGraph(img, x, y, width, height, txPercent, w.historyLen, w.txColor, w.graphFilled)
+	// Draw both graphs (RX and TX overlaid) if color is not transparent
+	if w.rxColor >= 0 {
+		bitmap.DrawGraph(img, x, y, width, height, rxPercent, w.historyLen, uint8(w.rxColor), w.graphFilled)
+	}
+	if w.txColor >= 0 {
+		bitmap.DrawGraph(img, x, y, width, height, txPercent, w.historyLen, uint8(w.txColor), w.graphFilled)
+	}
 }
 
 func (w *NetworkWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
@@ -352,5 +366,22 @@ func (w *NetworkWidget) renderGauge(img *image.Gray, pos config.PositionConfig) 
 	}
 
 	// Draw dual gauge: outer (RX) and inner (TX)
-	bitmap.DrawDualGauge(img, pos, rxPercent, txPercent, w.rxColor, w.rxNeedleColor, w.txColor, w.txNeedleColor)
+	// Convert colors, treating -1 as 0 (invisible on black)
+	rxCol := uint8(0)
+	rxNeedleCol := uint8(0)
+	txCol := uint8(0)
+	txNeedleCol := uint8(0)
+	if w.rxColor >= 0 {
+		rxCol = uint8(w.rxColor)
+	}
+	if w.rxNeedleColor >= 0 {
+		rxNeedleCol = uint8(w.rxNeedleColor)
+	}
+	if w.txColor >= 0 {
+		txCol = uint8(w.txColor)
+	}
+	if w.txNeedleColor >= 0 {
+		txNeedleCol = uint8(w.txNeedleColor)
+	}
+	bitmap.DrawDualGauge(img, pos, rxPercent, txPercent, rxCol, rxNeedleCol, txCol, txNeedleCol)
 }

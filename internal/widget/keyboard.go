@@ -32,8 +32,8 @@ type KeyboardWidget struct {
 	numLockOff    string
 	scrollLockOn  string
 	scrollLockOff string
-	colorOn       uint8
-	colorOff      uint8
+	colorOn       int          // -1 means transparent (skip drawing)
+	colorOff      int          // -1 means transparent (skip drawing)
 	mu            sync.RWMutex // protects state fields below
 	capsState     bool
 	numState      bool
@@ -146,8 +146,8 @@ func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
 		numLockOff:    numOff,
 		scrollLockOn:  scrollOn,
 		scrollLockOff: scrollOff,
-		colorOn:       uint8(colorOn),
-		colorOff:      uint8(colorOff),
+		colorOn:       colorOn,
+		colorOff:      colorOff,
 		fontFace:      fontFace,
 	}, nil
 }
@@ -323,11 +323,11 @@ func (w *KeyboardWidget) renderIcons(img *image.Gray, capsState, numState, scrol
 	currentX := startX
 	for _, ind := range indicators {
 		var iconName string
-		var c color.Gray
+		var colorValue int
 
 		// Select icon based on state
 		if ind.state {
-			c = color.Gray{Y: w.colorOn}
+			colorValue = w.colorOn
 			// For lock type, use closed lock when ON
 			if ind.iconType == "lock" {
 				iconName = "lock_closed"
@@ -335,7 +335,7 @@ func (w *KeyboardWidget) renderIcons(img *image.Gray, capsState, numState, scrol
 				iconName = ind.iconType
 			}
 		} else {
-			c = color.Gray{Y: w.colorOff}
+			colorValue = w.colorOff
 			// For lock type, use open lock when OFF
 			if ind.iconType == "lock" {
 				iconName = "lock_open"
@@ -345,9 +345,12 @@ func (w *KeyboardWidget) renderIcons(img *image.Gray, capsState, numState, scrol
 			}
 		}
 
-		icon := glyphs.GetIcon(iconSet, iconName)
-		if icon != nil {
-			glyphs.DrawGlyph(img, icon, currentX, baseY, c)
+		// Skip drawing if color is -1 (transparent)
+		if colorValue >= 0 {
+			icon := glyphs.GetIcon(iconSet, iconName)
+			if icon != nil {
+				glyphs.DrawGlyph(img, icon, currentX, baseY, color.Gray{Y: uint8(colorValue)})
+			}
 		}
 
 		currentX += iconSize + actualSpacing
@@ -487,77 +490,86 @@ func (w *KeyboardWidget) renderMixed(img *image.Gray, capsState, numState, scrol
 	for _, layout := range layouts {
 		ind := layout.ind
 
+		// Determine color based on state
+		var colorValue int
+		if ind.state {
+			colorValue = w.colorOn
+		} else {
+			colorValue = w.colorOff
+		}
+
 		if ind.useIcon {
-			// Render as icon
-			var iconName string
-			var c color.Gray
+			// Render as icon (only if color is not transparent)
+			if colorValue >= 0 {
+				var iconName string
 
-			if ind.state {
-				c = color.Gray{Y: w.colorOn}
-				if ind.iconType == "lock" {
-					iconName = "lock_closed"
+				if ind.state {
+					if ind.iconType == "lock" {
+						iconName = "lock_closed"
+					} else {
+						iconName = ind.iconType
+					}
 				} else {
-					iconName = ind.iconType
+					if ind.iconType == "lock" {
+						iconName = "lock_open"
+					} else {
+						iconName = ind.iconType
+					}
 				}
-			} else {
-				c = color.Gray{Y: w.colorOff}
-				if ind.iconType == "lock" {
-					iconName = "lock_open"
-				} else {
-					iconName = ind.iconType
+
+				// Calculate vertical position for icon
+				var baseY int
+				switch w.vertAlign {
+				case "top":
+					baseY = w.padding
+				case "bottom":
+					baseY = imgHeight - w.padding - iconSize
+				default: // "center"
+					baseY = (imgHeight - iconSize) / 2
 				}
-			}
 
-			// Calculate vertical position for icon
-			var baseY int
-			switch w.vertAlign {
-			case "top":
-				baseY = w.padding
-			case "bottom":
-				baseY = imgHeight - w.padding - iconSize
-			default: // "center"
-				baseY = (imgHeight - iconSize) / 2
-			}
-
-			icon := glyphs.GetIcon(iconSet, iconName)
-			if icon != nil {
-				glyphs.DrawGlyph(img, icon, currentX, baseY, c)
+				icon := glyphs.GetIcon(iconSet, iconName)
+				if icon != nil {
+					glyphs.DrawGlyph(img, icon, currentX, baseY, color.Gray{Y: uint8(colorValue)})
+				}
 			}
 
 			currentX += iconSize
 		} else {
-			// Render as text
-			text := ind.textOff
-			if ind.state {
-				text = ind.textOn
-			}
+			// Render as text (only if color is not transparent)
+			if colorValue >= 0 {
+				text := ind.textOff
+				if ind.state {
+					text = ind.textOn
+				}
 
-			// Draw text at current position with alignment
-			// Note: DrawAlignedText is for the whole image, so we need to draw manually
-			drawer := &font.Drawer{
-				Dst:  img,
-				Src:  image.NewUniform(color.Gray{Y: 255}),
-				Face: w.fontFace,
-			}
+				// Draw text at current position with alignment
+				// Note: DrawAlignedText is for the whole image, so we need to draw manually
+				drawer := &font.Drawer{
+					Dst:  img,
+					Src:  image.NewUniform(color.Gray{Y: uint8(colorValue)}),
+					Face: w.fontFace,
+				}
 
-			// Calculate vertical position for text
-			metrics := w.fontFace.Metrics()
-			textHeight := (metrics.Ascent + metrics.Descent).Ceil()
-			var baseY int
-			switch w.vertAlign {
-			case "top":
-				baseY = w.padding + metrics.Ascent.Ceil()
-			case "bottom":
-				baseY = imgHeight - w.padding - textHeight + metrics.Ascent.Ceil()
-			default: // "center"
-				baseY = (imgHeight-textHeight)/2 + metrics.Ascent.Ceil()
-			}
+				// Calculate vertical position for text
+				metrics := w.fontFace.Metrics()
+				textHeight := (metrics.Ascent + metrics.Descent).Ceil()
+				var baseY int
+				switch w.vertAlign {
+				case "top":
+					baseY = w.padding + metrics.Ascent.Ceil()
+				case "bottom":
+					baseY = imgHeight - w.padding - textHeight + metrics.Ascent.Ceil()
+				default: // "center"
+					baseY = (imgHeight-textHeight)/2 + metrics.Ascent.Ceil()
+				}
 
-			drawer.Dot = fixed.Point26_6{
-				X: fixed.I(currentX),
-				Y: fixed.I(baseY),
+				drawer.Dot = fixed.Point26_6{
+					X: fixed.I(currentX),
+					Y: fixed.I(baseY),
+				}
+				drawer.DrawString(text)
 			}
-			drawer.DrawString(text)
 
 			currentX += layout.width
 		}

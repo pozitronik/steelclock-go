@@ -204,33 +204,40 @@ func (w *ClockWidget) renderClockFace(img *image.Gray) {
 		centerY = pos.H / 2
 	}
 
-	faceC := color.Gray{Y: uint8(w.faceColor)}
-	hourC := color.Gray{Y: uint8(w.hourColor)}
-	minuteC := color.Gray{Y: uint8(w.minuteColor)}
-	secondC := color.Gray{Y: uint8(w.secondColor)}
+	// Draw clock face circle (if faceColor is not transparent)
+	if w.faceColor >= 0 {
+		faceC := color.Gray{Y: uint8(w.faceColor)}
+		bitmap.DrawCircle(img, centerX, centerY, radius, faceC)
 
-	// Draw clock face circle
-	bitmap.DrawCircle(img, centerX, centerY, radius, faceC)
+		// Draw hour markers if enabled
+		if w.showTicks {
+			for hour := 0; hour < 12; hour++ {
+				angle := float64(hour) * 30.0 // 30 degrees per hour
+				rad := (angle - 90.0) * math.Pi / 180.0
 
-	// Draw hour markers if enabled
-	if w.showTicks {
-		for hour := 0; hour < 12; hour++ {
-			angle := float64(hour) * 30.0 // 30 degrees per hour
-			rad := (angle - 90.0) * math.Pi / 180.0
+				// Outer point on circle
+				x1 := centerX + int(float64(radius)*math.Cos(rad))
+				y1 := centerY + int(float64(radius)*math.Sin(rad))
 
-			// Outer point on circle
-			x1 := centerX + int(float64(radius)*math.Cos(rad))
-			y1 := centerY + int(float64(radius)*math.Sin(rad))
+				// Inner point (tick mark length)
+				tickLen := 2
+				if hour%3 == 0 {
+					tickLen = 4 // Longer ticks at 12, 3, 6, 9
+				}
+				x2 := centerX + int(float64(radius-tickLen)*math.Cos(rad))
+				y2 := centerY + int(float64(radius-tickLen)*math.Sin(rad))
 
-			// Inner point (tick mark length)
-			tickLen := 2
-			if hour%3 == 0 {
-				tickLen = 4 // Longer ticks at 12, 3, 6, 9
+				bitmap.DrawLine(img, x1, y1, x2, y2, faceC)
 			}
-			x2 := centerX + int(float64(radius-tickLen)*math.Cos(rad))
-			y2 := centerY + int(float64(radius-tickLen)*math.Sin(rad))
+		}
 
-			bitmap.DrawLine(img, x1, y1, x2, y2, faceC)
+		// Draw center dot
+		for dy := -1; dy <= 1; dy++ {
+			for dx := -1; dx <= 1; dx++ {
+				if centerX+dx >= 0 && centerX+dx < pos.W && centerY+dy >= 0 && centerY+dy < pos.H {
+					img.Set(centerX+dx, centerY+dy, faceC)
+				}
+			}
 		}
 	}
 
@@ -246,33 +253,31 @@ func (w *ClockWidget) renderClockFace(img *image.Gray) {
 	minuteAngle := (float64(minute)*6.0 + float64(second)*0.1 - 90.0) * math.Pi / 180.0
 	secondAngle := (float64(second)*6.0 - 90.0) * math.Pi / 180.0
 
-	// Draw hour hand (short and thick)
-	hourLen := int(float64(radius) * 0.5)
-	hourX := centerX + int(float64(hourLen)*math.Cos(hourAngle))
-	hourY := centerY + int(float64(hourLen)*math.Sin(hourAngle))
-	bitmap.DrawLine(img, centerX, centerY, hourX, hourY, hourC)
+	// Draw hour hand (short and thick) if not transparent
+	if w.hourColor >= 0 {
+		hourC := color.Gray{Y: uint8(w.hourColor)}
+		hourLen := int(float64(radius) * 0.5)
+		hourX := centerX + int(float64(hourLen)*math.Cos(hourAngle))
+		hourY := centerY + int(float64(hourLen)*math.Sin(hourAngle))
+		bitmap.DrawLine(img, centerX, centerY, hourX, hourY, hourC)
+	}
 
-	// Draw minute hand (medium length)
-	minuteLen := int(float64(radius) * 0.75)
-	minuteX := centerX + int(float64(minuteLen)*math.Cos(minuteAngle))
-	minuteY := centerY + int(float64(minuteLen)*math.Sin(minuteAngle))
-	bitmap.DrawLine(img, centerX, centerY, minuteX, minuteY, minuteC)
+	// Draw minute hand (medium length) if not transparent
+	if w.minuteColor >= 0 {
+		minuteC := color.Gray{Y: uint8(w.minuteColor)}
+		minuteLen := int(float64(radius) * 0.75)
+		minuteX := centerX + int(float64(minuteLen)*math.Cos(minuteAngle))
+		minuteY := centerY + int(float64(minuteLen)*math.Sin(minuteAngle))
+		bitmap.DrawLine(img, centerX, centerY, minuteX, minuteY, minuteC)
+	}
 
-	// Draw second hand (long and thin) if enabled
-	if w.showSeconds {
+	// Draw second hand (long and thin) if enabled and not transparent
+	if w.showSeconds && w.secondColor >= 0 {
+		secondC := color.Gray{Y: uint8(w.secondColor)}
 		secondLen := int(float64(radius) * 0.9)
 		secondX := centerX + int(float64(secondLen)*math.Cos(secondAngle))
 		secondY := centerY + int(float64(secondLen)*math.Sin(secondAngle))
 		bitmap.DrawLine(img, centerX, centerY, secondX, secondY, secondC)
-	}
-
-	// Draw center dot
-	for dy := -1; dy <= 1; dy++ {
-		for dx := -1; dx <= 1; dx++ {
-			if centerX+dx >= 0 && centerX+dx < pos.W && centerY+dy >= 0 && centerY+dy < pos.H {
-				img.Set(centerX+dx, centerY+dy, faceC)
-			}
-		}
 	}
 }
 
