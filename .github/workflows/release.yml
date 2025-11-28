@@ -125,8 +125,8 @@ jobs:
         # Copy executable
         cp steelclock.exe release/$PACKAGE_NAME/
 
-        # Copy configs directory
-        cp -r configs release/$PACKAGE_NAME/
+        # Copy profiles directory
+        cp -r profiles release/$PACKAGE_NAME/
 
         # Copy README
         cp README.md release/$PACKAGE_NAME/
