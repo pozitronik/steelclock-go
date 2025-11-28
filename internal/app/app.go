@@ -51,17 +51,29 @@ type App struct {
 	client         gamesense.API
 	trayMgr        *tray.Manager
 	configPath     string
+	profileMgr     *config.ProfileManager
 	mu             sync.Mutex
 	lastGoodConfig *config.Config
 	retryCancel    chan struct{}
 	currentBackend string
+	isFirstStart   bool // Track first startup for splash animation
 }
 
-// NewApp creates a new application instance
+// NewApp creates a new application instance (legacy single-config mode)
 func NewApp(configPath string) *App {
 	return &App{
-		configPath:  configPath,
-		retryCancel: make(chan struct{}),
+		configPath:   configPath,
+		retryCancel:  make(chan struct{}),
+		isFirstStart: true,
+	}
+}
+
+// NewAppWithProfiles creates a new application instance with profile support
+func NewAppWithProfiles(profileMgr *config.ProfileManager) *App {
+	return &App{
+		profileMgr:   profileMgr,
+		retryCancel:  make(chan struct{}),
+		isFirstStart: true,
 	}
 }
 
@@ -69,11 +81,21 @@ func NewApp(configPath string) *App {
 func (a *App) Run() {
 	log.Println("========================================")
 	log.Println("SteelClock starting...")
-	log.Printf("Config: %s", a.configPath)
-	log.Println("========================================")
 
-	// Create tray manager
-	a.trayMgr = tray.NewManager(a.configPath, a.ReloadConfig, a.Stop)
+	// Create tray manager based on mode
+	if a.profileMgr != nil {
+		activeProfile := a.profileMgr.GetActiveProfile()
+		if activeProfile != nil {
+			log.Printf("Active profile: %s (%s)", activeProfile.Name, activeProfile.Path)
+		}
+		log.Printf("Available profiles: %d", len(a.profileMgr.GetProfiles()))
+		a.trayMgr = tray.NewManagerWithProfiles(a.profileMgr, a.ReloadConfig, a.SwitchProfile, a.Stop)
+	} else {
+		log.Printf("Config: %s", a.configPath)
+		a.trayMgr = tray.NewManager(a.configPath, a.ReloadConfig, a.Stop)
+	}
+
+	log.Println("========================================")
 
 	// Set callback to run when tray is ready
 	a.trayMgr.OnReady(func() {
@@ -130,7 +152,15 @@ func (a *App) handleStartupFailure(err error) {
 
 // Start initializes and starts all components
 func (a *App) Start() error {
-	cfg, err := config.Load(a.configPath)
+	var cfg *config.Config
+	var err error
+
+	if a.profileMgr != nil {
+		cfg, err = a.profileMgr.GetActiveConfig()
+	} else {
+		cfg, err = config.Load(a.configPath)
+	}
+
 	if err != nil {
 		log.Printf("ERROR: Failed to load config: %v", err)
 		return a.handleStartupError(err, nil)
@@ -164,6 +194,20 @@ func (a *App) stopInternal(isFinalShutdown bool) {
 	}
 
 	if a.client != nil {
+		// Show exit message on final shutdown
+		if isFinalShutdown {
+			displayWidth := config.DefaultDisplayWidth
+			displayHeight := config.DefaultDisplayHeight
+			if a.lastGoodConfig != nil {
+				displayWidth = a.lastGoodConfig.Display.Width
+				displayHeight = a.lastGoodConfig.Display.Height
+			}
+			splash := NewSplashRenderer(a.client, displayWidth, displayHeight)
+			if err := splash.ShowExitMessage(); err != nil {
+				log.Printf("Warning: Exit message failed: %v", err)
+			}
+		}
+
 		shouldUnregister := a.lastGoodConfig != nil && a.lastGoodConfig.UnregisterOnExit
 
 		if shouldUnregister && isFinalShutdown {
@@ -187,12 +231,26 @@ func (a *App) stopInternal(isFinalShutdown bool) {
 func (a *App) ReloadConfig() error {
 	log.Println("========================================")
 	log.Println("Reloading configuration...")
-	log.Printf("Config file: %s", a.configPath)
 
-	absPath, _ := filepath.Abs(a.configPath)
+	var configPath string
+	if a.profileMgr != nil {
+		activeProfile := a.profileMgr.GetActiveProfile()
+		if activeProfile != nil {
+			configPath = activeProfile.Path
+			log.Printf("Active profile: %s", activeProfile.Name)
+		} else {
+			return fmt.Errorf("no active profile")
+		}
+	} else {
+		configPath = a.configPath
+	}
+
+	log.Printf("Config file: %s", configPath)
+
+	absPath, _ := filepath.Abs(configPath)
 	log.Printf("Absolute path: %s", absPath)
 
-	fileInfo, err := os.Stat(a.configPath)
+	fileInfo, err := os.Stat(configPath)
 	if err != nil {
 		log.Printf("ERROR: Cannot access config file: %v", err)
 		log.Println("Keeping current configuration running")
@@ -200,7 +258,7 @@ func (a *App) ReloadConfig() error {
 	}
 	log.Printf("Config file last modified: %s", fileInfo.ModTime().Format("2006-01-02 15:04:05"))
 
-	newCfg, err := config.Load(a.configPath)
+	newCfg, err := config.Load(configPath)
 	if err != nil {
 		log.Printf("ERROR: Config validation failed: %v", err)
 		log.Println("Stopping current instance and showing error...")
@@ -229,6 +287,73 @@ func (a *App) ReloadConfig() error {
 
 	log.Println("Configuration reloaded successfully!")
 	log.Printf("Running with: %s (%s)", newCfg.GameName, newCfg.GameDisplayName)
+	log.Println("========================================")
+	return nil
+}
+
+// SwitchProfile switches to a different configuration profile
+func (a *App) SwitchProfile(path string) error {
+	if a.profileMgr == nil {
+		return fmt.Errorf("profile manager not available")
+	}
+
+	log.Println("========================================")
+	log.Printf("Switching to profile: %s", path)
+
+	// Update active profile in profile manager
+	if err := a.profileMgr.SetActiveProfile(path); err != nil {
+		log.Printf("ERROR: Failed to set active profile: %v", err)
+		return err
+	}
+
+	// Load new config
+	newCfg, err := a.profileMgr.GetActiveConfig()
+	if err != nil {
+		log.Printf("ERROR: Failed to load profile config: %v", err)
+		return a.handleStartupError(err, nil)
+	}
+
+	log.Printf("Loaded config: %s (%s) with %d widgets", newCfg.GameName, newCfg.GameDisplayName, len(newCfg.Widgets))
+
+	// Get profile name for transition banner
+	activeProfile := a.profileMgr.GetActiveProfile()
+	profileName := "Unknown"
+	if activeProfile != nil {
+		profileName = activeProfile.Name
+	}
+
+	// Stop compositor first to free the display
+	log.Println("Stopping current instance...")
+	a.Stop()
+
+	// Show transition banner (compositor stopped, display is free)
+	a.mu.Lock()
+	if a.client != nil {
+		displayWidth := config.DefaultDisplayWidth
+		displayHeight := config.DefaultDisplayHeight
+		if a.lastGoodConfig != nil {
+			displayWidth = a.lastGoodConfig.Display.Width
+			displayHeight = a.lastGoodConfig.Display.Height
+		}
+		splash := NewSplashRenderer(a.client, displayWidth, displayHeight)
+		if err := splash.ShowTransitionBanner(profileName); err != nil {
+			log.Printf("Warning: Transition banner failed: %v", err)
+		}
+	}
+	a.mu.Unlock()
+
+	log.Println("Waiting for GameSense API to settle...")
+	time.Sleep(500 * time.Millisecond)
+
+	// Start with new config
+	log.Println("Starting with new profile...")
+	if err := a.startWithConfig(newCfg); err != nil {
+		log.Printf("ERROR: Failed to start with new profile: %v", err)
+		time.Sleep(1 * time.Second)
+		return a.handleStartupError(err, newCfg)
+	}
+
+	log.Printf("Profile switched successfully to: %s", profileName)
 	log.Println("========================================")
 	return nil
 }
@@ -286,6 +411,15 @@ func (a *App) startWithConfig(cfg *config.Config) error {
 		}
 	} else {
 		log.Printf("Reusing existing %s client", a.currentBackend)
+	}
+
+	// Show startup animation on first start
+	if a.isFirstStart {
+		splash := NewSplashRenderer(a.client, cfg.Display.Width, cfg.Display.Height)
+		if err := splash.ShowStartupAnimation(); err != nil {
+			log.Printf("Warning: Startup animation failed: %v", err)
+		}
+		a.isFirstStart = false
 	}
 
 	widgets, err := widget.CreateWidgets(cfg.Widgets)

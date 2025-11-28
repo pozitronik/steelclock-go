@@ -1,0 +1,369 @@
+{
+  "$schema": "profiles/schema/config.schema.json",
+  "config_name": "Main Profile",
+  "refresh_rate_ms": 100,
+  "unregister_on_exit": true,
+  "backend": "direct",
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background_color": 0
+  },
+  "widgets": [
+    {
+      "type": "clock",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 12,
+        "z": 0
+      },
+      "style": {
+        "background": -1,
+        "border": -1,
+        "padding": 0
+      },
+      "mode": "text",
+      "text": {
+        "format": "%H:%M:%S",
+        "size": 16,
+        "font": null,
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
+      },
+      "update_interval": 0.1
+    },
+    {
+      "type": "cpu",
+      "enabled": true,
+      "position": {
+        "x": 64,
+        "y": 20,
+        "w": 64,
+        "h": 20,
+        "z": 0
+      },
+      "style": {
+        "background": -1,
+        "border": -1,
+        "padding": 0
+      },
+      "mode": "graph",
+      "gauge": {
+        "show_ticks": true,
+        "colors": {
+          "arc": 200
+        }
+      },
+      "per_core": {
+        "enabled": false,
+        "border": false,
+        "margin": 0
+      },
+      "bar": {
+        "border": true,
+        "direction": "vertical"
+      },
+      "text": {
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
+      },
+      "graph": {
+        "filled": true,
+        "colors": {
+          "fill": 255
+        }
+      },
+      "update_interval": 0.5
+    },
+    {
+      "type": "keyboard",
+      "enabled": true,
+      "position": {
+        "x": 64,
+        "y": 0,
+        "w": 40,
+        "h": 20,
+        "z": 0
+      },
+      "style": {
+        "background": -1,
+        "border": -1,
+        "padding": 0
+      },
+      "indicators": {
+        "caps": {
+          "on": null,
+          "off": null
+        },
+        "num": {
+          "on": null,
+          "off": null
+        },
+        "scroll": {
+          "on": null,
+          "off": null
+        }
+      },
+      "layout": {
+        "spacing": 0,
+        "separator": ""
+      },
+      "colors": {
+        "on": 255,
+        "off": 0
+      },
+      "text": {
+        "size": 10,
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
+      },
+      "update_interval": 0.2
+    },
+    {
+      "type": "keyboard_layout",
+      "enabled": true,
+      "position": {
+        "x": 104,
+        "y": 0,
+        "w": 24,
+        "h": 20,
+        "z": 0
+      },
+      "style": {
+        "background": 0,
+        "border": 255
+      },
+      "format": "iso639-1",
+      "text": {
+        "size": 16,
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
+      },
+      "update_interval": 0.2
+    },
+    {
+      "type": "audio_visualizer",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 20,
+        "w": 64,
+        "h": 20,
+        "z": 0
+      },
+      "style": {
+        "background": -1,
+        "border": -1
+      },
+      "mode": "spectrum",
+      "spectrum": {
+        "bars": 64,
+        "scale": "logarithmic",
+        "style": "bars",
+        "smoothing": 0.7,
+        "frequency_compensation": true,
+        "dynamic_scaling": {
+          "strength": 0,
+          "window": 0.1
+        },
+        "colors": {
+          "fill": 255
+        },
+        "peak": {
+          "enabled": true,
+          "hold_time": 1.0
+        }
+      },
+      "oscilloscope": {
+        "style": "line",
+        "samples": 128,
+        "colors": {
+          "fill": 255,
+          "left": 255,
+          "right": 200
+        }
+      },
+      "channel": "stereo_combined",
+      "update_interval": 0.033
+    },
+    {
+      "type": "volume",
+      "enabled": true,
+      "position": {
+        "x": 66,
+        "y": 0,
+        "w": 36,
+        "h": 20,
+        "z": 0
+      },
+      "style": {
+        "background": -1,
+        "border": 255,
+        "padding": 0
+      },
+      "mode": "text",
+      "bar": {
+        "direction": "horizontal",
+        "border": false,
+        "colors": {
+          "fill": 255
+        }
+      },
+      "gauge": {
+        "show_ticks": true,
+        "colors": {
+          "arc": 200,
+          "needle": 255
+        }
+      },
+      "triangle": {
+        "border": true,
+        "colors": {
+          "fill": 255
+        }
+      },
+      "text": {
+        "format": "%d%%",
+        "font": null,
+        "size": 16,
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
+      },
+      "auto_hide": {
+        "enabled": true,
+        "timeout": 2.0
+      },
+      "update_interval": 0.033
+    },
+    {
+      "type": "volume_meter",
+      "enabled": false,
+      "position": {
+        "x": 64,
+        "y": 20,
+        "w": 64,
+        "h": 20,
+        "z": 0
+      },
+      "style": {
+        "background": 0,
+        "border": -1,
+        "padding": 0
+      },
+      "mode": "bar",
+      "bar": {
+        "direction": "vertical",
+        "border": false,
+        "colors": {
+          "fill": 255,
+          "clipping": 255,
+          "peak": 255
+        }
+      },
+      "gauge": {
+        "show_ticks": true,
+        "colors": {
+          "arc": 255,
+          "needle": 255,
+          "ticks": 255,
+          "clipping": 200
+        }
+      },
+      "text": {
+        "format": "%d%%",
+        "font": null,
+        "size": 14,
+        "align": {
+          "h": "center",
+          "v": "center"
+        },
+        "colors": {
+          "fill": 10,
+          "clipping": 200
+        }
+      },
+      "stereo": {
+        "enabled": true,
+        "divider": 100
+      },
+      "metering": {
+        "db_scale": false,
+        "decay_rate": 2.0,
+        "silence_threshold": 0.01
+      },
+      "peak": {
+        "enabled": true,
+        "hold_time": 1.0
+      },
+      "clipping": {
+        "enabled": true,
+        "threshold": 0.1
+      },
+      "auto_hide": {
+        "enabled": false,
+        "timeout": 2.0,
+        "on_silence": false,
+        "silence_time": 2.0
+      },
+      "update_interval": 0.05,
+      "poll_interval": 0.05
+    },
+    {
+      "type": "winamp",
+      "enabled": false,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 20
+      },
+      "update_interval": 0.2,
+      "text": {
+        "format": "{title}",
+        "font": "pixel5x7",
+        "size": 16,
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
+      },
+      "winamp": {
+        "placeholder": {
+          "mode": "icon"
+        }
+      },
+      "scroll": {
+        "enabled": true,
+        "direction": "left",
+        "speed": 30,
+        "mode": "continuous",
+        "gap": 20
+      },
+      "auto_show": {
+        "on_track_change": true,
+        "on_play": true,
+        "on_pause": false,
+        "on_stop": false,
+        "on_seek": false
+      },
+      "auto_hide": {
+        "enabled": true,
+        "timeout": 5,
+        "on_show": "always"
+      }
+    }
+  ]
+}

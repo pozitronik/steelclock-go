@@ -282,8 +282,8 @@ func (w *WinampWidget) updateScrollPosition(now time.Time) {
 	}
 	w.scrollPauseUntil = time.Time{}
 
-	// Calculate text width
-	textWidth, _ := bitmap.MeasureText(w.currentText, w.fontFace)
+	// Calculate text width (using Smart* to handle both TTF and internal fonts)
+	textWidth, _ := bitmap.SmartMeasureText(w.currentText, w.fontFace, w.fontName)
 	pos := w.GetPosition()
 	contentWidth := pos.W - w.padding*2
 
@@ -461,7 +461,7 @@ func (w *WinampWidget) Render() (image.Image, error) {
 	if w.scrollEnabled {
 		w.renderScrollingText(img, currentText, scrollOffset)
 	} else {
-		bitmap.DrawAlignedText(img, currentText, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+		bitmap.SmartDrawAlignedText(img, currentText, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 	}
 
 	return img, nil
@@ -474,7 +474,7 @@ func (w *WinampWidget) renderPlaceholder(img *image.Gray) {
 	switch w.placeholderMode {
 	case "icon":
 		// Draw Winamp icon centered
-		iconSet := glyphs.GetWinampIconSet(pos.H - w.padding*2)
+		iconSet := glyphs.WinampIcons8x8
 		icon := glyphs.GetIcon(iconSet, "winamp")
 		if icon != nil {
 			// Center the icon
@@ -483,7 +483,7 @@ func (w *WinampWidget) renderPlaceholder(img *image.Gray) {
 			glyphs.DrawGlyph(img, icon, x, y, color.Gray{Y: 255})
 		}
 	case "text":
-		bitmap.DrawAlignedText(img, w.placeholderText, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+		bitmap.SmartDrawAlignedText(img, w.placeholderText, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 	}
 }
 
@@ -495,16 +495,16 @@ func (w *WinampWidget) renderScrollingText(img *image.Gray, text string, offset 
 	contentW := pos.W - w.padding*2
 	contentH := pos.H - w.padding*2
 
-	textWidth, _ := bitmap.MeasureText(text, w.fontFace)
+	textWidth, _ := bitmap.SmartMeasureText(text, w.fontFace, w.fontName)
 
 	// If text fits, just draw it normally
 	if textWidth <= contentW {
-		bitmap.DrawAlignedText(img, text, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+		bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 		return
 	}
 
 	// Calculate aligned position using bitmap helper
-	textX, textY := bitmap.CalculateTextPosition(text, w.fontFace, contentX, contentY, contentW, contentH, w.horizAlign, w.vertAlign)
+	textX, textY := bitmap.SmartCalculateTextPosition(text, w.fontFace, w.fontName, contentX, contentY, contentW, contentH, w.horizAlign, w.vertAlign)
 
 	// Handle horizontal scrolling
 	if w.scrollDirection == "left" || w.scrollDirection == "right" {
@@ -513,27 +513,27 @@ func (w *WinampWidget) renderScrollingText(img *image.Gray, text string, offset 
 
 		// For continuous mode, draw text twice for seamless loop
 		if w.scrollMode == "continuous" {
-			bitmap.DrawTextAtPosition(img, text, w.fontFace, scrollX, textY, contentX, contentY, contentW, contentH)
+			bitmap.SmartDrawTextAtPosition(img, text, w.fontFace, w.fontName, scrollX, textY, contentX, contentY, contentW, contentH)
 
 			// Draw second instance for seamless loop
 			if w.scrollDirection == "left" {
 				textX2 := scrollX + textWidth + w.scrollGap
 				if textX2 < contentX+contentW {
-					bitmap.DrawTextAtPosition(img, text, w.fontFace, textX2, textY, contentX, contentY, contentW, contentH)
+					bitmap.SmartDrawTextAtPosition(img, text, w.fontFace, w.fontName, textX2, textY, contentX, contentY, contentW, contentH)
 				}
 			} else {
 				textX2 := scrollX - textWidth - w.scrollGap
 				if textX2+textWidth > contentX {
-					bitmap.DrawTextAtPosition(img, text, w.fontFace, textX2, textY, contentX, contentY, contentW, contentH)
+					bitmap.SmartDrawTextAtPosition(img, text, w.fontFace, w.fontName, textX2, textY, contentX, contentY, contentW, contentH)
 				}
 			}
 		} else {
 			// For bounce and pause_ends modes, just draw once
-			bitmap.DrawTextAtPosition(img, text, w.fontFace, scrollX, textY, contentX, contentY, contentW, contentH)
+			bitmap.SmartDrawTextAtPosition(img, text, w.fontFace, w.fontName, scrollX, textY, contentX, contentY, contentW, contentH)
 		}
 	} else {
 		// Vertical scrolling - apply offset to Y
 		scrollY := textY - int(offset)
-		bitmap.DrawTextAtPosition(img, text, w.fontFace, textX, scrollY, contentX, contentY, contentW, contentH)
+		bitmap.SmartDrawTextAtPosition(img, text, w.fontFace, w.fontName, textX, scrollY, contentX, contentY, contentW, contentH)
 	}
 }

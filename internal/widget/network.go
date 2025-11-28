@@ -12,33 +12,71 @@ import (
 	"golang.org/x/image/font"
 )
 
+// NetworkUnit represents a network speed unit
+type NetworkUnit struct {
+	Name     string  // Display name (e.g., "Mbps")
+	Divisor  float64 // Divisor to convert from bytes per second
+	IsBits   bool    // True for bit-based units (bps, Kbps, Mbps, Gbps)
+	IsBinary bool    // True for binary units (KiB/s, MiB/s, GiB/s)
+}
+
+// Predefined network units
+var networkUnits = map[string]NetworkUnit{
+	// Bit-based units (standard for network)
+	"bps":  {Name: "bps", Divisor: 1.0 / 8, IsBits: true, IsBinary: false}, // bytes to bits
+	"Kbps": {Name: "Kbps", Divisor: 1000.0 / 8, IsBits: true, IsBinary: false},
+	"Mbps": {Name: "Mbps", Divisor: 1000000.0 / 8, IsBits: true, IsBinary: false},
+	"Gbps": {Name: "Gbps", Divisor: 1000000000.0 / 8, IsBits: true, IsBinary: false},
+	// Byte-based units (decimal)
+	"B/s":  {Name: "B/s", Divisor: 1, IsBits: false, IsBinary: false},
+	"KB/s": {Name: "KB/s", Divisor: 1000, IsBits: false, IsBinary: false},
+	"MB/s": {Name: "MB/s", Divisor: 1000000, IsBits: false, IsBinary: false},
+	"GB/s": {Name: "GB/s", Divisor: 1000000000, IsBits: false, IsBinary: false},
+	// Byte-based units (binary)
+	"KiB/s": {Name: "KiB/s", Divisor: 1024, IsBits: false, IsBinary: true},
+	"MiB/s": {Name: "MiB/s", Divisor: 1048576, IsBits: false, IsBinary: true},
+	"GiB/s": {Name: "GiB/s", Divisor: 1073741824, IsBits: false, IsBinary: true},
+}
+
+// autoScaleUnitsBits defines the order for auto-scaling (bit-based units)
+var autoScaleUnitsBits = []string{"bps", "Kbps", "Mbps", "Gbps"}
+
+// autoScaleUnitsBytes defines the order for auto-scaling (byte-based decimal units)
+var autoScaleUnitsBytes = []string{"B/s", "KB/s", "MB/s", "GB/s"}
+
+// autoScaleUnitsBinary defines the order for auto-scaling (byte-based binary units)
+var autoScaleUnitsBinaryNet = []string{"B/s", "KiB/s", "MiB/s", "GiB/s"}
+
 // NetworkWidget displays network I/O
 type NetworkWidget struct {
 	*BaseWidget
 	displayMode   string
 	interfaceName *string
-	maxSpeedMbps  float64
+	maxSpeedBps   float64 // Max speed in bytes per second (-1 for auto-scale)
 	fontSize      int
+	fontName      string
 	horizAlign    string
 	vertAlign     string
 	padding       int
 	barDirection  string
 	barBorder     bool
 	graphFilled   bool
-	rxColor       uint8
-	txColor       uint8
-	rxNeedleColor uint8
-	txNeedleColor uint8
+	rxColor       int // -1 means transparent (skip drawing)
+	txColor       int // -1 means transparent (skip drawing)
+	rxNeedleColor int // -1 means transparent (skip drawing)
+	txNeedleColor int // -1 means transparent (skip drawing)
 	historyLen    int
+	unit          string // "auto", "bps", "Kbps", "Mbps", "Gbps", "B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s"
+	showUnit      bool   // Show unit suffix in text mode
 	lastRx        uint64
 	lastTx        uint64
 	lastTime      time.Time
-	currentRxMbps float64
-	currentTxMbps float64
+	currentRxBps  float64 // Current RX speed in bytes per second
+	currentTxBps  float64 // Current TX speed in bytes per second
 	rxHistory     []float64
 	txHistory     []float64
 	fontFace      font.Face
-	mu            sync.RWMutex // Protects currentRxMbps, currentTxMbps, rxHistory, txHistory
+	mu            sync.RWMutex // Protects currentRxBps, currentTxBps, rxHistory, txHistory
 }
 
 // NewNetworkWidget creates a new network widget
@@ -95,10 +133,30 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		}
 	}
 
-	// Max speed
-	maxSpeed := cfg.MaxSpeedMbps
-	if maxSpeed == 0 {
-		maxSpeed = -1 // Auto-scale
+	// Max speed - convert from Mbps (config) to bytes per second (internal)
+	// Config uses Mbps for backward compatibility
+	maxSpeedBps := float64(-1) // Auto-scale by default
+	if cfg.MaxSpeedMbps > 0 {
+		// Convert Mbps to bytes per second: Mbps * 1000000 / 8
+		maxSpeedBps = cfg.MaxSpeedMbps * 1000000 / 8
+	}
+
+	// Unit selection - default to "Mbps" for backward compatibility
+	unit := cfg.Unit
+	if unit == "" {
+		unit = "Mbps"
+	}
+	// Validate unit
+	if unit != "auto" {
+		if _, ok := networkUnits[unit]; !ok {
+			unit = "Mbps" // Fallback to default
+		}
+	}
+
+	// Show unit suffix in text mode
+	showUnit := false
+	if cfg.Text != nil && cfg.Text.ShowUnit != nil {
+		showUnit = *cfg.Text.ShowUnit
 	}
 
 	// Load font for text mode
@@ -111,23 +169,88 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		BaseWidget:    base,
 		displayMode:   displayMode,
 		interfaceName: cfg.Interface,
-		maxSpeedMbps:  maxSpeed,
+		maxSpeedBps:   maxSpeedBps,
 		fontSize:      textSettings.FontSize,
+		fontName:      textSettings.FontName,
 		horizAlign:    textSettings.HorizAlign,
 		vertAlign:     textSettings.VertAlign,
 		padding:       padding,
 		barDirection:  barSettings.Direction,
 		barBorder:     barSettings.Border,
 		graphFilled:   graphSettings.Filled,
-		rxColor:       uint8(rxColor),
-		txColor:       uint8(txColor),
-		rxNeedleColor: uint8(rxNeedleColor),
-		txNeedleColor: uint8(txNeedleColor),
+		rxColor:       rxColor,
+		txColor:       txColor,
+		rxNeedleColor: rxNeedleColor,
+		txNeedleColor: txNeedleColor,
 		historyLen:    graphSettings.HistoryLen,
+		unit:          unit,
+		showUnit:      showUnit,
 		rxHistory:     make([]float64, 0, graphSettings.HistoryLen),
 		txHistory:     make([]float64, 0, graphSettings.HistoryLen),
 		fontFace:      fontFace,
 	}, nil
+}
+
+// convertToUnit converts bytes per second to the specified unit
+func (w *NetworkWidget) convertToUnit(bps float64, unitName string) (float64, string) {
+	if unitName == "auto" {
+		return w.autoScale(bps)
+	}
+
+	unit, ok := networkUnits[unitName]
+	if !ok {
+		// Fallback to Mbps
+		unit = networkUnits["Mbps"]
+	}
+
+	return bps / unit.Divisor, unit.Name
+}
+
+// autoScale automatically selects the best unit based on the value
+func (w *NetworkWidget) autoScale(bps float64) (float64, string) {
+	// Determine which unit family to use based on the configured unit
+	var units []string
+
+	if w.unit != "auto" {
+		if u, ok := networkUnits[w.unit]; ok {
+			if u.IsBits {
+				units = autoScaleUnitsBits
+			} else if u.IsBinary {
+				units = autoScaleUnitsBinaryNet
+			} else {
+				units = autoScaleUnitsBytes
+			}
+		}
+	}
+
+	// Default to bits if not determined
+	if units == nil {
+		units = autoScaleUnitsBits
+	}
+
+	// Find the best unit (largest unit where value >= 1)
+	selectedUnit := units[0]
+	for _, unitName := range units {
+		unit := networkUnits[unitName]
+		if bps/unit.Divisor >= 1 {
+			selectedUnit = unitName
+		} else {
+			break
+		}
+	}
+
+	unit := networkUnits[selectedUnit]
+	return bps / unit.Divisor, unit.Name
+}
+
+// formatNetValue formats a value with appropriate precision
+func formatNetValue(value float64) string {
+	if value >= 100 {
+		return fmt.Sprintf("%.0f", value)
+	} else if value >= 10 {
+		return fmt.Sprintf("%.1f", value)
+	}
+	return fmt.Sprintf("%.2f", value)
 }
 
 // Update updates the network stats
@@ -161,15 +284,15 @@ func (w *NetworkWidget) Update() error {
 	if !w.lastTime.IsZero() {
 		elapsed := now.Sub(w.lastTime).Seconds()
 		if elapsed > 0 {
-			// Calculate Mbps
-			rxDelta := float64(rx-w.lastRx) * 8 / 1000000 / elapsed // bits to Mbps
-			txDelta := float64(tx-w.lastTx) * 8 / 1000000 / elapsed
+			// Calculate bytes per second
+			rxDelta := float64(rx-w.lastRx) / elapsed
+			txDelta := float64(tx-w.lastTx) / elapsed
 
 			w.mu.Lock()
-			w.currentRxMbps = rxDelta
-			w.currentTxMbps = txDelta
+			w.currentRxBps = rxDelta
+			w.currentTxBps = txDelta
 
-			// Add to history
+			// Add to history (store raw bytes per second)
 			if w.displayMode == "graph" {
 				w.rxHistory = append(w.rxHistory, rxDelta)
 				if len(w.rxHistory) > w.historyLen {
@@ -230,8 +353,27 @@ func (w *NetworkWidget) renderText(img *image.Gray) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	text := fmt.Sprintf("↓%.1f ↑%.1f", w.currentRxMbps, w.currentTxMbps)
-	bitmap.DrawAlignedText(img, text, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+	var text string
+	if w.unit == "auto" {
+		// Auto-scale each value independently
+		rxVal, rxUnit := w.autoScale(w.currentRxBps)
+		txVal, txUnit := w.autoScale(w.currentTxBps)
+
+		// Always show unit for auto mode to distinguish scales
+		text = fmt.Sprintf("↓%s%s ↑%s%s", formatNetValue(rxVal), rxUnit, formatNetValue(txVal), txUnit)
+	} else {
+		// Fixed unit for both values
+		rxVal, unitName := w.convertToUnit(w.currentRxBps, w.unit)
+		txVal, _ := w.convertToUnit(w.currentTxBps, w.unit)
+
+		if w.showUnit {
+			text = fmt.Sprintf("↓%s ↑%s %s", formatNetValue(rxVal), formatNetValue(txVal), unitName)
+		} else {
+			text = fmt.Sprintf("↓%s ↑%s", formatNetValue(rxVal), formatNetValue(txVal))
+		}
+	}
+
+	bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 }
 
 func (w *NetworkWidget) renderBarHorizontal(img *image.Gray, x, y, width, height int) {
@@ -241,20 +383,25 @@ func (w *NetworkWidget) renderBarHorizontal(img *image.Gray, x, y, width, height
 	// Split into two halves: RX top, TX bottom
 	halfH := height / 2
 
-	maxSpeed := w.maxSpeedMbps
+	maxSpeed := w.maxSpeedBps
 	if maxSpeed < 0 {
 		// Auto-scale
-		maxSpeed = max(w.currentRxMbps, w.currentTxMbps)
+		maxSpeed = max(w.currentRxBps, w.currentTxBps)
 		if maxSpeed < 1 {
 			maxSpeed = 1
 		}
 	}
 
-	rxPercent := (w.currentRxMbps / maxSpeed) * 100
-	txPercent := (w.currentTxMbps / maxSpeed) * 100
+	rxPercent := (w.currentRxBps / maxSpeed) * 100
+	txPercent := (w.currentTxBps / maxSpeed) * 100
 
-	bitmap.DrawHorizontalBar(img, x, y, width, halfH, rxPercent, w.rxColor, w.barBorder)
-	bitmap.DrawHorizontalBar(img, x, y+halfH, width, height-halfH, txPercent, w.txColor, w.barBorder)
+	// Only draw if color is not transparent (-1)
+	if w.rxColor >= 0 {
+		bitmap.DrawHorizontalBar(img, x, y, width, halfH, rxPercent, uint8(w.rxColor), w.barBorder)
+	}
+	if w.txColor >= 0 {
+		bitmap.DrawHorizontalBar(img, x, y+halfH, width, height-halfH, txPercent, uint8(w.txColor), w.barBorder)
+	}
 }
 
 func (w *NetworkWidget) renderBarVertical(img *image.Gray, x, y, width, height int) {
@@ -264,19 +411,24 @@ func (w *NetworkWidget) renderBarVertical(img *image.Gray, x, y, width, height i
 	// Split into two halves: RX left, TX right
 	halfW := width / 2
 
-	maxSpeed := w.maxSpeedMbps
+	maxSpeed := w.maxSpeedBps
 	if maxSpeed < 0 {
-		maxSpeed = max(w.currentRxMbps, w.currentTxMbps)
+		maxSpeed = max(w.currentRxBps, w.currentTxBps)
 		if maxSpeed < 1 {
 			maxSpeed = 1
 		}
 	}
 
-	rxPercent := (w.currentRxMbps / maxSpeed) * 100
-	txPercent := (w.currentTxMbps / maxSpeed) * 100
+	rxPercent := (w.currentRxBps / maxSpeed) * 100
+	txPercent := (w.currentTxBps / maxSpeed) * 100
 
-	bitmap.DrawVerticalBar(img, x, y, halfW, height, rxPercent, w.rxColor, w.barBorder)
-	bitmap.DrawVerticalBar(img, x+halfW, y, width-halfW, height, txPercent, w.txColor, w.barBorder)
+	// Only draw if color is not transparent (-1)
+	if w.rxColor >= 0 {
+		bitmap.DrawVerticalBar(img, x, y, halfW, height, rxPercent, uint8(w.rxColor), w.barBorder)
+	}
+	if w.txColor >= 0 {
+		bitmap.DrawVerticalBar(img, x+halfW, y, width-halfW, height, txPercent, uint8(w.txColor), w.barBorder)
+	}
 }
 
 func (w *NetworkWidget) renderGraph(img *image.Gray, x, y, width, height int) {
@@ -287,8 +439,8 @@ func (w *NetworkWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 		return
 	}
 
-	// Normalize to 0-100 scale
-	maxSpeed := w.maxSpeedMbps
+	// Normalize to 0-100 scale using bytes per second
+	maxSpeed := w.maxSpeedBps
 	if maxSpeed < 0 {
 		// Find max in history
 		maxSpeed = 1.0
@@ -312,9 +464,13 @@ func (w *NetworkWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 		txPercent[i] = (w.txHistory[i] / maxSpeed) * 100
 	}
 
-	// Draw both graphs (RX and TX overlaid)
-	bitmap.DrawGraph(img, x, y, width, height, rxPercent, w.historyLen, w.rxColor, w.graphFilled)
-	bitmap.DrawGraph(img, x, y, width, height, txPercent, w.historyLen, w.txColor, w.graphFilled)
+	// Draw both graphs (RX and TX overlaid) if color is not transparent
+	if w.rxColor >= 0 {
+		bitmap.DrawGraph(img, x, y, width, height, rxPercent, w.historyLen, uint8(w.rxColor), w.graphFilled)
+	}
+	if w.txColor >= 0 {
+		bitmap.DrawGraph(img, x, y, width, height, txPercent, w.historyLen, uint8(w.txColor), w.graphFilled)
+	}
 }
 
 func (w *NetworkWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
@@ -322,18 +478,18 @@ func (w *NetworkWidget) renderGauge(img *image.Gray, pos config.PositionConfig) 
 	defer w.mu.RUnlock()
 
 	// Calculate max speed for percentage
-	maxSpeed := w.maxSpeedMbps
+	maxSpeed := w.maxSpeedBps
 	if maxSpeed < 0 {
 		// Auto-scale
-		maxSpeed = max(w.currentRxMbps, w.currentTxMbps)
+		maxSpeed = max(w.currentRxBps, w.currentTxBps)
 		if maxSpeed < 1 {
 			maxSpeed = 1
 		}
 	}
 
 	// Calculate percentages
-	rxPercent := (w.currentRxMbps / maxSpeed) * 100
-	txPercent := (w.currentTxMbps / maxSpeed) * 100
+	rxPercent := (w.currentRxBps / maxSpeed) * 100
+	txPercent := (w.currentTxBps / maxSpeed) * 100
 
 	// Clamp to 0-100
 	if rxPercent < 0 {
@@ -350,5 +506,22 @@ func (w *NetworkWidget) renderGauge(img *image.Gray, pos config.PositionConfig) 
 	}
 
 	// Draw dual gauge: outer (RX) and inner (TX)
-	bitmap.DrawDualGauge(img, pos, rxPercent, txPercent, w.rxColor, w.rxNeedleColor, w.txColor, w.txNeedleColor)
+	// Convert colors, treating -1 as 0 (invisible on black)
+	rxCol := uint8(0)
+	rxNeedleCol := uint8(0)
+	txCol := uint8(0)
+	txNeedleCol := uint8(0)
+	if w.rxColor >= 0 {
+		rxCol = uint8(w.rxColor)
+	}
+	if w.rxNeedleColor >= 0 {
+		rxNeedleCol = uint8(w.rxNeedleColor)
+	}
+	if w.txColor >= 0 {
+		txCol = uint8(w.txColor)
+	}
+	if w.txNeedleColor >= 0 {
+		txNeedleCol = uint8(w.txNeedleColor)
+	}
+	bitmap.DrawDualGauge(img, pos, rxPercent, txPercent, rxCol, rxNeedleCol, txCol, txNeedleCol)
 }

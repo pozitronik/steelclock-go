@@ -605,35 +605,37 @@ func TestValidateWidgetProperties_ClockMissingFormat(t *testing.T) {
 	}
 }
 
-// TestValidateWidgetProperties_NetworkMissingInterface tests network widget validation
-func TestValidateWidgetProperties_NetworkMissingInterface(t *testing.T) {
+// TestValidateWidgetProperties_NetworkEmptyInterface tests network widget validation
+// Empty interface is valid - means sum all interfaces
+func TestValidateWidgetProperties_NetworkEmptyInterface(t *testing.T) {
 	emptyInterface := ""
 	w := &WidgetConfig{
 		Type:      "network",
 		Enabled:   BoolPtr(true),
 		Position:  PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-		Interface: &emptyInterface, // Empty interface
+		Interface: &emptyInterface, // Empty interface = auto-detect all
 	}
 
 	err := validateWidgetProperties(0, w)
-	if err == nil {
-		t.Error("validateWidgetProperties() should return error for network with empty interface")
+	if err != nil {
+		t.Errorf("validateWidgetProperties() should not return error for network with empty interface (auto-detect), got: %v", err)
 	}
 }
 
-// TestValidateWidgetProperties_DiskMissingName tests disk widget validation
-func TestValidateWidgetProperties_DiskMissingName(t *testing.T) {
+// TestValidateWidgetProperties_DiskEmptyName tests disk widget validation
+// Empty disk is valid - means sum all disks
+func TestValidateWidgetProperties_DiskEmptyName(t *testing.T) {
 	emptyDisk := ""
 	w := &WidgetConfig{
 		Type:     "disk",
 		Enabled:  BoolPtr(true),
 		Position: PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-		Disk:     &emptyDisk, // Empty disk name
+		Disk:     &emptyDisk, // Empty disk name = auto-detect all
 	}
 
 	err := validateWidgetProperties(0, w)
-	if err == nil {
-		t.Error("validateWidgetProperties() should return error for disk with empty disk_name")
+	if err != nil {
+		t.Errorf("validateWidgetProperties() should not return error for disk with empty disk_name (auto-detect), got: %v", err)
 	}
 }
 

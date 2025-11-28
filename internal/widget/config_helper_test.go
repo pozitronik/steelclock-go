@@ -356,60 +356,6 @@ func TestConfigHelper_GetFillColorForMode(t *testing.T) {
 	}
 }
 
-func TestConfigHelper_GetTriangleSettings(t *testing.T) {
-	t.Run("defaults", func(t *testing.T) {
-		cfg := config.WidgetConfig{}
-		h := NewConfigHelper(cfg)
-		settings := h.GetTriangleSettings()
-
-		if settings.FillColor != 255 {
-			t.Errorf("FillColor = %d, want 255", settings.FillColor)
-		}
-		if settings.Border != false {
-			t.Errorf("Border = %v, want false", settings.Border)
-		}
-	})
-
-	t.Run("custom values", func(t *testing.T) {
-		fillColor := 180
-		cfg := config.WidgetConfig{
-			Triangle: &config.TriangleConfig{
-				Border: true,
-				Colors: &config.ModeColorsConfig{
-					Fill: &fillColor,
-				},
-			},
-		}
-		h := NewConfigHelper(cfg)
-		settings := h.GetTriangleSettings()
-
-		if settings.FillColor != 180 {
-			t.Errorf("FillColor = %d, want 180", settings.FillColor)
-		}
-		if settings.Border != true {
-			t.Errorf("Border = %v, want true", settings.Border)
-		}
-	})
-
-	t.Run("triangle with nil colors", func(t *testing.T) {
-		cfg := config.WidgetConfig{
-			Triangle: &config.TriangleConfig{
-				Border: true,
-				Colors: nil,
-			},
-		}
-		h := NewConfigHelper(cfg)
-		settings := h.GetTriangleSettings()
-
-		if settings.FillColor != 255 {
-			t.Errorf("FillColor = %d, want 255 (default)", settings.FillColor)
-		}
-		if settings.Border != true {
-			t.Errorf("Border = %v, want true", settings.Border)
-		}
-	})
-}
-
 func TestConfigHelper_LoadFontForTextMode(t *testing.T) {
 	t.Run("non-text mode returns nil", func(t *testing.T) {
 		cfg := config.WidgetConfig{}

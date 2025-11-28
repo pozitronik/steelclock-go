@@ -36,12 +36,6 @@ type GraphSettings struct {
 	FillColor  int
 }
 
-// TriangleSettings holds extracted triangle configuration with defaults
-type TriangleSettings struct {
-	FillColor int
-	Border    bool
-}
-
 // ConfigHelper provides centralized extraction of common widget configuration settings.
 // It reduces code duplication across widget constructors by providing typed helper methods
 // with consistent defaults.
@@ -164,23 +158,6 @@ func (h *ConfigHelper) GetGraphSettings() GraphSettings {
 		}
 		if h.cfg.Graph.Colors != nil && h.cfg.Graph.Colors.Fill != nil {
 			settings.FillColor = *h.cfg.Graph.Colors.Fill
-		}
-	}
-
-	return settings
-}
-
-// GetTriangleSettings extracts triangle configuration with defaults
-func (h *ConfigHelper) GetTriangleSettings() TriangleSettings {
-	settings := TriangleSettings{
-		FillColor: 255,
-		Border:    false,
-	}
-
-	if h.cfg.Triangle != nil {
-		settings.Border = h.cfg.Triangle.Border
-		if h.cfg.Triangle.Colors != nil && h.cfg.Triangle.Colors.Fill != nil {
-			settings.FillColor = *h.cfg.Triangle.Colors.Fill
 		}
 	}
 

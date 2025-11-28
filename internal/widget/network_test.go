@@ -75,8 +75,8 @@ func TestNewNetworkWidget_Defaults(t *testing.T) {
 		t.Errorf("default txColor = %d, want 255", widget.txColor)
 	}
 
-	if widget.maxSpeedMbps != -1 {
-		t.Errorf("default maxSpeedMbps = %f, want -1 (auto)", widget.maxSpeedMbps)
+	if widget.maxSpeedBps != -1 {
+		t.Errorf("default maxSpeedBps = %f, want -1 (auto)", widget.maxSpeedBps)
 	}
 }
 
@@ -111,7 +111,7 @@ func TestNetworkWidget_Update(t *testing.T) {
 
 	// Verify stats were collected (values may be 0 in test environment)
 	widget.mu.RLock()
-	hasStats := widget.currentRxMbps >= 0 && widget.currentTxMbps >= 0
+	hasStats := widget.currentRxBps >= 0 && widget.currentTxBps >= 0
 	widget.mu.RUnlock()
 
 	if !hasStats {

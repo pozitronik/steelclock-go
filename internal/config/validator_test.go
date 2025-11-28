@@ -42,7 +42,7 @@ func TestValidWidgetTypes(t *testing.T) {
 	expectedTypes := []string{
 		"clock", "cpu", "memory", "network", "disk",
 		"keyboard", "keyboard_layout", "volume", "volume_meter",
-		"audio_visualizer", "doom",
+		"audio_visualizer", "doom", "winamp",
 	}
 
 	for _, wt := range expectedTypes {
@@ -408,16 +408,14 @@ func TestValidateWidgetProperties(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "network - missing interface",
+			name:    "network - missing interface (auto-detect all)",
 			widget:  WidgetConfig{Type: "network", ID: "network_0"},
-			wantErr: true,
-			errMsg:  "interface is required",
+			wantErr: false,
 		},
 		{
-			name:    "network - empty interface",
+			name:    "network - empty interface (auto-detect all)",
 			widget:  WidgetConfig{Type: "network", ID: "network_0", Interface: new(string)},
-			wantErr: true,
-			errMsg:  "interface is required",
+			wantErr: false,
 		},
 		{
 			name:    "network - valid interface",
@@ -425,16 +423,14 @@ func TestValidateWidgetProperties(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "disk - missing disk",
+			name:    "disk - missing disk (auto-detect all)",
 			widget:  WidgetConfig{Type: "disk", ID: "disk_0"},
-			wantErr: true,
-			errMsg:  "disk is required",
+			wantErr: false,
 		},
 		{
-			name:    "disk - empty disk",
+			name:    "disk - empty disk (auto-detect all)",
 			widget:  WidgetConfig{Type: "disk", ID: "disk_0", Disk: new(string)},
-			wantErr: true,
-			errMsg:  "disk is required",
+			wantErr: false,
 		},
 		{
 			name:    "disk - valid disk",
@@ -495,14 +491,13 @@ func TestValidateWidgets(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "enabled widget requires properties",
+			name: "enabled widget with optional properties",
 			cfg: Config{
 				Widgets: []WidgetConfig{
-					{Type: "network", Enabled: BoolPtr(true)}, // Missing interface
+					{Type: "network", Enabled: BoolPtr(true)}, // Missing interface = auto-detect all
 				},
 			},
-			wantErr: true,
-			errMsg:  "interface is required",
+			wantErr: false,
 		},
 		{
 			name: "multiple widgets with one invalid",

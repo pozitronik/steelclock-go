@@ -218,12 +218,12 @@
                   "show_ticks": { "type": "boolean", "description": "Show hour tick marks", "default": true },
                   "colors": {
                     "type": "object",
-                    "description": "Analog clock colors",
+                    "description": "Analog clock colors (-1 = transparent/hidden)",
                     "properties": {
-                      "face": { "type": "integer", "description": "Clock face outline color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "hour": { "type": "integer", "description": "Hour hand color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "minute": { "type": "integer", "description": "Minute hand color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "second": { "type": "integer", "description": "Second hand color", "minimum": 0, "maximum": 255, "default": 255 },
+                      "face": { "type": "integer", "description": "Clock face outline color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "hour": { "type": "integer", "description": "Hour hand color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "minute": { "type": "integer", "description": "Minute hand color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "second": { "type": "integer", "description": "Second hand color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
                       "ticks": { "type": "integer", "description": "Hour tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
                     }
                   }
@@ -356,8 +356,25 @@
           "then": {
             "properties": {
               "mode": { "type": "string", "description": "Display mode for network I/O", "enum": ["text", "bar", "graph", "gauge"], "default": "bar" },
-              "interface": { "type": ["string", "null"], "description": "Network interface name (null = auto-detect)", "default": null },
+              "interface": { "type": ["string", "null"], "description": "Network interface name (sum all interfaces if omitted)", "default": null },
               "max_speed_mbps": { "type": "number", "description": "Maximum speed in Mbps for scaling", "default": 100 },
+              "unit": { "type": "string", "description": "Speed unit for display", "enum": ["auto", "bps", "Kbps", "Mbps", "Gbps", "B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s"], "default": "Mbps" },
+              "text": {
+                "type": "object",
+                "description": "Text mode settings",
+                "properties": {
+                  "font": { "type": ["string", "null"], "description": "Font name or TTF path", "default": null },
+                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 10 },
+                  "align": {
+                    "type": "object",
+                    "properties": {
+                      "h": { "type": "string", "enum": ["left", "center", "right"], "default": "center" },
+                      "v": { "type": "string", "enum": ["top", "center", "bottom"], "default": "center" }
+                    }
+                  },
+                  "show_unit": { "type": "boolean", "description": "Show unit suffix (e.g., 'Mbps') in text mode", "default": false }
+                }
+              },
               "bar": {
                 "type": "object",
                 "description": "Bar mode settings",
@@ -366,10 +383,10 @@
                   "border": { "type": "boolean", "description": "Draw border around bars", "default": false },
                   "colors": {
                     "type": "object",
-                    "description": "Bar colors for RX/TX",
+                    "description": "Bar colors for RX/TX (-1 = transparent/hidden)",
                     "properties": {
-                      "rx": { "type": "integer", "description": "Receive (download) bar color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "tx": { "type": "integer", "description": "Transmit (upload) bar color", "minimum": 0, "maximum": 255, "default": 128 }
+                      "rx": { "type": "integer", "description": "Receive (download) bar color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "description": "Transmit (upload) bar color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 128 }
                     }
                   }
                 }
@@ -382,10 +399,10 @@
                   "filled": { "type": "boolean", "description": "Fill area under graph lines", "default": true },
                   "colors": {
                     "type": "object",
-                    "description": "Graph colors for RX/TX",
+                    "description": "Graph colors for RX/TX (-1 = transparent/hidden)",
                     "properties": {
-                      "rx": { "type": "integer", "description": "Receive (download) line color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "tx": { "type": "integer", "description": "Transmit (upload) line color", "minimum": 0, "maximum": 255, "default": 128 }
+                      "rx": { "type": "integer", "description": "Receive (download) line color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "description": "Transmit (upload) line color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 128 }
                     }
                   }
                 }
@@ -396,12 +413,12 @@
                 "properties": {
                   "colors": {
                     "type": "object",
-                    "description": "Gauge colors for RX/TX",
+                    "description": "Gauge colors for RX/TX (-1 = transparent/hidden)",
                     "properties": {
-                      "rx": { "type": "integer", "description": "Receive (download) arc color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "tx": { "type": "integer", "description": "Transmit (upload) arc color", "minimum": 0, "maximum": 255, "default": 128 },
-                      "rx_needle": { "type": "integer", "description": "Receive needle color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "tx_needle": { "type": "integer", "description": "Transmit needle color", "minimum": 0, "maximum": 255, "default": 180 }
+                      "rx": { "type": "integer", "description": "Receive (download) arc color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "description": "Transmit (upload) arc color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 128 },
+                      "rx_needle": { "type": "integer", "description": "Receive needle color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "tx_needle": { "type": "integer", "description": "Transmit needle color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 180 }
                     }
                   }
                 }
@@ -414,8 +431,25 @@
           "then": {
             "properties": {
               "mode": { "type": "string", "description": "Display mode for disk I/O", "enum": ["text", "bar", "graph"], "default": "bar" },
-              "disk": { "type": ["string", "null"], "description": "Disk/drive to monitor (auto-detect if omitted)" },
+              "disk": { "type": ["string", "null"], "description": "Disk/drive to monitor (sum all disks if omitted)" },
               "max_speed_mbps": { "type": "number", "description": "Maximum speed in MB/s for scaling (-1 for auto)", "default": -1 },
+              "unit": { "type": "string", "description": "Speed unit for display", "enum": ["auto", "B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s"], "default": "MB/s" },
+              "text": {
+                "type": "object",
+                "description": "Text mode settings",
+                "properties": {
+                  "font": { "type": ["string", "null"], "description": "Font name or TTF path", "default": null },
+                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 10 },
+                  "align": {
+                    "type": "object",
+                    "properties": {
+                      "h": { "type": "string", "enum": ["left", "center", "right"], "default": "center" },
+                      "v": { "type": "string", "enum": ["top", "center", "bottom"], "default": "center" }
+                    }
+                  },
+                  "show_unit": { "type": "boolean", "description": "Show unit suffix (e.g., 'MB/s') in text mode", "default": false }
+                }
+              },
               "bar": {
                 "type": "object",
                 "description": "Bar mode settings",
@@ -424,10 +458,10 @@
                   "border": { "type": "boolean", "description": "Draw border around bars", "default": false },
                   "colors": {
                     "type": "object",
-                    "description": "Bar colors for read/write",
+                    "description": "Bar colors for read/write (-1 = transparent/hidden)",
                     "properties": {
-                      "read": { "type": "integer", "description": "Read bar color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "write": { "type": "integer", "description": "Write bar color", "minimum": 0, "maximum": 255, "default": 200 }
+                      "read": { "type": "integer", "description": "Read bar color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "write": { "type": "integer", "description": "Write bar color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 200 }
                     }
                   }
                 }
@@ -440,10 +474,10 @@
                   "filled": { "type": "boolean", "description": "Fill area under graph lines", "default": true },
                   "colors": {
                     "type": "object",
-                    "description": "Graph colors for read/write",
+                    "description": "Graph colors for read/write (-1 = transparent/hidden)",
                     "properties": {
-                      "read": { "type": "integer", "description": "Read line color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "write": { "type": "integer", "description": "Write line color", "minimum": 0, "maximum": 255, "default": 200 }
+                      "read": { "type": "integer", "description": "Read line color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "write": { "type": "integer", "description": "Write line color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 200 }
                     }
                   }
                 }
@@ -455,7 +489,7 @@
           "if": { "properties": { "type": { "const": "volume" } }, "required": ["type"] },
           "then": {
             "properties": {
-              "mode": { "type": "string", "description": "Display mode for system volume", "enum": ["text", "bar", "gauge", "triangle"], "default": "bar" },
+              "mode": { "type": "string", "description": "Display mode for system volume", "enum": ["text", "bar", "gauge"], "default": "bar" },
               "bar": {
                 "type": "object",
                 "description": "Bar mode settings",
@@ -483,20 +517,6 @@
                       "arc": { "type": "integer", "description": "Gauge arc outline color", "minimum": 0, "maximum": 255, "default": 200 },
                       "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 },
                       "ticks": { "type": "integer", "description": "Gauge tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
-                    }
-                  }
-                }
-              },
-              "triangle": {
-                "type": "object",
-                "description": "Triangle mode settings",
-                "properties": {
-                  "border": { "type": "boolean", "description": "Draw border around triangle", "default": false },
-                  "colors": {
-                    "type": "object",
-                    "description": "Triangle colors",
-                    "properties": {
-                      "fill": { "type": "integer", "description": "Triangle fill color", "minimum": 0, "maximum": 255, "default": 255 }
                     }
                   }
                 }
@@ -702,10 +722,10 @@
               },
               "colors": {
                 "type": "object",
-                "description": "Indicator colors",
+                "description": "Indicator colors (-1 = transparent/hidden)",
                 "properties": {
-                  "on": { "type": "integer", "description": "Color when indicator is active", "minimum": 0, "maximum": 255, "default": 255 },
-                  "off": { "type": "integer", "description": "Color when indicator is inactive", "minimum": 0, "maximum": 255, "default": 100 }
+                  "on": { "type": "integer", "description": "Color when indicator is active (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
+                  "off": { "type": "integer", "description": "Color when indicator is inactive (-1 to hide)", "minimum": -1, "maximum": 255, "default": 100 }
                 }
               }
             }

@@ -97,8 +97,8 @@ func TestNewDiskWidget_Defaults(t *testing.T) {
 		t.Errorf("default writeColor = %d, want 255", widget.writeColor)
 	}
 
-	if widget.maxSpeedMbps != -1 {
-		t.Errorf("default maxSpeedMbps = %f, want -1 (auto)", widget.maxSpeedMbps)
+	if widget.maxSpeedBps != -1 {
+		t.Errorf("default maxSpeedBps = %f, want -1 (auto)", widget.maxSpeedBps)
 	}
 }
 
@@ -133,7 +133,7 @@ func TestDiskWidget_Update(t *testing.T) {
 
 	// Verify stats were collected
 	widget.mu.RLock()
-	hasStats := widget.currentReadMbps >= 0 && widget.currentWriteMbps >= 0
+	hasStats := widget.currentReadBps >= 0 && widget.currentWriteBps >= 0
 	widget.mu.RUnlock()
 
 	if !hasStats {

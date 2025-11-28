@@ -1,7 +1,6 @@
 {
-  "$schema": "../config.schema.json",
-  "game_name": "STEELCLOCK",
-  "game_display_name": "SteelClock",
+  "$schema": "schema/config.schema.json",
+  "config_name": "Winamp",
   "refresh_rate_ms": 100,
   "display": {
     "width": 128,
@@ -16,7 +15,7 @@
       "text": {
         "format": "{title}",
         "font": null,
-        "size": 12,
+        "size": 16,
         "align": { "h": "center", "v": "center" }
       },
       "winamp": {
@@ -39,7 +38,7 @@
         "on_seek": false
       },
       "auto_hide": {
-        "enabled": true,
+        "enabled": false,
         "timeout": 5,
         "on_show": "always"
       }

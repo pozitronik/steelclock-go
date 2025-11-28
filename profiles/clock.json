@@ -1,5 +1,6 @@
 {
-  "$schema": "../config.schema.json",
+  "$schema": "schema/config.schema.json",
+  "config_name": "Clock",
   "refresh_rate_ms": 1000,
   "display": {
     "width": 128,
@@ -11,7 +12,7 @@
       "type": "clock",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": -1, "padding": 2},
+      "style": {"background": 0, "border": -1, "padding": 0},
       "mode": "text",
       "text": {
         "format": "%H:%M:%S",

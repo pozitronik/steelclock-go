@@ -3,6 +3,7 @@ package config
 // Config represents the complete SteelClock configuration (v2 schema)
 type Config struct {
 	SchemaVersion        int                 `json:"schema_version,omitempty"`
+	ConfigName           string              `json:"config_name,omitempty"` // Display name for profile selection menu
 	GameName             string              `json:"game_name"`
 	GameDisplayName      string              `json:"game_display_name"`
 	RefreshRateMs        int                 `json:"refresh_rate_ms"`
@@ -69,7 +70,6 @@ type WidgetConfig struct {
 	Bar          *BarConfig          `json:"bar,omitempty"`
 	Graph        *GraphConfig        `json:"graph,omitempty"`
 	Gauge        *GaugeConfig        `json:"gauge,omitempty"`
-	Triangle     *TriangleConfig     `json:"triangle,omitempty"`
 	Analog       *AnalogConfig       `json:"analog,omitempty"`
 	Spectrum     *SpectrumConfig     `json:"spectrum,omitempty"`
 	Oscilloscope *OscilloscopeConfig `json:"oscilloscope,omitempty"`
@@ -94,6 +94,7 @@ type WidgetConfig struct {
 	Interface     *string `json:"interface,omitempty"`       // Network
 	MaxSpeedMbps  float64 `json:"max_speed_mbps,omitempty"`  // Network, Disk
 	Disk          *string `json:"disk,omitempty"`            // Disk
+	Unit          string  `json:"unit,omitempty"`            // Disk: "auto", "B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s"
 	Format        string  `json:"format,omitempty"`          // Keyboard layout
 	Channel       string  `json:"channel,omitempty"`         // Audio visualizer
 	Wad           string  `json:"wad,omitempty"`             // DOOM
@@ -131,11 +132,12 @@ type StyleConfig struct {
 
 // TextConfig represents text rendering properties
 type TextConfig struct {
-	Format string       `json:"format,omitempty"`
-	Font   string       `json:"font,omitempty"`
-	Size   int          `json:"size,omitempty"`
-	Align  *AlignConfig `json:"align,omitempty"`
-	Unit   string       `json:"unit,omitempty"`
+	Format   string       `json:"format,omitempty"`
+	Font     string       `json:"font,omitempty"` // Font name: TTF font name/path or built-in: "pixel3x5", "pixel5x7"
+	Size     int          `json:"size,omitempty"`
+	Align    *AlignConfig `json:"align,omitempty"`
+	Unit     string       `json:"unit,omitempty"`
+	ShowUnit *bool        `json:"show_unit,omitempty"` // Show unit suffix in text mode (disk widget)
 }
 
 // AlignConfig represents text alignment
@@ -243,12 +245,6 @@ type GraphConfig struct {
 type GaugeConfig struct {
 	ShowTicks *bool             `json:"show_ticks,omitempty"`
 	Colors    *ModeColorsConfig `json:"colors,omitempty"`
-}
-
-// TriangleConfig represents triangle mode settings (volume widget)
-type TriangleConfig struct {
-	Border bool              `json:"border,omitempty"`
-	Colors *ModeColorsConfig `json:"colors,omitempty"`
 }
 
 // AnalogConfig represents analog clock mode settings

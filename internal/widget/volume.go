@@ -20,23 +20,29 @@ type volumeReader interface {
 	Close()
 }
 
+// reinitializableVolumeReader extends volumeReader with reinitialize capability
+type reinitializableVolumeReader interface {
+	volumeReader
+	Reinitialize() error
+	NeedsReinitialize() bool
+}
+
 // VolumeWidget displays system volume level
 type VolumeWidget struct {
 	*BaseWidget
-	displayMode       string
-	fillColor         uint8
-	barDirection      string
-	barBorder         bool
-	gaugeColor        uint8
-	gaugeNeedleColor  uint8
-	gaugeShowTicks    bool
-	gaugeTicksColor   uint8
-	triangleFillColor uint8
-	triangleBorder    bool
-	horizAlign        string
-	vertAlign         string
-	padding           int
-	pollInterval      time.Duration // Configurable internal polling rate
+	displayMode      string
+	fillColor        uint8
+	barDirection     string
+	barBorder        bool
+	gaugeColor       uint8
+	gaugeNeedleColor uint8
+	gaugeShowTicks   bool
+	gaugeTicksColor  uint8
+	fontName         string
+	horizAlign       string
+	vertAlign        string
+	padding          int
+	pollInterval     time.Duration // Configurable internal polling rate
 
 	mu         sync.RWMutex
 	volume     float64 // 0-100
@@ -70,7 +76,6 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 	padding := helper.GetPadding()
 	barSettings := helper.GetBarSettings()
 	gaugeSettings := helper.GetGaugeSettings()
-	triangleSettings := helper.GetTriangleSettings()
 	fillColor := helper.GetFillColorForMode(displayMode)
 
 	// Load font for text mode (ignore error - volume widget degrades gracefully)
@@ -83,24 +88,23 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 	}
 
 	w := &VolumeWidget{
-		BaseWidget:        base,
-		displayMode:       displayMode,
-		fillColor:         uint8(fillColor),
-		barDirection:      barSettings.Direction,
-		barBorder:         barSettings.Border,
-		gaugeColor:        uint8(gaugeSettings.ArcColor),
-		gaugeNeedleColor:  uint8(gaugeSettings.NeedleColor),
-		gaugeShowTicks:    gaugeSettings.ShowTicks,
-		gaugeTicksColor:   uint8(gaugeSettings.TicksColor),
-		triangleFillColor: uint8(triangleSettings.FillColor),
-		triangleBorder:    triangleSettings.Border,
-		horizAlign:        textSettings.HorizAlign,
-		vertAlign:         textSettings.VertAlign,
-		padding:           padding,
-		pollInterval:      pollInterval,
-		lastSuccessTime:   time.Now(), // Initialize to prevent false "stuck" detection
-		face:              fontFace,
-		stopChan:          make(chan struct{}),
+		BaseWidget:       base,
+		displayMode:      displayMode,
+		fillColor:        uint8(fillColor),
+		barDirection:     barSettings.Direction,
+		barBorder:        barSettings.Border,
+		gaugeColor:       uint8(gaugeSettings.ArcColor),
+		gaugeNeedleColor: uint8(gaugeSettings.NeedleColor),
+		gaugeShowTicks:   gaugeSettings.ShowTicks,
+		gaugeTicksColor:  uint8(gaugeSettings.TicksColor),
+		fontName:         textSettings.FontName,
+		horizAlign:       textSettings.HorizAlign,
+		vertAlign:        textSettings.VertAlign,
+		padding:          padding,
+		pollInterval:     pollInterval,
+		lastSuccessTime:  time.Now(), // Initialize to prevent false "stuck" detection
+		face:             fontFace,
+		stopChan:         make(chan struct{}),
 	}
 
 	// Start single background goroutine for polling volume
@@ -160,6 +164,17 @@ func (w *VolumeWidget) pollVolumeBackground() {
 
 // pollOnce performs a single volume poll and updates the widget state
 func (w *VolumeWidget) pollOnce() {
+	// Check if reader needs reinitialization (device may have changed)
+	if reinitReader, ok := w.reader.(reinitializableVolumeReader); ok {
+		if reinitReader.NeedsReinitialize() {
+			log.Printf("[VOLUME] Reader needs reinitialization, attempting...")
+			if err := reinitReader.Reinitialize(); err != nil {
+				log.Printf("[VOLUME] Failed to reinitialize: %v", err)
+				// Continue anyway, will retry next cycle
+			}
+		}
+	}
+
 	// Call volume reader
 	volume, muted, err := w.reader.GetVolume()
 
@@ -241,8 +256,6 @@ func (w *VolumeWidget) Render() (image.Image, error) {
 		}
 	case "gauge":
 		w.renderGauge(img, pos)
-	case "triangle":
-		w.renderTriangle(img, pos, style)
 	default:
 		w.renderBarHorizontal(img, pos, style)
 	}
@@ -252,7 +265,8 @@ func (w *VolumeWidget) Render() (image.Image, error) {
 
 // renderText renders volume as text
 func (w *VolumeWidget) renderText(img *image.Gray) {
-	if w.face == nil {
+	// Skip rendering if no font available (neither TTF nor internal)
+	if w.face == nil && !bitmap.IsInternalFont(w.fontName) {
 		return
 	}
 
@@ -262,7 +276,7 @@ func (w *VolumeWidget) renderText(img *image.Gray) {
 	}
 
 	// Draw text with configured alignment
-	bitmap.DrawAlignedText(img, text, w.face, w.horizAlign, w.vertAlign, w.padding)
+	bitmap.SmartDrawAlignedText(img, text, w.face, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 }
 
 // renderBarHorizontal renders volume as horizontal bar
@@ -367,68 +381,6 @@ func (w *VolumeWidget) renderBarVertical(img *image.Gray, pos config.PositionCon
 func (w *VolumeWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
 	// Use shared gauge drawing function
 	bitmap.DrawGauge(img, 0, 0, pos.W, pos.H, w.volume, w.gaugeColor, w.gaugeNeedleColor, w.gaugeShowTicks, w.gaugeTicksColor)
-
-	// Draw mute indicator
-	if w.isMuted {
-		w.drawMuteIndicator(img, pos)
-	}
-}
-
-// renderTriangle renders volume as a right-angled triangle that fills from left to right.
-// Right angle at bottom-right, hypotenuse from bottom-left to top-right
-//
-//nolint:gocyclo // Geometric calculations for triangle rendering
-func (w *VolumeWidget) renderTriangle(img *image.Gray, pos config.PositionConfig, style config.StyleConfig) {
-	padding := 2
-	if style.Border >= 0 {
-		padding = 3
-	}
-
-	availWidth := pos.W - (padding * 2)
-	availHeight := pos.H - (padding * 2)
-
-	if availWidth <= 0 || availHeight <= 0 {
-		return
-	}
-
-	fillColor := color.Gray{Y: w.triangleFillColor}
-	borderColor := color.Gray{Y: w.triangleFillColor / 2}
-
-	// Calculate how much of the triangle to fill based on volume (0-100%)
-	fillWidth := int(float64(availWidth) * (w.volume / 100.0))
-
-	// Draw right-angled triangle from left to right.
-	// Right angle at bottom-right corner
-	for col := 0; col < availWidth; col++ {
-		// Calculate height at this column
-		// Height increases linearly from left (0) to right (availHeight)
-		colHeight := ((col + 1) * availHeight) / availWidth
-		if colHeight < 1 {
-			colHeight = 1
-		}
-
-		// Start from bottom
-		startY := padding + availHeight - colHeight
-		x := padding + col
-
-		// Determine if this column should be filled
-		shouldFill := col < fillWidth
-
-		// Draw the column from top to bottom
-		for y := 0; y < colHeight; y++ {
-			actualY := startY + y
-			if x >= 0 && x < pos.W && actualY >= 0 && actualY < pos.H {
-				if shouldFill {
-					img.Set(x, actualY, fillColor)
-				} else if w.triangleBorder {
-					// Draw border outline for unfilled area
-					if y == 0 || y == colHeight-1 {
-						img.Set(x, actualY, borderColor)
-					}
-				}
-			}
-		}
-	}
 
 	// Draw mute indicator
 	if w.isMuted {

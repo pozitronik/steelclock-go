@@ -1,5 +1,6 @@
 {
-  "$schema": "../config.schema.json",
+  "$schema": "schema/config.schema.json",
+  "config_name": "Memory Monitor",
   "refresh_rate_ms": 1000,
   "display": {
     "width": 128,
@@ -8,31 +9,36 @@
   },
   "widgets": [
     {
-      "type": "disk",
+      "type": "memory",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
       "style": {"background": 0, "border": 255, "padding": 2},
       "mode": "graph",
-      "disk": null,
-      "max_speed_mbps": -1,
       "bar": {
         "direction": "horizontal",
         "border": false,
         "colors": {
-          "read": 255,
-          "write": 200
+          "fill": 255
         }
       },
       "graph": {
         "history": 60,
         "filled": true,
         "colors": {
-          "read": 255,
-          "write": 200
+          "fill": 255
+        }
+      },
+      "gauge": {
+        "show_ticks": true,
+        "colors": {
+          "fill": 255,
+          "arc": 200,
+          "needle": 255,
+          "ticks": 150
         }
       },
       "text": {
-        "format": "R: %s W: %s",
+        "format": "%d%%",
         "font": null,
         "size": 10,
         "align": {"h": "center", "v": "center"}

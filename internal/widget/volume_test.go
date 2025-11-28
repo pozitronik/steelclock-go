@@ -49,7 +49,6 @@ func TestNewVolumeWidget(t *testing.T) {
 		{"Bar horizontal", "bar_horizontal"},
 		{"Bar vertical", "bar_vertical"},
 		{"Gauge mode", "gauge"},
-		{"Triangle mode", "triangle"},
 	}
 
 	for _, tt := range tests {
@@ -120,10 +119,6 @@ func TestNewVolumeWidget_Defaults(t *testing.T) {
 
 	if widget.gaugeNeedleColor != 255 {
 		t.Errorf("default gaugeNeedleColor = %v, want 255", widget.gaugeNeedleColor)
-	}
-
-	if widget.triangleFillColor != 255 {
-		t.Errorf("default triangleFillColor = %v, want 255", widget.triangleFillColor)
 	}
 }
 
@@ -315,45 +310,6 @@ func TestVolumeWidget_RenderGauge(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_RenderTriangle tests triangle rendering
-func TestVolumeWidget_RenderTriangle(t *testing.T) {
-	skipIfNoAudioDevice(t)
-
-	cfg := config.WidgetConfig{
-		Type: "volume",
-		ID:   "test_volume",
-		Position: config.PositionConfig{
-			X: 0,
-			Y: 0,
-			W: 40,
-			H: 60,
-		},
-		Mode: "triangle",
-		Style: &config.StyleConfig{
-			Border: 255,
-		},
-		Colors: &config.ColorsConfig{
-			Fill: config.IntPtr(255),
-		},
-	}
-
-	widget, err := NewVolumeWidget(cfg)
-	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
-	}
-
-	_ = widget.Update()
-
-	img, err := widget.Render()
-	if err != nil {
-		t.Errorf("Render() error = %v", err)
-	}
-
-	if img == nil {
-		t.Error("Render() returned nil image")
-	}
-}
-
 // TestVolumeWidget_AutoHide tests auto-hide functionality
 func TestVolumeWidget_AutoHide(t *testing.T) {
 	// Skip on non-Windows platforms - volume reading is Windows-only
@@ -422,7 +378,7 @@ func TestVolumeWidget_AutoHide(t *testing.T) {
 func TestVolumeWidget_AllModes(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
-	modes := []string{"text", "bar_horizontal", "bar_vertical", "gauge", "triangle"}
+	modes := []string{"text", "bar_horizontal", "bar_vertical", "gauge"}
 
 	for _, mode := range modes {
 		t.Run(mode, func(t *testing.T) {

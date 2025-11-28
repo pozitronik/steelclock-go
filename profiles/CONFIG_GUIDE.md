@@ -35,7 +35,7 @@ Add these lines at the top of your configuration file:
 
 ```json
 {
-  "$schema": "./config.schema.json",
+  "$schema": "schema/config.schema.json",
   "schema_version": 2,
   ...
 }
@@ -49,16 +49,24 @@ Supported IDEs: VS Code, JetBrains IDEs, Visual Studio, Sublime Text, and others
 
 ```json
 {
-  "$schema": "./config.schema.json",
+  "$schema": "schema/config.schema.json",
   "schema_version": 2,
   "game_name": "STEELCLOCK",
   "game_display_name": "SteelClock",
   "refresh_rate_ms": 100,
   "backend": "gamesense",
-  "direct_driver": { ... },
-  "display": { ... },
-  "defaults": { ... },
-  "widgets": [ ... ]
+  "direct_driver": {
+    ...
+  },
+  "display": {
+    ...
+  },
+  "defaults": {
+    ...
+  },
+  "widgets": [
+    ...
+  ]
 }
 ```
 
@@ -742,18 +750,30 @@ Works with `auto_hide` to show the widget when specific events occur:
 
 ```json
 {
-  "$schema": "./config.schema.json",
+  "$schema": "schema/config.schema.json",
   "schema_version": 2,
-  "display": {"width": 128, "height": 40, "background": 0},
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
   "widgets": [
     {
       "type": "clock",
-      "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40
+      },
       "mode": "text",
       "text": {
         "format": "%H:%M:%S",
         "size": 16,
-        "align": {"h": "center", "v": "center"}
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
       }
     }
   ]
@@ -764,23 +784,53 @@ Works with `auto_hide` to show the widget when specific events occur:
 
 ```json
 {
-  "$schema": "./config.schema.json",
+  "$schema": "schema/config.schema.json",
   "schema_version": 2,
-  "display": {"width": 128, "height": 40, "background": 0},
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
   "widgets": [
     {
       "type": "cpu",
-      "position": {"x": 0, "y": 0, "w": 128, "h": 20, "z": 0},
-      "style": {"border": 255},
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 20,
+        "z": 0
+      },
+      "style": {
+        "border": 255
+      },
       "mode": "bar",
-      "bar": {"direction": "horizontal", "colors": {"fill": 255}}
+      "bar": {
+        "direction": "horizontal",
+        "colors": {
+          "fill": 255
+        }
+      }
     },
     {
       "type": "memory",
-      "position": {"x": 0, "y": 20, "w": 128, "h": 20, "z": 0},
-      "style": {"border": 255},
+      "position": {
+        "x": 0,
+        "y": 20,
+        "w": 128,
+        "h": 20,
+        "z": 0
+      },
+      "style": {
+        "border": 255
+      },
       "mode": "bar",
-      "bar": {"direction": "horizontal", "colors": {"fill": 255}}
+      "bar": {
+        "direction": "horizontal",
+        "colors": {
+          "fill": 255
+        }
+      }
     }
   ]
 }
@@ -790,22 +840,49 @@ Works with `auto_hide` to show the widget when specific events occur:
 
 ```json
 {
-  "$schema": "./config.schema.json",
+  "$schema": "schema/config.schema.json",
   "schema_version": 2,
-  "display": {"width": 128, "height": 40, "background": 0},
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
   "widgets": [
     {
       "type": "network",
-      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40,
+        "z": 0
+      },
       "mode": "graph",
-      "graph": {"history": 30, "colors": {"rx": 200, "tx": 100}}
+      "graph": {
+        "history": 30,
+        "colors": {
+          "rx": 200,
+          "tx": 100
+        }
+      }
     },
     {
       "type": "clock",
-      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 10},
-      "style": {"background": -1},
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40,
+        "z": 10
+      },
+      "style": {
+        "background": -1
+      },
       "mode": "text",
-      "text": {"format": "%H:%M", "size": 16}
+      "text": {
+        "format": "%H:%M",
+        "size": 16
+      }
     }
   ]
 }
@@ -815,23 +892,55 @@ Works with `auto_hide` to show the widget when specific events occur:
 
 ```json
 {
-  "$schema": "./config.schema.json",
+  "$schema": "schema/config.schema.json",
   "schema_version": 2,
-  "display": {"width": 128, "height": 40, "background": 0},
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
   "widgets": [
     {
       "type": "cpu",
-      "position": {"x": 0, "y": 0, "w": 64, "h": 40},
-      "style": {"border": 255},
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 40
+      },
+      "style": {
+        "border": 255
+      },
       "mode": "gauge",
-      "gauge": {"show_ticks": true, "colors": {"arc": 200, "needle": 255, "ticks": 150}}
+      "gauge": {
+        "show_ticks": true,
+        "colors": {
+          "arc": 200,
+          "needle": 255,
+          "ticks": 150
+        }
+      }
     },
     {
       "type": "memory",
-      "position": {"x": 64, "y": 0, "w": 64, "h": 40},
-      "style": {"border": 255},
+      "position": {
+        "x": 64,
+        "y": 0,
+        "w": 64,
+        "h": 40
+      },
+      "style": {
+        "border": 255
+      },
       "mode": "gauge",
-      "gauge": {"show_ticks": true, "colors": {"arc": 180, "needle": 255, "ticks": 150}}
+      "gauge": {
+        "show_ticks": true,
+        "colors": {
+          "arc": 180,
+          "needle": 255,
+          "ticks": 150
+        }
+      }
     }
   ]
 }
@@ -841,21 +950,35 @@ Works with `auto_hide` to show the widget when specific events occur:
 
 ```json
 {
-  "$schema": "./config.schema.json",
+  "$schema": "schema/config.schema.json",
   "schema_version": 2,
   "refresh_rate_ms": 33,
-  "display": {"width": 128, "height": 40, "background": 0},
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
   "widgets": [
     {
       "type": "audio_visualizer",
-      "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40
+      },
       "mode": "spectrum",
       "spectrum": {
         "bars": 32,
         "scale": "logarithmic",
         "smoothing": 0.7,
-        "peak": {"enabled": true, "hold_time": 1.0},
-        "colors": {"fill": 255}
+        "peak": {
+          "enabled": true,
+          "hold_time": 1.0
+        },
+        "colors": {
+          "fill": 255
+        }
       },
       "update_interval": 0.033
     }

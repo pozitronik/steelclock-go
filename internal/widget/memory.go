@@ -147,7 +147,7 @@ func (w *MemoryWidget) Render() (image.Image, error) {
 func (w *MemoryWidget) renderText(img *image.Gray) {
 	// Note: caller must hold read lock
 	text := fmt.Sprintf("%.0f", w.currentUsage)
-	bitmap.DrawAlignedText(img, text, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+	bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 }
 
 func (w *MemoryWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {

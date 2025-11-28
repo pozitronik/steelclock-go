@@ -84,6 +84,7 @@ var lcidToLanguage = map[uint16]languageInfo{
 type KeyboardLayoutWidget struct {
 	*BaseWidget
 	fontSize      int
+	fontName      string
 	horizAlign    string
 	vertAlign     string
 	padding       int
@@ -145,6 +146,7 @@ func NewKeyboardLayoutWidget(cfg config.WidgetConfig) (*KeyboardLayoutWidget, er
 	widget := &KeyboardLayoutWidget{
 		BaseWidget:    base,
 		fontSize:      fontSize,
+		fontName:      fontName,
 		horizAlign:    horizAlign,
 		vertAlign:     vertAlign,
 		padding:       padding,
@@ -191,7 +193,7 @@ func (w *KeyboardLayoutWidget) Render() (image.Image, error) {
 	layout := w.currentLayout
 	w.mu.RUnlock()
 
-	bitmap.DrawAlignedText(img, layout, w.fontFace, w.horizAlign, w.vertAlign, w.padding)
+	bitmap.SmartDrawAlignedText(img, layout, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 
 	return img, nil
 }

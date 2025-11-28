@@ -19,6 +19,7 @@ https://github.com/user-attachments/assets/58f607cb-be31-4af4-bb3d-6e0628f0748c
 ## Features
 
 - **System Tray Integration**: Runs in background with system tray icon
+- **Configuration Profiles**: Switch between multiple configurations via tray menu
 - **Live Configuration Reload**: Edit and reload config without restarting
 - **Multiple Widgets**: Clock, CPU, Memory, Network, Disk, Keyboard indicators, Keyboard layout, Volume control, Audio visualizer, Winamp integration
 - **Display Modes**: Text, horizontal/vertical bars, graphs, analog gauges, etc
@@ -32,7 +33,7 @@ https://github.com/user-attachments/assets/58f607cb-be31-4af4-bb3d-6e0628f0748c
 - **Automatic Logging**: All output logged to `steelclock.log` with timestamps
 - **JSON Schema Support**: Full IDE autocomplete and validation via included schema file
 
-And it also runs [DOOM](configs/examples/DOOM_README.md).
+And it also runs [DOOM](profiles/DOOM_README.md).
 
 ## Quick Start
 
@@ -53,8 +54,9 @@ And it also runs [DOOM](configs/examples/DOOM_README.md).
 
 3. Use the tray menu:
    - Right-click the tray icon
-   - Choose "Edit Config" to modify settings
-   - Choose "Reload Config" to apply changes
+   - Select a profile to switch configurations
+   - Choose "Edit Active Config" to modify settings
+   - Choose "Reload Active Config" to apply changes
    - Choose "Exit" to close the application
 
 ### Manual Build
@@ -68,17 +70,56 @@ GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H windowsgui" -o steelclock.
 
 ```
 -config string
-    Path to configuration file (default "config.json")
+    Path to configuration file (bypasses profile system)
 ```
 
 ## Configuration
 
-Edit `config.json` to customize widgets. The application supports live reload via the tray menu.
+The application uses `steelclock.json` as the main configuration file. The application supports live reload via the tray menu.
 
 **For complete configuration documentation**, see:
-- **[CONFIG_GUIDE.md](configs/CONFIG_GUIDE.md)** - Comprehensive guide with all properties and examples
-- **[config.schema.json](configs/config.schema.json)** - JSON schema for IDE autocomplete and validation
-- **[configs/examples/](configs/examples/)** - Example configurations for each widget type
+- **[CONFIG_GUIDE.md](profiles/CONFIG_GUIDE.md)** - Comprehensive guide with all properties and examples
+- **[config.schema.json](profiles/schema/config.schema.json)** - JSON schema for IDE autocomplete and validation
+- **[profiles/](profiles/)** - Example configurations for each widget type
+
+## Configuration Profiles
+
+SteelClock supports multiple configuration profiles that can be switched via the tray menu.
+
+### Profile System
+
+- **Main config**: `steelclock.json` in the current working directory
+- **Additional profiles**: JSON files in the `profiles/` subdirectory
+- **Profile names**: Set via `config_name` field in JSON, or filename is used as fallback
+- **State persistence**: Last active profile is saved to `.steelclock.state` and restored on restart
+
+### Tray Menu Structure
+
+```
+Profile 1 (checkmark indicates active)
+Profile 2
+...
+Profile N
+─────────
+Edit Active Config
+Reload Active Config
+─────────
+Exit
+```
+
+### Example Profile Configuration
+
+```json
+{
+  "$schema": "schema/config.schema.json",
+  "config_name": "My Gaming Profile",
+  "refresh_rate_ms": 50,
+  "display": { ... },
+  "widgets": [ ... ]
+}
+```
+
+The `config_name` field determines how the profile appears in the tray menu. If omitted, the filename (without `.json` extension) is used.
 
 ### Supported Widgets
 
@@ -97,7 +138,7 @@ Edit `config.json` to customize widgets. The application supports live reload vi
 | **winamp**           | Winamp player info display           | text (with scrolling support)                                   |
 | **doom**             | Interactive DOOM game display        | game                                                            |
 
-See [CONFIG_GUIDE.md](configs/CONFIG_GUIDE.md) for detailed widget properties and configuration examples.
+See [CONFIG_GUIDE.md](profiles/CONFIG_GUIDE.md) for detailed widget properties and configuration examples.
 
 ## Direct Mode Connection
 
@@ -123,6 +164,8 @@ SteelClock supports two connection backends for communicating with your SteelSer
   }
 }
 ```
+
+If "direct_driver" section is empty, app will try to detect your hardware automatically.  
 
 ### Pros of Direct Mode
 
@@ -158,11 +201,11 @@ SteelClock supports two connection backends for communicating with your SteelSer
 ### Application won't start
 - If using `gamesense` backend: Verify SteelSeries Engine/GG is installed and running
 - If using `direct` backend: Verify device VID/PID are correct and device is connected
-- Check if config file exists and is valid JSON
+- Check if `steelclock.json` exists and is valid JSON
 - Review `steelclock.log` for initialization errors and stack traces
 
 ### Config reload fails
-- Check `config.json` syntax (must be valid JSON)
+- Check configuration file syntax (must be valid JSON)
 - Verify widget configurations are correct
 - Check `steelclock.log` for specific validation errors
 

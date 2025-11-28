@@ -1,5 +1,6 @@
 {
-  "$schema": "../config.schema.json",
+  "$schema": "schema/config.schema.json",
+  "config_name": "Keyboard Indicators",
   "refresh_rate_ms": 200,
   "display": {
     "width": 128,
@@ -11,7 +12,7 @@
       "type": "keyboard",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": -1, "padding": 2},
+      "style": {"background": 0, "border": -1, "padding": 0},
       "indicators": {
         "caps": {"on": null, "off": null},
         "num": {"on": null, "off": null},
@@ -23,11 +24,11 @@
       },
       "colors": {
         "on": 255,
-        "off": 100
+        "off": -1
       },
       "text": {
         "font": null,
-        "size": 10,
+        "size": 16,
         "align": {"h": "center", "v": "center"}
       },
       "update_interval": 0.2

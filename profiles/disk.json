@@ -1,5 +1,6 @@
 {
-  "$schema": "../config.schema.json",
+  "$schema": "schema/config.schema.json",
+  "config_name": "Disk I/O",
   "refresh_rate_ms": 1000,
   "display": {
     "width": 128,
@@ -8,43 +9,35 @@
   },
   "widgets": [
     {
-      "type": "cpu",
+      "type": "disk",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": -1, "padding": 2},
-      "mode": "gauge",
+      "style": {"background": 0, "border": -1, "padding": 0},
+      "mode": "text",
+      "disk": null,
+      "max_speed_mbps": -1,
+      "unit": "MiB/s",
       "bar": {
         "direction": "horizontal",
         "border": false,
         "colors": {
-          "fill": 255
+          "read": 255,
+          "write": 120
         }
       },
       "graph": {
         "history": 60,
         "filled": true,
         "colors": {
-          "fill": 255
+          "read": 255,
+          "write": 0
         }
-      },
-      "gauge": {
-        "show_ticks": true,
-        "colors": {
-          "fill": 255,
-          "arc": 200,
-          "needle": 255,
-          "ticks": 150
-        }
-      },
-      "per_core": {
-        "enabled": false,
-        "margin": 0,
-        "border": false
       },
       "text": {
-        "format": "%d%%",
-        "font": null,
-        "size": 10,
+        "format": "R: %s W: %s",
+        "show_unit": true,
+        "font": "pixel5x7",
+        "size": 16,
         "align": {"h": "center", "v": "center"}
       },
       "update_interval": 1.0

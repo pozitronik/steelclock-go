@@ -263,7 +263,19 @@ func (w *AudioVisualizerWidget) Update() error {
 	// Capture audio samples (both channels)
 	leftSamples, rightSamples, err := w.audioCapture.ReadSamples()
 	if err != nil {
-		return fmt.Errorf("failed to read audio samples: %w", err)
+		// Try to reinitialize on error (device may have changed)
+		log.Printf("[AUDIO-VIS] Read error, attempting reinitialize: %v", err)
+		if reinitErr := ReinitializeSharedAudioCapture(); reinitErr != nil {
+			return fmt.Errorf("failed to reinitialize audio capture: %w", reinitErr)
+		}
+		// Get the new instance
+		newCapture, getErr := GetSharedAudioCapture()
+		if getErr != nil {
+			return fmt.Errorf("failed to get audio capture after reinit: %w", getErr)
+		}
+		w.audioCapture = newCapture
+		// Return early, will try again next update
+		return nil
 	}
 
 	// If no samples, create silent buffers to allow peaks to decay
@@ -844,41 +856,87 @@ func (w *AudioVisualizerWidget) drawWaveform(img *image.Gray, samples []float32,
 	}
 }
 
-// Shared audio capture instance (singleton)
+// Cooldown period between reinitializations to prevent rapid loops
+const audioCaptureReinitCooldown = 10 * time.Second
+
+// Shared audio capture instance (recreatable singleton)
 var (
-	sharedAudioCapture     *AudioCaptureWCA
-	sharedAudioCaptureOnce sync.Once
-	sharedAudioCaptureErr  error
+	sharedAudioCapture        *AudioCaptureWCA
+	sharedAudioCaptureMu      sync.Mutex
+	sharedAudioCaptureErr     error
+	sharedAudioLastReinitTime time.Time // Track last reinit to enforce cooldown
 )
 
 // GetSharedAudioCapture returns the shared AudioCaptureWCA instance
+// This can recreate the instance if it was previously invalidated
 func GetSharedAudioCapture() (*AudioCaptureWCA, error) {
-	sharedAudioCaptureOnce.Do(func() {
-		ac := &AudioCaptureWCA{}
-		if err := ac.initialize(); err != nil {
-			sharedAudioCaptureErr = fmt.Errorf("failed to initialize: %w", err)
-			return
-		}
-		sharedAudioCapture = ac
-	})
+	sharedAudioCaptureMu.Lock()
+	defer sharedAudioCaptureMu.Unlock()
 
-	if sharedAudioCaptureErr != nil {
+	// Return existing instance if valid
+	if sharedAudioCapture != nil && sharedAudioCapture.initialized {
+		return sharedAudioCapture, nil
+	}
+
+	// Create new instance
+	ac := &AudioCaptureWCA{}
+	if err := ac.initialize(); err != nil {
+		sharedAudioCaptureErr = fmt.Errorf("failed to initialize: %w", err)
 		return nil, sharedAudioCaptureErr
 	}
 
+	sharedAudioCapture = ac
+	sharedAudioCaptureErr = nil
 	return sharedAudioCapture, nil
+}
+
+// ReinitializeSharedAudioCapture forces recreation of the shared audio capture
+// Call this when device change is detected
+func ReinitializeSharedAudioCapture() error {
+	sharedAudioCaptureMu.Lock()
+	defer sharedAudioCaptureMu.Unlock()
+
+	// Enforce cooldown to prevent rapid reinitialization loops
+	timeSinceLastReinit := time.Since(sharedAudioLastReinitTime)
+	if timeSinceLastReinit < audioCaptureReinitCooldown {
+		remaining := audioCaptureReinitCooldown - timeSinceLastReinit
+		log.Printf("[AUDIO-CAPTURE] Reinit skipped - cooldown active (%.1fs remaining)", remaining.Seconds())
+		return nil // Not an error, just skipped
+	}
+
+	// Clean up old instance
+	if sharedAudioCapture != nil {
+		sharedAudioCapture.cleanup()
+		sharedAudioCapture.initialized = false
+	}
+
+	// Create new instance
+	ac := &AudioCaptureWCA{}
+	if err := ac.initialize(); err != nil {
+		sharedAudioCaptureErr = fmt.Errorf("failed to reinitialize: %w", err)
+		sharedAudioCapture = nil
+		sharedAudioLastReinitTime = time.Now() // Still update time to prevent rapid retry
+		return sharedAudioCaptureErr
+	}
+
+	sharedAudioCapture = ac
+	sharedAudioCaptureErr = nil
+	sharedAudioLastReinitTime = time.Now()
+	log.Printf("[AUDIO-CAPTURE] Reinitialized after device change")
+	return nil
 }
 
 // AudioCaptureWCA captures audio using Windows Core Audio API in loopback mode
 type AudioCaptureWCA struct {
-	mu            sync.Mutex
-	initialized   bool
-	audioClient   *wca.IAudioClient
-	captureClient *wca.IAudioCaptureClient
-	mmd           *wca.IMMDevice
-	mmde          *wca.IMMDeviceEnumerator
-	bufferSize    uint32
-	sampleRate    uint32
+	mu              sync.Mutex
+	initialized     bool
+	audioClient     *wca.IAudioClient
+	captureClient   *wca.IAudioCaptureClient
+	mmd             *wca.IMMDevice
+	mmde            *wca.IMMDeviceEnumerator
+	bufferSize      uint32
+	sampleRate      uint32
+	consecutiveErrs int // Track consecutive errors for device change detection
 }
 
 // initialize sets up WASAPI loopback capture
@@ -972,6 +1030,7 @@ func (ac *AudioCaptureWCA) initialize() error {
 
 // ReadSamples reads available audio samples (stereo float32)
 // Returns (leftChannel, rightChannel, error)
+// Automatically detects device changes and marks for reinitialization
 func (ac *AudioCaptureWCA) ReadSamples() ([]float32, []float32, error) {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
@@ -983,6 +1042,7 @@ func (ac *AudioCaptureWCA) ReadSamples() ([]float32, []float32, error) {
 	leftSamples := make([]float32, 0, 4096)
 	rightSamples := make([]float32, 0, 4096)
 	totalFrames := 0
+	hadError := false
 
 	// Read all available packets
 	for {
@@ -992,7 +1052,9 @@ func (ac *AudioCaptureWCA) ReadSamples() ([]float32, []float32, error) {
 
 		err := ac.captureClient.GetBuffer(&pData, &numFramesToRead, &flags, nil, nil)
 		if err != nil {
-			// No more data available
+			// Check if this looks like a device disconnection error
+			// Common error codes: AUDCLNT_E_DEVICE_INVALIDATED (0x88890004)
+			hadError = true
 			break
 		}
 
@@ -1012,6 +1074,19 @@ func (ac *AudioCaptureWCA) ReadSamples() ([]float32, []float32, error) {
 		}
 
 		_ = ac.captureClient.ReleaseBuffer(numFramesToRead)
+	}
+
+	// Track consecutive errors to detect device change
+	if hadError && totalFrames == 0 {
+		ac.consecutiveErrs++
+		// After 3 consecutive errors with no data, likely device changed
+		if ac.consecutiveErrs >= 3 {
+			log.Printf("[AUDIO-CAPTURE] Multiple consecutive errors detected, device may have changed")
+			ac.initialized = false // Mark for reinitialization
+			return nil, nil, fmt.Errorf("device may have changed, needs reinitialization")
+		}
+	} else {
+		ac.consecutiveErrs = 0 // Reset on successful read
 	}
 
 	return leftSamples, rightSamples, nil

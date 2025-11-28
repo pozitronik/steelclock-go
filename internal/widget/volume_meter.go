@@ -30,6 +30,13 @@ type meterReader interface {
 	Close()
 }
 
+// reinitializableMeterReader extends meterReader with reinitialize capability
+type reinitializableMeterReader interface {
+	meterReader
+	Reinitialize() error
+	NeedsReinitialize() bool
+}
+
 // VolumeMeterWidget displays realtime audio output levels
 type VolumeMeterWidget struct {
 	*BaseWidget
@@ -41,6 +48,7 @@ type VolumeMeterWidget struct {
 	gaugeNeedleColor uint8
 	gaugeShowTicks   bool
 	gaugeTicksColor  uint8
+	fontName         string
 	horizontalAlign  string
 	verticalAlign    string
 	padding          int
@@ -236,6 +244,7 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		gaugeNeedleColor:    uint8(gaugeSettings.NeedleColor),
 		gaugeShowTicks:      gaugeSettings.ShowTicks,
 		gaugeTicksColor:     uint8(gaugeSettings.TicksColor),
+		fontName:            textSettings.FontName,
 		horizontalAlign:     textSettings.HorizAlign,
 		verticalAlign:       textSettings.VertAlign,
 		padding:             padding,
@@ -318,6 +327,17 @@ func (w *VolumeMeterWidget) updateMeter() {
 	w.mu.Lock()
 	w.totalCalls++
 	w.mu.Unlock()
+
+	// Check if reader needs reinitialization (device may have changed)
+	if reinitReader, ok := w.reader.(reinitializableMeterReader); ok {
+		if reinitReader.NeedsReinitialize() {
+			log.Printf("[VOLUME-METER] Reader needs reinitialization, attempting...")
+			if err := reinitReader.Reinitialize(); err != nil {
+				log.Printf("[VOLUME-METER] Failed to reinitialize: %v", err)
+				// Continue anyway, will retry next cycle
+			}
+		}
+	}
 
 	// Read meter data
 	data, err := w.reader.GetMeterData(w.clippingThreshold, w.silenceThreshold)
@@ -526,7 +546,7 @@ func (w *VolumeMeterWidget) renderText(img *image.Gray, peak float64, isClipping
 		text += " CLIP"
 	}
 
-	bitmap.DrawAlignedText(img, text, w.face, w.horizontalAlign, w.verticalAlign, w.padding)
+	bitmap.SmartDrawAlignedText(img, text, w.face, w.fontName, w.horizontalAlign, w.verticalAlign, w.padding)
 }
 
 // renderBarHorizontal renders horizontal bar display
@@ -712,7 +732,7 @@ func (w *VolumeMeterWidget) renderTextStereo(img *image.Gray, channelPeaks []flo
 		text += " CLIP"
 	}
 
-	bitmap.DrawAlignedText(img, text, w.face, w.horizontalAlign, w.verticalAlign, w.padding)
+	bitmap.SmartDrawAlignedText(img, text, w.face, w.fontName, w.horizontalAlign, w.verticalAlign, w.padding)
 
 	// Draw separator between channels (if enabled)
 	if w.stereoDivider >= 0 {
