@@ -489,7 +489,7 @@
           "if": { "properties": { "type": { "const": "volume" } }, "required": ["type"] },
           "then": {
             "properties": {
-              "mode": { "type": "string", "description": "Display mode for system volume", "enum": ["text", "bar", "gauge", "triangle"], "default": "bar" },
+              "mode": { "type": "string", "description": "Display mode for system volume", "enum": ["text", "bar", "gauge"], "default": "bar" },
               "bar": {
                 "type": "object",
                 "description": "Bar mode settings",
@@ -517,20 +517,6 @@
                       "arc": { "type": "integer", "description": "Gauge arc outline color", "minimum": 0, "maximum": 255, "default": 200 },
                       "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 },
                       "ticks": { "type": "integer", "description": "Gauge tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
-                    }
-                  }
-                }
-              },
-              "triangle": {
-                "type": "object",
-                "description": "Triangle mode settings",
-                "properties": {
-                  "border": { "type": "boolean", "description": "Draw border around triangle", "default": false },
-                  "colors": {
-                    "type": "object",
-                    "description": "Triangle colors",
-                    "properties": {
-                      "fill": { "type": "integer", "description": "Triangle fill color", "minimum": 0, "maximum": 255, "default": 255 }
                     }
                   }
                 }

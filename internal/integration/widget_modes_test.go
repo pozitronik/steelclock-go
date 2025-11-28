@@ -543,40 +543,6 @@ func TestVolumeWidget_BarMode(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_TriangleMode tests volume widget in triangle mode
-func TestVolumeWidget_TriangleMode(t *testing.T) {
-	widgetCfg := config.WidgetConfig{
-		ID:       "test-vol",
-		Type:     "volume",
-		Enabled:  boolPtr(true),
-		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-		Mode:     "triangle",
-		Triangle: &config.TriangleConfig{
-			Border: true,
-		},
-	}
-
-	volWidget, err := widget.NewVolumeWidget(widgetCfg)
-	if err != nil {
-		t.Skipf("Volume widget not available: %v", err)
-	}
-
-	cfg := createTestConfig()
-	client, comp := createTestSetup([]widget.Widget{volWidget}, cfg)
-
-	_ = comp.Start()
-	_ = client.WaitForFrames(3, 2*time.Second)
-	comp.Stop()
-
-	frame := client.LastFrame()
-	if frame == nil {
-		t.Fatal("No frame captured")
-	}
-
-	pixelCount := testutil.CountSetPixels(frame.Data)
-	t.Logf("Volume triangle rendered %d pixels", pixelCount)
-}
-
 // TestVolumeWidget_GaugeMode tests volume widget in gauge mode
 func TestVolumeWidget_GaugeMode(t *testing.T) {
 	showTicks := true
