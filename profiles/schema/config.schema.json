@@ -358,6 +358,23 @@
               "mode": { "type": "string", "description": "Display mode for network I/O", "enum": ["text", "bar", "graph", "gauge"], "default": "bar" },
               "interface": { "type": ["string", "null"], "description": "Network interface name (sum all interfaces if omitted)", "default": null },
               "max_speed_mbps": { "type": "number", "description": "Maximum speed in Mbps for scaling", "default": 100 },
+              "unit": { "type": "string", "description": "Speed unit for display", "enum": ["auto", "bps", "Kbps", "Mbps", "Gbps", "B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s"], "default": "Mbps" },
+              "text": {
+                "type": "object",
+                "description": "Text mode settings",
+                "properties": {
+                  "font": { "type": ["string", "null"], "description": "Font name or TTF path", "default": null },
+                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 10 },
+                  "align": {
+                    "type": "object",
+                    "properties": {
+                      "h": { "type": "string", "enum": ["left", "center", "right"], "default": "center" },
+                      "v": { "type": "string", "enum": ["top", "center", "bottom"], "default": "center" }
+                    }
+                  },
+                  "show_unit": { "type": "boolean", "description": "Show unit suffix (e.g., 'Mbps') in text mode", "default": false }
+                }
+              },
               "bar": {
                 "type": "object",
                 "description": "Bar mode settings",
