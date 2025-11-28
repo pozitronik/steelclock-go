@@ -12,32 +12,58 @@ import (
 	"golang.org/x/image/font"
 )
 
+// DiskUnit represents a disk speed unit
+type DiskUnit struct {
+	Name     string  // Display name (e.g., "MB/s")
+	Divisor  float64 // Divisor to convert from bytes
+	IsBinary bool    // True for binary units (KiB, MiB, GiB)
+}
+
+// Predefined disk units
+var diskUnits = map[string]DiskUnit{
+	"B/s":   {Name: "B/s", Divisor: 1, IsBinary: false},
+	"KB/s":  {Name: "KB/s", Divisor: 1000, IsBinary: false},
+	"MB/s":  {Name: "MB/s", Divisor: 1000000, IsBinary: false},
+	"GB/s":  {Name: "GB/s", Divisor: 1000000000, IsBinary: false},
+	"KiB/s": {Name: "KiB/s", Divisor: 1024, IsBinary: true},
+	"MiB/s": {Name: "MiB/s", Divisor: 1048576, IsBinary: true},
+	"GiB/s": {Name: "GiB/s", Divisor: 1073741824, IsBinary: true},
+}
+
+// autoScaleUnits defines the order for auto-scaling (decimal units)
+var autoScaleUnitsDecimal = []string{"B/s", "KB/s", "MB/s", "GB/s"}
+
+// autoScaleUnitsBinary defines the order for auto-scaling (binary units)
+var autoScaleUnitsBinary = []string{"B/s", "KiB/s", "MiB/s", "GiB/s"}
+
 // DiskWidget displays disk I/O
 type DiskWidget struct {
 	*BaseWidget
-	displayMode      string
-	diskName         *string
-	maxSpeedMbps     float64
-	fontSize         int
-	fontName         string
-	horizAlign       string
-	vertAlign        string
-	padding          int
-	barDirection     string
-	barBorder        bool
-	graphFilled      bool
-	readColor        int // -1 means transparent (skip drawing)
-	writeColor       int // -1 means transparent (skip drawing)
-	historyLen       int
-	lastRead         uint64
-	lastWrite        uint64
-	lastTime         time.Time
-	currentReadMbps  float64
-	currentWriteMbps float64
-	readHistory      []float64
-	writeHistory     []float64
-	fontFace         font.Face
-	mu               sync.RWMutex // Protects currentReadMbps, currentWriteMbps, readHistory, writeHistory
+	displayMode     string
+	diskName        *string
+	maxSpeedBps     float64 // Max speed in bytes per second (-1 for auto-scale)
+	fontSize        int
+	fontName        string
+	horizAlign      string
+	vertAlign       string
+	padding         int
+	barDirection    string
+	barBorder       bool
+	graphFilled     bool
+	readColor       int // -1 means transparent (skip drawing)
+	writeColor      int // -1 means transparent (skip drawing)
+	historyLen      int
+	unit            string // "auto", "B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s"
+	showUnit        bool   // Show unit suffix in text mode
+	lastRead        uint64
+	lastWrite       uint64
+	lastTime        time.Time
+	currentReadBps  float64 // Current read speed in bytes per second
+	currentWriteBps float64 // Current write speed in bytes per second
+	readHistory     []float64
+	writeHistory    []float64
+	fontFace        font.Face
+	mu              sync.RWMutex // Protects currentReadBps, currentWriteBps, readHistory, writeHistory
 }
 
 // NewDiskWidget creates a new disk widget
@@ -76,10 +102,28 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 		}
 	}
 
-	// Max speed
-	maxSpeed := cfg.MaxSpeedMbps
-	if maxSpeed == 0 {
-		maxSpeed = -1 // Auto-scale
+	// Max speed - convert from MB/s (config) to B/s (internal)
+	maxSpeedBps := float64(-1) // Auto-scale by default
+	if cfg.MaxSpeedMbps > 0 {
+		maxSpeedBps = cfg.MaxSpeedMbps * 1000000 // Convert MB/s to B/s
+	}
+
+	// Unit selection - default to "MB/s" for backward compatibility
+	unit := cfg.Unit
+	if unit == "" {
+		unit = "MB/s"
+	}
+	// Validate unit
+	if unit != "auto" {
+		if _, ok := diskUnits[unit]; !ok {
+			unit = "MB/s" // Fallback to default
+		}
+	}
+
+	// Show unit suffix in text mode
+	showUnit := false
+	if cfg.Text != nil && cfg.Text.ShowUnit != nil {
+		showUnit = *cfg.Text.ShowUnit
 	}
 
 	// Load font for text mode
@@ -92,7 +136,7 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 		BaseWidget:   base,
 		displayMode:  displayMode,
 		diskName:     cfg.Disk,
-		maxSpeedMbps: maxSpeed,
+		maxSpeedBps:  maxSpeedBps,
 		fontSize:     textSettings.FontSize,
 		fontName:     textSettings.FontName,
 		horizAlign:   textSettings.HorizAlign,
@@ -104,10 +148,70 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 		readColor:    readColor,
 		writeColor:   writeColor,
 		historyLen:   graphSettings.HistoryLen,
+		unit:         unit,
+		showUnit:     showUnit,
 		readHistory:  make([]float64, 0, graphSettings.HistoryLen),
 		writeHistory: make([]float64, 0, graphSettings.HistoryLen),
 		fontFace:     fontFace,
 	}, nil
+}
+
+// convertToUnit converts bytes per second to the specified unit
+func (w *DiskWidget) convertToUnit(bps float64, unitName string) (float64, string) {
+	if unitName == "auto" {
+		return w.autoScale(bps)
+	}
+
+	unit, ok := diskUnits[unitName]
+	if !ok {
+		// Fallback to MB/s
+		unit = diskUnits["MB/s"]
+	}
+
+	return bps / unit.Divisor, unit.Name
+}
+
+// autoScale automatically selects the best unit based on the value
+func (w *DiskWidget) autoScale(bps float64) (float64, string) {
+	// Determine if we should use binary or decimal units
+	// Use binary if the configured unit (when not auto) is binary
+	useBinary := false
+	if w.unit != "auto" {
+		if u, ok := diskUnits[w.unit]; ok {
+			useBinary = u.IsBinary
+		}
+	}
+
+	var units []string
+	if useBinary {
+		units = autoScaleUnitsBinary
+	} else {
+		units = autoScaleUnitsDecimal
+	}
+
+	// Find the best unit (largest unit where value >= 1)
+	selectedUnit := units[0]
+	for _, unitName := range units {
+		unit := diskUnits[unitName]
+		if bps/unit.Divisor >= 1 {
+			selectedUnit = unitName
+		} else {
+			break
+		}
+	}
+
+	unit := diskUnits[selectedUnit]
+	return bps / unit.Divisor, unit.Name
+}
+
+// formatValue formats a value with appropriate precision
+func formatValue(value float64) string {
+	if value >= 100 {
+		return fmt.Sprintf("%.0f", value)
+	} else if value >= 10 {
+		return fmt.Sprintf("%.1f", value)
+	}
+	return fmt.Sprintf("%.2f", value)
 }
 
 // Update updates the disk stats
@@ -138,15 +242,15 @@ func (w *DiskWidget) Update() error {
 	if !w.lastTime.IsZero() {
 		elapsed := now.Sub(w.lastTime).Seconds()
 		if elapsed > 0 {
-			// Calculate MBps
-			readDelta := float64(readBytes-w.lastRead) / 1000000 / elapsed
-			writeDelta := float64(writeBytes-w.lastWrite) / 1000000 / elapsed
+			// Calculate bytes per second
+			readDelta := float64(readBytes-w.lastRead) / elapsed
+			writeDelta := float64(writeBytes-w.lastWrite) / elapsed
 
 			w.mu.Lock()
-			w.currentReadMbps = readDelta
-			w.currentWriteMbps = writeDelta
+			w.currentReadBps = readDelta
+			w.currentWriteBps = writeDelta
 
-			// Add to history
+			// Add to history (store raw bytes per second)
 			if w.displayMode == "graph" {
 				w.readHistory = append(w.readHistory, readDelta)
 				if len(w.readHistory) > w.historyLen {
@@ -205,7 +309,30 @@ func (w *DiskWidget) renderText(img *image.Gray) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	text := fmt.Sprintf("R%.1f W%.1f", w.currentReadMbps, w.currentWriteMbps)
+	var text string
+	if w.unit == "auto" {
+		// Auto-scale each value independently
+		readVal, readUnit := w.autoScale(w.currentReadBps)
+		writeVal, writeUnit := w.autoScale(w.currentWriteBps)
+
+		if w.showUnit {
+			text = fmt.Sprintf("R%s%s W%s%s", formatValue(readVal), readUnit, formatValue(writeVal), writeUnit)
+		} else {
+			// Even without show_unit, include abbreviated unit for auto mode to distinguish scales
+			text = fmt.Sprintf("R%s%s W%s%s", formatValue(readVal), readUnit, formatValue(writeVal), writeUnit)
+		}
+	} else {
+		// Fixed unit for both values
+		readVal, unitName := w.convertToUnit(w.currentReadBps, w.unit)
+		writeVal, _ := w.convertToUnit(w.currentWriteBps, w.unit)
+
+		if w.showUnit {
+			text = fmt.Sprintf("R%s W%s %s", formatValue(readVal), formatValue(writeVal), unitName)
+		} else {
+			text = fmt.Sprintf("R%s W%s", formatValue(readVal), formatValue(writeVal))
+		}
+	}
+
 	bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 }
 
@@ -216,17 +343,17 @@ func (w *DiskWidget) renderBarHorizontal(img *image.Gray, x, y, width, height in
 	// Split into two halves: Read top, Write bottom
 	halfH := height / 2
 
-	maxSpeed := w.maxSpeedMbps
+	maxSpeed := w.maxSpeedBps
 	if maxSpeed < 0 {
 		// Auto-scale
-		maxSpeed = max(w.currentReadMbps, w.currentWriteMbps)
+		maxSpeed = max(w.currentReadBps, w.currentWriteBps)
 		if maxSpeed < 1 {
 			maxSpeed = 1
 		}
 	}
 
-	readPercent := (w.currentReadMbps / maxSpeed) * 100
-	writePercent := (w.currentWriteMbps / maxSpeed) * 100
+	readPercent := (w.currentReadBps / maxSpeed) * 100
+	writePercent := (w.currentWriteBps / maxSpeed) * 100
 
 	// Only draw if color is not transparent (-1)
 	if w.readColor >= 0 {
@@ -244,16 +371,16 @@ func (w *DiskWidget) renderBarVertical(img *image.Gray, x, y, width, height int)
 	// Split into two halves: Read left, Write right
 	halfW := width / 2
 
-	maxSpeed := w.maxSpeedMbps
+	maxSpeed := w.maxSpeedBps
 	if maxSpeed < 0 {
-		maxSpeed = max(w.currentReadMbps, w.currentWriteMbps)
+		maxSpeed = max(w.currentReadBps, w.currentWriteBps)
 		if maxSpeed < 1 {
 			maxSpeed = 1
 		}
 	}
 
-	readPercent := (w.currentReadMbps / maxSpeed) * 100
-	writePercent := (w.currentWriteMbps / maxSpeed) * 100
+	readPercent := (w.currentReadBps / maxSpeed) * 100
+	writePercent := (w.currentWriteBps / maxSpeed) * 100
 
 	// Only draw if color is not transparent (-1)
 	if w.readColor >= 0 {
@@ -272,8 +399,8 @@ func (w *DiskWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 		return
 	}
 
-	// Normalize to 0-100 scale
-	maxSpeed := w.maxSpeedMbps
+	// Normalize to 0-100 scale using bytes per second
+	maxSpeed := w.maxSpeedBps
 	if maxSpeed < 0 {
 		// Find max in history
 		maxSpeed = 1.0

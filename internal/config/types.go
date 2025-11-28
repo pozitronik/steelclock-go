@@ -95,6 +95,7 @@ type WidgetConfig struct {
 	Interface     *string `json:"interface,omitempty"`       // Network
 	MaxSpeedMbps  float64 `json:"max_speed_mbps,omitempty"`  // Network, Disk
 	Disk          *string `json:"disk,omitempty"`            // Disk
+	Unit          string  `json:"unit,omitempty"`            // Disk: "auto", "B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s"
 	Format        string  `json:"format,omitempty"`          // Keyboard layout
 	Channel       string  `json:"channel,omitempty"`         // Audio visualizer
 	Wad           string  `json:"wad,omitempty"`             // DOOM
@@ -132,11 +133,12 @@ type StyleConfig struct {
 
 // TextConfig represents text rendering properties
 type TextConfig struct {
-	Format string       `json:"format,omitempty"`
-	Font   string       `json:"font,omitempty"` // Font name: TTF font name/path or built-in: "pixel3x5", "pixel5x7"
-	Size   int          `json:"size,omitempty"`
-	Align  *AlignConfig `json:"align,omitempty"`
-	Unit   string       `json:"unit,omitempty"`
+	Format   string       `json:"format,omitempty"`
+	Font     string       `json:"font,omitempty"` // Font name: TTF font name/path or built-in: "pixel3x5", "pixel5x7"
+	Size     int          `json:"size,omitempty"`
+	Align    *AlignConfig `json:"align,omitempty"`
+	Unit     string       `json:"unit,omitempty"`
+	ShowUnit *bool        `json:"show_unit,omitempty"` // Show unit suffix in text mode (disk widget)
 }
 
 // AlignConfig represents text alignment
