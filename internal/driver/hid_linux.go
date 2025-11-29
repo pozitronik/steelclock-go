@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -83,8 +84,12 @@ func parseUevent(ueventPath string) (vid, pid uint16, hidName string, err error)
 	return vid, pid, hidName, nil
 }
 
+// usbInterfaceRegex matches USB interface patterns like "3-2:1.0", "3-2:1.1"
+// Format: bus-port:configuration.interface
+var usbInterfaceRegex = regexp.MustCompile(`\d+-\d+:\d+\.(\d+)`)
+
 // getInterfaceFromPath tries to extract interface identifier from device path
-// Looks for patterns like "input0", "input1" in the sysfs path
+// Looks for USB interface patterns like "3-2:1.0", "3-2:1.1" in the sysfs path
 func getInterfaceFromPath(sysPath string) string {
 	// Read the device path symlink to get full path
 	devicePath, err := filepath.EvalSymlinks(filepath.Join(sysPath, "device"))
@@ -92,15 +97,12 @@ func getInterfaceFromPath(sysPath string) string {
 		return ""
 	}
 
-	// Look for inputN pattern in path
-	parts := strings.Split(devicePath, "/")
-	for _, part := range parts {
-		if strings.HasPrefix(part, "input") {
-			// Convert input0 -> mi_00, input1 -> mi_01, etc.
-			numStr := strings.TrimPrefix(part, "input")
-			if num, err := strconv.Atoi(numStr); err == nil {
-				return fmt.Sprintf("mi_%02d", num)
-			}
+	// Match USB interface pattern: X-Y:Z.N where N is the interface number
+	// Example: "3-2:1.0" means interface 0, "3-2:1.1" means interface 1
+	matches := usbInterfaceRegex.FindStringSubmatch(devicePath)
+	if len(matches) >= 2 {
+		if num, err := strconv.Atoi(matches[1]); err == nil {
+			return fmt.Sprintf("mi_%02d", num)
 		}
 	}
 
@@ -215,6 +217,8 @@ func closeDevice(handle DeviceHandle) error {
 }
 
 // sendFeatureReport sends a feature report to the HID device
+// On Linux, we try write() first as it works for output reports,
+// falling back to HIDIOCSFEATURE for feature reports
 func sendFeatureReport(handle DeviceHandle, data []byte) error {
 	if handle == InvalidHandle {
 		return fmt.Errorf("invalid handle")
@@ -224,10 +228,16 @@ func sendFeatureReport(handle DeviceHandle, data []byte) error {
 		return fmt.Errorf("empty data")
 	}
 
-	// Calculate ioctl request for this data length
+	// Try write() first - this works for output reports on hidraw
+	// The first byte should be the report ID
+	n, err := syscall.Write(int(handle), data)
+	if err == nil && n == len(data) {
+		return nil
+	}
+
+	// If write() fails, try HIDIOCSFEATURE for feature reports
 	req := hidiocsfeature(len(data))
 
-	// Perform ioctl
 	_, _, errno := syscall.Syscall(
 		syscall.SYS_IOCTL,
 		uintptr(handle),
@@ -236,7 +246,7 @@ func sendFeatureReport(handle DeviceHandle, data []byte) error {
 	)
 
 	if errno != 0 {
-		return fmt.Errorf("HIDIOCSFEATURE ioctl failed: %v", errno)
+		return fmt.Errorf("HIDIOCSFEATURE ioctl failed: %v (write also failed: %v)", errno, err)
 	}
 
 	return nil

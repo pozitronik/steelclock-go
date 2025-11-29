@@ -140,7 +140,7 @@ func TestApplyGlobalDefaults(t *testing.T) {
 			input:           Config{},
 			expectedGame:    DefaultGameName,
 			expectedDisplay: DefaultGameDisplay,
-			expectedBackend: "gamesense",
+			expectedBackend: "any",
 		},
 		{
 			name: "custom game name",
@@ -149,7 +149,7 @@ func TestApplyGlobalDefaults(t *testing.T) {
 			},
 			expectedGame:    "CUSTOM",
 			expectedDisplay: DefaultGameDisplay,
-			expectedBackend: "gamesense",
+			expectedBackend: "any",
 		},
 		{
 			name: "custom backend",
@@ -560,8 +560,8 @@ func TestApplyDefaults(t *testing.T) {
 	if cfg.GameName != DefaultGameName {
 		t.Errorf("GameName not set to default")
 	}
-	if cfg.Backend != "gamesense" {
-		t.Errorf("Backend not set to default")
+	if cfg.Backend != "any" {
+		t.Errorf("Backend not set to default, got %s", cfg.Backend)
 	}
 
 	// Check display defaults applied
