@@ -2,6 +2,7 @@
 package integration
 
 import (
+	"runtime"
 	"testing"
 	"time"
 
@@ -584,6 +585,10 @@ func TestVolumeWidget_GaugeMode(t *testing.T) {
 
 // TestKeyboardWidget_WithIndicators tests keyboard widget with custom indicators
 func TestKeyboardWidget_WithIndicators(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Keyboard widget is only supported on Windows")
+	}
+
 	capsOn := "CAPS"
 	capsOff := ""
 	numOn := "NUM"
@@ -626,6 +631,10 @@ func TestKeyboardWidget_WithIndicators(t *testing.T) {
 
 // TestKeyboardWidget_WithLayout tests keyboard widget with layout settings
 func TestKeyboardWidget_WithLayout(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Keyboard widget is only supported on Windows")
+	}
+
 	capsOn := "C"
 	numOn := "N"
 

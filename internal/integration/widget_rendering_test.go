@@ -2,6 +2,7 @@
 package integration
 
 import (
+	"runtime"
 	"testing"
 	"time"
 
@@ -129,6 +130,10 @@ func TestClockWidget_ConsistentRendering(t *testing.T) {
 
 // TestKeyboardWidget_Rendering tests keyboard indicator widget
 func TestKeyboardWidget_Rendering(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Keyboard widget is only supported on Windows")
+	}
+
 	// Use default indicator configuration
 	capsOn := "CAPS"
 	numOn := "NUM"
