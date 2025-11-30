@@ -1,0 +1,16 @@
+# SteelSeries HID devices - udev rules for SteelClock
+#
+# Installation:
+#   sudo cp 99-steelseries.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+#   sudo udevadm trigger
+#
+# Then unplug and replug your keyboard, or reboot.
+#
+# This allows non-root users to access SteelSeries OLED displays via hidraw.
+
+# SteelSeries Vendor ID
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1038", MODE="0666"
+
+# Alternative: restrict to specific user group (more secure)
+# SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1038", GROUP="plugdev", MODE="0660"
