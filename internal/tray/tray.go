@@ -104,10 +104,18 @@ func (m *Manager) buildProfileMenu() {
 
 	// Add profile menu items
 	for _, profile := range profiles {
-		menuItem := systray.AddMenuItem(profile.Name, profile.Path)
+		title := profile.Name
+		isActive := activeProfile != nil && profile.Path == activeProfile.Path
 
-		// Mark active profile with checkmark
-		if activeProfile != nil && profile.Path == activeProfile.Path {
+		// On Linux, add prefix for active profile (checkmarks don't display with AppIndicator)
+		if isActive && runtime.GOOS == "linux" {
+			title = "✓ " + title
+		}
+
+		menuItem := systray.AddMenuItem(title, profile.Path)
+
+		// Use checkmark (works on Windows/macOS)
+		if isActive {
 			menuItem.Check()
 		}
 
@@ -210,12 +218,20 @@ func (m *Manager) handleProfileSwitch(index int) {
 		}
 	}
 
-	// Update checkmarks
+	// Update checkmarks and titles
 	for i, item := range m.profileMenuItems {
 		if i == index {
 			item.Check()
+			// On Linux, add prefix for active profile
+			if runtime.GOOS == "linux" {
+				item.SetTitle("✓ " + profiles[i].Name)
+			}
 		} else {
 			item.Uncheck()
+			// On Linux, remove prefix from inactive profiles
+			if runtime.GOOS == "linux" {
+				item.SetTitle(profiles[i].Name)
+			}
 		}
 	}
 }
@@ -322,10 +338,17 @@ func (m *Manager) UpdateActiveProfile() {
 
 	for i, profile := range profiles {
 		if i < len(m.profileMenuItems) {
-			if activeProfile != nil && profile.Path == activeProfile.Path {
+			isActive := activeProfile != nil && profile.Path == activeProfile.Path
+			if isActive {
 				m.profileMenuItems[i].Check()
+				if runtime.GOOS == "linux" {
+					m.profileMenuItems[i].SetTitle("✓ " + profile.Name)
+				}
 			} else {
 				m.profileMenuItems[i].Uncheck()
+				if runtime.GOOS == "linux" {
+					m.profileMenuItems[i].SetTitle(profile.Name)
+				}
 			}
 		}
 	}
