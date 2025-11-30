@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strings"
 
 	"github.com/getlantern/systray"
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -274,14 +275,97 @@ func (m *Manager) handleEditConfig() {
 	case "windows":
 		cmd = exec.Command("cmd", "/c", "start", "", absPath)
 	case "darwin":
-		cmd = exec.Command("open", absPath)
+		cmd = exec.Command("open", "-t", absPath) // -t opens with default text editor
 	default: // linux
-		cmd = exec.Command("xdg-open", absPath)
+		cmd = findLinuxEditor(absPath)
+	}
+
+	if cmd == nil {
+		log.Printf("No suitable editor found")
+		return
 	}
 
 	if err := cmd.Start(); err != nil {
 		log.Printf("Failed to open config: %v", err)
 	}
+}
+
+// findLinuxEditor finds an appropriate text editor on Linux
+func findLinuxEditor(filePath string) *exec.Cmd {
+	// Check VISUAL and EDITOR environment variables first
+	if editor := os.Getenv("VISUAL"); editor != "" {
+		return exec.Command(editor, filePath)
+	}
+	if editor := os.Getenv("EDITOR"); editor != "" {
+		return exec.Command(editor, filePath)
+	}
+
+	// Try to get the default text editor from xdg-mime
+	if editor := getXdgTextEditor(); editor != "" {
+		return exec.Command(editor, filePath)
+	}
+
+	// Fall back to xdg-open as last resort
+	return exec.Command("xdg-open", filePath)
+}
+
+// getXdgTextEditor queries xdg-mime for the default text/plain handler
+func getXdgTextEditor() string {
+	// Query default application for text/plain
+	out, err := exec.Command("xdg-mime", "query", "default", "text/plain").Output()
+	if err != nil {
+		return ""
+	}
+
+	desktop := strings.TrimSpace(string(out))
+	if desktop == "" {
+		return ""
+	}
+
+	// Find the .desktop file and extract the Exec line
+	// Check standard locations
+	locations := []string{
+		filepath.Join(os.Getenv("HOME"), ".local/share/applications"),
+		"/usr/local/share/applications",
+		"/usr/share/applications",
+	}
+
+	for _, loc := range locations {
+		desktopPath := filepath.Join(loc, desktop)
+		if _, err := os.Stat(desktopPath); err == nil {
+			if cmd := parseDesktopExec(desktopPath); cmd != "" {
+				return cmd
+			}
+		}
+	}
+
+	return ""
+}
+
+// parseDesktopExec extracts the executable from a .desktop file
+func parseDesktopExec(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, "Exec=") {
+			execLine := strings.TrimPrefix(line, "Exec=")
+			// Extract just the command (first word), removing any %f, %u, etc.
+			parts := strings.Fields(execLine)
+			if len(parts) > 0 {
+				cmd := parts[0]
+				// Verify the command exists
+				if _, err := exec.LookPath(cmd); err == nil {
+					return cmd
+				}
+			}
+			break
+		}
+	}
+
+	return ""
 }
 
 // handleReloadConfig reloads the configuration
