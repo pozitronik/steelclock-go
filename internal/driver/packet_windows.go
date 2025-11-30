@@ -2,7 +2,7 @@
 
 package driver
 
-// buildPacket constructs the HID packet for sending pixel data on Windows
+// buildPacket constructs the HID packet for sending pixel data on Windows.
 // Windows HidD_SetFeature expects report ID as first byte
 // Format: [00 ReportID] + [61 CMD] + [16 Padding] + [pixelData]
 func buildPacket(pixelData []byte, width, height int) []byte {

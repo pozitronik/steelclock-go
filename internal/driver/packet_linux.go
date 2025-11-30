@@ -2,7 +2,7 @@
 
 package driver
 
-// buildPacket constructs the HID packet for sending pixel data on Linux
+// buildPacket constructs the HID packet for sending pixel data on Linux.
 // Linux hidraw with no report ID in descriptor expects data without report ID byte
 // The HID descriptor shows Feature Report = 642 bytes (8 bits * 642)
 // Format: [61 CMD] + [pixelData (640)] + [1 padding] = 642 bytes total

@@ -11,7 +11,6 @@ const (
 	testHeaderSize   = 18
 	testCmdOffset    = 1
 	testDataOffset   = 18
-	testHasReportID  = true
 	testPaddingStart = 2
 	testPaddingEnd   = 18
 )
