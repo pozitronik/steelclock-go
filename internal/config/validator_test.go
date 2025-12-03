@@ -42,19 +42,19 @@ func TestValidWidgetTypes(t *testing.T) {
 	expectedTypes := []string{
 		"clock", "cpu", "memory", "network", "disk",
 		"keyboard", "keyboard_layout", "volume", "volume_meter",
-		"audio_visualizer", "doom", "winamp",
+		"audio_visualizer", "doom", "winamp", "matrix",
 	}
 
 	for _, wt := range expectedTypes {
-		if !ValidWidgetTypes[wt] {
-			t.Errorf("ValidWidgetTypes[%q] should be true", wt)
+		if !IsValidWidgetType(wt) {
+			t.Errorf("IsValidWidgetType(%q) should be true", wt)
 		}
 	}
 
 	invalidTypes := []string{"invalid", "CLOCK", "Clock", "timer", ""}
 	for _, wt := range invalidTypes {
-		if ValidWidgetTypes[wt] {
-			t.Errorf("ValidWidgetTypes[%q] should be false", wt)
+		if IsValidWidgetType(wt) {
+			t.Errorf("IsValidWidgetType(%q) should be false", wt)
 		}
 	}
 }

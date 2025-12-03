@@ -1,0 +1,27 @@
+{
+  "config_name": "Matrix",
+  "refresh_rate_ms": 33,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "matrix",
+      "position": { "x": 0, "y": 0, "w": 128, "h": 40 },
+      "update_interval": 0.033,
+      "matrix": {
+        "charset": "katakana",
+        "density": 0.5,
+        "min_speed": 0.5,
+        "max_speed": 2.5,
+        "min_length": 4,
+        "max_length": 12,
+        "head_color": 255,
+        "trail_fade": 0.8,
+        "char_change_rate": 0.03
+      }
+    }
+  ]
+}

@@ -194,7 +194,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp"]
+          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix"]
         },
         "enabled": { "type": "boolean", "default": true },
         "position": { "$ref": "#/definitions/position" },
@@ -865,6 +865,77 @@
                     "description": "Gap between text repetitions in pixels (for continuous mode)",
                     "minimum": 0,
                     "default": 20
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "matrix" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "matrix": {
+                "type": "object",
+                "description": "Matrix 'digital rain' effect settings",
+                "properties": {
+                  "charset": {
+                    "type": "string",
+                    "description": "Character set to use for the rain effect",
+                    "enum": ["ascii", "katakana", "binary", "digits", "hex"],
+                    "default": "ascii"
+                  },
+                  "density": {
+                    "type": "number",
+                    "description": "Column density (0.0-1.0) - probability of a column being active",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0.4
+                  },
+                  "min_speed": {
+                    "type": "number",
+                    "description": "Minimum fall speed in pixels per frame",
+                    "minimum": 0.1,
+                    "default": 0.5
+                  },
+                  "max_speed": {
+                    "type": "number",
+                    "description": "Maximum fall speed in pixels per frame",
+                    "minimum": 0.1,
+                    "default": 2.0
+                  },
+                  "min_length": {
+                    "type": "integer",
+                    "description": "Minimum trail length in characters",
+                    "minimum": 1,
+                    "default": 4
+                  },
+                  "max_length": {
+                    "type": "integer",
+                    "description": "Maximum trail length in characters",
+                    "minimum": 1,
+                    "default": 15
+                  },
+                  "head_color": {
+                    "type": "integer",
+                    "description": "Brightness of the leading character (0-255)",
+                    "minimum": 0,
+                    "maximum": 255,
+                    "default": 255
+                  },
+                  "trail_fade": {
+                    "type": "number",
+                    "description": "Trail fade factor (0.0-1.0) - how quickly characters fade",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0.85
+                  },
+                  "char_change_rate": {
+                    "type": "number",
+                    "description": "Probability of a character changing per frame (0.0-1.0)",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0.02
                   }
                 }
               }

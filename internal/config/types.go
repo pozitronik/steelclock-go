@@ -105,6 +105,9 @@ type WidgetConfig struct {
 	Winamp   *WinampConfig         `json:"winamp,omitempty"`    // Winamp settings (placeholder)
 	Scroll   *ScrollConfig         `json:"scroll,omitempty"`    // Text scrolling settings
 	AutoShow *WinampAutoShowConfig `json:"auto_show,omitempty"` // Auto-show events (Winamp)
+
+	// Matrix widget
+	Matrix *MatrixConfig `json:"matrix,omitempty"` // Matrix "digital rain" settings
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -376,4 +379,26 @@ type ScrollConfig struct {
 	PauseMs int `json:"pause_ms,omitempty"`
 	// Gap - pixels between end and start of text in continuous mode
 	Gap int `json:"gap,omitempty"`
+}
+
+// MatrixConfig represents Matrix "digital rain" widget settings
+type MatrixConfig struct {
+	// Charset: "ascii", "katakana", "binary", "digits", "hex"
+	Charset string `json:"charset,omitempty"`
+	// Density: probability of column being active (0.0-1.0, default: 0.4)
+	Density float64 `json:"density,omitempty"`
+	// MinSpeed: minimum fall speed in pixels per frame (default: 0.5)
+	MinSpeed float64 `json:"min_speed,omitempty"`
+	// MaxSpeed: maximum fall speed in pixels per frame (default: 2.0)
+	MaxSpeed float64 `json:"max_speed,omitempty"`
+	// MinLength: minimum trail length in characters (default: 4)
+	MinLength int `json:"min_length,omitempty"`
+	// MaxLength: maximum trail length in characters (default: 15)
+	MaxLength int `json:"max_length,omitempty"`
+	// HeadColor: brightness of leading character (0-255, default: 255)
+	HeadColor int `json:"head_color,omitempty"`
+	// TrailFade: how quickly trail fades (0.0-1.0, default: 0.85)
+	TrailFade float64 `json:"trail_fade,omitempty"`
+	// CharChangeRate: probability of character changing per frame (default: 0.02)
+	CharChangeRate float64 `json:"char_change_rate,omitempty"`
 }

@@ -158,6 +158,7 @@ SteelClock supports these widget types:
 | `keyboard_layout`  | Current keyboard layout | -                          |
 | `doom`             | DOOM game               | -                          |
 | `winamp`           | Winamp media player     | -                          |
+| `matrix`           | Matrix digital rain     | -                          |
 
 ## Common Properties
 
@@ -743,6 +744,60 @@ Works with `auto_hide` to show the widget when specific events occur:
 | `on_pause`        | Show when playback is paused               | false   |
 | `on_stop`         | Show when playback stops                   | false   |
 | `on_seek`         | Show when user seeks to different position | false   |
+
+### Matrix Widget
+
+Displays the classic "Matrix digital rain" effect with falling characters.
+
+```json
+{
+  "type": "matrix",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.033,
+  "matrix": {
+    "charset": "ascii",
+    "density": 0.5,
+    "min_speed": 0.5,
+    "max_speed": 2.5,
+    "min_length": 4,
+    "max_length": 12,
+    "head_color": 255,
+    "trail_fade": 0.8,
+    "char_change_rate": 0.03
+  }
+}
+```
+
+#### Character Sets
+
+| Charset    | Characters                                      |
+|------------|-------------------------------------------------|
+| `ascii`    | A-Z, 0-9, symbols (default)                     |
+| `katakana` | Japanese Katakana characters                    |
+| `binary`   | 0 and 1 only                                    |
+| `digits`   | 0-9 only                                        |
+| `hex`      | 0-9, A-F                                        |
+
+#### Matrix Configuration
+
+| Property           | Type   | Range   | Default | Description                              |
+|--------------------|--------|---------|---------|------------------------------------------|
+| `charset`          | string | -       | "ascii" | Character set to use                     |
+| `density`          | number | 0.0-1.0 | 0.4     | Column density (probability of active)   |
+| `min_speed`        | number | 0.1+    | 0.5     | Minimum fall speed (pixels/frame)        |
+| `max_speed`        | number | 0.1+    | 2.0     | Maximum fall speed (pixels/frame)        |
+| `min_length`       | int    | 1+      | 4       | Minimum trail length (characters)        |
+| `max_length`       | int    | 1+      | 15      | Maximum trail length (characters)        |
+| `head_color`       | int    | 0-255   | 255     | Brightness of leading character          |
+| `trail_fade`       | number | 0.0-1.0 | 0.85    | Trail fade factor (lower = faster fade)  |
+| `char_change_rate` | number | 0.0-1.0 | 0.02    | Character change probability per frame   |
+
+#### Tips
+
+- Use low `update_interval` (0.033 = 30fps) for smooth animation
+- Higher `density` = more columns active simultaneously
+- Lower `trail_fade` = shorter visible trails
+- `katakana` charset requires font support (falls back to ASCII if unavailable)
 
 ## Examples
 
