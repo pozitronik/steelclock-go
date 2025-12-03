@@ -44,6 +44,7 @@
         }
       },
       "channel": "stereo_combined",
+      "error_threshold": 30,
       "auto_hide": {
         "enabled": false,
         "timeout": 2.0,

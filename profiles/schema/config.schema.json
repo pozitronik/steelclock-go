@@ -674,7 +674,8 @@
                   }
                 }
               },
-              "channel": { "type": "string", "description": "Audio channel mode", "enum": ["mono", "stereo_combined", "stereo_separated"], "default": "stereo_combined" }
+              "channel": { "type": "string", "description": "Audio channel mode", "enum": ["mono", "stereo_combined", "stereo_separated"], "default": "stereo_combined" },
+              "error_threshold": { "type": "integer", "description": "Consecutive errors before audio failure (default: 30, ~3 seconds)", "minimum": 1, "default": 30 }
             }
           }
         },

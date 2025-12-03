@@ -91,14 +91,15 @@ type WidgetConfig struct {
 	Layout     *KeyboardLayout   `json:"layout,omitempty"`     // Keyboard
 
 	// Simple widget-specific properties
-	Interface     *string `json:"interface,omitempty"`       // Network
-	MaxSpeedMbps  float64 `json:"max_speed_mbps,omitempty"`  // Network, Disk
-	Disk          *string `json:"disk,omitempty"`            // Disk
-	Unit          string  `json:"unit,omitempty"`            // Disk: "auto", "B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s"
-	Format        string  `json:"format,omitempty"`          // Keyboard layout
-	Channel       string  `json:"channel,omitempty"`         // Audio visualizer
-	Wad           string  `json:"wad,omitempty"`             // DOOM
-	BundledWadURL *string `json:"bundled_wad_url,omitempty"` // DOOM - custom WAD download URL
+	Interface      *string `json:"interface,omitempty"`       // Network
+	MaxSpeedMbps   float64 `json:"max_speed_mbps,omitempty"`  // Network, Disk
+	Disk           *string `json:"disk,omitempty"`            // Disk
+	Unit           string  `json:"unit,omitempty"`            // Disk: "auto", "B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s"
+	Format         string  `json:"format,omitempty"`          // Keyboard layout
+	Channel        string  `json:"channel,omitempty"`         // Audio visualizer
+	ErrorThreshold int     `json:"error_threshold,omitempty"` // Audio visualizer: consecutive errors before failure (default: 30)
+	Wad            string  `json:"wad,omitempty"`             // DOOM
+	BundledWadURL  *string `json:"bundled_wad_url,omitempty"` // DOOM - custom WAD download URL
 
 	// Winamp widget
 	Winamp   *WinampConfig         `json:"winamp,omitempty"`    // Winamp settings (placeholder)

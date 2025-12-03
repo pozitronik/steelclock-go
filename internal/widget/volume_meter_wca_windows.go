@@ -7,15 +7,11 @@ import (
 	"log"
 	"sync"
 	"syscall"
-	"time"
 	"unsafe"
 
 	"github.com/go-ole/go-ole"
 	"github.com/moutend/go-wca/pkg/wca"
 )
-
-// Cooldown period between reinitializations to prevent rapid loops
-const meterReinitCooldown = 10 * time.Second
 
 // Direct COM calls for IAudioMeterInformation methods not implemented in go-wca
 // These use syscall to directly call the vtable methods
@@ -72,13 +68,11 @@ func getChannelsPeakValues(ami *wca.IAudioMeterInformation, channelCount uint32,
 // MeterReaderWCA manages Windows Core Audio meter using go-wca library
 // with proper COM lifecycle (initialize once, not per call)
 type MeterReaderWCA struct {
-	mu              sync.Mutex
-	initialized     bool
-	ami             *wca.IAudioMeterInformation
-	mmd             *wca.IMMDevice
-	mmde            *wca.IMMDeviceEnumerator
-	consecutiveErrs int       // Track consecutive errors for device change detection
-	lastReinitTime  time.Time // Track last reinit to enforce cooldown
+	mu          sync.Mutex
+	initialized bool
+	ami         *wca.IAudioMeterInformation
+	mmd         *wca.IMMDevice
+	mmde        *wca.IMMDeviceEnumerator
 }
 
 // NewMeterReaderWCA creates a meter reader using go-wca with proper lifecycle
@@ -144,37 +138,26 @@ func (mr *MeterReaderWCA) initialize() error {
 }
 
 // Reinitialize recreates the meter reader with a new device
-// Call this when device change is detected
+// Call this when device change notification is received
 func (mr *MeterReaderWCA) Reinitialize() error {
 	mr.mu.Lock()
 	defer mr.mu.Unlock()
 
-	// Enforce cooldown to prevent rapid reinitialization loops
-	timeSinceLastReinit := time.Since(mr.lastReinitTime)
-	if timeSinceLastReinit < meterReinitCooldown {
-		remaining := meterReinitCooldown - timeSinceLastReinit
-		log.Printf("[METER-WCA] Reinit skipped - cooldown active (%.1fs remaining)", remaining.Seconds())
-		return nil // Not an error, just skipped
-	}
-
 	// Cleanup old resources
 	mr.cleanup()
 	mr.initialized = false
-	mr.consecutiveErrs = 0
 
 	log.Printf("[METER-WCA] Reinitializing after device change...")
 
 	// Reinitialize COM and get new device
 	err := EnsureCOMInitialized()
 	if err != nil {
-		mr.lastReinitTime = time.Now() // Update time even on failure
 		return fmt.Errorf("failed to reinitialize COM: %w", err)
 	}
 
 	// Create device enumerator
 	mmde, err := CreateDeviceEnumerator()
 	if err != nil {
-		mr.lastReinitTime = time.Now()
 		return err
 	}
 	mr.mmde = mmde
@@ -183,7 +166,6 @@ func (mr *MeterReaderWCA) Reinitialize() error {
 	mmd, err := GetDefaultRenderDevice(mmde)
 	if err != nil {
 		mr.cleanup()
-		mr.lastReinitTime = time.Now()
 		return err
 	}
 	mr.mmd = mmd
@@ -192,26 +174,24 @@ func (mr *MeterReaderWCA) Reinitialize() error {
 	var ami *wca.IAudioMeterInformation
 	if err := mmd.Activate(wca.IID_IAudioMeterInformation, wca.CLSCTX_ALL, nil, &ami); err != nil {
 		mr.cleanup()
-		mr.lastReinitTime = time.Now()
 		return fmt.Errorf("Activate IAudioMeterInformation failed: %w", err)
 	}
 	mr.ami = ami
 
 	mr.initialized = true
-	mr.lastReinitTime = time.Now()
 	log.Printf("[METER-WCA] Reinitialized successfully")
 	return nil
 }
 
 // NeedsReinitialize returns true if the reader needs to be reinitialized
+// Note: With device notification, this is only true if not initialized
 func (mr *MeterReaderWCA) NeedsReinitialize() bool {
 	mr.mu.Lock()
 	defer mr.mu.Unlock()
-	return !mr.initialized || mr.consecutiveErrs >= 3
+	return !mr.initialized
 }
 
 // GetMeterData reads current audio meter values
-// Automatically detects device changes and marks for reinitialization
 func (mr *MeterReaderWCA) GetMeterData(clippingThreshold, silenceThreshold float64) (*MeterData, error) {
 	mr.mu.Lock()
 	defer mr.mu.Unlock()
@@ -225,16 +205,9 @@ func (mr *MeterReaderWCA) GetMeterData(clippingThreshold, silenceThreshold float
 	// Get overall peak value (0.0 - 1.0)
 	var peak float32
 	if err := mr.ami.GetPeakValue(&peak); err != nil {
-		mr.consecutiveErrs++
-		if mr.consecutiveErrs >= 3 {
-			log.Printf("[METER-WCA] Multiple consecutive errors detected, device may have changed")
-			mr.initialized = false // Mark for reinitialization
-		}
 		return nil, fmt.Errorf("GetPeakValue failed: %w", err)
 	}
 
-	// Reset error counter on successful read
-	mr.consecutiveErrs = 0
 	data.Peak = float64(peak)
 
 	// Check for clipping and audio presence
