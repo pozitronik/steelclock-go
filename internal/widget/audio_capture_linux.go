@@ -30,9 +30,8 @@ type AudioCaptureLinux struct {
 }
 
 var (
-	sharedAudioCapture     *AudioCaptureLinux
-	sharedAudioCaptureMu   sync.Mutex
-	sharedAudioCaptureOnce sync.Once
+	sharedAudioCapture   *AudioCaptureLinux
+	sharedAudioCaptureMu sync.Mutex
 )
 
 // GetSharedAudioCaptureLinux returns the shared audio capture instance
@@ -307,8 +306,8 @@ func (ac *AudioCaptureLinux) Close() {
 	ac.running = false
 
 	if ac.cmd != nil && ac.cmd.Process != nil {
-		ac.cmd.Process.Kill()
-		ac.cmd.Wait()
+		_ = ac.cmd.Process.Kill()
+		_ = ac.cmd.Wait()
 	}
 
 	if ac.stdout != nil {
