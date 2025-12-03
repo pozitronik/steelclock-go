@@ -308,11 +308,7 @@ func (w *MatrixWidget) Render() (image.Image, error) {
 func (w *MatrixWidget) drawChar(img *image.Gray, x, y int, char rune, brightness uint8) {
 	glyph := glyphs.GetGlyph(w.glyphSet, char)
 	if glyph == nil {
-		// Fallback to a random ASCII character if glyph not found
-		glyph = glyphs.GetGlyph(w.glyphSet, 'A')
-		if glyph == nil {
-			return
-		}
+		return
 	}
 
 	c := color.Gray{Y: brightness}
