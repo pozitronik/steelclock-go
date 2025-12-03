@@ -145,6 +145,17 @@ func (w *VolumeWidget) pollVolumeBackground() {
 		}
 	}()
 
+	// Subscribe to device change notifications (if available)
+	var deviceNotifyChan <-chan struct{}
+	deviceNotifier, err := GetDeviceNotifier()
+	if err != nil {
+		log.Printf("[VOLUME] Device notifier not available: %v (will rely on polling)", err)
+	} else {
+		deviceNotifyChan = deviceNotifier.Subscribe()
+		defer deviceNotifier.Unsubscribe(deviceNotifyChan)
+		log.Printf("[VOLUME] Subscribed to device change notifications")
+	}
+
 	ticker := time.NewTicker(w.pollInterval)
 	defer ticker.Stop()
 
@@ -155,6 +166,15 @@ func (w *VolumeWidget) pollVolumeBackground() {
 		select {
 		case <-w.stopChan:
 			return
+
+		case <-deviceNotifyChan:
+			// Device change detected - reinitialize reader
+			if reinitReader, ok := w.reader.(reinitializableVolumeReader); ok {
+				log.Printf("[VOLUME] Device change notification received, reinitializing...")
+				if err := reinitReader.Reinitialize(); err != nil {
+					log.Printf("[VOLUME] Failed to reinitialize after device change: %v", err)
+				}
+			}
 
 		case <-ticker.C:
 			w.pollOnce()

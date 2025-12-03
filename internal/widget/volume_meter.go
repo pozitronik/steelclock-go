@@ -303,6 +303,17 @@ func (w *VolumeMeterWidget) pollMeterBackground() {
 		}
 	}()
 
+	// Subscribe to device change notifications (if available)
+	var deviceNotifyChan <-chan struct{}
+	deviceNotifier, err := GetDeviceNotifier()
+	if err != nil {
+		log.Printf("[VOLUME-METER] Device notifier not available: %v (will rely on polling)", err)
+	} else {
+		deviceNotifyChan = deviceNotifier.Subscribe()
+		defer deviceNotifier.Unsubscribe(deviceNotifyChan)
+		log.Printf("[VOLUME-METER] Subscribed to device change notifications")
+	}
+
 	ticker := time.NewTicker(w.pollInterval)
 	defer ticker.Stop()
 
@@ -313,6 +324,16 @@ func (w *VolumeMeterWidget) pollMeterBackground() {
 		select {
 		case <-w.stopChan:
 			return
+
+		case <-deviceNotifyChan:
+			// Device change detected - reinitialize reader
+			if reinitReader, ok := w.reader.(reinitializableMeterReader); ok {
+				log.Printf("[VOLUME-METER] Device change notification received, reinitializing...")
+				if err := reinitReader.Reinitialize(); err != nil {
+					log.Printf("[VOLUME-METER] Failed to reinitialize after device change: %v", err)
+				}
+			}
+
 		case <-ticker.C:
 			w.updateMeter()
 		}

@@ -89,6 +89,9 @@ type AudioVisualizerWidget struct {
 	errorCount      int       // Consecutive error count
 	errorThreshold  int       // Threshold before entering error state
 	startupTime     time.Time // Widget creation time for grace period
+
+	// Device change notification
+	deviceNotifyChan <-chan struct{} // Receives signal on audio device change
 }
 
 // NewAudioVisualizerWidget creates a new audio visualizer widget
@@ -103,6 +106,12 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 	volumeReader, err := GetSharedVolumeReader()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get shared volume reader: %w", err)
+	}
+
+	// Subscribe to device change notifications
+	var deviceNotifyChan <-chan struct{}
+	if notifier, err := GetDeviceNotifier(); err == nil {
+		deviceNotifyChan = notifier.Subscribe()
 	}
 
 	// Set default update interval for audio visualizer (33ms = ~30fps)
@@ -268,6 +277,7 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 		audioData:              make([]float32, 0, 4096),
 		errorThreshold:         errorThreshold,
 		startupTime:            time.Now(),
+		deviceNotifyChan:       deviceNotifyChan,
 	}
 
 	return w, nil
@@ -277,6 +287,31 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 func (w *AudioVisualizerWidget) Update() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	// Check for device change notification (non-blocking)
+	if w.deviceNotifyChan != nil {
+		select {
+		case <-w.deviceNotifyChan:
+			// Device changed - reinitialize audio capture
+			log.Printf("[AUDIO-VIS] Device change detected, reinitializing...")
+			w.audioCapture.cleanup()
+			w.audioCapture.initialized = false
+			newCapture, err := GetSharedAudioCapture()
+			if err != nil {
+				log.Printf("[AUDIO-VIS] Failed to reinitialize after device change: %v", err)
+				// Don't enter error state immediately - will retry on next update
+				return nil
+			}
+			w.audioCapture = newCapture
+			// Reset error state if we were in error
+			w.errorState = false
+			w.errorCount = 0
+			w.startupTime = time.Now() // Reset startup grace period
+			log.Printf("[AUDIO-VIS] Reinitialized after device change")
+		default:
+			// No notification, continue normally
+		}
+	}
 
 	// If in error state, just update flash timer and return
 	if w.errorState {
