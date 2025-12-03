@@ -3,6 +3,7 @@
 package widget
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -17,6 +18,7 @@ import (
 	"github.com/mjibson/go-dsp/fft"
 	"github.com/moutend/go-wca/pkg/wca"
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
+	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
@@ -79,6 +81,14 @@ type AudioVisualizerWidget struct {
 	barEnergyIndex      int         // Circular buffer index for energy history
 	barEnergyWindowSize int         // Number of history samples for rolling average
 	lastUpdateTime      time.Time
+
+	// Error state tracking
+	errorState      bool      // Widget is in error state (audio failed)
+	errorFlashState bool      // Current flash state for error display
+	lastFlashTime   time.Time // Last time flash state changed
+	errorCount      int       // Consecutive error count
+	errorThreshold  int       // Threshold before entering error state
+	startupTime     time.Time // Widget creation time for grace period
 }
 
 // NewAudioVisualizerWidget creates a new audio visualizer widget
@@ -178,6 +188,12 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 		channelMode = cfg.Channel
 	}
 
+	// Error threshold from config (default: 30 = ~3 seconds at 33ms update interval)
+	errorThreshold := 30
+	if cfg.ErrorThreshold > 0 {
+		errorThreshold = cfg.ErrorThreshold
+	}
+
 	// Colors from mode-specific configs
 	fillColor := 255
 	leftChannelColor := 255
@@ -250,6 +266,8 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 		barEnergyIndex:         0,
 		barEnergyWindowSize:    windowSize,
 		audioData:              make([]float32, 0, 4096),
+		errorThreshold:         errorThreshold,
+		startupTime:            time.Now(),
 	}
 
 	return w, nil
@@ -260,23 +278,40 @@ func (w *AudioVisualizerWidget) Update() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	// If in error state, just update flash timer and return
+	if w.errorState {
+		now := time.Now()
+		if now.Sub(w.lastFlashTime) >= 500*time.Millisecond {
+			w.errorFlashState = !w.errorFlashState
+			w.lastFlashTime = now
+		}
+		return nil
+	}
+
 	// Capture audio samples (both channels)
 	leftSamples, rightSamples, err := w.audioCapture.ReadSamples()
 	if err != nil {
-		// Try to reinitialize on error (device may have changed)
-		log.Printf("[AUDIO-VIS] Read error, attempting reinitialize: %v", err)
-		if reinitErr := ReinitializeSharedAudioCapture(); reinitErr != nil {
-			return fmt.Errorf("failed to reinitialize audio capture: %w", reinitErr)
+		// Grace period: ignore errors during first 3 seconds after startup
+		// Audio buffer needs time to warm up
+		if time.Since(w.startupTime) < 3*time.Second {
+			return nil
 		}
-		// Get the new instance
-		newCapture, getErr := GetSharedAudioCapture()
-		if getErr != nil {
-			return fmt.Errorf("failed to get audio capture after reinit: %w", getErr)
+
+		w.errorCount++
+		if w.errorCount >= w.errorThreshold {
+			// Enter error state
+			w.errorState = true
+			w.errorFlashState = true
+			w.lastFlashTime = time.Now()
+			// Mark singleton as uninitialized so config reload can retry
+			w.audioCapture.initialized = false
+			log.Printf("[AUDIO-VIS] Audio capture failed after %d consecutive errors: %v", w.errorCount, err)
 		}
-		w.audioCapture = newCapture
-		// Return early, will try again next update
 		return nil
 	}
+
+	// Reset error count on successful read
+	w.errorCount = 0
 
 	// If no samples, create silent buffers to allow peaks to decay
 	if len(leftSamples) == 0 {
@@ -681,6 +716,15 @@ func (w *AudioVisualizerWidget) Render() (image.Image, error) {
 
 	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 
+	// Render error display if in error state
+	if w.errorState {
+		w.renderErrorDisplay(img)
+		if style.Border >= 0 {
+			bitmap.DrawBorder(img, uint8(style.Border))
+		}
+		return img, nil
+	}
+
 	if w.displayMode == "spectrum" {
 		w.renderSpectrum(img)
 	} else if w.displayMode == "oscilloscope" {
@@ -692,6 +736,56 @@ func (w *AudioVisualizerWidget) Render() (image.Image, error) {
 	}
 
 	return img, nil
+}
+
+// renderErrorDisplay draws error message with warning icons
+func (w *AudioVisualizerWidget) renderErrorDisplay(img *image.Gray) {
+	// Only draw if flash state is on
+	if !w.errorFlashState {
+		return
+	}
+
+	pos := w.GetPosition()
+	c := color.Gray{Y: 255} // White foreground
+
+	// Select icon size based on display height
+	var iconSet *glyphs.GlyphSet
+	if pos.H >= 24 {
+		iconSet = glyphs.CommonIcons24x24
+	} else if pos.H >= 16 {
+		iconSet = glyphs.CommonIcons16x16
+	} else {
+		iconSet = glyphs.CommonIcons12x12
+	}
+
+	warningIcon := glyphs.GetIcon(iconSet, "warning")
+	if warningIcon == nil {
+		// Fallback: just draw text if icon not found
+		glyphs.DrawText(img, "AUDIO ERROR", pos.W/2-30, pos.H/2-3, glyphs.Font5x7, c)
+		return
+	}
+
+	// Left triangle
+	leftX := 2
+	centerY := pos.H / 2
+	glyphs.DrawGlyph(img, warningIcon, leftX, centerY-warningIcon.Height/2, c)
+
+	// Right triangle
+	rightX := pos.W - 2 - warningIcon.Width
+	glyphs.DrawGlyph(img, warningIcon, rightX, centerY-warningIcon.Height/2, c)
+
+	// Draw message text centered between triangles
+	message := "AUDIO ERROR"
+	availableX := leftX + warningIcon.Width + 2
+	availableW := rightX - availableX - 2
+
+	textWidth := glyphs.MeasureText(message, glyphs.Font5x7)
+	textX := availableX + (availableW-textWidth)/2
+	if textX < availableX {
+		textX = availableX
+	}
+
+	glyphs.DrawText(img, message, textX, centerY-3, glyphs.Font5x7, c)
 }
 
 // renderSpectrum draws spectrum analyzer bars
@@ -856,15 +950,11 @@ func (w *AudioVisualizerWidget) drawWaveform(img *image.Gray, samples []float32,
 	}
 }
 
-// Cooldown period between reinitializations to prevent rapid loops
-const audioCaptureReinitCooldown = 10 * time.Second
-
 // Shared audio capture instance (recreatable singleton)
 var (
-	sharedAudioCapture        *AudioCaptureWCA
-	sharedAudioCaptureMu      sync.Mutex
-	sharedAudioCaptureErr     error
-	sharedAudioLastReinitTime time.Time // Track last reinit to enforce cooldown
+	sharedAudioCapture    *AudioCaptureWCA
+	sharedAudioCaptureMu  sync.Mutex
+	sharedAudioCaptureErr error
 )
 
 // GetSharedAudioCapture returns the shared AudioCaptureWCA instance
@@ -890,53 +980,16 @@ func GetSharedAudioCapture() (*AudioCaptureWCA, error) {
 	return sharedAudioCapture, nil
 }
 
-// ReinitializeSharedAudioCapture forces recreation of the shared audio capture
-// Call this when device change is detected
-func ReinitializeSharedAudioCapture() error {
-	sharedAudioCaptureMu.Lock()
-	defer sharedAudioCaptureMu.Unlock()
-
-	// Enforce cooldown to prevent rapid reinitialization loops
-	timeSinceLastReinit := time.Since(sharedAudioLastReinitTime)
-	if timeSinceLastReinit < audioCaptureReinitCooldown {
-		remaining := audioCaptureReinitCooldown - timeSinceLastReinit
-		log.Printf("[AUDIO-CAPTURE] Reinit skipped - cooldown active (%.1fs remaining)", remaining.Seconds())
-		return nil // Not an error, just skipped
-	}
-
-	// Clean up old instance
-	if sharedAudioCapture != nil {
-		sharedAudioCapture.cleanup()
-		sharedAudioCapture.initialized = false
-	}
-
-	// Create new instance
-	ac := &AudioCaptureWCA{}
-	if err := ac.initialize(); err != nil {
-		sharedAudioCaptureErr = fmt.Errorf("failed to reinitialize: %w", err)
-		sharedAudioCapture = nil
-		sharedAudioLastReinitTime = time.Now() // Still update time to prevent rapid retry
-		return sharedAudioCaptureErr
-	}
-
-	sharedAudioCapture = ac
-	sharedAudioCaptureErr = nil
-	sharedAudioLastReinitTime = time.Now()
-	log.Printf("[AUDIO-CAPTURE] Reinitialized after device change")
-	return nil
-}
-
 // AudioCaptureWCA captures audio using Windows Core Audio API in loopback mode
 type AudioCaptureWCA struct {
-	mu              sync.Mutex
-	initialized     bool
-	audioClient     *wca.IAudioClient
-	captureClient   *wca.IAudioCaptureClient
-	mmd             *wca.IMMDevice
-	mmde            *wca.IMMDeviceEnumerator
-	bufferSize      uint32
-	sampleRate      uint32
-	consecutiveErrs int // Track consecutive errors for device change detection
+	mu            sync.Mutex
+	initialized   bool
+	audioClient   *wca.IAudioClient
+	captureClient *wca.IAudioCaptureClient
+	mmd           *wca.IMMDevice
+	mmde          *wca.IMMDeviceEnumerator
+	bufferSize    uint32
+	sampleRate    uint32
 }
 
 // initialize sets up WASAPI loopback capture
@@ -1028,9 +1081,12 @@ func (ac *AudioCaptureWCA) initialize() error {
 	return nil
 }
 
+// AUDCLNT_S_BUFFER_EMPTY is a success code indicating no audio data available
+// This is normal when nothing is playing - not an error
+const audclntSBufferEmpty = 0x08890001
+
 // ReadSamples reads available audio samples (stereo float32)
 // Returns (leftChannel, rightChannel, error)
-// Automatically detects device changes and marks for reinitialization
 func (ac *AudioCaptureWCA) ReadSamples() ([]float32, []float32, error) {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
@@ -1041,8 +1097,8 @@ func (ac *AudioCaptureWCA) ReadSamples() ([]float32, []float32, error) {
 
 	leftSamples := make([]float32, 0, 4096)
 	rightSamples := make([]float32, 0, 4096)
-	totalFrames := 0
-	hadError := false
+	hadRealError := false
+	var lastErr error
 
 	// Read all available packets
 	for {
@@ -1052,9 +1108,18 @@ func (ac *AudioCaptureWCA) ReadSamples() ([]float32, []float32, error) {
 
 		err := ac.captureClient.GetBuffer(&pData, &numFramesToRead, &flags, nil, nil)
 		if err != nil {
-			// Check if this looks like a device disconnection error
-			// Common error codes: AUDCLNT_E_DEVICE_INVALIDATED (0x88890004)
-			hadError = true
+			// Check if this is just "buffer empty" (normal when no audio playing)
+			var oleErr *ole.OleError
+			if errors.As(err, &oleErr) {
+				errCode := uint32(oleErr.Code())
+				if errCode == audclntSBufferEmpty {
+					// Buffer empty is normal - just means no audio data right now
+					break
+				}
+			}
+			// Real error
+			hadRealError = true
+			lastErr = err
 			break
 		}
 
@@ -1062,8 +1127,6 @@ func (ac *AudioCaptureWCA) ReadSamples() ([]float32, []float32, error) {
 			_ = ac.captureClient.ReleaseBuffer(numFramesToRead)
 			break
 		}
-
-		totalFrames += int(numFramesToRead)
 
 		// Convert samples to float32 (assuming format is float32 stereo interleaved: L-R-L-R)
 		// Extract both left and right channels
@@ -1076,17 +1139,9 @@ func (ac *AudioCaptureWCA) ReadSamples() ([]float32, []float32, error) {
 		_ = ac.captureClient.ReleaseBuffer(numFramesToRead)
 	}
 
-	// Track consecutive errors to detect device change
-	if hadError && totalFrames == 0 {
-		ac.consecutiveErrs++
-		// After 3 consecutive errors with no data, likely device changed
-		if ac.consecutiveErrs >= 3 {
-			log.Printf("[AUDIO-CAPTURE] Multiple consecutive errors detected, device may have changed")
-			ac.initialized = false // Mark for reinitialization
-			return nil, nil, fmt.Errorf("device may have changed, needs reinitialization")
-		}
-	} else {
-		ac.consecutiveErrs = 0 // Reset on successful read
+	// Return error only if we had a real error (not buffer empty)
+	if hadRealError && len(leftSamples) == 0 {
+		return nil, nil, fmt.Errorf("audio capture failed: %w", lastErr)
 	}
 
 	return leftSamples, rightSamples, nil
