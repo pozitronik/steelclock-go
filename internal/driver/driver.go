@@ -182,23 +182,6 @@ func (d *HIDDriver) Reconnect() error {
 	return d.Open()
 }
 
-// buildPacket constructs the HID packet for sending pixel data
-// Format: [00 ReportID] + [61 CMD] + [16 Padding] + [pixelData]
-func buildPacket(pixelData []byte, width, height int) []byte {
-	dataSize := width * height / 8
-	packetSize := 18 + dataSize // ReportID(1) + CMD(1) + Padding(16) + Data
-
-	packet := make([]byte, packetSize)
-	packet[0] = 0x00 // Report ID
-	packet[1] = 0x61 // Command byte
-	// Bytes 2-17 stay zero (padding)
-
-	// Copy pixel data, truncate or pad as needed
-	if len(pixelData) > dataSize {
-		copy(packet[18:], pixelData[:dataSize])
-	} else {
-		copy(packet[18:], pixelData)
-	}
-
-	return packet
-}
+// buildPacket is defined in platform-specific files:
+// - packet_windows.go: Format [00 ReportID] + [61 CMD] + [16 Padding] + [pixelData] = 658 bytes
+// - packet_linux.go: Format [61 CMD] + [1 Padding] + [pixelData] = 642 bytes

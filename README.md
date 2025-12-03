@@ -12,8 +12,15 @@ https://github.com/user-attachments/assets/58f607cb-be31-4af4-bb3d-6e0628f0748c
 
 ## Requirements
 
-- **Windows OS** (Windows 10/11)
-- **SteelSeries Engine** or **SteelSeries GG** (optional)
+### Windows
+- **Windows 10/11**
+- **SteelSeries Engine** or **SteelSeries GG** (optional with direct driver)
+- **Go 1.21+** (for building from source)
+
+### Linux
+- **Linux** with hidraw support
+- **PipeWire** or **PulseAudio** (for audio widgets)
+- **GTK 3** and **libayatana-appindicator3** (for system tray)
 - **Go 1.21+** (for building from source)
 
 ## Features
@@ -37,12 +44,12 @@ And it also runs [DOOM](profiles/DOOM_README.md).
 
 ## Quick Start
 
+### Windows
+
 1. Build the application:
    ```bash
-   # On Windows
    build.cmd
-
-   # On Linux/WSL
+   # Or from WSL/bash:
    ./build.sh
    ```
 
@@ -50,20 +57,42 @@ And it also runs [DOOM](profiles/DOOM_README.md).
    ```bash
    steelclock.exe
    ```
-   The application starts in the background with a system tray icon.
 
-3. Use the tray menu:
-   - Right-click the tray icon
-   - Select a profile to switch configurations
-   - Choose "Edit Active Config" to modify settings
-   - Choose "Reload Active Config" to apply changes
-   - Choose "Exit" to close the application
+### Linux
+
+1. Install dependencies:
+   ```bash
+   sudo apt-get install libgtk-3-dev libayatana-appindicator3-dev
+   ```
+
+2. Build the application:
+   ```bash
+   ./build-linux.sh
+   ```
+
+3. Install udev rules for device access (one-time setup):
+   ```bash
+   sudo cp profiles/99-steelseries.rules /etc/udev/rules.d/
+   sudo udevadm control --reload-rules
+   sudo udevadm trigger
+   # Unplug and replug your keyboard, or reboot
+   ```
+
+4. Run the application:
+   ```bash
+   ./steelclock
+   ```
+
+The application starts in the background with a system tray icon. Right-click the tray icon to access the menu for switching profiles, editing config, or exiting.
 
 ### Manual Build
 
 ```bash
 # Build for Windows (GUI mode - no console window)
 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H windowsgui" -o steelclock.exe ./cmd/steelclock
+
+# Build for Linux
+GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o steelclock ./cmd/steelclock
 ```
 
 ### Command Line Options
@@ -123,20 +152,22 @@ The `config_name` field determines how the profile appears in the tray menu. If 
 
 ### Supported Widgets
 
-| Widget               | Description                          | Modes                                                           |
-|----------------------|--------------------------------------|-----------------------------------------------------------------|
-| **clock**            | Current time display                 | text, analog                                                    |
-| **cpu**              | CPU usage (per-core support)         | text, bar, graph, gauge                                         |
-| **memory**           | RAM usage                            | text, bar, graph, gauge                                         |
-| **network**          | Network I/O (RX/TX)                  | text, bar, graph, gauge                                         |
-| **disk**             | Disk I/O (read/write)                | text, bar, graph                                                |
-| **keyboard**         | Lock indicators (Caps/Num/Scroll)    | icons, text, mixed                                              |
-| **keyboard_layout**  | Current keyboard input language      | text (ISO 639-1, ISO 639-2, full name)                          |
-| **volume**           | System volume level and mute         | text, bar, gauge, triangle                                      |
-| **volume_meter**     | Realtime audio peak meter            | bar, gauge (stereo & VU support)                                |
-| **audio_visualizer** | Realtime audio spectrum/waveform     | spectrum, oscilloscope                                          |
-| **winamp**           | Winamp player info display           | text (with scrolling support)                                   |
-| **doom**             | Interactive DOOM game display        | game                                                            |
+| Widget               | Description                       | Modes                                  | Windows |  Linux   |
+|----------------------|-----------------------------------|----------------------------------------|:-------:|:--------:|
+| **clock**            | Current time display              | text, analog                           |   Yes   |   Yes    |
+| **cpu**              | CPU usage (per-core support)      | text, bar, graph, gauge                |   Yes   |   Yes    |
+| **memory**           | RAM usage                         | text, bar, graph, gauge                |   Yes   |   Yes    |
+| **network**          | Network I/O (RX/TX)               | text, bar, graph, gauge                |   Yes   |   Yes    |
+| **disk**             | Disk I/O (read/write)             | text, bar, graph                       |   Yes   |   Yes    |
+| **keyboard**         | Lock indicators (Caps/Num/Scroll) | icons, text, mixed                     |   Yes   |    No    |
+| **keyboard_layout**  | Current keyboard input language   | text (ISO 639-1, ISO 639-2, full name) |   Yes   |    No    |
+| **volume**           | System volume level and mute      | text, bar, gauge                       |   Yes   |   Yes*   |
+| **volume_meter**     | Realtime audio peak meter         | bar, gauge (stereo & VU support)       |   Yes   | Limited* |
+| **audio_visualizer** | Realtime audio spectrum/waveform  | spectrum, oscilloscope                 |   Yes   |   Yes*   |
+| **winamp**           | Winamp player info display        | text (with scrolling support)          |   Yes   |    No    |
+| **doom**             | Interactive DOOM game display     | game                                   |   Yes   |   Yes    |
+
+\* See [Linux Limitations](#linux-limitations) section below.
 
 See [CONFIG_GUIDE.md](profiles/CONFIG_GUIDE.md) for detailed widget properties and configuration examples.
 
@@ -146,11 +177,11 @@ SteelClock supports two connection backends for communicating with your SteelSer
 
 ### Backend Options
 
-| Backend     | Description                              | Refresh Rate        | Requirements                  |
-|-------------|------------------------------------------|---------------------|-------------------------------|
-| `gamesense` | Uses SteelSeries GG/Engine API (default) | 100ms (10 Hz)       | SteelSeries GG/Engine running |
-| `direct`    | Direct USB HID communication             | ~16-30ms (30-60 Hz) | Windows only, device VID/PID  |
-| `any`       | Try GameSense first, fallback to direct  | Varies              | -                             |
+| Backend     | Description                              | Refresh Rate        | Requirements                        |
+|-------------|------------------------------------------|---------------------|-------------------------------------|
+| `gamesense` | Uses SteelSeries GG/Engine API (default) | 100ms (10 Hz)       | SteelSeries GG/Engine running       |
+| `direct`    | Direct USB HID communication             | ~16-30ms (30-60 Hz) | Device VID/PID, udev rules on Linux |
+| `any`       | Try GameSense first, fallback to direct  | Varies              | -                                   |
 
 ### Configuration
 
@@ -165,7 +196,7 @@ SteelClock supports two connection backends for communicating with your SteelSer
 }
 ```
 
-If "direct_driver" section is empty, app will try to detect your hardware automatically.  
+If "direct_driver" section is empty, app will try to detect your hardware automatically.
 
 ### Pros of Direct Mode
 
@@ -173,21 +204,31 @@ If "direct_driver" section is empty, app will try to detect your hardware automa
 - **Lower latency**: Direct USB communication without HTTP overhead
 - **No SteelSeries software required**: Works without GG/Engine installed
 - **Better for real-time visualizations**: Audio visualizer, smooth animations
+- **Cross-platform**: Works on both Windows and Linux
 
 ### Cons of Direct Mode
 
-- **Windows only**: USB HID library requires Windows
 - **Device-specific configuration**: Need to know VID/PID of your device
 - **Exclusive access**: May conflict with SteelSeries GG if running simultaneously
-- **No automatic device discovery**: Must configure device identifiers manually
 - **Limited testing**: Only tested with specific SteelSeries keyboards (Apex Pro)
+- **Linux requires udev rules**: Need to install udev rules for non-root access
 
 ### Finding Your Device VID/PID
 
+**Windows:**
 1. Open Device Manager
 2. Find your SteelSeries device under "Human Interface Devices"
 3. Check device properties for VID (Vendor ID) and PID (Product ID)
-4. Common values: VID `1038` (SteelSeries), PID varies by model
+
+**Linux:**
+```bash
+lsusb | grep -i steelseries
+# Output: Bus 001 Device 005: ID 1038:1612 SteelSeries ApS SteelSeries Apex Pro
+#                                ^^^^ ^^^^
+#                                VID  PID
+```
+
+Common values: VID `1038` (SteelSeries), PID varies by model.
 
 ### Compatibility Notes
 
@@ -195,6 +236,48 @@ If "direct_driver" section is empty, app will try to detect your hardware automa
 - Some devices may have multiple HID interfaces - use `interface` to specify (e.g., `mi_01`)
 - If experiencing issues, try `backend: "any"` to automatically fallback
 - Direct mode reconnects automatically if the device is disconnected and reconnected
+
+## Linux Limitations
+
+On Linux, some widgets have reduced functionality compared to Windows:
+
+### Unsupported Widgets
+
+| Widget              | Reason                                                    |
+|---------------------|-----------------------------------------------------------|
+| **keyboard**        | Requires Windows `GetKeyState` API for lock key detection |
+| **keyboard_layout** | Requires Windows input language API                       |
+| **winamp**          | Winamp is Windows-only software                           |
+
+### Limited Functionality
+
+| Widget               | Limitation                                                                                                                |
+|----------------------|---------------------------------------------------------------------------------------------------------------------------|
+| **volume**           | Uses command-line tools (`wpctl`, `pactl`, `amixer`) instead of native API. Polling-based, not event-driven.              |
+| **volume_meter**     | Real-time audio peak metering is limited. Falls back to volume level as a proxy when actual audio levels are unavailable. |
+| **audio_visualizer** | Requires PipeWire with `parec` for audio capture. May need additional configuration for proper audio routing.             |
+
+### Audio Setup on Linux
+
+For audio widgets to work properly on Linux:
+
+1. **PipeWire (recommended)**:
+   ```bash
+   # Ensure PipeWire is running
+   systemctl --user status pipewire
+
+   # Install PipeWire tools if needed
+   sudo apt-get install pipewire-audio-client-libraries
+   ```
+
+2. **PulseAudio**:
+   ```bash
+   # Check PulseAudio is running
+   pactl info
+   ```
+
+3. **Audio capture for visualizer**:
+   The audio visualizer captures system audio output. On PipeWire, this should work automatically. On PulseAudio, you may need to configure a monitor source.
 
 ## Troubleshooting
 
@@ -209,13 +292,37 @@ If "direct_driver" section is empty, app will try to detect your hardware automa
 - Verify widget configurations are correct
 - Check `steelclock.log` for specific validation errors
 
+### Linux-specific issues
+
+**"Permission denied" when accessing device:**
+```bash
+# Install udev rules
+sudo cp profiles/99-steelseries.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+# Unplug and replug your keyboard
+```
+
+**"cannot read /sys/class/hidraw" error:**
+- Ensure the `hidraw` kernel module is loaded: `lsmod | grep hidraw`
+- Check if your device appears: `ls /dev/hidraw*`
+
+**System tray icon not appearing:**
+- Ensure you have a system tray implementation (e.g., `gnome-shell-extension-appindicator` for GNOME)
+- Check that `libayatana-appindicator3` is installed
+
+**Audio widgets not working:**
+- Check which audio system is running: `pactl info` or `wpctl status`
+- Ensure audio tools are installed: `wpctl`, `pactl`, or `amixer`
+- For audio visualizer, PipeWire is recommended
+
 ### Logging
 
 All application output is logged to `steelclock.log` in the same directory as the executable. The log includes:
 - Startup and shutdown events
 - Configuration loading and validation errors
 - Widget initialization
-- GameSense API communication
+- GameSense API communication (Windows) / HID communication (Linux)
 - Runtime errors and warnings
 
 Check this file if you encounter any issues or unexpected behavior.

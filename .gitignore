@@ -34,3 +34,11 @@ cmd/**/*.syso
 .DS_Store
 Thumbs.db
 /config.json
+/steelclock
+/doom1.wad
+/.steelclock.state
+/internal/widget/test_progress_render.wad
+/internal/widget/test_error_render.wad
+/internal/widget/test_doom.wad
+/internal/widget/test_empty_frame.wad
+/internal/widget/doom1.wad

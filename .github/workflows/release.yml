@@ -10,8 +10,8 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Create Release
+  build-windows:
+    name: Build Windows
     runs-on: windows-latest
 
     steps:
@@ -149,6 +149,130 @@ jobs:
         echo "Created release package: ${PACKAGE_NAME}.zip"
         ls -lh release/*.zip
 
+    - name: Upload Windows artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-release
+        path: release/*.zip
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.25.4'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libayatana-appindicator3-dev libgtk-3-dev
+
+    - name: Extract version from tag
+      id: version
+      shell: bash
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+
+    - name: Prepare icon resources
+      shell: bash
+      run: |
+        mkdir -p internal/tray
+        if [ -f winres/icon.ico ]; then
+          cp winres/icon.ico internal/tray/icon.ico
+          echo "Icon copied to internal/tray/"
+        else
+          echo "Warning: winres/icon.ico not found"
+        fi
+
+    - name: Build Linux executable
+      shell: bash
+      run: |
+        GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o steelclock ./cmd/steelclock
+        echo "Built steelclock"
+
+    - name: Create release package
+      shell: bash
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        PACKAGE_NAME="steelclock-v${VERSION}-linux-amd64"
+
+        # Create release directory
+        mkdir -p release/$PACKAGE_NAME
+
+        # Copy executable
+        cp steelclock release/$PACKAGE_NAME/
+
+        # Copy profiles directory
+        cp -r profiles release/$PACKAGE_NAME/
+
+        # Copy README
+        cp README.md release/$PACKAGE_NAME/
+
+        # Copy LICENSE
+        if [ -f LICENSE ]; then
+          cp LICENSE release/$PACKAGE_NAME/
+        fi
+
+        # Create archive
+        cd release
+        tar -czvf "${PACKAGE_NAME}.tar.gz" "$PACKAGE_NAME"
+        cd ..
+
+        echo "Created release package: ${PACKAGE_NAME}.tar.gz"
+        ls -lh release/*.tar.gz
+
+    - name: Upload Linux artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-release
+        path: release/*.tar.gz
+
+  release:
+    name: Create Release
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Extract version from tag
+      id: version
+      shell: bash
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+
+    - name: Download Windows artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: windows-release
+        path: release/
+
+    - name: Download Linux artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-release
+        path: release/
+
+    - name: List release files
+      run: ls -lh release/
+
     - name: Generate release notes
       id: release_notes
       uses: actions/github-script@v7
@@ -170,6 +294,13 @@ jobs:
             : null;
 
           let releaseNotes = `## What's New in ${tag}\n\n`;
+
+          // Platform notes
+          releaseNotes += `### Downloads\n\n`;
+          releaseNotes += `- **Windows**: \`steelclock-v${{ steps.version.outputs.version }}-windows-amd64.zip\`\n`;
+          releaseNotes += `- **Linux**: \`steelclock-v${{ steps.version.outputs.version }}-linux-amd64.tar.gz\`\n\n`;
+
+          releaseNotes += `> **Linux users**: For direct USB driver access, install the udev rules from \`profiles/99-steelseries.rules\`\n\n`;
 
           if (previousTag) {
             // Get commits between tags
@@ -201,13 +332,13 @@ jobs:
             });
 
             if (features.length > 0) {
-              releaseNotes += `#### ✨ Features\n${features.join('\n')}\n\n`;
+              releaseNotes += `#### Features\n${features.join('\n')}\n\n`;
             }
             if (fixes.length > 0) {
-              releaseNotes += `#### 🐛 Bug Fixes\n${fixes.join('\n')}\n\n`;
+              releaseNotes += `#### Bug Fixes\n${fixes.join('\n')}\n\n`;
             }
             if (other.length > 0) {
-              releaseNotes += `#### 📝 Other Changes\n${other.join('\n')}\n\n`;
+              releaseNotes += `#### Other Changes\n${other.join('\n')}\n\n`;
             }
 
             releaseNotes += `\n**Full Changelog**: https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${previousTag}...${tag}`;
@@ -225,6 +356,6 @@ jobs:
         name: Release ${{ steps.version.outputs.tag }}
         body: ${{ steps.release_notes.outputs.result }}
         files: |
-          release/*.zip
+          release/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

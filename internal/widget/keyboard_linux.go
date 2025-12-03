@@ -8,25 +8,25 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-// KeyboardLayoutWidget stub for Linux - displays error via ErrorWidget
-type KeyboardLayoutWidget struct {
+// KeyboardWidget stub for Linux - displays error via ErrorWidget
+type KeyboardWidget struct {
 	*BaseWidget
 	errorWidget *ErrorWidget
 }
 
-// NewKeyboardLayoutWidget creates a stub widget that displays unsupported message
-func NewKeyboardLayoutWidget(cfg config.WidgetConfig) (*KeyboardLayoutWidget, error) {
+// NewKeyboardWidget creates a stub widget that displays unsupported message
+func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
 	base := NewBaseWidget(cfg)
 	pos := base.GetPosition()
 
-	return &KeyboardLayoutWidget{
+	return &KeyboardWidget{
 		BaseWidget:  base,
 		errorWidget: NewErrorWidget(pos.W, pos.H, "UNSUPPORTED"),
 	}, nil
 }
 
 // Update delegates to error widget
-func (w *KeyboardLayoutWidget) Update() error {
+func (w *KeyboardWidget) Update() error {
 	if w.errorWidget != nil {
 		return w.errorWidget.Update()
 	}
@@ -34,7 +34,7 @@ func (w *KeyboardLayoutWidget) Update() error {
 }
 
 // Render delegates to error widget
-func (w *KeyboardLayoutWidget) Render() (image.Image, error) {
+func (w *KeyboardWidget) Render() (image.Image, error) {
 	if w.errorWidget != nil {
 		return w.errorWidget.Render()
 	}

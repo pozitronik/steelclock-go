@@ -8,6 +8,7 @@ import "fmt"
 type DeviceNotifier struct{}
 
 // GetDeviceNotifier returns an error on non-Windows platforms
+// Device change notifications are only supported on Windows via IMMNotificationClient
 func GetDeviceNotifier() (*DeviceNotifier, error) {
 	return nil, fmt.Errorf("device notifications are not supported on this platform")
 }

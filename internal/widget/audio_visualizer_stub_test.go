@@ -1,4 +1,4 @@
-//go:build !windows
+//go:build !windows && !linux
 
 package widget
 
@@ -9,10 +9,10 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-func TestNewAudioVisualizerWidget_Unix(t *testing.T) {
+func TestNewAudioVisualizerWidget_Stub(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
-		ID:      "test_unix",
+		ID:      "test_stub",
 		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
@@ -28,25 +28,25 @@ func TestNewAudioVisualizerWidget_Unix(t *testing.T) {
 		UpdateInterval: 0.033,
 	}
 
-	// On Unix, NewAudioVisualizerWidget should succeed (stub widget created)
+	// On unsupported platforms, NewAudioVisualizerWidget should succeed (stub widget created)
 	widget, err := NewAudioVisualizerWidget(cfg)
 	if err != nil {
-		t.Fatalf("NewAudioVisualizerWidget() on Unix error = %v (should create stub widget)", err)
+		t.Fatalf("NewAudioVisualizerWidget() error = %v (should create stub widget)", err)
 	}
 
 	if widget == nil {
-		t.Fatal("NewAudioVisualizerWidget() returned nil on Unix")
+		t.Fatal("NewAudioVisualizerWidget() returned nil")
 	}
 
-	if widget.Name() != "test_unix" {
-		t.Errorf("Name() = %s, want test_unix", widget.Name())
+	if widget.Name() != "test_stub" {
+		t.Errorf("Name() = %s, want test_stub", widget.Name())
 	}
 }
 
-func TestAudioVisualizerWidget_Unix_Render(t *testing.T) {
+func TestAudioVisualizerWidget_Stub_Render(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
-		ID:      "test_unix_render",
+		ID:      "test_stub_render",
 		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
@@ -67,20 +67,15 @@ func TestAudioVisualizerWidget_Unix_Render(t *testing.T) {
 		t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
 	}
 
-	// Render should return an error on Unix
+	// Render should succeed (stub renders via ErrorWidget)
 	img, err := widget.Render()
-	if err == nil {
-		t.Error("Render() on Unix should return error, got nil")
+	if err != nil {
+		t.Errorf("Render() error = %v (stub should render without error)", err)
 	}
 
-	// Error message should indicate platform limitation
-	if err != nil && !strings.Contains(err.Error(), "Windows") {
-		t.Errorf("Render() error message should mention Windows, got: %v", err)
-	}
-
-	// But it should still return an image with error message
+	// Should return an image
 	if img == nil {
-		t.Fatal("Render() returned nil image on Unix (should return error message image)")
+		t.Fatal("Render() returned nil image")
 	}
 
 	if img.Bounds().Dx() != 128 {
@@ -92,10 +87,10 @@ func TestAudioVisualizerWidget_Unix_Render(t *testing.T) {
 	}
 }
 
-func TestAudioVisualizerWidget_Unix_Update(t *testing.T) {
+func TestAudioVisualizerWidget_Stub_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
-		ID:      "test_unix_update",
+		ID:      "test_stub_update",
 		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
@@ -115,17 +110,17 @@ func TestAudioVisualizerWidget_Unix_Update(t *testing.T) {
 		t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
 	}
 
-	// Update should succeed (no-op on Unix)
+	// Update should succeed (delegates to ErrorWidget)
 	err = widget.Update()
 	if err != nil {
-		t.Errorf("Update() on Unix error = %v (should be no-op)", err)
+		t.Errorf("Update() error = %v (should succeed)", err)
 	}
 }
 
-func TestAudioVisualizerWidget_Unix_GetMethods(t *testing.T) {
+func TestAudioVisualizerWidget_Stub_GetMethods(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
-		ID:      "test_unix_getters",
+		ID:      "test_stub_getters",
 		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 10,
@@ -148,8 +143,8 @@ func TestAudioVisualizerWidget_Unix_GetMethods(t *testing.T) {
 	}
 
 	// Test Name()
-	if widget.Name() != "test_unix_getters" {
-		t.Errorf("Name() = %s, want test_unix_getters", widget.Name())
+	if widget.Name() != "test_stub_getters" {
+		t.Errorf("Name() = %s, want test_stub_getters", widget.Name())
 	}
 
 	// Test GetPosition()
@@ -172,15 +167,15 @@ func TestAudioVisualizerWidget_Unix_GetMethods(t *testing.T) {
 	}
 }
 
-func TestGetSharedAudioCapture_Unix(t *testing.T) {
-	// On Unix, GetSharedAudioCapture should return an error
+func TestGetSharedAudioCapture_Stub(t *testing.T) {
+	// On unsupported platforms, GetSharedAudioCapture should return an error
 	capture, err := GetSharedAudioCapture()
 	if err == nil {
-		t.Error("GetSharedAudioCapture() on Unix should return error, got nil")
+		t.Error("GetSharedAudioCapture() should return error on unsupported platform, got nil")
 	}
 
 	if capture != nil {
-		t.Error("GetSharedAudioCapture() on Unix should return nil capture, got non-nil")
+		t.Error("GetSharedAudioCapture() should return nil capture on unsupported platform, got non-nil")
 	}
 
 	// Error should mention platform limitation
@@ -189,10 +184,10 @@ func TestGetSharedAudioCapture_Unix(t *testing.T) {
 	}
 }
 
-func TestAudioVisualizerWidget_Unix_BorderRendering(t *testing.T) {
+func TestAudioVisualizerWidget_Stub_BorderRendering(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
-		ID:      "test_unix_border",
+		ID:      "test_stub_border",
 		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
 			X: 0,
@@ -212,10 +207,10 @@ func TestAudioVisualizerWidget_Unix_BorderRendering(t *testing.T) {
 		t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
 	}
 
-	// Render should return error but still provide image
+	// Render should succeed (stub renders via ErrorWidget)
 	img, err := widget.Render()
-	if err == nil {
-		t.Error("Render() should return error on Unix")
+	if err != nil {
+		t.Errorf("Render() error = %v (stub should render without error)", err)
 	}
 
 	if img == nil {
