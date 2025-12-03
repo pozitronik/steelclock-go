@@ -13,6 +13,7 @@
       "update_interval": 0.033,
       "matrix": {
         "charset": "katakana",
+        "font_size": "auto",
         "density": 0.5,
         "min_speed": 0.5,
         "max_speed": 2.5,

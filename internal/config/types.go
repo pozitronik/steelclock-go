@@ -401,4 +401,6 @@ type MatrixConfig struct {
 	TrailFade float64 `json:"trail_fade,omitempty"`
 	// CharChangeRate: probability of character changing per frame (default: 0.02)
 	CharChangeRate float64 `json:"char_change_rate,omitempty"`
+	// FontSize: "small" (3x5), "large" (5x7), or "auto" (based on display height, default)
+	FontSize string `json:"font_size,omitempty"`
 }

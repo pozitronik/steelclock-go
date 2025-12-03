@@ -936,6 +936,12 @@
                     "minimum": 0,
                     "maximum": 1,
                     "default": 0.02
+                  },
+                  "font_size": {
+                    "type": "string",
+                    "description": "Font size: 'small' (3x5 pixels), 'large' (5x7 pixels), or 'auto' (based on display height)",
+                    "enum": ["auto", "small", "large"],
+                    "default": "auto"
                   }
                 }
               }

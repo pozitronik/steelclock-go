@@ -783,6 +783,7 @@ Displays the classic "Matrix digital rain" effect with falling characters.
 | Property           | Type   | Range   | Default | Description                              |
 |--------------------|--------|---------|---------|------------------------------------------|
 | `charset`          | string | -       | "ascii" | Character set to use                     |
+| `font_size`        | string | -       | "auto"  | Font: "small" (3x5), "large" (5x7), "auto" |
 | `density`          | number | 0.0-1.0 | 0.4     | Column density (probability of active)   |
 | `min_speed`        | number | 0.1+    | 0.5     | Minimum fall speed (pixels/frame)        |
 | `max_speed`        | number | 0.1+    | 2.0     | Maximum fall speed (pixels/frame)        |
@@ -797,7 +798,8 @@ Displays the classic "Matrix digital rain" effect with falling characters.
 - Use low `update_interval` (0.033 = 30fps) for smooth animation
 - Higher `density` = more columns active simultaneously
 - Lower `trail_fade` = shorter visible trails
-- `katakana` charset requires font support (falls back to ASCII if unavailable)
+- Use `font_size: "small"` for denser rain effect with more columns
+- Use `font_size: "large"` for more readable characters
 
 ## Examples
 

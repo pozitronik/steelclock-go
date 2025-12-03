@@ -126,15 +126,30 @@ func NewMatrixWidget(cfg config.WidgetConfig) (*MatrixWidget, error) {
 		charset = matrixASCII
 	}
 
-	// Use 3x5 font for dense effect, 5x7 for larger displays
+	// Determine font size: "small" (3x5), "large" (5x7), or "auto" (default)
+	fontSizeOption := "auto"
+	if cfg.Matrix != nil && cfg.Matrix.FontSize != "" {
+		fontSizeOption = cfg.Matrix.FontSize
+	}
+
 	glyphSet := glyphs.Font3x5
 	charWidth := 4  // 3 + 1 spacing
 	charHeight := 6 // 5 + 1 spacing
 
-	if pos.H >= 30 {
+	switch fontSizeOption {
+	case "small":
+		// Use 3x5 font (already set as default)
+	case "large":
 		glyphSet = glyphs.Font5x7
 		charWidth = 6  // 5 + 1 spacing
 		charHeight = 8 // 7 + 1 spacing
+	default: // "auto" or unrecognized
+		// Auto-select based on display height
+		if pos.H >= 30 {
+			glyphSet = glyphs.Font5x7
+			charWidth = 6
+			charHeight = 8
+		}
 	}
 
 	// Calculate number of columns
