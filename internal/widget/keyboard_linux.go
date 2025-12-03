@@ -3,28 +3,40 @@
 package widget
 
 import (
-	"fmt"
 	"image"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-// KeyboardWidget stub for Linux
+// KeyboardWidget stub for Linux - displays error via ErrorWidget
 type KeyboardWidget struct {
 	*BaseWidget
+	errorWidget *ErrorWidget
 }
 
-// NewKeyboardWidget is not supported on Linux
+// NewKeyboardWidget creates a stub widget that displays unsupported message
 func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
-	return nil, fmt.Errorf("keyboard widget is not supported on Linux")
+	base := NewBaseWidget(cfg)
+	pos := base.GetPosition()
+
+	return &KeyboardWidget{
+		BaseWidget:  base,
+		errorWidget: NewErrorWidget(pos.W, pos.H, "UNSUPPORTED"),
+	}, nil
 }
 
-// Update stub
+// Update delegates to error widget
 func (w *KeyboardWidget) Update() error {
+	if w.errorWidget != nil {
+		return w.errorWidget.Update()
+	}
 	return nil
 }
 
-// Render stub
+// Render delegates to error widget
 func (w *KeyboardWidget) Render() (image.Image, error) {
-	return nil, fmt.Errorf("keyboard widget is not supported on Linux")
+	if w.errorWidget != nil {
+		return w.errorWidget.Render()
+	}
+	return nil, nil
 }
