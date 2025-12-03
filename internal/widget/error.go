@@ -70,49 +70,107 @@ func (w *ErrorWidget) Render() (image.Image, error) {
 
 	c := color.Gray{Y: 255} // White foreground for error display
 
-	// Select icon size based on display height
-	var iconSet *glyphs.GlyphSet
-	if pos.H >= 24 {
-		iconSet = glyphs.CommonIcons24x24
-	} else if pos.H >= 16 {
-		iconSet = glyphs.CommonIcons16x16
-	} else {
-		iconSet = glyphs.CommonIcons12x12
+	// Try different layout combinations from largest to smallest
+	// Each combination: (iconSet, font, margin)
+	type layoutOption struct {
+		iconSet *glyphs.GlyphSet
+		font    *glyphs.GlyphSet
+		margin  int
 	}
 
-	warningIcon := glyphs.GetIcon(iconSet, "warning")
-	if warningIcon == nil {
-		// Fallback: just draw centered text
-		textWidth := glyphs.MeasureText(w.message, glyphs.Font5x7)
-		textX := (pos.W - textWidth) / 2
-		if textX < 0 {
-			textX = 0
+	options := []layoutOption{
+		{glyphs.CommonIcons24x24, glyphs.Font5x7, 3},
+		{glyphs.CommonIcons16x16, glyphs.Font5x7, 3},
+		{glyphs.CommonIcons12x12, glyphs.Font5x7, 2},
+		{glyphs.CommonIcons12x12, glyphs.Font3x5, 2},
+		{nil, glyphs.Font5x7, 2}, // No icons, 5x7 font only
+		{nil, glyphs.Font3x5, 1}, // No icons, 3x5 font only
+	}
+
+	for _, opt := range options {
+		if w.tryRenderLayout(img, pos.W, pos.H, opt.iconSet, opt.font, opt.margin, c) {
+			return img, nil
 		}
-		glyphs.DrawText(img, w.message, textX, pos.H/2-3, glyphs.Font5x7, c)
-		return img, nil
 	}
 
-	// Left warning icon
-	margin := 5
-	leftX := margin
-	centerY := pos.H / 2
-	glyphs.DrawGlyph(img, warningIcon, leftX, centerY-warningIcon.Height/2, c)
-
-	// Right warning icon
-	rightX := pos.W - margin - warningIcon.Width
-	glyphs.DrawGlyph(img, warningIcon, rightX, centerY-warningIcon.Height/2, c)
-
-	// Draw message text centered between icons
-	availableX := leftX + warningIcon.Width + margin
-	availableW := rightX - availableX - margin
-
-	textWidth := glyphs.MeasureText(w.message, glyphs.Font5x7)
-	textX := availableX + (availableW-textWidth)/2
-	if textX < availableX {
-		textX = availableX
-	}
-
-	glyphs.DrawText(img, w.message, textX, centerY-3, glyphs.Font5x7, c)
+	// Ultimate fallback: just draw a centered warning icon (smallest available)
+	w.renderIconOnly(img, pos.W, pos.H, c)
 
 	return img, nil
+}
+
+// tryRenderLayout attempts to render with the given layout options
+// Returns true if the layout fits, false otherwise
+func (w *ErrorWidget) tryRenderLayout(img *image.Gray, width, height int, iconSet, font *glyphs.GlyphSet, margin int, c color.Gray) bool {
+	textWidth := glyphs.MeasureText(w.message, font)
+	fontHeight := font.GlyphHeight
+	centerY := height / 2
+
+	if iconSet == nil {
+		// Text only mode
+		// Check if text fits
+		if textWidth > width-margin*2 || fontHeight > height {
+			return false
+		}
+
+		textX := (width - textWidth) / 2
+		textY := centerY - fontHeight/2
+		glyphs.DrawText(img, w.message, textX, textY, font, c)
+		return true
+	}
+
+	// Icons + text mode
+	icon := glyphs.GetIcon(iconSet, "warning")
+	if icon == nil {
+		return false
+	}
+
+	// Check if icons fit vertically
+	if icon.Height > height {
+		return false
+	}
+
+	// Calculate total width needed: margin + icon + margin + text + margin + icon + margin
+	totalWidth := margin + icon.Width + margin + textWidth + margin + icon.Width + margin
+	if totalWidth > width {
+		return false
+	}
+
+	// Everything fits - render it
+	leftX := margin
+	rightX := width - margin - icon.Width
+	iconY := centerY - icon.Height/2
+
+	// Draw icons
+	glyphs.DrawGlyph(img, icon, leftX, iconY, c)
+	glyphs.DrawGlyph(img, icon, rightX, iconY, c)
+
+	// Draw text centered between icons
+	textAreaStart := leftX + icon.Width + margin
+	textAreaWidth := rightX - textAreaStart - margin
+	textX := textAreaStart + (textAreaWidth-textWidth)/2
+	textY := centerY - fontHeight/2
+
+	glyphs.DrawText(img, w.message, textX, textY, font, c)
+	return true
+}
+
+// renderIconOnly draws just a warning icon centered (ultimate fallback)
+func (w *ErrorWidget) renderIconOnly(img *image.Gray, width, height int, c color.Gray) {
+	// Try icons from smallest to largest that fit
+	iconSets := []*glyphs.GlyphSet{
+		glyphs.CommonIcons12x12,
+		glyphs.CommonIcons16x16,
+		glyphs.CommonIcons24x24,
+	}
+
+	for _, iconSet := range iconSets {
+		icon := glyphs.GetIcon(iconSet, "warning")
+		if icon != nil && icon.Width <= width && icon.Height <= height {
+			x := (width - icon.Width) / 2
+			y := (height - icon.Height) / 2
+			glyphs.DrawGlyph(img, icon, x, y, c)
+			return
+		}
+	}
 }
