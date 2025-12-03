@@ -9,15 +9,15 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-// AudioCaptureWCA stub for non-Windows platforms
+// AudioCaptureWCA stub for unsupported platforms
 type AudioCaptureWCA struct{}
 
-// GetSharedAudioCapture returns an error on Unix platforms
+// GetSharedAudioCapture returns an error on unsupported platforms
 func GetSharedAudioCapture() (*AudioCaptureWCA, error) {
-	return nil, fmt.Errorf("audio capture is not supported on this platform (Unix/macOS)")
+	return nil, fmt.Errorf("audio capture is not supported on this platform")
 }
 
-// AudioVisualizerWidget stub for non-Windows/non-Linux platforms
+// AudioVisualizerWidget stub for unsupported platforms (not Windows or Linux)
 type AudioVisualizerWidget struct {
 	*BaseWidget
 	errorWidget *ErrorWidget
