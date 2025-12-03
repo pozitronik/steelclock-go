@@ -74,6 +74,12 @@ type AudioVisualizerWidget struct {
 	// Display settings
 	displayMode string
 
+	// Error state management
+	errorWidget    *ErrorWidget // Error widget proxy (nil = normal operation)
+	errorCount     int          // Consecutive errors
+	errorThreshold int          // Errors before entering error state
+	startupTime    time.Time    // For startup grace period
+
 	// Spectrum settings
 	frequencyScale         string
 	frequencyCompensation  bool
@@ -272,6 +278,19 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 		audioData:              make([]float32, 0, 4096),
 		audioDataLeft:          make([]float32, 0, 4096),
 		audioDataRight:         make([]float32, 0, 4096),
+		errorThreshold:         30, // ~1 second at 30fps
+		startupTime:            time.Now(),
+	}
+
+	// Enter error state immediately if audio capture failed to initialize
+	if audioCapture == nil || !audioCapture.IsRunning() {
+		// Only show error after startup grace period (audio tools may take time to start)
+		// For immediate failures, we'll detect in Update()
+		if err != nil {
+			pos := w.GetPosition()
+			w.errorWidget = NewErrorWidget(pos.W, pos.H, "NO AUDIO")
+			log.Printf("[AUDIO-VIS-LINUX] Entering error state: audio capture unavailable")
+		}
 	}
 
 	return w, nil
@@ -282,12 +301,29 @@ func (w *AudioVisualizerWidget) Update() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	// Delegate to error widget if in error state
+	if w.errorWidget != nil {
+		return w.errorWidget.Update()
+	}
+
 	w.lastUpdateTime = time.Now()
 
-	// Get real audio samples from capture
+	// Check audio capture health
 	if w.audioCapture == nil || !w.audioCapture.IsRunning() {
+		// Grace period: don't count errors during startup (audio tools may take time)
+		if time.Since(w.startupTime) > 3*time.Second {
+			w.errorCount++
+			if w.errorCount >= w.errorThreshold {
+				pos := w.GetPosition()
+				w.errorWidget = NewErrorWidget(pos.W, pos.H, "NO AUDIO")
+				log.Printf("[AUDIO-VIS-LINUX] Entering error state after %d consecutive failures", w.errorCount)
+			}
+		}
 		return nil
 	}
+
+	// Reset error count on successful capture access
+	w.errorCount = 0
 
 	left, right := w.audioCapture.GetRecentSamples(4096)
 	if len(left) == 0 {
@@ -505,6 +541,11 @@ func (w *AudioVisualizerWidget) mapFrequenciesLinear(magnitudes []float64, barCo
 func (w *AudioVisualizerWidget) Render() (image.Image, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	// Delegate to error widget if in error state
+	if w.errorWidget != nil {
+		return w.errorWidget.Render()
+	}
 
 	pos := w.GetPosition()
 	style := w.GetStyle()
