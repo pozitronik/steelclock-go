@@ -91,6 +91,10 @@ type VolumeMeterWidget struct {
 	lastSuccessTime   time.Time
 	maxCallDuration   time.Duration
 	consecutiveErrors int
+	errorThreshold    int // Threshold before entering error state
+
+	// Error state
+	errorWidget *ErrorWidget // Error widget proxy (nil = normal operation)
 
 	// Platform-specific meter reader
 	reader meterReader
@@ -262,6 +266,7 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 		autoHideSilenceTime: autoHideSilenceTime,
 		lastSuccessTime:     time.Now(),
 		lastUpdateTime:      time.Now(),
+		errorThreshold:      30, // ~3 seconds at 100ms poll interval
 		face:                fontFace,
 		stopChan:            make(chan struct{}),
 	}
@@ -331,6 +336,13 @@ func (w *VolumeMeterWidget) pollMeterBackground() {
 				log.Printf("[VOLUME-METER] Device change notification received, reinitializing...")
 				if err := reinitReader.Reinitialize(); err != nil {
 					log.Printf("[VOLUME-METER] Failed to reinitialize after device change: %v", err)
+				} else {
+					// Reset error state on successful reinit
+					w.mu.Lock()
+					w.errorWidget = nil
+					w.consecutiveErrors = 0
+					w.mu.Unlock()
+					log.Printf("[VOLUME-METER] Recovered from error state after device change")
 				}
 			}
 
@@ -379,6 +391,13 @@ func (w *VolumeMeterWidget) updateMeter() {
 		}
 		w.failedCalls++
 		w.consecutiveErrors++
+
+		// Enter error state if threshold reached
+		if w.consecutiveErrors >= w.errorThreshold && w.errorWidget == nil {
+			pos := w.GetPosition()
+			w.errorWidget = NewErrorWidget(pos.W, pos.H, "METER ERROR")
+			log.Printf("[VOLUME-METER] Entered error state after %d consecutive errors", w.consecutiveErrors)
+		}
 		return
 	}
 
@@ -453,6 +472,14 @@ func (w *VolumeMeterWidget) updateMeter() {
 //
 //nolint:gocyclo // Multiple display modes require branching logic
 func (w *VolumeMeterWidget) Render() (image.Image, error) {
+	// Delegate to error widget if in error state
+	w.mu.RLock()
+	errorWidget := w.errorWidget
+	w.mu.RUnlock()
+	if errorWidget != nil {
+		return errorWidget.Render()
+	}
+
 	// Check auto-hide
 	if w.ShouldHide() {
 		return nil, nil
@@ -962,7 +989,14 @@ func (w *VolumeMeterWidget) drawGaugePeakHoldMark(img *image.Gray, pos config.Po
 // Update is called periodically but just returns immediately
 // All meter polling happens in the background goroutine
 func (w *VolumeMeterWidget) Update() error {
-	// No-op: background goroutine handles all polling
+	w.mu.RLock()
+	errorWidget := w.errorWidget
+	w.mu.RUnlock()
+
+	// Delegate to error widget if in error state
+	if errorWidget != nil {
+		return errorWidget.Update()
+	}
 	return nil
 }
 

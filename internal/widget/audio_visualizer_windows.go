@@ -18,7 +18,6 @@ import (
 	"github.com/mjibson/go-dsp/fft"
 	"github.com/moutend/go-wca/pkg/wca"
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
-	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
@@ -83,12 +82,10 @@ type AudioVisualizerWidget struct {
 	lastUpdateTime      time.Time
 
 	// Error state tracking
-	errorState      bool      // Widget is in error state (audio failed)
-	errorFlashState bool      // Current flash state for error display
-	lastFlashTime   time.Time // Last time flash state changed
-	errorCount      int       // Consecutive error count
-	errorThreshold  int       // Threshold before entering error state
-	startupTime     time.Time // Widget creation time for grace period
+	errorWidget    *ErrorWidget // Error widget proxy (nil = normal operation)
+	errorCount     int          // Consecutive error count
+	errorThreshold int          // Threshold before entering error state
+	startupTime    time.Time    // Widget creation time for grace period
 
 	// Device change notification
 	deviceNotifyChan <-chan struct{} // Receives signal on audio device change
@@ -304,7 +301,7 @@ func (w *AudioVisualizerWidget) Update() error {
 			}
 			w.audioCapture = newCapture
 			// Reset error state if we were in error
-			w.errorState = false
+			w.errorWidget = nil
 			w.errorCount = 0
 			w.startupTime = time.Now() // Reset startup grace period
 			log.Printf("[AUDIO-VIS] Reinitialized after device change")
@@ -313,14 +310,9 @@ func (w *AudioVisualizerWidget) Update() error {
 		}
 	}
 
-	// If in error state, just update flash timer and return
-	if w.errorState {
-		now := time.Now()
-		if now.Sub(w.lastFlashTime) >= 500*time.Millisecond {
-			w.errorFlashState = !w.errorFlashState
-			w.lastFlashTime = now
-		}
-		return nil
+	// If in error state, delegate to error widget
+	if w.errorWidget != nil {
+		return w.errorWidget.Update()
 	}
 
 	// Capture audio samples (both channels)
@@ -334,10 +326,9 @@ func (w *AudioVisualizerWidget) Update() error {
 
 		w.errorCount++
 		if w.errorCount >= w.errorThreshold {
-			// Enter error state
-			w.errorState = true
-			w.errorFlashState = true
-			w.lastFlashTime = time.Now()
+			// Enter error state - create error widget proxy
+			pos := w.GetPosition()
+			w.errorWidget = NewErrorWidget(pos.W, pos.H, "AUDIO ERROR")
 			// Mark singleton as uninitialized so config reload can retry
 			w.audioCapture.initialized = false
 			log.Printf("[AUDIO-VIS] Audio capture failed after %d consecutive errors: %v", w.errorCount, err)
@@ -746,19 +737,15 @@ func (w *AudioVisualizerWidget) Render() (image.Image, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	// Delegate to error widget if in error state
+	if w.errorWidget != nil {
+		return w.errorWidget.Render()
+	}
+
 	pos := w.GetPosition()
 	style := w.GetStyle()
 
 	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
-
-	// Render error display if in error state
-	if w.errorState {
-		w.renderErrorDisplay(img)
-		if style.Border >= 0 {
-			bitmap.DrawBorder(img, uint8(style.Border))
-		}
-		return img, nil
-	}
 
 	if w.displayMode == "spectrum" {
 		w.renderSpectrum(img)
@@ -771,56 +758,6 @@ func (w *AudioVisualizerWidget) Render() (image.Image, error) {
 	}
 
 	return img, nil
-}
-
-// renderErrorDisplay draws error message with warning icons
-func (w *AudioVisualizerWidget) renderErrorDisplay(img *image.Gray) {
-	// Only draw if flash state is on
-	if !w.errorFlashState {
-		return
-	}
-
-	pos := w.GetPosition()
-	c := color.Gray{Y: 255} // White foreground
-
-	// Select icon size based on display height
-	var iconSet *glyphs.GlyphSet
-	if pos.H >= 24 {
-		iconSet = glyphs.CommonIcons24x24
-	} else if pos.H >= 16 {
-		iconSet = glyphs.CommonIcons16x16
-	} else {
-		iconSet = glyphs.CommonIcons12x12
-	}
-
-	warningIcon := glyphs.GetIcon(iconSet, "warning")
-	if warningIcon == nil {
-		// Fallback: just draw text if icon not found
-		glyphs.DrawText(img, "AUDIO ERROR", pos.W/2-30, pos.H/2-3, glyphs.Font5x7, c)
-		return
-	}
-
-	// Left triangle
-	leftX := 2
-	centerY := pos.H / 2
-	glyphs.DrawGlyph(img, warningIcon, leftX, centerY-warningIcon.Height/2, c)
-
-	// Right triangle
-	rightX := pos.W - 2 - warningIcon.Width
-	glyphs.DrawGlyph(img, warningIcon, rightX, centerY-warningIcon.Height/2, c)
-
-	// Draw message text centered between triangles
-	message := "AUDIO ERROR"
-	availableX := leftX + warningIcon.Width + 2
-	availableW := rightX - availableX - 2
-
-	textWidth := glyphs.MeasureText(message, glyphs.Font5x7)
-	textX := availableX + (availableW-textWidth)/2
-	if textX < availableX {
-		textX = availableX
-	}
-
-	glyphs.DrawText(img, message, textX, centerY-3, glyphs.Font5x7, c)
 }
 
 // renderSpectrum draws spectrum analyzer bars

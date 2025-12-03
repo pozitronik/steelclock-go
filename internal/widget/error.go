@@ -70,7 +70,6 @@ func (w *ErrorWidget) Render() (image.Image, error) {
 
 	c := color.Gray{Y: 255} // White foreground for error display
 
-	// Draw warning triangles on left and right using glyph system
 	// Select icon size based on display height
 	var iconSet *glyphs.GlyphSet
 	if pos.H >= 24 {
@@ -83,32 +82,36 @@ func (w *ErrorWidget) Render() (image.Image, error) {
 
 	warningIcon := glyphs.GetIcon(iconSet, "warning")
 	if warningIcon == nil {
-		return img, nil // Fail gracefully if icon not found
+		// Fallback: just draw centered text
+		textWidth := glyphs.MeasureText(w.message, glyphs.Font5x7)
+		textX := (pos.W - textWidth) / 2
+		if textX < 0 {
+			textX = 0
+		}
+		glyphs.DrawText(img, w.message, textX, pos.H/2-3, glyphs.Font5x7, c)
+		return img, nil
 	}
 
-	// Left triangle
-	leftX := 5
+	// Left warning icon
+	margin := 5
+	leftX := margin
 	centerY := pos.H / 2
 	glyphs.DrawGlyph(img, warningIcon, leftX, centerY-warningIcon.Height/2, c)
 
-	// Right triangle
-	rightX := pos.W - 5 - warningIcon.Width
+	// Right warning icon
+	rightX := pos.W - margin - warningIcon.Width
 	glyphs.DrawGlyph(img, warningIcon, rightX, centerY-warningIcon.Height/2, c)
 
-	// Draw message text centered between triangles
-	availableX := leftX + warningIcon.Width + 5
-	availableW := (rightX) - (leftX + warningIcon.Width + 5)
+	// Draw message text centered between icons
+	availableX := leftX + warningIcon.Width + margin
+	availableW := rightX - availableX - margin
 
-	// Calculate text width using glyph system
 	textWidth := glyphs.MeasureText(w.message, glyphs.Font5x7)
-
-	// Center text in available space
 	textX := availableX + (availableW-textWidth)/2
 	if textX < availableX {
-		textX = availableX // Don't go past left boundary
+		textX = availableX
 	}
 
-	// Draw text using 5×7 pixel font
 	glyphs.DrawText(img, w.message, textX, centerY-3, glyphs.Font5x7, c)
 
 	return img, nil

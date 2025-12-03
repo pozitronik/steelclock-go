@@ -60,6 +60,10 @@ type VolumeWidget struct {
 	failedCalls       int64
 	lastSuccessTime   time.Time
 	consecutiveErrors int
+	errorThreshold    int // Threshold before entering error state
+
+	// Error state
+	errorWidget *ErrorWidget // Error widget proxy (nil = normal operation)
 
 	// Platform-specific volume reader (managed by polling goroutine)
 	reader volumeReader
@@ -103,6 +107,7 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		padding:          padding,
 		pollInterval:     pollInterval,
 		lastSuccessTime:  time.Now(), // Initialize to prevent false "stuck" detection
+		errorThreshold:   30,         // ~3 seconds at 100ms poll interval
 		face:             fontFace,
 		stopChan:         make(chan struct{}),
 	}
@@ -173,6 +178,13 @@ func (w *VolumeWidget) pollVolumeBackground() {
 				log.Printf("[VOLUME] Device change notification received, reinitializing...")
 				if err := reinitReader.Reinitialize(); err != nil {
 					log.Printf("[VOLUME] Failed to reinitialize after device change: %v", err)
+				} else {
+					// Reset error state on successful reinit
+					w.mu.Lock()
+					w.errorWidget = nil
+					w.consecutiveErrors = 0
+					w.mu.Unlock()
+					log.Printf("[VOLUME] Recovered from error state after device change")
 				}
 			}
 
@@ -210,6 +222,13 @@ func (w *VolumeWidget) pollOnce() {
 		}
 		w.failedCalls++
 		w.consecutiveErrors++
+
+		// Enter error state if threshold reached
+		if w.consecutiveErrors >= w.errorThreshold && w.errorWidget == nil {
+			pos := w.GetPosition()
+			w.errorWidget = NewErrorWidget(pos.W, pos.H, "VOLUME ERROR")
+			log.Printf("[VOLUME] Entered error state after %d consecutive errors", w.consecutiveErrors)
+		}
 		return
 	}
 
@@ -232,7 +251,14 @@ func (w *VolumeWidget) pollOnce() {
 // Update is called periodically but just returns immediately
 // All volume polling happens in the background goroutine
 func (w *VolumeWidget) Update() error {
-	// No-op: background goroutine handles all polling
+	w.mu.RLock()
+	errorWidget := w.errorWidget
+	w.mu.RUnlock()
+
+	// Delegate to error widget if in error state
+	if errorWidget != nil {
+		return errorWidget.Update()
+	}
 	return nil
 }
 
@@ -246,6 +272,11 @@ func (w *VolumeWidget) Stop() {
 func (w *VolumeWidget) Render() (image.Image, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
+
+	// Delegate to error widget if in error state
+	if w.errorWidget != nil {
+		return w.errorWidget.Render()
+	}
 
 	pos := w.GetPosition()
 	style := w.GetStyle()
