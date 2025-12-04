@@ -256,7 +256,7 @@ func (w *MatrixWidget) Update() error {
 			col.chars[idx] = w.randomChar()
 		}
 
-		// Check if column has fallen off screen
+		// Check if column has fallen off the screen
 		if int(col.y)-col.length*w.charHeight > pos.H {
 			col.active = false
 			col.spawnDelay = w.rng.Intn(40) + 10
@@ -291,7 +291,7 @@ func (w *MatrixWidget) Render() (image.Image, error) {
 		for i := 0; i < col.length; i++ {
 			charY := int(col.y) - i*w.charHeight
 
-			// Skip if off screen
+			// Skip if off the screen
 			if charY < -w.charHeight || charY >= pos.H {
 				continue
 			}
