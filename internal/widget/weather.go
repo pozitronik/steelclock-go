@@ -1093,7 +1093,7 @@ func (w *WeatherWidget) getIconSize(t *Token) int {
 	if t.Param != "" {
 		// Parse size from parameter
 		var size int
-		fmt.Sscanf(t.Param, "%d", &size)
+		_, _ = fmt.Sscanf(t.Param, "%d", &size)
 		if size > 0 {
 			return size
 		}
@@ -1279,7 +1279,7 @@ func (w *WeatherWidget) getForecastText(t *Token, forecast *ForecastData, unit s
 	field := parts[2]     // "temp", "name", etc.
 
 	var offset int
-	fmt.Sscanf(offsetStr, "+%d", &offset)
+	_, _ = fmt.Sscanf(offsetStr, "+%d", &offset)
 
 	var point *ForecastPoint
 	if timeType == "day" && offset > 0 && offset <= len(forecast.Daily) {
@@ -1325,7 +1325,7 @@ func (w *WeatherWidget) getForecastIconName(t *Token, forecast *ForecastData) st
 		parts := strings.Split(name, ":")
 		if len(parts) >= 2 {
 			var offset int
-			fmt.Sscanf(parts[1], "+%d", &offset)
+			_, _ = fmt.Sscanf(parts[1], "+%d", &offset)
 			if offset > 0 && offset <= len(forecast.Daily) {
 				return w.getIconName(forecast.Daily[offset-1].Condition)
 			}
@@ -1334,7 +1334,7 @@ func (w *WeatherWidget) getForecastIconName(t *Token, forecast *ForecastData) st
 		parts := strings.Split(name, ":")
 		if len(parts) >= 2 {
 			var offset int
-			fmt.Sscanf(parts[1], "+%d", &offset)
+			_, _ = fmt.Sscanf(parts[1], "+%d", &offset)
 			targetTime := time.Now().Add(time.Duration(offset) * time.Hour)
 			for _, p := range forecast.Hourly {
 				if p.Time.After(targetTime.Add(-90 * time.Minute)) {
@@ -1680,7 +1680,7 @@ func (w *WeatherWidget) fetchOpenWeatherMap(needForecast bool) (*WeatherData, *F
 	if err != nil {
 		return nil, nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -1760,7 +1760,7 @@ func (w *WeatherWidget) fetchOpenWeatherMapForecast() (*ForecastData, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("forecast API error: status %d", resp.StatusCode)
@@ -1849,7 +1849,7 @@ func (w *WeatherWidget) fetchOpenWeatherMapAQI() (*AirQualityData, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("AQI API error: status %d", resp.StatusCode)
@@ -1913,7 +1913,7 @@ func (w *WeatherWidget) fetchOpenMeteo(needForecast bool) (*WeatherData, *Foreca
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -2037,7 +2037,7 @@ func (w *WeatherWidget) fetchOpenMeteoAQI() (*AirQualityData, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("AQI API error: status %d", resp.StatusCode)
@@ -2077,7 +2077,7 @@ func (w *WeatherWidget) fetchOpenMeteoUV() (*UVIndexData, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("UV API error: status %d", resp.StatusCode)
