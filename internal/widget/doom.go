@@ -14,6 +14,13 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
+// Package-level state to track if DOOM has been run in this process.
+// The gore library uses global state and cannot be safely restarted.
+var (
+	doomHasRun   bool
+	doomHasRunMu sync.Mutex
+)
+
 // DoomWidget displays DOOM running on the device
 type DoomWidget struct {
 	*BaseWidget
@@ -147,6 +154,20 @@ func NewDoomWidget(cfg config.WidgetConfig) (*DoomWidget, error) {
 // runDoom runs the DOOM engine in a background goroutine
 func (w *DoomWidget) runDoom() {
 	defer w.wg.Done()
+
+	// Check if DOOM has already been run in this process.
+	// The gore library uses global state and cannot be safely restarted.
+	doomHasRunMu.Lock()
+	if doomHasRun {
+		doomHasRunMu.Unlock()
+		log.Printf("[DOOM] Cannot restart DOOM - engine has global state. Restart application to play DOOM again.")
+		w.mu.Lock()
+		w.downloadError = fmt.Errorf("restart app to play DOOM")
+		w.mu.Unlock()
+		return
+	}
+	doomHasRun = true
+	doomHasRunMu.Unlock()
 
 	// Catch any panics
 	defer func() {
@@ -333,11 +354,14 @@ func (w *DoomWidget) Render() (image.Image, error) {
 	pos := w.GetPosition()
 	img := image.NewGray(image.Rect(0, 0, pos.W, pos.H))
 
-	// Show download error if any
+	// Show error if any
 	if w.downloadError != nil {
-		text := "Download failed!"
+		text := w.downloadError.Error()
 		textWidth := glyphs.MeasureText(text, glyphs.Font3x5)
 		textX := (pos.W - textWidth) / 2
+		if textX < 0 {
+			textX = 0
+		}
 		glyphs.DrawText(img, text, textX, pos.H/2-4, glyphs.Font3x5, color.Gray{Y: 255})
 		return img, nil
 	}
