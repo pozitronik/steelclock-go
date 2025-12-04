@@ -499,6 +499,8 @@ func TestDeviceNotifierStopWithoutStart(t *testing.T) {
 }
 
 // TestEDataFlowConstants verifies the EDataFlow constants match Windows API
+//
+//goland:noinspection GoBoolExpressions
 func TestEDataFlowConstants(t *testing.T) {
 	// These values are defined by Windows and must not change
 	if eRender != 0 {
@@ -513,6 +515,8 @@ func TestEDataFlowConstants(t *testing.T) {
 }
 
 // TestERoleConstants verifies the ERole constants match Windows API
+//
+//goland:noinspection GoBoolExpressions
 func TestERoleConstants(t *testing.T) {
 	// These values are defined by Windows and must not change
 	if eConsole != 0 {
