@@ -1123,9 +1123,14 @@ func (w *ClockWidget) drawSegmentDigit(img *image.Gray, x, y, width, height int,
 	pattern := segmentPatterns[digit]
 	thickness := w.segmentThickness
 
+	// Calculate middle Y position first to properly center the middle segment
+	// Using (height-thickness)/2 instead of height/2-thickness/2 avoids integer truncation asymmetry
+	middleY := y + (height-thickness)/2
+
 	// Calculate segment lengths
-	// Vertical segments span between horizontal segments
-	vSegLen := (height - 3*thickness) / 2
+	// Upper and lower vertical segments may have different lengths due to integer division
+	upperVSegLen := middleY - y - thickness                        // from bottom of segment A to top of segment G
+	lowerVSegLen := height - thickness - (middleY - y) - thickness // from bottom of segment G to top of segment D
 	// Horizontal segments span between vertical segments (with slight overlap for corners)
 	hSegLen := width - 2*thickness + 2 // +2 for 1px overlap on each side
 
@@ -1151,15 +1156,15 @@ func (w *ClockWidget) drawSegmentDigit(img *image.Gray, x, y, width, height int,
 
 	// Draw horizontal segments (with 1px overlap into vertical segment area)
 	hStartX := x + thickness - 1
-	w.drawHSegment(img, hStartX, y, hSegLen, thickness, segA, onColor, offColor)                      // a (top)
-	w.drawHSegment(img, hStartX, y+height/2-thickness/2, hSegLen, thickness, segG, onColor, offColor) // g (middle)
-	w.drawHSegment(img, hStartX, y+height-thickness, hSegLen, thickness, segD, onColor, offColor)     // d (bottom)
+	w.drawHSegment(img, hStartX, y, hSegLen, thickness, segA, onColor, offColor)                  // a (top)
+	w.drawHSegment(img, hStartX, middleY, hSegLen, thickness, segG, onColor, offColor)            // g (middle)
+	w.drawHSegment(img, hStartX, y+height-thickness, hSegLen, thickness, segD, onColor, offColor) // d (bottom)
 
-	// Draw vertical segments
-	w.drawVSegment(img, x+width-thickness, y+thickness, vSegLen, thickness, segB, onColor, offColor)            // b (top-right)
-	w.drawVSegment(img, x+width-thickness, y+height/2+thickness/2, vSegLen, thickness, segC, onColor, offColor) // c (bottom-right)
-	w.drawVSegment(img, x, y+thickness, vSegLen, thickness, segF, onColor, offColor)                            // f (top-left)
-	w.drawVSegment(img, x, y+height/2+thickness/2, vSegLen, thickness, segE, onColor, offColor)                 // e (bottom-left)
+	// Draw vertical segments (upper use upperVSegLen, lower use lowerVSegLen)
+	w.drawVSegment(img, x+width-thickness, y+thickness, upperVSegLen, thickness, segB, onColor, offColor)       // b (top-right)
+	w.drawVSegment(img, x+width-thickness, middleY+thickness, lowerVSegLen, thickness, segC, onColor, offColor) // c (bottom-right)
+	w.drawVSegment(img, x, y+thickness, upperVSegLen, thickness, segF, onColor, offColor)                       // f (top-left)
+	w.drawVSegment(img, x, middleY+thickness, lowerVSegLen, thickness, segE, onColor, offColor)                 // e (bottom-left)
 }
 
 // drawHSegment draws a horizontal segment with the configured style
