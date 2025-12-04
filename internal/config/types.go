@@ -1,5 +1,37 @@
 package config
 
+import "encoding/json"
+
+// StringOrSlice is a type that can unmarshal from either a string or an array of strings.
+// When unmarshaling a single string, it becomes a slice with one element.
+type StringOrSlice []string
+
+// UnmarshalJSON implements json.Unmarshaler for StringOrSlice
+func (s *StringOrSlice) UnmarshalJSON(data []byte) error {
+	// Try to unmarshal as a string first
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		*s = []string{str}
+		return nil
+	}
+
+	// Try to unmarshal as an array of strings
+	var arr []string
+	if err := json.Unmarshal(data, &arr); err != nil {
+		return err
+	}
+	*s = arr
+	return nil
+}
+
+// MarshalJSON implements json.Marshaler for StringOrSlice
+func (s StringOrSlice) MarshalJSON() ([]byte, error) {
+	if len(s) == 1 {
+		return json.Marshal(s[0])
+	}
+	return json.Marshal([]string(s))
+}
+
 // Config represents the complete SteelClock configuration (v2 schema)
 type Config struct {
 	SchemaVersion        int                 `json:"schema_version,omitempty"`
@@ -418,10 +450,27 @@ type WeatherConfig struct {
 	Location *WeatherLocationConfig `json:"location,omitempty"`
 	// Units: "metric" (Celsius, m/s) or "imperial" (Fahrenheit, mph) (default: "metric")
 	Units string `json:"units,omitempty"`
-	// ShowIcon: whether to show weather condition icon (default: true)
-	ShowIcon *bool `json:"show_icon,omitempty"`
-	// IconSize: size of weather icon in pixels (default: 16)
+	// IconSize: size of weather icons in pixels (default: 16)
 	IconSize int `json:"icon_size,omitempty"`
+	// Format: display format string(s) with tokens like {icon}, {temp}, {aqi}, etc.
+	// Can be a single string or an array of strings (for cycling between formats).
+	// Supports newlines (\n) for multi-line layouts.
+	// Default: "{icon} {temp}"
+	Format StringOrSlice `json:"format,omitempty"`
+	// Cycle: format cycling and transition settings
+	Cycle *WeatherCycleConfig `json:"cycle,omitempty"`
+	// Forecast: forecast display settings (hours, days, scroll_speed)
+	Forecast *WeatherForecastConfig `json:"forecast,omitempty"`
+
+	// Deprecated fields for backward compatibility
+	// ShowIcon: deprecated, use Format instead
+	ShowIcon *bool `json:"show_icon,omitempty"`
+	// ForecastHours: deprecated, use Forecast.Hours instead
+	ForecastHours int `json:"forecast_hours,omitempty"`
+	// ForecastDays: deprecated, use Forecast.Days instead
+	ForecastDays int `json:"forecast_days,omitempty"`
+	// ScrollSpeed: deprecated, use Forecast.ScrollSpeed instead
+	ScrollSpeed float64 `json:"scroll_speed,omitempty"`
 }
 
 // WeatherLocationConfig represents weather location settings
@@ -432,4 +481,28 @@ type WeatherLocationConfig struct {
 	Lat float64 `json:"lat,omitempty"`
 	// Lon: longitude for coordinate-based location
 	Lon float64 `json:"lon,omitempty"`
+}
+
+// WeatherForecastConfig represents forecast display settings
+type WeatherForecastConfig struct {
+	// Hours: number of hours for hourly forecast (default: 24, max: 48)
+	Hours int `json:"hours,omitempty"`
+	// Days: number of days for daily forecast (default: 3, max: 7)
+	Days int `json:"days,omitempty"`
+	// ScrollSpeed: pixels per second for {forecast:scroll} (default: 30)
+	ScrollSpeed float64 `json:"scroll_speed,omitempty"`
+}
+
+// WeatherCycleConfig represents format cycling and transition settings
+type WeatherCycleConfig struct {
+	// Interval: seconds between format changes (0 to disable cycling, default: 10)
+	Interval int `json:"interval,omitempty"`
+	// Transition: transition effect type (default: "none")
+	// Values: "none", "push_left", "push_right", "push_up", "push_down",
+	//         "slide_left", "slide_right", "slide_up", "slide_down",
+	//         "dissolve_fade", "dissolve_pixel", "dissolve_dither",
+	//         "box_in", "box_out", "clock_wipe", "random"
+	Transition string `json:"transition,omitempty"`
+	// Speed: transition duration in seconds (default: 0.5)
+	Speed float64 `json:"speed,omitempty"`
 }

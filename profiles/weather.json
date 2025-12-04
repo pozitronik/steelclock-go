@@ -1,7 +1,7 @@
 {
   "$schema": "schema/config.schema.json",
   "config_name": "Weather",
-  "refresh_rate_ms": 1000,
+  "refresh_rate_ms": 100,
   "display": {
     "width": 128,
     "height": 40,
@@ -12,12 +12,11 @@
       "type": "weather",
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": -1, "padding": 0},
-      "mode": "icon",
+      "style": {"background": 0, "border": 255, "padding": 0},
       "text": {
         "font": null,
         "size": 16,
-        "align": {"h": "center", "v": "center"}
+        "align": {"h": "left", "v": "top"}
       },
       "weather": {
         "provider": "open-meteo",
@@ -26,8 +25,26 @@
           "lon": -0.1278
         },
         "units": "metric",
-        "show_icon": true,
-        "icon_size": 16
+        "icon_size": 16,
+        "format": [
+          "{icon}{temp} ({feels})\n{condition}",
+          "{humidity_icon}{humidity}\n{wind_icon}{wind} {wind_dir_icon}{wind_dir}",
+          "{pressure} {visibility}\n{description}",
+          "{aqi_icon} AQI:{aqi}\n{uv_icon} UV:{uv}",
+          "{forecast:graph}",
+          "{forecast:icons}",
+          "{forecast:scroll}"
+        ],
+        "cycle": {
+          "interval": 5,
+          "transition": "random",
+          "speed": 0.5
+        },
+        "forecast": {
+          "hours": 24,
+          "days": 3,
+          "scroll_speed": 30
+        }
       },
       "update_interval": 300
     }

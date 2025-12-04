@@ -781,18 +781,18 @@ Displays the classic "Matrix digital rain" effect with falling characters.
 
 #### Matrix Configuration
 
-| Property           | Type   | Range   | Default | Description                              |
-|--------------------|--------|---------|---------|------------------------------------------|
-| `charset`          | string | -       | "ascii" | Character set to use                     |
+| Property           | Type   | Range   | Default | Description                                |
+|--------------------|--------|---------|---------|--------------------------------------------|
+| `charset`          | string | -       | "ascii" | Character set to use                       |
 | `font_size`        | string | -       | "auto"  | Font: "small" (3x5), "large" (5x7), "auto" |
-| `density`          | number | 0.0-1.0 | 0.4     | Column density (probability of active)   |
-| `min_speed`        | number | 0.1+    | 0.5     | Minimum fall speed (pixels/frame)        |
-| `max_speed`        | number | 0.1+    | 2.0     | Maximum fall speed (pixels/frame)        |
-| `min_length`       | int    | 1+      | 4       | Minimum trail length (characters)        |
-| `max_length`       | int    | 1+      | 15      | Maximum trail length (characters)        |
-| `head_color`       | int    | 0-255   | 255     | Brightness of leading character          |
-| `trail_fade`       | number | 0.0-1.0 | 0.85    | Trail fade factor (lower = faster fade)  |
-| `char_change_rate` | number | 0.0-1.0 | 0.02    | Character change probability per frame   |
+| `density`          | number | 0.0-1.0 | 0.4     | Column density (probability of active)     |
+| `min_speed`        | number | 0.1+    | 0.5     | Minimum fall speed (pixels/frame)          |
+| `max_speed`        | number | 0.1+    | 2.0     | Maximum fall speed (pixels/frame)          |
+| `min_length`       | int    | 1+      | 4       | Minimum trail length (characters)          |
+| `max_length`       | int    | 1+      | 15      | Maximum trail length (characters)          |
+| `head_color`       | int    | 0-255   | 255     | Brightness of leading character            |
+| `trail_fade`       | number | 0.0-1.0 | 0.85    | Trail fade factor (lower = faster fade)    |
+| `char_change_rate` | number | 0.0-1.0 | 0.02    | Character change probability per frame     |
 
 #### Tips
 
@@ -804,50 +804,176 @@ Displays the classic "Matrix digital rain" effect with falling characters.
 
 ### Weather Widget
 
-Displays current weather conditions with temperature and optional weather icon.
+Displays weather information using a flexible format string system with tokens. Supports current weather, forecasts, air quality index (AQI), and UV index.
 
 ```json
 {
   "type": "weather",
   "position": {"x": 0, "y": 0, "w": 128, "h": 40},
   "update_interval": 300,
-  "mode": "icon",
   "weather": {
     "provider": "open-meteo",
     "location": {
       "lat": 51.5074,
       "lon": -0.1278
     },
-    "units": "metric"
+    "units": "metric",
+    "format": "{icon} {temp}"
   }
 }
 ```
 
+#### Format String System
+
+The weather widget uses format strings with tokens to define what to display. Tokens are enclosed in curly braces: `{token_name}`.
+
+**Basic tokens (text):**
+
+| Token          | Description                           | Example Output    |
+|----------------|---------------------------------------|-------------------|
+| `{temp}`       | Current temperature                   | `15C` or `59F`    |
+| `{feels}`      | Feels-like temperature                | `13C`             |
+| `{humidity}`   | Humidity percentage                   | `75%`             |
+| `{wind}`       | Wind speed                            | `12 km/h`         |
+| `{wind_dir}`   | Wind direction                        | `NE`              |
+| `{pressure}`   | Atmospheric pressure                  | `1013 hPa`        |
+| `{visibility}` | Visibility distance                   | `10 km`           |
+| `{condition}`  | Weather condition                     | `Cloudy`          |
+| `{description}`| Detailed description                  | `Partly cloudy`   |
+| `{aqi}`        | Air quality index value               | `42`              |
+| `{aqi_level}`  | AQI level text                        | `Good`            |
+| `{uv}`         | UV index value                        | `6.5`             |
+| `{uv_level}`   | UV level text                         | `High`            |
+
+**Icon tokens:**
+
+| Token             | Description                                            |
+|-------------------|--------------------------------------------------------|
+| `{icon}`          | Weather condition icon (sun, cloud, rain, etc.)        |
+| `{aqi_icon}`      | AQI level icon (checkmark/warning/X based on level)    |
+| `{uv_icon}`       | UV level icon (sun with varying intensity)             |
+| `{humidity_icon}` | Humidity level icon (water drop fill level)            |
+| `{wind_icon}`     | Wind level icon (wind lines with varying intensity)    |
+| `{wind_dir_icon}` | Wind direction arrow icon (N, NE, E, SE, S, SW, W, NW) |
+
+**Large tokens (expand to fill available space):**
+
+| Token              | Description                                    |
+|--------------------|------------------------------------------------|
+| `{forecast:graph}` | Temperature trend line graph for next hours    |
+| `{forecast:icons}` | Multi-day forecast with icons and temperatures |
+| `{forecast:scroll}`| Scrolling text with current weather + forecast |
+
+#### Multi-line Layouts
+
+Use `\n` in the format string to create multi-line displays:
+
+```json
+{
+  "weather": {
+    "format": "{icon} {temp}\n{humidity} {wind}"
+  }
+}
+```
+
+This displays the icon and temperature on the first line, and humidity and wind on the second line.
+
+#### Format Cycling
+
+Rotate between different formats automatically by passing an array to `format`:
+
+```json
+{
+  "weather": {
+    "format": [
+      "{icon} {temp}",
+      "{humidity} {wind}",
+      "{aqi_level}"
+    ],
+    "cycle": {
+      "interval": 10,
+      "transition": "dissolve_fade",
+      "speed": 0.5
+    }
+  }
+}
+```
+
+This rotates through three different displays every 10 seconds with a crossfade transition.
+
+#### Cycle Configuration
+
+| Property     | Type   | Default  | Description                                    |
+|--------------|--------|----------|------------------------------------------------|
+| `interval`   | int    | `10`     | Seconds between format changes (0 to disable)  |
+| `transition` | string | `"none"` | Transition effect between formats              |
+| `speed`      | number | `0.5`    | Transition duration in seconds                 |
+
+**Available transitions:**
+
+| Transition        | Description                                              |
+|-------------------|----------------------------------------------------------|
+| `none`            | Instant switch (no animation)                            |
+| `push_left`       | New content pushes old content out to the left           |
+| `push_right`      | New content pushes old content out to the right          |
+| `push_up`         | New content pushes old content up                        |
+| `push_down`       | New content pushes old content down                      |
+| `slide_left`      | New content slides in from right, covering old           |
+| `slide_right`     | New content slides in from left, covering old            |
+| `slide_up`        | New content slides in from bottom, covering old          |
+| `slide_down`      | New content slides in from top, covering old             |
+| `dissolve_fade`   | Smooth crossfade between old and new                     |
+| `dissolve_pixel`  | Random pixels switch from old to new                     |
+| `dissolve_dither` | Ordered dithering pattern reveal                         |
+| `box_in`          | Box shrinks from edges, revealing new content            |
+| `box_out`         | Box expands from center, revealing new content           |
+| `clock_wipe`      | Radial sweep from 12 o'clock clockwise                   |
+| `random`          | Randomly selects a transition for each cycle             |
+
 #### Weather Providers
 
-| Provider         | API Key Required | Location Support     | Notes                        |
-|------------------|------------------|----------------------|------------------------------|
-| `open-meteo`     | No               | Coordinates only     | Free, no registration needed |
-| `openweathermap` | Yes              | City name or coords  | Free tier: 1000 calls/day    |
+| Provider         | API Key Required | Location Support     | AQI Support | UV Support | Notes                        |
+|------------------|------------------|----------------------|-------------|------------|------------------------------|
+| `open-meteo`     | No               | Coordinates only     | Yes         | Yes        | Free, no registration needed |
+| `openweathermap` | Yes              | City name or coords  | Yes         | Yes        | Free tier: 1000 calls/day    |
 
 #### Weather Configuration
 
-| Property    | Type    | Default      | Description                                  |
-|-------------|---------|--------------|----------------------------------------------|
-| `provider`  | string  | "open-meteo" | Weather data provider                        |
-| `api_key`   | string  | -            | API key (required for openweathermap)        |
-| `location`  | object  | -            | Location settings (see below)                |
-| `units`     | string  | "metric"     | Temperature units: "metric" (C) or "imperial" (F) |
-| `show_icon` | boolean | true         | Show weather condition icon                  |
-| `icon_size` | int     | 16           | Icon size in pixels (16 or 24)               |
+| Property         | Type              | Default           | Description                                       |
+|------------------|-------------------|-------------------|---------------------------------------------------|
+| `provider`       | string            | `"open-meteo"`    | Weather data provider                             |
+| `api_key`        | string            | -                 | API key (required for openweathermap)             |
+| `location`       | object            | -                 | Location settings (see below)                     |
+| `units`          | string            | `"metric"`        | Temperature units: "metric" (C) or "imperial" (F) |
+| `icon_size`      | int               | `16`              | Icon size in pixels (16 or 24)                    |
+| `format`         | string or array   | `"{icon} {temp}"` | Display format(s) with tokens                     |
+| `cycle`          | object            | -                 | Cycle and transition settings (see above)         |
+
+#### Forecast Configuration
+
+| Property       | Type   | Default | Description                      |
+|----------------|--------|---------|----------------------------------|
+| `hours`        | int    | `24`    | Hours for hourly forecast (6-48) |
+| `days`         | int    | `3`     | Days for daily forecast (1-7)    |
+| `scroll_speed` | number | `30`    | Pixels/second for scroll mode    |
+
+Forecast data is automatically fetched when `{forecast:*}` tokens are used in the format string.
+
+#### Air Quality and UV Index
+
+AQI and UV data are automatically fetched when their tokens are used in the format string.
+
+**AQI levels:** Good, Moderate, Unhealthy for Sensitive, Unhealthy, Very Unhealthy, Hazardous
+
+**UV levels:** Low (0-2), Moderate (3-5), High (6-7), Very High (8-10), Extreme (11+)
 
 #### Location Configuration
 
-| Property | Type   | Description                                           |
-|----------|--------|-------------------------------------------------------|
+| Property | Type   | Description                                                       |
+|----------|--------|-------------------------------------------------------------------|
 | `city`   | string | City name (e.g., "London" or "New York,US"). OpenWeatherMap only. |
-| `lat`    | number | Latitude coordinate (-90 to 90)                       |
-| `lon`    | number | Longitude coordinate (-180 to 180)                    |
+| `lat`    | number | Latitude coordinate (-90 to 90)                                   |
+| `lon`    | number | Longitude coordinate (-180 to 180)                                |
 
 #### Weather Icons
 
@@ -861,12 +987,114 @@ The widget displays appropriate icons for weather conditions:
 - Storm (cloud with lightning)
 - Fog (horizontal lines)
 
+#### Examples
+
+**Basic weather with icon:**
+```json
+{
+  "type": "weather",
+  "weather": {
+    "format": "{icon} {temp}",
+    "location": {"lat": 51.5074, "lon": -0.1278}
+  }
+}
+```
+
+**Multi-line with humidity and wind:**
+```json
+{
+  "type": "weather",
+  "weather": {
+    "format": "{icon} {temp} {feels}\n{humidity} {wind} {wind_dir}",
+    "location": {"lat": 51.5074, "lon": -0.1278}
+  }
+}
+```
+
+**Temperature graph:**
+```json
+{
+  "type": "weather",
+  "weather": {
+    "format": "{forecast:graph}",
+    "location": {"lat": 51.5074, "lon": -0.1278},
+    "forecast": {
+      "hours": 24
+    }
+  }
+}
+```
+
+**Multi-day forecast with icons:**
+```json
+{
+  "type": "weather",
+  "weather": {
+    "format": "{forecast:icons}",
+    "location": {"lat": 51.5074, "lon": -0.1278},
+    "forecast": {
+      "days": 3
+    }
+  }
+}
+```
+
+**Scrolling forecast:**
+```json
+{
+  "type": "weather",
+  "weather": {
+    "format": "{forecast:scroll}",
+    "location": {"lat": 51.5074, "lon": -0.1278},
+    "forecast": {
+      "scroll_speed": 30
+    }
+  }
+}
+```
+
+**With air quality:**
+```json
+{
+  "type": "weather",
+  "weather": {
+    "format": "{icon} {temp} AQI:{aqi}",
+    "location": {"lat": 51.5074, "lon": -0.1278}
+  }
+}
+```
+
+**Cycling between displays with transitions:**
+```json
+{
+  "type": "weather",
+  "weather": {
+    "format": [
+      "{icon} {temp}",
+      "{humidity} {wind}",
+      "{aqi} {uv}",
+      "{forecast:icons}"
+    ],
+    "cycle": {
+      "interval": 10,
+      "transition": "random",
+      "speed": 0.5
+    },
+    "location": {"lat": 51.5074, "lon": -0.1278}
+  }
+}
+```
+
 #### Tips
 
 - Use `update_interval: 300` (5 minutes) to avoid hitting API rate limits
 - Open-Meteo is completely free and requires no registration
 - For OpenWeatherMap, get a free API key at https://openweathermap.org/api
 - Use coordinates (lat/lon) for more precise location
+- AQI and UV tokens automatically enable their respective API fetching
+- Large tokens (forecast:*) expand to fill available horizontal space
+- Format cycling is useful for displaying more information on small screens
+- Scroll mode combines current weather with hourly and daily forecasts
 
 ## Examples
 
