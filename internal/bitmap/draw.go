@@ -427,26 +427,6 @@ func DrawFilledCircle(img *image.Gray, centerX, centerY, radius int, c color.Gra
 	}
 }
 
-// DrawFilledRectangle draws a filled rectangle at the specified position
-func DrawFilledRectangle(img *image.Gray, x, y, w, h int, fillColor uint8) {
-	if img == nil || w <= 0 || h <= 0 {
-		return
-	}
-
-	bounds := img.Bounds()
-	c := color.Gray{Y: fillColor}
-
-	for py := y; py < y+h; py++ {
-		if py >= bounds.Min.Y && py < bounds.Max.Y {
-			for px := x; px < x+w; px++ {
-				if px >= bounds.Min.X && px < bounds.Max.X {
-					img.Set(px, py, c)
-				}
-			}
-		}
-	}
-}
-
 // DrawRectangle draws a rectangle border at the specified position
 //
 //nolint:gocyclo // Edge and corner handling requires multiple conditions
