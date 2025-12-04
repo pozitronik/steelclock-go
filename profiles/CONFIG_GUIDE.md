@@ -144,9 +144,9 @@ Widgets can reference default colors with `@name` syntax: `"fill": "@primary"`.
 
 SteelClock supports these widget types:
 
-| Type               | Description             | Modes                      |
-|--------------------|-------------------------|----------------------------|
-| `clock`            | Time display            | text, analog               |
+| Type               | Description             | Modes                           |
+|--------------------|-------------------------|---------------------------------|
+| `clock`            | Time display            | text, analog, binary, segment   |
 | `cpu`              | CPU usage monitor       | text, bar, graph, gauge    |
 | `memory`           | RAM usage monitor       | text, bar, graph, gauge    |
 | `network`          | Network I/O monitor     | text, bar, graph, gauge    |
@@ -303,7 +303,7 @@ Widgets with multiple modes use mode-named objects:
 
 ### Clock Widget
 
-**Modes:** `text`, `analog`
+**Modes:** `text`, `analog`, `binary`, `segment`
 
 #### Text Mode
 
@@ -345,6 +345,130 @@ Widgets with multiple modes use mode-named objects:
   }
 }
 ```
+
+#### Binary Mode
+
+Displays time as a binary clock using LED-style dots.
+
+**BCD Style (default):** Each decimal digit is represented in 4-bit BCD (Binary Coded Decimal).
+
+```
+Vertical layout:           Horizontal layout:
+     H  H  M  M  S  S      H  8 4 2 1  8 4 2 1
+8    .  .  .  .  .  .      M  8 4 2 1  8 4 2 1
+4    .  *  .  *  .  *      S  8 4 2 1  8 4 2 1
+2    *  .  *  .  *  .
+1    .  *  .  *  .  *
+```
+
+**True Binary Style:** Hours, minutes, and seconds as raw binary numbers (5-6 bits each).
+
+```json
+{
+  "type": "clock",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "mode": "binary",
+  "binary": {
+    "format": "%H:%M:%S",
+    "style": "bcd",
+    "layout": "vertical",
+    "dot_size": 5,
+    "dot_spacing": 2,
+    "dot_style": "circle",
+    "on_color": 255,
+    "off_color": 40,
+    "show_labels": true,
+    "show_hint": true
+  }
+}
+```
+
+| Property      | Options              | Default      | Description                              |
+|---------------|----------------------|--------------|------------------------------------------|
+| `format`      | strftime             | `%H:%M:%S`   | Which components to show (%H, %M, %S)    |
+| `style`       | `bcd`, `true`        | `bcd`        | Binary representation style              |
+| `layout`      | `vertical`, `horizontal` | `vertical` | Bit layout orientation                 |
+| `dot_size`    | 1+                   | 4            | Dot diameter in pixels                   |
+| `dot_spacing` | 0+                   | 2            | Gap between dots in pixels               |
+| `dot_style`   | `circle`, `square`   | `circle`     | Dot shape                                |
+| `on_color`    | 0-255                | 255          | Color for "on" bits (1)                  |
+| `off_color`   | 0-255                | 40           | Color for "off" bits (0 = invisible)     |
+| `show_labels` | true/false           | false        | Show H/M/S labels                        |
+| `show_hint`   | true/false           | false        | Show decimal values alongside binary     |
+
+#### Segment Mode
+
+Displays time using a seven-segment display style, like digital alarm clocks.
+
+```
+ ___     ___
+|   |   |   |
+|___|   |___|
+|   | . |   |
+|___|   |___|
+```
+
+```json
+{
+  "type": "clock",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "mode": "segment",
+  "segment": {
+    "format": "%H:%M:%S",
+    "digit_height": 0,
+    "segment_thickness": 3,
+    "segment_style": "hexagon",
+    "digit_spacing": 2,
+    "colon_style": "dots",
+    "colon_blink": true,
+    "on_color": 255,
+    "off_color": 30,
+    "flip": {
+      "style": "fade",
+      "speed": 0.15
+    }
+  }
+}
+```
+
+| Property            | Options                         | Default     | Description                          |
+|---------------------|---------------------------------|-------------|--------------------------------------|
+| `format`            | see below                       | `%H:%M:%S`  | Time format with optional literals   |
+| `digit_height`      | 0+                              | 0           | Digit height (0 = auto-fit)          |
+| `segment_thickness` | 1+                              | 2           | Segment line thickness               |
+| `segment_style`     | `rectangle`, `hexagon`, `rounded` | `rectangle` | Segment shape style                |
+| `digit_spacing`     | 0+                              | 2           | Space between digits                 |
+| `colon_style`       | `dots`, `bar`, `none`           | `dots`      | Colon separator style                |
+| `colon_blink`       | true/false                      | true        | Blink colons each second             |
+| `on_color`          | 0-255                           | 255         | Active segment color                 |
+| `off_color`         | 0-255                           | 30          | Inactive segment color (0=invisible) |
+
+**Segment Styles:**
+- `rectangle` - Simple rectangular bars (default)
+- `hexagon` - Classic LCD style with angled/pointed ends
+- `rounded` - Segments with rounded/semicircular ends
+
+**Format String:**
+Supports time specifiers and literal digits:
+- `%H` - Hours (00-23)
+- `%M` - Minutes (00-59)
+- `%S` - Seconds (00-59)
+- `0-9` - Literal digits (for testing)
+- `:` - Colon separator
+
+Examples:
+- `"%H:%M:%S"` - Full time display (default)
+- `"%H:%M"` - Hours and minutes only
+- `"88:88:88"` - All 8s (tests all segments lit)
+- `"12:34:56"` - Static digits for testing
+- `"%H:00"` - Current hour with static `:00`
+
+**Flip Animation:**
+
+| Property | Options        | Default | Description                    |
+|----------|----------------|---------|--------------------------------|
+| `style`  | `none`, `fade` | `none`  | Animation style (none=disabled)|
+| `speed`  | 0.05-1.0       | 0.15    | Animation duration in seconds  |
 
 ### CPU Widget
 

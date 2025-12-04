@@ -103,6 +103,8 @@ type WidgetConfig struct {
 	Graph        *GraphConfig        `json:"graph,omitempty"`
 	Gauge        *GaugeConfig        `json:"gauge,omitempty"`
 	Analog       *AnalogConfig       `json:"analog,omitempty"`
+	Binary       *BinaryClockConfig  `json:"binary,omitempty"`  // Clock binary mode
+	Segment      *SegmentClockConfig `json:"segment,omitempty"` // Clock segment mode
 	Spectrum     *SpectrumConfig     `json:"spectrum,omitempty"`
 	Oscilloscope *OscilloscopeConfig `json:"oscilloscope,omitempty"`
 
@@ -291,6 +293,62 @@ type AnalogConfig struct {
 	ShowSeconds bool              `json:"show_seconds,omitempty"`
 	ShowTicks   bool              `json:"show_ticks,omitempty"`
 	Colors      *ModeColorsConfig `json:"colors,omitempty"`
+}
+
+// BinaryClockConfig represents binary clock mode settings
+type BinaryClockConfig struct {
+	// Format: time format like "%H:%M" or "%H:%M:%S" (default: "%H:%M:%S")
+	Format string `json:"format,omitempty"`
+	// Style: "bcd" (each digit in binary) or "true" (whole number in binary)
+	Style string `json:"style,omitempty"`
+	// Layout: "vertical" (bits top-to-bottom) or "horizontal" (bits left-to-right)
+	Layout string `json:"layout,omitempty"`
+	// ShowLabels: show H:M:S labels
+	ShowLabels bool `json:"show_labels,omitempty"`
+	// ShowHint: show decimal digits alongside binary
+	ShowHint bool `json:"show_hint,omitempty"`
+	// DotSize: diameter of dots in pixels (default: 4)
+	DotSize int `json:"dot_size,omitempty"`
+	// DotSpacing: gap between dots in pixels (default: 2)
+	DotSpacing int `json:"dot_spacing,omitempty"`
+	// DotStyle: "circle" or "square" (default: "circle")
+	DotStyle string `json:"dot_style,omitempty"`
+	// OnColor: color for "on" bits (default: 255)
+	OnColor *int `json:"on_color,omitempty"`
+	// OffColor: color for "off" bits, 0 = invisible (default: 40)
+	OffColor *int `json:"off_color,omitempty"`
+}
+
+// SegmentClockConfig represents seven-segment clock mode settings
+type SegmentClockConfig struct {
+	// Format: time format like "%H:%M" or "%H:%M:%S" (default: "%H:%M:%S")
+	Format string `json:"format,omitempty"`
+	// DigitHeight: height of digits in pixels (default: auto-fit)
+	DigitHeight int `json:"digit_height,omitempty"`
+	// SegmentThickness: thickness of segments in pixels (default: 2)
+	SegmentThickness int `json:"segment_thickness,omitempty"`
+	// SegmentStyle: shape of segments - "rectangle", "hexagon", "rounded" (default: "rectangle")
+	SegmentStyle string `json:"segment_style,omitempty"`
+	// DigitSpacing: gap between digits in pixels (default: 2)
+	DigitSpacing int `json:"digit_spacing,omitempty"`
+	// ColonStyle: "dots", "bar", or "none" (default: "dots")
+	ColonStyle string `json:"colon_style,omitempty"`
+	// ColonBlink: blink colon every second (default: true)
+	ColonBlink *bool `json:"colon_blink,omitempty"`
+	// OnColor: color for "on" segments (default: 255)
+	OnColor *int `json:"on_color,omitempty"`
+	// OffColor: color for "off" segments, 0 = invisible (default: 30)
+	OffColor *int `json:"off_color,omitempty"`
+	// Flip: flip animation settings
+	Flip *FlipEffectConfig `json:"flip,omitempty"`
+}
+
+// FlipEffectConfig represents digit flip animation settings
+type FlipEffectConfig struct {
+	// Style: "none" (disabled), "fade" (crossfade between digits)
+	Style string `json:"style,omitempty"`
+	// Speed: animation duration in seconds (default: 0.15)
+	Speed float64 `json:"speed,omitempty"`
 }
 
 // SpectrumConfig represents spectrum analyzer settings

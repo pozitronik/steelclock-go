@@ -405,6 +405,48 @@ func drawCirclePoints(img *image.Gray, centerX, centerY, x, y int, c color.Gray)
 	}
 }
 
+// DrawFilledCircle draws a filled circle with the given center and radius
+func DrawFilledCircle(img *image.Gray, centerX, centerY, radius int, c color.Gray) {
+	if img == nil || radius <= 0 {
+		return
+	}
+
+	bounds := img.Bounds()
+
+	// Simple filled circle using the midpoint circle equation
+	for y := -radius; y <= radius; y++ {
+		for x := -radius; x <= radius; x++ {
+			if x*x+y*y <= radius*radius {
+				px, py := centerX+x, centerY+y
+				if px >= bounds.Min.X && px < bounds.Max.X &&
+					py >= bounds.Min.Y && py < bounds.Max.Y {
+					img.Set(px, py, c)
+				}
+			}
+		}
+	}
+}
+
+// DrawFilledRectangle draws a filled rectangle at the specified position
+func DrawFilledRectangle(img *image.Gray, x, y, w, h int, fillColor uint8) {
+	if img == nil || w <= 0 || h <= 0 {
+		return
+	}
+
+	bounds := img.Bounds()
+	c := color.Gray{Y: fillColor}
+
+	for py := y; py < y+h; py++ {
+		if py >= bounds.Min.Y && py < bounds.Max.Y {
+			for px := x; px < x+w; px++ {
+				if px >= bounds.Min.X && px < bounds.Max.X {
+					img.Set(px, py, c)
+				}
+			}
+		}
+	}
+}
+
 // DrawRectangle draws a rectangle border at the specified position
 //
 //nolint:gocyclo // Edge and corner handling requires multiple conditions

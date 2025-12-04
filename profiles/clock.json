@@ -1,7 +1,7 @@
 {
   "$schema": "schema/config.schema.json",
   "config_name": "Clock",
-  "refresh_rate_ms": 1000,
+  "refresh_rate_ms": 100,
   "display": {
     "width": 128,
     "height": 40,
@@ -13,7 +13,7 @@
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
       "style": {"background": 0, "border": -1, "padding": 0},
-      "mode": "text",
+      "mode": "segment",
       "text": {
         "format": "%H:%M:%S",
         "font": null,
@@ -29,6 +29,33 @@
           "minute": 255,
           "second": 255,
           "ticks": 150
+        }
+      },
+      "binary": {
+        "format": "%H:%M:%S",
+        "style": "bcd",
+        "layout": "vertical",
+        "dot_size": 5,
+        "dot_spacing": 1,
+        "dot_style": "circle",
+        "on_color": 255,
+        "off_color": 0,
+        "show_labels": true,
+        "show_hint": false
+      },
+      "segment": {
+        "format": "%H:%M",
+        "digit_height": 0,
+        "segment_thickness": 3,
+        "segment_style": "hexagon",
+        "digit_spacing": 2,
+        "colon_style": "dots",
+        "colon_blink": true,
+        "on_color": 255,
+        "off_color": 0,
+        "flip": {
+          "style": "fade",
+          "speed": 0.15
         }
       },
       "update_interval": 0.1

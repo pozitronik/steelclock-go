@@ -209,7 +209,7 @@
           "if": { "properties": { "type": { "const": "clock" } }, "required": ["type"] },
           "then": {
             "properties": {
-              "mode": { "type": "string", "description": "Display mode: text or analog clock face", "enum": ["text", "analog"], "default": "text" },
+              "mode": { "type": "string", "description": "Display mode: text, analog clock face, binary clock, or seven-segment display", "enum": ["text", "analog", "binary", "segment"], "default": "text" },
               "analog": {
                 "type": "object",
                 "description": "Analog clock face settings",
@@ -225,6 +225,45 @@
                       "minute": { "type": "integer", "description": "Minute hand color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
                       "second": { "type": "integer", "description": "Second hand color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
                       "ticks": { "type": "integer", "description": "Hour tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
+                    }
+                  }
+                }
+              },
+              "binary": {
+                "type": "object",
+                "description": "Binary clock settings",
+                "properties": {
+                  "format": { "type": "string", "description": "Time format: %H (hours), %M (minutes), %S (seconds)", "default": "%H:%M:%S" },
+                  "style": { "type": "string", "description": "Binary style: BCD (per-digit 4-bit) or true binary (whole number)", "enum": ["bcd", "true"], "default": "bcd" },
+                  "layout": { "type": "string", "description": "Layout: vertical (bits top-to-bottom) or horizontal (bits left-to-right)", "enum": ["vertical", "horizontal"], "default": "vertical" },
+                  "show_labels": { "type": "boolean", "description": "Show H:M:S labels", "default": false },
+                  "show_hint": { "type": "boolean", "description": "Show decimal values alongside binary", "default": false },
+                  "dot_size": { "type": "integer", "description": "Dot diameter in pixels", "minimum": 1, "default": 4 },
+                  "dot_spacing": { "type": "integer", "description": "Gap between dots in pixels", "minimum": 0, "default": 2 },
+                  "dot_style": { "type": "string", "description": "Dot shape", "enum": ["circle", "square"], "default": "circle" },
+                  "on_color": { "type": "integer", "description": "Color for 'on' bits (1)", "minimum": 0, "maximum": 255, "default": 255 },
+                  "off_color": { "type": "integer", "description": "Color for 'off' bits (0), 0 = invisible", "minimum": 0, "maximum": 255, "default": 40 }
+                }
+              },
+              "segment": {
+                "type": "object",
+                "description": "Seven-segment display settings",
+                "properties": {
+                  "format": { "type": "string", "description": "Time format: %H (hours), %M (minutes), %S (seconds)", "default": "%H:%M:%S" },
+                  "digit_height": { "type": "integer", "description": "Digit height in pixels (0 = auto-fit)", "minimum": 0, "default": 0 },
+                  "segment_thickness": { "type": "integer", "description": "Segment line thickness in pixels", "minimum": 1, "default": 2 },
+                  "segment_style": { "type": "string", "description": "Segment shape style", "enum": ["rectangle", "hexagon", "rounded"], "default": "rectangle" },
+                  "digit_spacing": { "type": "integer", "description": "Space between digits in pixels", "minimum": 0, "default": 2 },
+                  "colon_style": { "type": "string", "description": "Colon separator style", "enum": ["dots", "bar", "none"], "default": "dots" },
+                  "colon_blink": { "type": "boolean", "description": "Blink colon separators", "default": true },
+                  "on_color": { "type": "integer", "description": "Color for active segments", "minimum": 0, "maximum": 255, "default": 255 },
+                  "off_color": { "type": "integer", "description": "Color for inactive segments (0 = invisible)", "minimum": 0, "maximum": 255, "default": 30 },
+                  "flip": {
+                    "type": "object",
+                    "description": "Digit flip animation settings",
+                    "properties": {
+                      "style": { "type": "string", "description": "Animation style: none (disabled), fade (crossfade)", "enum": ["none", "fade"], "default": "none" },
+                      "speed": { "type": "number", "description": "Animation duration in seconds", "minimum": 0.05, "maximum": 1.0, "default": 0.15 }
                     }
                   }
                 }
