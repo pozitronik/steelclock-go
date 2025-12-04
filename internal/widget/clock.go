@@ -1065,7 +1065,8 @@ func (w *ClockWidget) renderSegmentClock(img *image.Gray) {
 	digitW := digitH*6/10 - 1
 	colonW := w.segmentThickness * 4
 
-	totalWidth := len(digitInfos)*digitW + (len(digitInfos)-1)*w.digitSpacing + numColons*colonW
+	// Each colon has digitSpacing on both sides (before from digit, after added explicitly)
+	totalWidth := len(digitInfos)*digitW + (len(digitInfos)-1)*w.digitSpacing + numColons*(colonW+w.digitSpacing)
 	startX := (pos.W - totalWidth) / 2
 	startY := (pos.H - digitH) / 2
 
@@ -1110,10 +1111,10 @@ func (w *ClockWidget) renderSegmentClock(img *image.Gray) {
 		w.drawSegmentDigit(img, x, startY, digitW, digitH, di.value, animProgress)
 		x += digitW + w.digitSpacing
 
-		// Draw colon after this digit if needed
+		// Draw colon after this digit if needed (with equal spacing on both sides)
 		if di.colonAfter {
 			w.drawColon(img, x, startY, colonW, digitH, now)
-			x += colonW
+			x += colonW + w.digitSpacing
 		}
 	}
 }
