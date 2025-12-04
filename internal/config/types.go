@@ -25,11 +25,11 @@ func (s *StringOrSlice) UnmarshalJSON(data []byte) error {
 }
 
 // MarshalJSON implements json.Marshaler for StringOrSlice
-func (s StringOrSlice) MarshalJSON() ([]byte, error) {
-	if len(s) == 1 {
-		return json.Marshal(s[0])
+func (s *StringOrSlice) MarshalJSON() ([]byte, error) {
+	if len(*s) == 1 {
+		return json.Marshal((*s)[0])
 	}
-	return json.Marshal([]string(s))
+	return json.Marshal([]string(*s))
 }
 
 // Config represents the complete SteelClock configuration (v2 schema)
