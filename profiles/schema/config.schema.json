@@ -194,7 +194,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix"]
+          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather"]
         },
         "enabled": { "type": "boolean", "default": true },
         "position": { "$ref": "#/definitions/position" },
@@ -942,6 +942,74 @@
                     "description": "Font size: 'small' (3x5 pixels), 'large' (5x7 pixels), or 'auto' (based on display height)",
                     "enum": ["auto", "small", "large"],
                     "default": "auto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "weather" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "mode": {
+                "type": "string",
+                "description": "Display mode: 'icon' shows weather icon with temperature, 'text' shows text only",
+                "enum": ["icon", "text"],
+                "default": "icon"
+              },
+              "weather": {
+                "type": "object",
+                "description": "Weather widget settings",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "description": "Weather data provider",
+                    "enum": ["open-meteo", "openweathermap"],
+                    "default": "open-meteo"
+                  },
+                  "api_key": {
+                    "type": "string",
+                    "description": "API key for OpenWeatherMap (required for openweathermap provider)"
+                  },
+                  "location": {
+                    "type": "object",
+                    "description": "Location for weather data",
+                    "properties": {
+                      "city": {
+                        "type": "string",
+                        "description": "City name (e.g., 'London' or 'New York,US'). Only supported with openweathermap provider."
+                      },
+                      "lat": {
+                        "type": "number",
+                        "description": "Latitude coordinate",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lon": {
+                        "type": "number",
+                        "description": "Longitude coordinate",
+                        "minimum": -180,
+                        "maximum": 180
+                      }
+                    }
+                  },
+                  "units": {
+                    "type": "string",
+                    "description": "Temperature units",
+                    "enum": ["metric", "imperial"],
+                    "default": "metric"
+                  },
+                  "show_icon": {
+                    "type": "boolean",
+                    "description": "Show weather condition icon",
+                    "default": true
+                  },
+                  "icon_size": {
+                    "type": "integer",
+                    "description": "Weather icon size in pixels (16 or 24)",
+                    "enum": [16, 24],
+                    "default": 16
                   }
                 }
               }

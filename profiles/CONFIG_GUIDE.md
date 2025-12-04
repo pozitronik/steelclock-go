@@ -159,6 +159,7 @@ SteelClock supports these widget types:
 | `doom`             | DOOM game               | -                          |
 | `winamp`           | Winamp media player     | -                          |
 | `matrix`           | Matrix digital rain     | -                          |
+| `weather`          | Current weather         | icon, text                 |
 
 ## Common Properties
 
@@ -800,6 +801,72 @@ Displays the classic "Matrix digital rain" effect with falling characters.
 - Lower `trail_fade` = shorter visible trails
 - Use `font_size: "small"` for denser rain effect with more columns
 - Use `font_size: "large"` for more readable characters
+
+### Weather Widget
+
+Displays current weather conditions with temperature and optional weather icon.
+
+```json
+{
+  "type": "weather",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 300,
+  "mode": "icon",
+  "weather": {
+    "provider": "open-meteo",
+    "location": {
+      "lat": 51.5074,
+      "lon": -0.1278
+    },
+    "units": "metric"
+  }
+}
+```
+
+#### Weather Providers
+
+| Provider         | API Key Required | Location Support     | Notes                        |
+|------------------|------------------|----------------------|------------------------------|
+| `open-meteo`     | No               | Coordinates only     | Free, no registration needed |
+| `openweathermap` | Yes              | City name or coords  | Free tier: 1000 calls/day    |
+
+#### Weather Configuration
+
+| Property    | Type    | Default      | Description                                  |
+|-------------|---------|--------------|----------------------------------------------|
+| `provider`  | string  | "open-meteo" | Weather data provider                        |
+| `api_key`   | string  | -            | API key (required for openweathermap)        |
+| `location`  | object  | -            | Location settings (see below)                |
+| `units`     | string  | "metric"     | Temperature units: "metric" (C) or "imperial" (F) |
+| `show_icon` | boolean | true         | Show weather condition icon                  |
+| `icon_size` | int     | 16           | Icon size in pixels (16 or 24)               |
+
+#### Location Configuration
+
+| Property | Type   | Description                                           |
+|----------|--------|-------------------------------------------------------|
+| `city`   | string | City name (e.g., "London" or "New York,US"). OpenWeatherMap only. |
+| `lat`    | number | Latitude coordinate (-90 to 90)                       |
+| `lon`    | number | Longitude coordinate (-180 to 180)                    |
+
+#### Weather Icons
+
+The widget displays appropriate icons for weather conditions:
+- Sun (clear sky)
+- Cloud (overcast)
+- Partly cloudy (sun with cloud)
+- Rain (cloud with raindrops)
+- Drizzle (light rain)
+- Snow (cloud with snowflakes)
+- Storm (cloud with lightning)
+- Fog (horizontal lines)
+
+#### Tips
+
+- Use `update_interval: 300` (5 minutes) to avoid hitting API rate limits
+- Open-Meteo is completely free and requires no registration
+- For OpenWeatherMap, get a free API key at https://openweathermap.org/api
+- Use coordinates (lat/lon) for more precise location
 
 ## Examples
 

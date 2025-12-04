@@ -40,6 +40,8 @@ func CreateWidget(cfg config.WidgetConfig) (Widget, error) {
 		return NewWinampWidget(cfg)
 	case "matrix":
 		return NewMatrixWidget(cfg)
+	case "weather":
+		return NewWeatherWidget(cfg)
 	default:
 		return nil, fmt.Errorf("unknown widget type: %s (valid: %s)", cfg.Type, config.GetValidWidgetTypesList())
 	}

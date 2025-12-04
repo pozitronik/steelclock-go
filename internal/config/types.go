@@ -108,6 +108,9 @@ type WidgetConfig struct {
 
 	// Matrix widget
 	Matrix *MatrixConfig `json:"matrix,omitempty"` // Matrix "digital rain" settings
+
+	// Weather widget
+	Weather *WeatherConfig `json:"weather,omitempty"` // Weather widget settings
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -403,4 +406,30 @@ type MatrixConfig struct {
 	CharChangeRate float64 `json:"char_change_rate,omitempty"`
 	// FontSize: "small" (3x5), "large" (5x7), or "auto" (based on display height, default)
 	FontSize string `json:"font_size,omitempty"`
+}
+
+// WeatherConfig represents Weather widget settings
+type WeatherConfig struct {
+	// Provider: "openweathermap" or "open-meteo" (default: "open-meteo")
+	Provider string `json:"provider,omitempty"`
+	// ApiKey: API key for OpenWeatherMap (required for openweathermap provider)
+	ApiKey string `json:"api_key,omitempty"`
+	// Location configuration
+	Location *WeatherLocationConfig `json:"location,omitempty"`
+	// Units: "metric" (Celsius, m/s) or "imperial" (Fahrenheit, mph) (default: "metric")
+	Units string `json:"units,omitempty"`
+	// ShowIcon: whether to show weather condition icon (default: true)
+	ShowIcon *bool `json:"show_icon,omitempty"`
+	// IconSize: size of weather icon in pixels (default: 16)
+	IconSize int `json:"icon_size,omitempty"`
+}
+
+// WeatherLocationConfig represents weather location settings
+type WeatherLocationConfig struct {
+	// City: city name (e.g., "London" or "New York,US")
+	City string `json:"city,omitempty"`
+	// Lat: latitude for coordinate-based location
+	Lat float64 `json:"lat,omitempty"`
+	// Lon: longitude for coordinate-based location
+	Lon float64 `json:"lon,omitempty"`
 }
