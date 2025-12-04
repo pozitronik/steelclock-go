@@ -784,7 +784,53 @@
           "then": {
             "properties": {
               "wad": { "type": "string", "description": "WAD file name (auto-downloads doom1.wad if not found)", "default": "doom1.wad" },
-              "bundled_wad_url": { "type": ["string", "null"], "description": "Custom URL for downloading DOOM shareware WAD (null = use default distro.ibiblio.org)", "default": null }
+              "bundled_wad_url": { "type": ["string", "null"], "description": "Custom URL for downloading DOOM shareware WAD (null = use default distro.ibiblio.org)", "default": null },
+              "doom": {
+                "type": "object",
+                "description": "DOOM display rendering settings",
+                "properties": {
+                  "render_mode": {
+                    "type": "string",
+                    "description": "Grayscale conversion mode for OLED display",
+                    "enum": ["normal", "contrast", "posterize", "threshold", "dither", "gamma"],
+                    "default": "normal"
+                  },
+                  "posterize_levels": {
+                    "type": "integer",
+                    "description": "Number of gray levels for posterize mode (2-16)",
+                    "minimum": 2,
+                    "maximum": 16,
+                    "default": 4
+                  },
+                  "threshold_value": {
+                    "type": "integer",
+                    "description": "Cutoff value for threshold mode (0-255)",
+                    "minimum": 0,
+                    "maximum": 255,
+                    "default": 128
+                  },
+                  "gamma": {
+                    "type": "number",
+                    "description": "Gamma value for gamma mode (0.1-3.0, >1 brightens midtones)",
+                    "minimum": 0.1,
+                    "maximum": 3.0,
+                    "default": 1.5
+                  },
+                  "contrast_boost": {
+                    "type": "number",
+                    "description": "Contrast multiplier for gamma mode (1.0-3.0)",
+                    "minimum": 1.0,
+                    "maximum": 3.0,
+                    "default": 1.2
+                  },
+                  "dither_size": {
+                    "type": "integer",
+                    "description": "Bayer matrix size for dither mode (2, 4, or 8)",
+                    "enum": [2, 4, 8],
+                    "default": 4
+                  }
+                }
+              }
             }
           }
         },

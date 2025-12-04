@@ -774,13 +774,47 @@ Same structure as CPU widget, without `per_core`.
 
 ### DOOM Widget
 
+Plays DOOM shareware demo on the OLED display. Auto-downloads doom1.wad if not found.
+
 ```json
 {
   "type": "doom",
   "position": {"x": 0, "y": 0, "w": 128, "h": 40},
-  "wad": "doom1.wad"
+  "wad": "doom1.wad",
+  "doom": {
+    "render_mode": "posterize",
+    "posterize_levels": 4
+  }
 }
 ```
+
+#### Render Modes
+
+The `doom.render_mode` setting controls how color frames are converted to grayscale for the OLED display:
+
+| Mode | Description |
+|------|-------------|
+| `normal` | Standard luminance conversion (default) |
+| `contrast` | Auto-contrast stretching - maps actual min/max to full 0-255 range |
+| `posterize` | Reduces to N discrete gray levels - reduces noise while keeping depth |
+| `threshold` | Pure black/white conversion - maximum clarity but loses depth |
+| `dither` | Ordered dithering using Bayer matrix - retro dot-pattern look |
+| `gamma` | Gamma correction with contrast boost - brightens dark scenes |
+
+#### Render Mode Settings
+
+| Setting | Mode | Description | Default |
+|---------|------|-------------|---------|
+| `posterize_levels` | posterize | Number of gray levels (2-16) | 4 |
+| `threshold_value` | threshold | Cutoff brightness (0-255) | 128 |
+| `gamma` | gamma | Gamma value (0.1-3.0, >1 brightens midtones) | 1.5 |
+| `contrast_boost` | gamma | Contrast multiplier (1.0-3.0) | 1.2 |
+| `dither_size` | dither | Bayer matrix size (2, 4, or 8) | 4 |
+
+**Recommended settings:**
+- For best visibility: `"render_mode": "posterize"` with `"posterize_levels": 4`
+- For dark scenes: `"render_mode": "gamma"` with `"gamma": 2.0`
+- For retro look: `"render_mode": "dither"` with `"dither_size": 4`
 
 ### Winamp Widget
 

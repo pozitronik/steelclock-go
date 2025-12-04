@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"log"
+	"math"
 	"sync"
 	"time"
 
@@ -33,6 +34,14 @@ type DoomWidget struct {
 
 	// Rendering
 	scale float64 // Downscale factor from DOOM resolution to display
+
+	// Render mode settings
+	renderMode      string  // "normal", "contrast", "posterize", "threshold", "dither", "gamma"
+	posterizeLevels int     // Number of gray levels for posterize mode
+	thresholdValue  int     // Cutoff for threshold mode
+	gamma           float64 // Gamma value for gamma mode
+	contrastBoost   float64 // Contrast multiplier for gamma mode
+	ditherSize      int     // Bayer matrix size for dither mode
 }
 
 // NewDoomWidget creates a new DOOM widget
@@ -59,12 +68,73 @@ func NewDoomWidget(cfg config.WidgetConfig) (*DoomWidget, error) {
 		scale = scaleY
 	}
 
+	// Render mode settings with defaults
+	renderMode := "normal"
+	posterizeLevels := 4
+	thresholdValue := 128
+	gamma := 1.5
+	contrastBoost := 1.2
+	ditherSize := 4
+
+	if cfg.Doom != nil {
+		if cfg.Doom.RenderMode != "" {
+			renderMode = cfg.Doom.RenderMode
+		}
+		if cfg.Doom.PosterizeLevels > 0 {
+			posterizeLevels = cfg.Doom.PosterizeLevels
+			if posterizeLevels < 2 {
+				posterizeLevels = 2
+			} else if posterizeLevels > 16 {
+				posterizeLevels = 16
+			}
+		}
+		if cfg.Doom.ThresholdValue > 0 {
+			thresholdValue = cfg.Doom.ThresholdValue
+			if thresholdValue > 255 {
+				thresholdValue = 255
+			}
+		}
+		if cfg.Doom.Gamma > 0 {
+			gamma = cfg.Doom.Gamma
+			if gamma < 0.1 {
+				gamma = 0.1
+			} else if gamma > 3.0 {
+				gamma = 3.0
+			}
+		}
+		if cfg.Doom.ContrastBoost > 0 {
+			contrastBoost = cfg.Doom.ContrastBoost
+			if contrastBoost < 1.0 {
+				contrastBoost = 1.0
+			} else if contrastBoost > 3.0 {
+				contrastBoost = 3.0
+			}
+		}
+		if cfg.Doom.DitherSize > 0 {
+			ditherSize = cfg.Doom.DitherSize
+			// Clamp to valid Bayer matrix sizes
+			if ditherSize <= 2 {
+				ditherSize = 2
+			} else if ditherSize <= 4 {
+				ditherSize = 4
+			} else {
+				ditherSize = 8
+			}
+		}
+	}
+
 	w := &DoomWidget{
-		BaseWidget:    base,
-		wadFile:       wadName,
-		bundledWadURL: bundledWadURL,
-		scale:         scale,
-		stopChan:      make(chan struct{}),
+		BaseWidget:      base,
+		wadFile:         wadName,
+		bundledWadURL:   bundledWadURL,
+		scale:           scale,
+		stopChan:        make(chan struct{}),
+		renderMode:      renderMode,
+		posterizeLevels: posterizeLevels,
+		thresholdValue:  thresholdValue,
+		gamma:           gamma,
+		contrastBoost:   contrastBoost,
+		ditherSize:      ditherSize,
 	}
 
 	// Initialize DOOM in background (handles WAD download if needed)
@@ -154,7 +224,7 @@ func (w *DoomWidget) DrawFrame(img *image.RGBA) {
 	// Log first frame only
 	w.mu.Lock()
 	if w.currentImg == nil {
-		log.Printf("[DOOM] First frame received, size: %dx%d", img.Bounds().Dx(), img.Bounds().Dy())
+		log.Printf("[DOOM] First frame received, size: %dx%d, render mode: %s", img.Bounds().Dx(), img.Bounds().Dy(), w.renderMode)
 	}
 	w.mu.Unlock()
 
@@ -168,7 +238,12 @@ func (w *DoomWidget) DrawFrame(img *image.RGBA) {
 	scaleX := float64(bounds.Dx()) / float64(pos.W)
 	scaleY := float64(bounds.Dy()) / float64(pos.H)
 
+	// First pass: convert to grayscale and find min/max for contrast modes
+	grayValues := make([][]uint8, pos.H)
+	var minGray, maxGray uint8 = 255, 0
+
 	for y := 0; y < pos.H; y++ {
+		grayValues[y] = make([]uint8, pos.W)
 		for x := 0; x < pos.W; x++ {
 			// Sample from source image
 			srcX := int(float64(x) * scaleX)
@@ -180,8 +255,39 @@ func (w *DoomWidget) DrawFrame(img *image.RGBA) {
 			// Convert to grayscale using standard luminance formula
 			// Y = 0.299*R + 0.587*G + 0.114*B
 			gray := uint8((299*r + 587*g + 114*b) / 1000 / 256)
+			grayValues[y][x] = gray
 
-			grayImg.SetGray(x, y, color.Gray{Y: gray})
+			if gray < minGray {
+				minGray = gray
+			}
+			if gray > maxGray {
+				maxGray = gray
+			}
+		}
+	}
+
+	// Second pass: apply render mode
+	for y := 0; y < pos.H; y++ {
+		for x := 0; x < pos.W; x++ {
+			gray := grayValues[y][x]
+			var finalGray uint8
+
+			switch w.renderMode {
+			case "contrast":
+				finalGray = w.applyContrast(gray, minGray, maxGray)
+			case "posterize":
+				finalGray = w.applyPosterize(gray)
+			case "threshold":
+				finalGray = w.applyThreshold(gray)
+			case "dither":
+				finalGray = w.applyDither(gray, x, y)
+			case "gamma":
+				finalGray = w.applyGamma(gray, minGray, maxGray)
+			default: // "normal"
+				finalGray = gray
+			}
+
+			grayImg.SetGray(x, y, color.Gray{Y: finalGray})
 		}
 	}
 
@@ -305,4 +411,119 @@ func (w *DoomWidget) Stop() {
 	// Wait for runDoom goroutine to complete
 	// This ensures gore.Run() goroutine has exited
 	w.wg.Wait()
+}
+
+// applyContrast applies auto-contrast stretching (histogram stretching)
+// Maps the actual min-max range to full 0-255 range
+func (w *DoomWidget) applyContrast(gray, minGray, maxGray uint8) uint8 {
+	if maxGray == minGray {
+		return gray
+	}
+	// Stretch to full range
+	stretched := float64(gray-minGray) * 255.0 / float64(maxGray-minGray)
+	if stretched > 255 {
+		return 255
+	}
+	return uint8(stretched)
+}
+
+// applyPosterize reduces the image to N discrete gray levels
+func (w *DoomWidget) applyPosterize(gray uint8) uint8 {
+	levels := w.posterizeLevels
+	if levels < 2 {
+		levels = 2
+	}
+	// Quantize to N levels, then map back to 0-255
+	step := 256 / levels
+	level := int(gray) / step
+	if level >= levels {
+		level = levels - 1
+	}
+	// Map level back to 0-255 range
+	return uint8(level * 255 / (levels - 1))
+}
+
+// applyThreshold converts to pure black/white based on threshold value
+func (w *DoomWidget) applyThreshold(gray uint8) uint8 {
+	if int(gray) >= w.thresholdValue {
+		return 255
+	}
+	return 0
+}
+
+// applyDither applies ordered dithering using Bayer matrix
+func (w *DoomWidget) applyDither(gray uint8, x, y int) uint8 {
+	// Bayer matrices for different sizes
+	var threshold float64
+
+	switch w.ditherSize {
+	case 2:
+		// 2x2 Bayer matrix
+		bayer2 := [2][2]float64{
+			{0.0 / 4.0, 2.0 / 4.0},
+			{3.0 / 4.0, 1.0 / 4.0},
+		}
+		threshold = bayer2[y%2][x%2]
+	case 8:
+		// 8x8 Bayer matrix
+		bayer8 := [8][8]float64{
+			{0.0 / 64.0, 32.0 / 64.0, 8.0 / 64.0, 40.0 / 64.0, 2.0 / 64.0, 34.0 / 64.0, 10.0 / 64.0, 42.0 / 64.0},
+			{48.0 / 64.0, 16.0 / 64.0, 56.0 / 64.0, 24.0 / 64.0, 50.0 / 64.0, 18.0 / 64.0, 58.0 / 64.0, 26.0 / 64.0},
+			{12.0 / 64.0, 44.0 / 64.0, 4.0 / 64.0, 36.0 / 64.0, 14.0 / 64.0, 46.0 / 64.0, 6.0 / 64.0, 38.0 / 64.0},
+			{60.0 / 64.0, 28.0 / 64.0, 52.0 / 64.0, 20.0 / 64.0, 62.0 / 64.0, 30.0 / 64.0, 54.0 / 64.0, 22.0 / 64.0},
+			{3.0 / 64.0, 35.0 / 64.0, 11.0 / 64.0, 43.0 / 64.0, 1.0 / 64.0, 33.0 / 64.0, 9.0 / 64.0, 41.0 / 64.0},
+			{51.0 / 64.0, 19.0 / 64.0, 59.0 / 64.0, 27.0 / 64.0, 49.0 / 64.0, 17.0 / 64.0, 57.0 / 64.0, 25.0 / 64.0},
+			{15.0 / 64.0, 47.0 / 64.0, 7.0 / 64.0, 39.0 / 64.0, 13.0 / 64.0, 45.0 / 64.0, 5.0 / 64.0, 37.0 / 64.0},
+			{63.0 / 64.0, 31.0 / 64.0, 55.0 / 64.0, 23.0 / 64.0, 61.0 / 64.0, 29.0 / 64.0, 53.0 / 64.0, 21.0 / 64.0},
+		}
+		threshold = bayer8[y%8][x%8]
+	default: // 4x4 (default)
+		// 4x4 Bayer matrix
+		bayer4 := [4][4]float64{
+			{0.0 / 16.0, 8.0 / 16.0, 2.0 / 16.0, 10.0 / 16.0},
+			{12.0 / 16.0, 4.0 / 16.0, 14.0 / 16.0, 6.0 / 16.0},
+			{3.0 / 16.0, 11.0 / 16.0, 1.0 / 16.0, 9.0 / 16.0},
+			{15.0 / 16.0, 7.0 / 16.0, 13.0 / 16.0, 5.0 / 16.0},
+		}
+		threshold = bayer4[y%4][x%4]
+	}
+
+	// Compare normalized gray value against threshold
+	normalizedGray := float64(gray) / 255.0
+	if normalizedGray > threshold {
+		return 255
+	}
+	return 0
+}
+
+// applyGamma applies gamma correction with optional contrast boost
+// First stretches contrast, then applies gamma curve
+func (w *DoomWidget) applyGamma(gray, minGray, maxGray uint8) uint8 {
+	// First apply contrast stretching
+	var normalized float64
+	if maxGray == minGray {
+		normalized = float64(gray) / 255.0
+	} else {
+		normalized = float64(gray-minGray) / float64(maxGray-minGray)
+	}
+
+	// Apply contrast boost (expand around 0.5)
+	if w.contrastBoost > 1.0 {
+		normalized = (normalized-0.5)*w.contrastBoost + 0.5
+		if normalized < 0 {
+			normalized = 0
+		} else if normalized > 1 {
+			normalized = 1
+		}
+	}
+
+	// Apply gamma correction: output = input^(1/gamma)
+	// gamma > 1 brightens midtones, gamma < 1 darkens them
+	gammaCorrected := math.Pow(normalized, 1.0/w.gamma)
+
+	result := gammaCorrected * 255.0
+	if result > 255 {
+		return 255
+	}
+	return uint8(result)
 }

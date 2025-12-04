@@ -143,6 +143,9 @@ type WidgetConfig struct {
 	// Matrix widget
 	Matrix *MatrixConfig `json:"matrix,omitempty"` // Matrix "digital rain" settings
 
+	// DOOM widget
+	Doom *DoomConfig `json:"doom,omitempty"` // DOOM display settings
+
 	// Weather widget
 	Weather *WeatherConfig `json:"weather,omitempty"` // Weather widget settings
 }
@@ -496,6 +499,28 @@ type MatrixConfig struct {
 	CharChangeRate float64 `json:"char_change_rate,omitempty"`
 	// FontSize: "small" (3x5), "large" (5x7), or "auto" (based on display height, default)
 	FontSize string `json:"font_size,omitempty"`
+}
+
+// DoomConfig represents DOOM widget display settings
+type DoomConfig struct {
+	// RenderMode: grayscale conversion mode
+	// "normal" - standard luminance (default)
+	// "contrast" - auto-contrast stretching
+	// "posterize" - reduce to N gray levels
+	// "threshold" - pure black/white
+	// "dither" - ordered dithering (Bayer matrix)
+	// "gamma" - gamma correction with contrast boost
+	RenderMode string `json:"render_mode,omitempty"`
+	// PosterizeLevels: number of gray levels for posterize mode (2-16, default: 4)
+	PosterizeLevels int `json:"posterize_levels,omitempty"`
+	// ThresholdValue: cutoff value for threshold mode (0-255, default: 128)
+	ThresholdValue int `json:"threshold_value,omitempty"`
+	// Gamma: gamma value for gamma mode (0.1-3.0, default: 1.5)
+	Gamma float64 `json:"gamma,omitempty"`
+	// ContrastBoost: contrast multiplier for gamma mode (1.0-3.0, default: 1.2)
+	ContrastBoost float64 `json:"contrast_boost,omitempty"`
+	// DitherSize: Bayer matrix size for dither mode (2, 4, or 8, default: 4)
+	DitherSize int `json:"dither_size,omitempty"`
 }
 
 // WeatherConfig represents Weather widget settings

@@ -15,7 +15,15 @@
       "style": {"background": 0, "border": -1, "padding": 0},
       "wad": "doom1.wad",
       "bundled_wad_url": null,
-      "update_interval": 0.05
+      "update_interval": 0.05,
+      "doom": {
+        "render_mode": "gamma",
+        "posterize_levels": 4,
+        "threshold_value": 128,
+        "gamma": 1.5,
+        "contrast_boost": 1.2,
+        "dither_size": 4
+      }
     }
   ]
 }
