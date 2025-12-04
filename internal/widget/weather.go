@@ -1122,6 +1122,10 @@ func (w *WeatherWidget) renderTokenInRectWithAlign(img *image.Gray, t *Token, x,
 		width, _ := bitmap.SmartMeasureText(text, w.fontFace, w.fontName)
 		bitmap.SmartDrawTextInRect(img, text, w.fontFace, w.fontName, x, y, width+10, height, "left", vAlign, 0)
 		return width
+
+	case TokenLarge:
+		// Large tokens are handled separately in renderLine/renderTokens
+		return 0
 	}
 	return 0
 }
