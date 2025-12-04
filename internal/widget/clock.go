@@ -577,14 +577,14 @@ func (w *ClockWidget) renderBCDClock(img *image.Gray, now time.Time, pos config.
 	offColor := color.Gray{Y: uint8(w.dotOffColor)}
 
 	if w.binaryLayout == "horizontal" {
-		w.renderBCDHorizontal(img, pairs, startX, startY, dotUnit, colonSpace, labelSpace, hintSpace, onColor, offColor)
+		w.renderBCDHorizontal(img, pairs, startX, startY, dotUnit, colonSpace, labelSpace, onColor, offColor)
 	} else {
-		w.renderBCDVertical(img, pairs, startX, startY, dotUnit, colonSpace, labelSpace, hintSpace, onColor, offColor)
+		w.renderBCDVertical(img, pairs, startX, startY, dotUnit, colonSpace, labelSpace, onColor, offColor)
 	}
 }
 
 // renderBCDVertical renders BCD clock with bits stacked vertically (columns for digits)
-func (w *ClockWidget) renderBCDVertical(img *image.Gray, pairs []digitPair, startX, startY, dotUnit, colonSpace, labelSpace, hintSpace int, onColor, offColor color.Gray) {
+func (w *ClockWidget) renderBCDVertical(img *image.Gray, pairs []digitPair, startX, startY, dotUnit, colonSpace, labelSpace int, onColor, offColor color.Gray) {
 	x := startX
 
 	// Draw labels at top if enabled
@@ -645,7 +645,7 @@ func (w *ClockWidget) renderBCDVertical(img *image.Gray, pairs []digitPair, star
 }
 
 // renderBCDHorizontal renders BCD clock with bits arranged horizontally
-func (w *ClockWidget) renderBCDHorizontal(img *image.Gray, pairs []digitPair, startX, startY, dotUnit, colonSpace, labelSpace, hintSpace int, onColor, offColor color.Gray) {
+func (w *ClockWidget) renderBCDHorizontal(img *image.Gray, pairs []digitPair, startX, startY, dotUnit, colonSpace, labelSpace int, onColor, offColor color.Gray) {
 	y := startY
 
 	// Adjust starting X for labels
