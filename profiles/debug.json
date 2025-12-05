@@ -1,0 +1,23 @@
+{
+  "$schema": "schema/config.schema.json",
+  "config_name": "Debug Pattern",
+  "backend": "direct",
+  "refresh_rate_ms": 100,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "debug",
+      "enabled": true,
+      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
+      "style": {"background": 0, "border": -1, "padding": 0},
+      "update_interval": 0.5,
+      "debug": {
+        "file": "profiles/debug_pattern.txt"
+      }
+    }
+  ]
+}

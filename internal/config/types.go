@@ -152,6 +152,9 @@ type WidgetConfig struct {
 
 	// Weather widget
 	Weather *WeatherConfig `json:"weather,omitempty"` // Weather widget settings
+
+	// Debug widget
+	Debug *DebugConfig `json:"debug,omitempty"` // Debug widget settings
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -640,4 +643,10 @@ type WeatherCycleConfig struct {
 	Transition string `json:"transition,omitempty"`
 	// Speed: transition duration in seconds (default: 0.5)
 	Speed float64 `json:"speed,omitempty"`
+}
+
+// DebugConfig represents Debug widget settings for testing display output
+type DebugConfig struct {
+	// File: path to text file containing pixel pattern (0s and non-0s)
+	File string `json:"file,omitempty"`
 }
