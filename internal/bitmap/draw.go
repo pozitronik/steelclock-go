@@ -88,12 +88,20 @@ func DrawVerticalBar(img *image.Gray, x, y, w, h int, percentage float64, fillCo
 }
 
 // DrawGraph draws a history graph with optional filled area
-func DrawGraph(img *image.Gray, x, y, w, h int, history []float64, maxHistory int, fillColor uint8, filled bool) {
+// fillColor: -1 = no fill (line only), 0-255 = fill color
+// lineColor: 0-255 = line color (always drawn)
+func DrawGraph(img *image.Gray, x, y, w, h int, history []float64, maxHistory int, fillColor, lineColor int) {
 	if len(history) < 2 {
 		return
 	}
 
-	c := color.Gray{Y: fillColor}
+	// Clamp line color to valid range
+	if lineColor < 0 {
+		lineColor = 255
+	} else if lineColor > 255 {
+		lineColor = 255
+	}
+	lineC := color.Gray{Y: uint8(lineColor)}
 
 	// Calculate points
 	points := make([][2]int, 0, len(history))
@@ -105,13 +113,9 @@ func DrawGraph(img *image.Gray, x, y, w, h int, history []float64, maxHistory in
 		points = append(points, [2]int{px, py})
 	}
 
-	// Draw line
-	for i := 0; i < len(points)-1; i++ {
-		DrawLine(img, points[i][0], points[i][1], points[i+1][0], points[i+1][1], c)
-	}
-
-	// Fill area under a line (if enabled)
-	if filled {
+	// Fill area under a line first (if fillColor >= 0), so line is drawn on top
+	if fillColor >= 0 && fillColor <= 255 {
+		fillC := color.Gray{Y: uint8(fillColor)}
 		for i := 0; i < len(points)-1; i++ {
 			x1, y1 := points[i][0], points[i][1]
 			x2, y2 := points[i+1][0], points[i+1][1]
@@ -122,12 +126,17 @@ func DrawGraph(img *image.Gray, x, y, w, h int, history []float64, maxHistory in
 				t := float64(px-x1) / float64(x2-x1+1)
 				py := int(float64(y1) + t*float64(y2-y1))
 
-				// Fill from py to bottom using full fillColor
+				// Fill from py to bottom
 				for fy := py; fy < y+h; fy++ {
-					img.Set(px, fy, c)
+					img.Set(px, fy, fillC)
 				}
 			}
 		}
+	}
+
+	// Draw line on top
+	for i := 0; i < len(points)-1; i++ {
+		DrawLine(img, points[i][0], points[i][1], points[i+1][0], points[i+1][1], lineC)
 	}
 }
 
@@ -401,6 +410,28 @@ func drawCirclePoints(img *image.Gray, centerX, centerY, x, y int, c color.Gray)
 		if p[0] >= bounds.Min.X && p[0] < bounds.Max.X &&
 			p[1] >= bounds.Min.Y && p[1] < bounds.Max.Y {
 			img.Set(p[0], p[1], c)
+		}
+	}
+}
+
+// DrawFilledCircle draws a filled circle with the given center and radius
+func DrawFilledCircle(img *image.Gray, centerX, centerY, radius int, c color.Gray) {
+	if img == nil || radius <= 0 {
+		return
+	}
+
+	bounds := img.Bounds()
+
+	// Simple filled circle using the midpoint circle equation
+	for y := -radius; y <= radius; y++ {
+		for x := -radius; x <= radius; x++ {
+			if x*x+y*y <= radius*radius {
+				px, py := centerX+x, centerY+y
+				if px >= bounds.Min.X && px < bounds.Max.X &&
+					py >= bounds.Min.Y && py < bounds.Max.Y {
+					img.Set(px, py, c)
+				}
+			}
 		}
 	}
 }

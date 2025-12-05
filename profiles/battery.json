@@ -1,0 +1,68 @@
+{
+  "$schema": "schema/config.schema.json",
+  "config_name": "Battery Monitor",
+  "backend": "gamesense",
+  "refresh_rate_ms": 1000,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "battery",
+      "enabled": true,
+      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
+      "style": {"background": 0, "border": 0, "padding": 0},
+      "mode": "text",
+      "power_status": {
+        "show_economy": "blink",
+        "show_charging": "always",
+        "show_plugged": "notify",
+        "notify_duration": 60
+      },
+      "battery": {
+        "orientation": "horizontal",
+        "low_threshold": 20,
+        "critical_threshold": 10,
+        "colors": {
+          "normal": 255,
+          "low": 200,
+          "critical": 150,
+          "charging": 255,
+          "background": 0,
+          "border": 255
+        }
+      },
+      "bar": {
+        "direction": "left",
+        "border": false,
+        "colors": {
+          "fill": 255
+        }
+      },
+      "graph": {
+        "history": 60,
+        "colors": {
+          "fill": 100,
+          "line": 255
+        }
+      },
+      "gauge": {
+        "show_ticks": true,
+        "colors": {
+          "arc": 200,
+          "needle": 255,
+          "ticks": 150
+        }
+      },
+      "text": {
+        "format": "{percent}% {status}",
+        "font": null,
+        "size": 16,
+        "align": {"h": "center", "v": "center"}
+      },
+      "update_interval": 1
+    }
+  ]
+}

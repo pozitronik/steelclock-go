@@ -197,13 +197,13 @@ func TestMemoryWidget_BarMode(t *testing.T) {
 // TestMemoryWidget_GraphMode tests memory widget in graph mode
 func TestMemoryWidget_GraphMode(t *testing.T) {
 	tests := []struct {
-		name    string
-		filled  bool
-		history int
+		name      string
+		fillColor int // -1 = line only, 0-255 = fill color
+		history   int
 	}{
-		{"FilledDefault", true, 0},
-		{"LineOnly", false, 0},
-		{"FilledHistory50", true, 50},
+		{"FilledDefault", 255, 0},
+		{"LineOnly", -1, 0},
+		{"FilledHistory50", 255, 50},
 	}
 
 	for _, tt := range tests {
@@ -215,8 +215,10 @@ func TestMemoryWidget_GraphMode(t *testing.T) {
 				Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 				Mode:     "graph",
 				Graph: &config.GraphConfig{
-					Filled:  &tt.filled,
 					History: tt.history,
+					Colors: &config.ModeColorsConfig{
+						Fill: &tt.fillColor,
+					},
 				},
 			}
 
@@ -424,7 +426,6 @@ func TestCPUWidget_PerCore(t *testing.T) {
 
 // TestNetworkWidget_GraphMode tests network widget with dual graph
 func TestNetworkWidget_GraphMode(t *testing.T) {
-	filled := true
 	widgetCfg := config.WidgetConfig{
 		ID:       "test-net",
 		Type:     "network",
@@ -432,7 +433,6 @@ func TestNetworkWidget_GraphMode(t *testing.T) {
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 		Mode:     "graph",
 		Graph: &config.GraphConfig{
-			Filled:  &filled,
 			History: 128,
 		},
 	}

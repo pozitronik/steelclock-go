@@ -194,7 +194,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp"]
+          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery"]
         },
         "enabled": { "type": "boolean", "default": true },
         "position": { "$ref": "#/definitions/position" },
@@ -209,7 +209,7 @@
           "if": { "properties": { "type": { "const": "clock" } }, "required": ["type"] },
           "then": {
             "properties": {
-              "mode": { "type": "string", "description": "Display mode: text or analog clock face", "enum": ["text", "analog"], "default": "text" },
+              "mode": { "type": "string", "description": "Display mode: text, analog clock face, binary clock, or seven-segment display", "enum": ["text", "analog", "binary", "segment"], "default": "text" },
               "analog": {
                 "type": "object",
                 "description": "Analog clock face settings",
@@ -225,6 +225,45 @@
                       "minute": { "type": "integer", "description": "Minute hand color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
                       "second": { "type": "integer", "description": "Second hand color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
                       "ticks": { "type": "integer", "description": "Hour tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
+                    }
+                  }
+                }
+              },
+              "binary": {
+                "type": "object",
+                "description": "Binary clock settings",
+                "properties": {
+                  "format": { "type": "string", "description": "Time format: %H (hours), %M (minutes), %S (seconds)", "default": "%H:%M:%S" },
+                  "style": { "type": "string", "description": "Binary style: BCD (per-digit 4-bit) or true binary (whole number)", "enum": ["bcd", "true"], "default": "bcd" },
+                  "layout": { "type": "string", "description": "Layout: vertical (bits top-to-bottom) or horizontal (bits left-to-right)", "enum": ["vertical", "horizontal"], "default": "vertical" },
+                  "show_labels": { "type": "boolean", "description": "Show H:M:S labels", "default": false },
+                  "show_hint": { "type": "boolean", "description": "Show decimal values alongside binary", "default": false },
+                  "dot_size": { "type": "integer", "description": "Dot diameter in pixels", "minimum": 1, "default": 4 },
+                  "dot_spacing": { "type": "integer", "description": "Gap between dots in pixels", "minimum": 0, "default": 2 },
+                  "dot_style": { "type": "string", "description": "Dot shape", "enum": ["circle", "square"], "default": "circle" },
+                  "on_color": { "type": "integer", "description": "Color for 'on' bits (1)", "minimum": 0, "maximum": 255, "default": 255 },
+                  "off_color": { "type": "integer", "description": "Color for 'off' bits (0), 0 = invisible", "minimum": 0, "maximum": 255, "default": 40 }
+                }
+              },
+              "segment": {
+                "type": "object",
+                "description": "Seven-segment display settings",
+                "properties": {
+                  "format": { "type": "string", "description": "Time format: %H (hours), %M (minutes), %S (seconds)", "default": "%H:%M:%S" },
+                  "digit_height": { "type": "integer", "description": "Digit height in pixels (0 = auto-fit)", "minimum": 0, "default": 0 },
+                  "segment_thickness": { "type": "integer", "description": "Segment line thickness in pixels", "minimum": 1, "default": 2 },
+                  "segment_style": { "type": "string", "description": "Segment shape style", "enum": ["rectangle", "hexagon", "rounded"], "default": "rectangle" },
+                  "digit_spacing": { "type": "integer", "description": "Space between digits in pixels", "minimum": 0, "default": 2 },
+                  "colon_style": { "type": "string", "description": "Colon separator style", "enum": ["dots", "bar", "none"], "default": "dots" },
+                  "colon_blink": { "type": "boolean", "description": "Blink colon separators", "default": true },
+                  "on_color": { "type": "integer", "description": "Color for active segments", "minimum": 0, "maximum": 255, "default": 255 },
+                  "off_color": { "type": "integer", "description": "Color for inactive segments (0 = invisible)", "minimum": 0, "maximum": 255, "default": 30 },
+                  "flip": {
+                    "type": "object",
+                    "description": "Digit flip animation settings",
+                    "properties": {
+                      "style": { "type": "string", "description": "Animation style: none (disabled), fade (crossfade)", "enum": ["none", "fade"], "default": "none" },
+                      "speed": { "type": "number", "description": "Animation duration in seconds", "minimum": 0.05, "maximum": 1.0, "default": 0.15 }
                     }
                   }
                 }
@@ -257,12 +296,12 @@
                 "description": "Graph mode settings",
                 "properties": {
                   "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
-                  "filled": { "type": "boolean", "description": "Fill area under graph line", "default": true },
                   "colors": {
                     "type": "object",
                     "description": "Graph colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Graph fill/line color", "minimum": 0, "maximum": 255, "default": 255 }
+                      "fill": { "type": "integer", "description": "Graph fill color (-1 = no fill)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "line": { "type": "integer", "description": "Graph line color", "minimum": 0, "maximum": 255, "default": 255 }
                     }
                   }
                 }
@@ -321,12 +360,12 @@
                 "description": "Graph mode settings",
                 "properties": {
                   "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
-                  "filled": { "type": "boolean", "description": "Fill area under graph line", "default": true },
                   "colors": {
                     "type": "object",
                     "description": "Graph colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Graph fill/line color", "minimum": 0, "maximum": 255, "default": 255 }
+                      "fill": { "type": "integer", "description": "Graph fill color (-1 = no fill)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "line": { "type": "integer", "description": "Graph line color", "minimum": 0, "maximum": 255, "default": 255 }
                     }
                   }
                 }
@@ -396,13 +435,12 @@
                 "description": "Graph mode settings",
                 "properties": {
                   "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
-                  "filled": { "type": "boolean", "description": "Fill area under graph lines", "default": true },
                   "colors": {
                     "type": "object",
-                    "description": "Graph colors for RX/TX (-1 = transparent/hidden)",
+                    "description": "Graph colors for RX/TX (-1 = line only/no fill)",
                     "properties": {
-                      "rx": { "type": "integer", "description": "Receive (download) line color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "tx": { "type": "integer", "description": "Transmit (upload) line color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 128 }
+                      "rx": { "type": "integer", "description": "Receive (download) line/fill color (-1 = line only)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "description": "Transmit (upload) line/fill color (-1 = line only)", "minimum": -1, "maximum": 255, "default": 128 }
                     }
                   }
                 }
@@ -471,13 +509,12 @@
                 "description": "Graph mode settings",
                 "properties": {
                   "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
-                  "filled": { "type": "boolean", "description": "Fill area under graph lines", "default": true },
                   "colors": {
                     "type": "object",
-                    "description": "Graph colors for read/write (-1 = transparent/hidden)",
+                    "description": "Graph colors for read/write (-1 = line only/no fill)",
                     "properties": {
-                      "read": { "type": "integer", "description": "Read line color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "write": { "type": "integer", "description": "Write line color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 200 }
+                      "read": { "type": "integer", "description": "Read line/fill color (-1 = line only)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "write": { "type": "integer", "description": "Write line/fill color (-1 = line only)", "minimum": -1, "maximum": 255, "default": 200 }
                     }
                   }
                 }
@@ -745,7 +782,53 @@
           "then": {
             "properties": {
               "wad": { "type": "string", "description": "WAD file name (auto-downloads doom1.wad if not found)", "default": "doom1.wad" },
-              "bundled_wad_url": { "type": ["string", "null"], "description": "Custom URL for downloading DOOM shareware WAD (null = use default distro.ibiblio.org)", "default": null }
+              "bundled_wad_url": { "type": ["string", "null"], "description": "Custom URL for downloading DOOM shareware WAD (null = use default distro.ibiblio.org)", "default": null },
+              "doom": {
+                "type": "object",
+                "description": "DOOM display rendering settings",
+                "properties": {
+                  "render_mode": {
+                    "type": "string",
+                    "description": "Grayscale conversion mode for OLED display",
+                    "enum": ["normal", "contrast", "posterize", "threshold", "dither", "gamma"],
+                    "default": "normal"
+                  },
+                  "posterize_levels": {
+                    "type": "integer",
+                    "description": "Number of gray levels for posterize mode (2-16)",
+                    "minimum": 2,
+                    "maximum": 16,
+                    "default": 4
+                  },
+                  "threshold_value": {
+                    "type": "integer",
+                    "description": "Cutoff value for threshold mode (0-255)",
+                    "minimum": 0,
+                    "maximum": 255,
+                    "default": 128
+                  },
+                  "gamma": {
+                    "type": "number",
+                    "description": "Gamma value for gamma mode (0.1-3.0, >1 brightens midtones)",
+                    "minimum": 0.1,
+                    "maximum": 3.0,
+                    "default": 1.5
+                  },
+                  "contrast_boost": {
+                    "type": "number",
+                    "description": "Contrast multiplier for gamma mode (1.0-3.0)",
+                    "minimum": 1.0,
+                    "maximum": 3.0,
+                    "default": 1.2
+                  },
+                  "dither_size": {
+                    "type": "integer",
+                    "description": "Bayer matrix size for dither mode (2, 4, or 8)",
+                    "enum": [2, 4, 8],
+                    "default": 4
+                  }
+                }
+              }
             }
           }
         },
@@ -865,6 +948,367 @@
                     "description": "Gap between text repetitions in pixels (for continuous mode)",
                     "minimum": 0,
                     "default": 20
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "matrix" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "matrix": {
+                "type": "object",
+                "description": "Matrix 'digital rain' effect settings",
+                "properties": {
+                  "charset": {
+                    "type": "string",
+                    "description": "Character set to use for the rain effect",
+                    "enum": ["ascii", "katakana", "binary", "digits", "hex"],
+                    "default": "ascii"
+                  },
+                  "density": {
+                    "type": "number",
+                    "description": "Column density (0.0-1.0) - probability of a column being active",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0.4
+                  },
+                  "min_speed": {
+                    "type": "number",
+                    "description": "Minimum fall speed in pixels per frame",
+                    "minimum": 0.1,
+                    "default": 0.5
+                  },
+                  "max_speed": {
+                    "type": "number",
+                    "description": "Maximum fall speed in pixels per frame",
+                    "minimum": 0.1,
+                    "default": 2.0
+                  },
+                  "min_length": {
+                    "type": "integer",
+                    "description": "Minimum trail length in characters",
+                    "minimum": 1,
+                    "default": 4
+                  },
+                  "max_length": {
+                    "type": "integer",
+                    "description": "Maximum trail length in characters",
+                    "minimum": 1,
+                    "default": 15
+                  },
+                  "head_color": {
+                    "type": "integer",
+                    "description": "Brightness of the leading character (0-255)",
+                    "minimum": 0,
+                    "maximum": 255,
+                    "default": 255
+                  },
+                  "trail_fade": {
+                    "type": "number",
+                    "description": "Trail fade factor (0.0-1.0) - how quickly characters fade",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0.85
+                  },
+                  "char_change_rate": {
+                    "type": "number",
+                    "description": "Probability of a character changing per frame (0.0-1.0)",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0.02
+                  },
+                  "font_size": {
+                    "type": "string",
+                    "description": "Font size: 'small' (3x5 pixels), 'large' (5x7 pixels), or 'auto' (based on display height)",
+                    "enum": ["auto", "small", "large"],
+                    "default": "auto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "weather" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "weather": {
+                "type": "object",
+                "description": "Weather widget settings",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "description": "Weather data provider",
+                    "enum": ["open-meteo", "openweathermap"],
+                    "default": "open-meteo"
+                  },
+                  "api_key": {
+                    "type": "string",
+                    "description": "API key for OpenWeatherMap (required for openweathermap provider)"
+                  },
+                  "location": {
+                    "type": "object",
+                    "description": "Location for weather data",
+                    "properties": {
+                      "city": {
+                        "type": "string",
+                        "description": "City name (e.g., 'London' or 'New York,US'). Only supported with openweathermap provider."
+                      },
+                      "lat": {
+                        "type": "number",
+                        "description": "Latitude coordinate",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lon": {
+                        "type": "number",
+                        "description": "Longitude coordinate",
+                        "minimum": -180,
+                        "maximum": 180
+                      }
+                    }
+                  },
+                  "units": {
+                    "type": "string",
+                    "description": "Temperature units",
+                    "enum": ["metric", "imperial"],
+                    "default": "metric"
+                  },
+                  "icon_size": {
+                    "type": "integer",
+                    "description": "Weather icon size in pixels (16 or 24)",
+                    "enum": [16, 24],
+                    "default": 16
+                  },
+                  "format": {
+                    "oneOf": [
+                      { "type": "string" },
+                      { "type": "array", "items": { "type": "string" } }
+                    ],
+                    "description": "Display format string(s) with tokens. Can be a single string or array of strings (for cycling). Available tokens: {icon} (weather icon), {temp} (temperature), {feels} (feels like temp), {humidity} (humidity %), {wind} (wind speed), {wind_dir} (wind direction), {pressure} (pressure), {visibility} (visibility), {condition} (weather condition text), {description} (detailed description), {aqi} (air quality index), {aqi_level} (AQI level text), {uv} (UV index), {uv_level} (UV level text), {forecast:graph} (temperature graph), {forecast:icons} (forecast day icons), {forecast:scroll} (scrolling forecast). Use \\n for multi-line layouts.",
+                    "default": "{icon} {temp}"
+                  },
+                  "cycle": {
+                    "type": "object",
+                    "description": "Format cycling and transition settings",
+                    "properties": {
+                      "interval": {
+                        "type": "integer",
+                        "description": "Seconds between format changes (0 to disable cycling)",
+                        "minimum": 0,
+                        "default": 10
+                      },
+                      "transition": {
+                        "type": "string",
+                        "description": "Transition effect between formats",
+                        "enum": ["none", "push_left", "push_right", "push_up", "push_down", "slide_left", "slide_right", "slide_up", "slide_down", "dissolve_fade", "dissolve_pixel", "dissolve_dither", "box_in", "box_out", "clock_wipe", "random"],
+                        "default": "none"
+                      },
+                      "speed": {
+                        "type": "number",
+                        "description": "Transition duration in seconds",
+                        "minimum": 0.1,
+                        "maximum": 5.0,
+                        "default": 0.5
+                      }
+                    }
+                  },
+                  "forecast": {
+                    "type": "object",
+                    "description": "Forecast display settings (auto-enabled when forecast tokens are used in format)",
+                    "properties": {
+                      "hours": {
+                        "type": "integer",
+                        "description": "Number of hours for hourly forecast",
+                        "minimum": 6,
+                        "maximum": 48,
+                        "default": 24
+                      },
+                      "days": {
+                        "type": "integer",
+                        "description": "Number of days for daily forecast",
+                        "minimum": 1,
+                        "maximum": 7,
+                        "default": 3
+                      },
+                      "scroll_speed": {
+                        "type": "number",
+                        "description": "Scroll speed in pixels per second for {forecast:scroll}",
+                        "minimum": 1,
+                        "maximum": 200,
+                        "default": 30
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "battery" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "mode": {
+                "type": "string",
+                "description": "Display mode: battery (progressbar in battery shape), text, bar, gauge, graph",
+                "enum": ["battery", "text", "bar", "gauge", "graph"],
+                "default": "battery"
+              },
+              "battery": {
+                "type": "object",
+                "description": "Battery widget settings.",
+                "properties": {
+                  "orientation": {
+                    "type": "string",
+                    "description": "Battery orientation",
+                    "enum": ["horizontal", "vertical"],
+                    "default": "horizontal"
+                  },
+                  "low_threshold": {
+                    "type": "integer",
+                    "description": "Percentage below which battery is considered low",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 20
+                  },
+                  "critical_threshold": {
+                    "type": "integer",
+                    "description": "Percentage below which battery is considered critical",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 10
+                  },
+                  "colors": {
+                    "type": "object",
+                    "description": "Color settings for battery display (0-255, 0=black supported)",
+                    "properties": {
+                      "normal": {
+                        "type": "integer",
+                        "description": "Fill color when battery is normal",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "low": {
+                        "type": "integer",
+                        "description": "Fill color when battery is low",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 200
+                      },
+                      "critical": {
+                        "type": "integer",
+                        "description": "Fill color when battery is critical",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 150
+                      },
+                      "charging": {
+                        "type": "integer",
+                        "description": "Charging indicator color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "background": {
+                        "type": "integer",
+                        "description": "Background color inside battery body",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 0
+                      },
+                      "border": {
+                        "type": "integer",
+                        "description": "Battery outline color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      }
+                    }
+                  }
+                }
+              },
+              "power_status": {
+                "type": "object",
+                "description": "Power status indicator display settings",
+                "properties": {
+                  "show_economy": {
+                    "type": "string",
+                    "description": "Display mode for economy/power saver indicator",
+                    "enum": ["always", "never", "notify", "blink", "notify_blink"],
+                    "default": "blink"
+                  },
+                  "show_charging": {
+                    "type": "string",
+                    "description": "Display mode for charging indicator",
+                    "enum": ["always", "never", "notify", "blink", "notify_blink"],
+                    "default": "always"
+                  },
+                  "show_plugged": {
+                    "type": "string",
+                    "description": "Display mode for AC power indicator",
+                    "enum": ["always", "never", "notify", "blink", "notify_blink"],
+                    "default": "always"
+                  },
+                  "notify_duration": {
+                    "type": "integer",
+                    "description": "Seconds to show indicator in notify modes",
+                    "minimum": 1,
+                    "default": 60
+                  }
+                }
+              },
+              "bar": {
+                "type": "object",
+                "description": "Bar mode settings (use direction: up/down for vertical orientation)",
+                "properties": {
+                  "direction": { "type": "string", "enum": ["left", "right", "up", "down"], "default": "left" },
+                  "border": { "type": "boolean", "default": false }
+                }
+              },
+              "graph": {
+                "type": "object",
+                "description": "Graph mode settings",
+                "properties": {
+                  "history": { "type": "integer", "minimum": 10, "maximum": 500, "default": 60 },
+                  "colors": {
+                    "type": "object",
+                    "description": "Graph colors",
+                    "properties": {
+                      "fill": { "type": "integer", "description": "Graph fill color (-1 = no fill)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "line": { "type": "integer", "description": "Graph line color", "minimum": 0, "maximum": 255, "default": 255 }
+                    }
+                  }
+                }
+              },
+              "gauge": {
+                "type": "object",
+                "description": "Gauge mode settings",
+                "properties": {
+                  "show_ticks": { "type": "boolean", "default": true }
+                }
+              },
+              "text": {
+                "type": "object",
+                "description": "Text mode settings",
+                "properties": {
+                  "format": {
+                    "type": "string",
+                    "description": "Format string with tokens: {percent}/{pct} (value), {status} (CHG/AC/ECO), {status_full} (Charging/AC Power/Economy), {time} (smart remaining), {time_left}, {time_to_full}, {time_left_min} (minutes), {level} (critical/low/normal), {charging}/{plugged}/{economy} (boolean indicators)",
+                    "default": "{percent}%"
+                  },
+                  "font": { "type": ["string", "null"], "description": "Font name or TTF path", "default": null },
+                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 16 },
+                  "align": {
+                    "type": "object",
+                    "properties": {
+                      "h": { "type": "string", "enum": ["left", "center", "right"], "default": "center" },
+                      "v": { "type": "string", "enum": ["top", "center", "bottom"], "default": "center" }
+                    }
                   }
                 }
               }

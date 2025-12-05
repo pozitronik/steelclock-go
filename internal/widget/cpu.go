@@ -27,8 +27,8 @@ type CPUWidget struct {
 	coreMargin       int
 	barDirection     string
 	barBorder        bool
-	graphFilled      bool
-	fillColor        uint8
+	fillColor        int // -1 = no fill, 0-255 = fill color
+	lineColor        int // 0-255 = line color
 	gaugeColor       uint8
 	gaugeNeedleColor uint8
 	gaugeShowTicks   bool
@@ -58,7 +58,6 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 	barSettings := helper.GetBarSettings()
 	graphSettings := helper.GetGraphSettings()
 	gaugeSettings := helper.GetGaugeSettings()
-	fillColor := helper.GetFillColorForMode(displayMode)
 	perCore, coreBorder, coreMargin := helper.GetPerCoreSettings()
 
 	// Get core count
@@ -86,8 +85,8 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 		coreMargin:       coreMargin,
 		barDirection:     barSettings.Direction,
 		barBorder:        barSettings.Border,
-		graphFilled:      graphSettings.Filled,
-		fillColor:        uint8(fillColor),
+		fillColor:        graphSettings.FillColor,
+		lineColor:        graphSettings.LineColor,
 		gaugeColor:       uint8(gaugeSettings.ArcColor),
 		gaugeNeedleColor: uint8(gaugeSettings.NeedleColor),
 		gaugeShowTicks:   gaugeSettings.ShowTicks,
@@ -234,6 +233,11 @@ func (w *CPUWidget) renderTextGrid(img *image.Gray, cores []float64) {
 	cellWidth := (pos.W - totalMarginWidth) / cols
 	cellHeight := (pos.H - totalMarginHeight) / rows
 
+	borderColor := uint8(255)
+	if w.fillColor >= 0 && w.fillColor <= 255 {
+		borderColor = uint8(w.fillColor)
+	}
+
 	// Draw each core value in its grid cell
 	for i, usage := range cores {
 		row := i / cols
@@ -244,7 +248,7 @@ func (w *CPUWidget) renderTextGrid(img *image.Gray, cores []float64) {
 
 		// Draw border if enabled
 		if w.coreBorder {
-			bitmap.DrawRectangle(img, cellX, cellY, cellWidth, cellHeight, w.fillColor)
+			bitmap.DrawRectangle(img, cellX, cellY, cellWidth, cellHeight, borderColor)
 		}
 
 		// Format: just the percentage value
@@ -263,16 +267,21 @@ func (w *CPUWidget) renderBarHorizontal(img *image.Gray, x, y, width, height int
 		return
 	}
 
+	barColor := uint8(255)
+	if w.fillColor >= 0 && w.fillColor <= 255 {
+		barColor = uint8(w.fillColor)
+	}
+
 	if w.perCore {
 		cores := w.currentUsagePerCore
 		coreHeight := (height - (len(cores)-1)*w.coreMargin) / len(cores)
 
 		for i, usage := range cores {
 			coreY := y + i*(coreHeight+w.coreMargin)
-			bitmap.DrawHorizontalBar(img, x, coreY, width, coreHeight, usage, w.fillColor, w.barBorder || w.coreBorder)
+			bitmap.DrawHorizontalBar(img, x, coreY, width, coreHeight, usage, barColor, w.barBorder || w.coreBorder)
 		}
 	} else {
-		bitmap.DrawHorizontalBar(img, x, y, width, height, w.currentUsageSingle, w.fillColor, w.barBorder)
+		bitmap.DrawHorizontalBar(img, x, y, width, height, w.currentUsageSingle, barColor, w.barBorder)
 	}
 }
 
@@ -284,16 +293,21 @@ func (w *CPUWidget) renderBarVertical(img *image.Gray, x, y, width, height int) 
 		return
 	}
 
+	barColor := uint8(255)
+	if w.fillColor >= 0 && w.fillColor <= 255 {
+		barColor = uint8(w.fillColor)
+	}
+
 	if w.perCore {
 		cores := w.currentUsagePerCore
 		coreWidth := (width - (len(cores)-1)*w.coreMargin) / len(cores)
 
 		for i, usage := range cores {
 			coreX := x + i*(coreWidth+w.coreMargin)
-			bitmap.DrawVerticalBar(img, coreX, y, coreWidth, height, usage, w.fillColor, w.barBorder || w.coreBorder)
+			bitmap.DrawVerticalBar(img, coreX, y, coreWidth, height, usage, barColor, w.barBorder || w.coreBorder)
 		}
 	} else {
-		bitmap.DrawVerticalBar(img, x, y, width, height, w.currentUsageSingle, w.fillColor, w.barBorder)
+		bitmap.DrawVerticalBar(img, x, y, width, height, w.currentUsageSingle, barColor, w.barBorder)
 	}
 }
 
@@ -342,16 +356,20 @@ func (w *CPUWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 
 			// Draw border if enabled
 			if w.coreBorder {
-				bitmap.DrawRectangle(img, cellX, cellY, cellWidth, cellHeight, w.fillColor)
+				borderColor := uint8(255)
+				if w.fillColor >= 0 && w.fillColor <= 255 {
+					borderColor = uint8(w.fillColor)
+				}
+				bitmap.DrawRectangle(img, cellX, cellY, cellWidth, cellHeight, borderColor)
 			}
 
-			bitmap.DrawGraph(img, cellX, cellY, cellWidth, cellHeight, coreHistories[i], w.historyLen, w.fillColor, w.graphFilled)
+			bitmap.DrawGraph(img, cellX, cellY, cellWidth, cellHeight, coreHistories[i], w.historyLen, w.fillColor, w.lineColor)
 		}
 	} else {
 		if w.historySingle.Len() < 2 {
 			return
 		}
-		bitmap.DrawGraph(img, x, y, width, height, w.historySingle.ToSlice(), w.historyLen, w.fillColor, w.graphFilled)
+		bitmap.DrawGraph(img, x, y, width, height, w.historySingle.ToSlice(), w.historyLen, w.fillColor, w.lineColor)
 	}
 }
 
@@ -377,6 +395,11 @@ func (w *CPUWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
 		cellWidth := (pos.W - totalMarginWidth) / cols
 		cellHeight := (pos.H - totalMarginHeight) / rows
 
+		borderColor := uint8(255)
+		if w.fillColor >= 0 && w.fillColor <= 255 {
+			borderColor = uint8(w.fillColor)
+		}
+
 		// Draw a gauge for each core
 		for i, usage := range cores {
 			row := i / cols
@@ -387,7 +410,7 @@ func (w *CPUWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
 
 			// Draw border if enabled
 			if w.coreBorder {
-				bitmap.DrawRectangle(img, cellX, cellY, cellWidth, cellHeight, w.fillColor)
+				bitmap.DrawRectangle(img, cellX, cellY, cellWidth, cellHeight, borderColor)
 			}
 
 			bitmap.DrawGauge(img, cellX, cellY, cellWidth, cellHeight, usage, w.gaugeColor, w.gaugeNeedleColor, w.gaugeShowTicks, w.gaugeTicksColor)

@@ -6,13 +6,12 @@ import (
 	"testing"
 )
 
-// Windows packet format: ReportID(1) + CMD(1) + Padding(16) + Data = 18 + dataSize
+// Windows packet format: ReportID(1) + CMD(1) + Data(640) + Padding(1) = 643 bytes
+// After Windows HID driver strips ReportID, device receives 642 bytes (matching HID descriptor)
 const (
-	testHeaderSize   = 18
-	testCmdOffset    = 1
-	testDataOffset   = 18
-	testPaddingStart = 2
-	testPaddingEnd   = 18
+	testPacketSize = 643 // Total packet including Report ID
+	testCmdOffset  = 1
+	testDataOffset = 2
 )
 
 func TestBuildPacket_Size(t *testing.T) {
@@ -20,10 +19,9 @@ func TestBuildPacket_Size(t *testing.T) {
 
 	packet := buildPacket(pixelData, 128, 40)
 
-	// Expected: ReportID(1) + CMD(1) + Padding(16) + Data(640) = 658 bytes on Windows
-	expected := testHeaderSize + 640
-	if len(packet) != expected {
-		t.Errorf("buildPacket() size = %d, want %d", len(packet), expected)
+	// Expected: ReportID(1) + CMD(1) + Data(640) + Padding(1) = 643 bytes
+	if len(packet) != testPacketSize {
+		t.Errorf("buildPacket() size = %d, want %d", len(packet), testPacketSize)
 	}
 }
 
@@ -43,17 +41,6 @@ func TestBuildPacket_Command(t *testing.T) {
 	}
 }
 
-func TestBuildPacket_Padding(t *testing.T) {
-	packet := buildPacket(make([]byte, 640), 128, 40)
-
-	// Bytes 2-17 should be zero padding
-	for i := testPaddingStart; i < testPaddingEnd; i++ {
-		if packet[i] != 0x00 {
-			t.Errorf("packet[%d] (padding) = 0x%02X, want 0x00", i, packet[i])
-		}
-	}
-}
-
 func TestBuildPacket_DataCopy(t *testing.T) {
 	pixelData := make([]byte, 640)
 	for i := range pixelData {
@@ -62,7 +49,7 @@ func TestBuildPacket_DataCopy(t *testing.T) {
 
 	packet := buildPacket(pixelData, 128, 40)
 
-	// Check that pixel data is copied correctly starting at byte 18
+	// Check that pixel data is copied correctly starting at byte 2
 	for i := 0; i < len(pixelData); i++ {
 		if packet[testDataOffset+i] != pixelData[i] {
 			t.Errorf("packet[%d] = 0x%02X, want 0x%02X", testDataOffset+i, packet[testDataOffset+i], pixelData[i])
@@ -106,10 +93,9 @@ func TestBuildPacket_LongData(t *testing.T) {
 
 	packet := buildPacket(pixelData, 128, 40)
 
-	// Packet should still be correct size
-	expected := testHeaderSize + 640
-	if len(packet) != expected {
-		t.Errorf("buildPacket() size with long data = %d, want %d", len(packet), expected)
+	// Packet should still be correct size (643 for 128x40)
+	if len(packet) != testPacketSize {
+		t.Errorf("buildPacket() size with long data = %d, want %d", len(packet), testPacketSize)
 	}
 
 	// Data should be truncated to 640 bytes
@@ -118,6 +104,11 @@ func TestBuildPacket_LongData(t *testing.T) {
 			t.Errorf("packet[%d] = 0x%02X, want 0xAA", testDataOffset+i, packet[testDataOffset+i])
 			break
 		}
+	}
+
+	// Trailing padding byte should be zero
+	if packet[642] != 0x00 {
+		t.Errorf("packet[642] (trailing padding) = 0x%02X, want 0x00", packet[642])
 	}
 }
 
@@ -130,7 +121,9 @@ func TestBuildPacket_DifferentResolution(t *testing.T) {
 	pixelData := make([]byte, dataSize)
 	packet := buildPacket(pixelData, width, height)
 
-	expected := testHeaderSize + dataSize
+	// ReportID(1) + CMD(1) + Data + Padding(1) = 1 + 642 base, but data varies
+	// For 256x64: 1 + 1 + 2048 + 1 = 2051 bytes
+	expected := 1 + 1 + dataSize + 1
 	if len(packet) != expected {
 		t.Errorf("buildPacket() size for %dx%d = %d, want %d", width, height, len(packet), expected)
 	}

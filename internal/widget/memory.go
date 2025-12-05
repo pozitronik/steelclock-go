@@ -22,8 +22,8 @@ type MemoryWidget struct {
 	padding          int
 	barDirection     string
 	barBorder        bool
-	graphFilled      bool
-	fillColor        uint8
+	fillColor        int // -1 = no fill, 0-255 = fill color
+	lineColor        int // 0-255 = line color
 	gaugeColor       uint8
 	gaugeNeedleColor uint8
 	gaugeShowTicks   bool
@@ -47,7 +47,6 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 	barSettings := helper.GetBarSettings()
 	graphSettings := helper.GetGraphSettings()
 	gaugeSettings := helper.GetGaugeSettings()
-	fillColor := helper.GetFillColorForMode(displayMode)
 
 	// Load font for text mode
 	fontFace, err := helper.LoadFontForTextMode(displayMode)
@@ -65,8 +64,8 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 		padding:          padding,
 		barDirection:     barSettings.Direction,
 		barBorder:        barSettings.Border,
-		graphFilled:      graphSettings.Filled,
-		fillColor:        uint8(fillColor),
+		fillColor:        graphSettings.FillColor,
+		lineColor:        graphSettings.LineColor,
 		gaugeColor:       uint8(gaugeSettings.ArcColor),
 		gaugeNeedleColor: uint8(gaugeSettings.NeedleColor),
 		gaugeShowTicks:   gaugeSettings.ShowTicks,
@@ -129,13 +128,17 @@ func (w *MemoryWidget) Render() (image.Image, error) {
 	case "text":
 		w.renderText(img)
 	case "bar":
+		barColor := uint8(255)
+		if w.fillColor >= 0 && w.fillColor <= 255 {
+			barColor = uint8(w.fillColor)
+		}
 		if w.barDirection == "vertical" {
-			bitmap.DrawVerticalBar(img, contentX, contentY, contentW, contentH, w.currentUsage, w.fillColor, w.barBorder)
+			bitmap.DrawVerticalBar(img, contentX, contentY, contentW, contentH, w.currentUsage, barColor, w.barBorder)
 		} else {
-			bitmap.DrawHorizontalBar(img, contentX, contentY, contentW, contentH, w.currentUsage, w.fillColor, w.barBorder)
+			bitmap.DrawHorizontalBar(img, contentX, contentY, contentW, contentH, w.currentUsage, barColor, w.barBorder)
 		}
 	case "graph":
-		bitmap.DrawGraph(img, contentX, contentY, contentW, contentH, w.history.ToSlice(), w.historyLen, w.fillColor, w.graphFilled)
+		bitmap.DrawGraph(img, contentX, contentY, contentW, contentH, w.history.ToSlice(), w.historyLen, w.fillColor, w.lineColor)
 	case "gauge":
 		w.renderGauge(img, pos)
 	}

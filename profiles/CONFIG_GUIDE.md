@@ -144,9 +144,9 @@ Widgets can reference default colors with `@name` syntax: `"fill": "@primary"`.
 
 SteelClock supports these widget types:
 
-| Type               | Description             | Modes                      |
-|--------------------|-------------------------|----------------------------|
-| `clock`            | Time display            | text, analog               |
+| Type               | Description             | Modes                           |
+|--------------------|-------------------------|---------------------------------|
+| `clock`            | Time display            | text, analog, binary, segment   |
 | `cpu`              | CPU usage monitor       | text, bar, graph, gauge    |
 | `memory`           | RAM usage monitor       | text, bar, graph, gauge    |
 | `network`          | Network I/O monitor     | text, bar, graph, gauge    |
@@ -158,6 +158,8 @@ SteelClock supports these widget types:
 | `keyboard_layout`  | Current keyboard layout | -                          |
 | `doom`             | DOOM game               | -                          |
 | `winamp`           | Winamp media player     | -                          |
+| `matrix`           | Matrix digital rain     | -                          |
+| `weather`          | Current weather         | icon, text                 |
 
 ## Common Properties
 
@@ -301,7 +303,7 @@ Widgets with multiple modes use mode-named objects:
 
 ### Clock Widget
 
-**Modes:** `text`, `analog`
+**Modes:** `text`, `analog`, `binary`, `segment`
 
 #### Text Mode
 
@@ -343,6 +345,130 @@ Widgets with multiple modes use mode-named objects:
   }
 }
 ```
+
+#### Binary Mode
+
+Displays time as a binary clock using LED-style dots.
+
+**BCD Style (default):** Each decimal digit is represented in 4-bit BCD (Binary Coded Decimal).
+
+```
+Vertical layout:           Horizontal layout:
+     H  H  M  M  S  S      H  8 4 2 1  8 4 2 1
+8    .  .  .  .  .  .      M  8 4 2 1  8 4 2 1
+4    .  *  .  *  .  *      S  8 4 2 1  8 4 2 1
+2    *  .  *  .  *  .
+1    .  *  .  *  .  *
+```
+
+**True Binary Style:** Hours, minutes, and seconds as raw binary numbers (5-6 bits each).
+
+```json
+{
+  "type": "clock",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "mode": "binary",
+  "binary": {
+    "format": "%H:%M:%S",
+    "style": "bcd",
+    "layout": "vertical",
+    "dot_size": 5,
+    "dot_spacing": 2,
+    "dot_style": "circle",
+    "on_color": 255,
+    "off_color": 40,
+    "show_labels": true,
+    "show_hint": true
+  }
+}
+```
+
+| Property      | Options              | Default      | Description                              |
+|---------------|----------------------|--------------|------------------------------------------|
+| `format`      | strftime             | `%H:%M:%S`   | Which components to show (%H, %M, %S)    |
+| `style`       | `bcd`, `true`        | `bcd`        | Binary representation style              |
+| `layout`      | `vertical`, `horizontal` | `vertical` | Bit layout orientation                 |
+| `dot_size`    | 1+                   | 4            | Dot diameter in pixels                   |
+| `dot_spacing` | 0+                   | 2            | Gap between dots in pixels               |
+| `dot_style`   | `circle`, `square`   | `circle`     | Dot shape                                |
+| `on_color`    | 0-255                | 255          | Color for "on" bits (1)                  |
+| `off_color`   | 0-255                | 40           | Color for "off" bits (0 = invisible)     |
+| `show_labels` | true/false           | false        | Show H/M/S labels                        |
+| `show_hint`   | true/false           | false        | Show decimal values alongside binary     |
+
+#### Segment Mode
+
+Displays time using a seven-segment display style, like digital alarm clocks.
+
+```
+ ___     ___
+|   |   |   |
+|___|   |___|
+|   | . |   |
+|___|   |___|
+```
+
+```json
+{
+  "type": "clock",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "mode": "segment",
+  "segment": {
+    "format": "%H:%M:%S",
+    "digit_height": 0,
+    "segment_thickness": 3,
+    "segment_style": "hexagon",
+    "digit_spacing": 2,
+    "colon_style": "dots",
+    "colon_blink": true,
+    "on_color": 255,
+    "off_color": 30,
+    "flip": {
+      "style": "fade",
+      "speed": 0.15
+    }
+  }
+}
+```
+
+| Property            | Options                         | Default     | Description                          |
+|---------------------|---------------------------------|-------------|--------------------------------------|
+| `format`            | see below                       | `%H:%M:%S`  | Time format with optional literals   |
+| `digit_height`      | 0+                              | 0           | Digit height (0 = auto-fit)          |
+| `segment_thickness` | 1+                              | 2           | Segment line thickness               |
+| `segment_style`     | `rectangle`, `hexagon`, `rounded` | `rectangle` | Segment shape style                |
+| `digit_spacing`     | 0+                              | 2           | Space between digits                 |
+| `colon_style`       | `dots`, `bar`, `none`           | `dots`      | Colon separator style                |
+| `colon_blink`       | true/false                      | true        | Blink colons each second             |
+| `on_color`          | 0-255                           | 255         | Active segment color                 |
+| `off_color`         | 0-255                           | 30          | Inactive segment color (0=invisible) |
+
+**Segment Styles:**
+- `rectangle` - Simple rectangular bars (default)
+- `hexagon` - Classic LCD style with angled/pointed ends
+- `rounded` - Segments with rounded/semicircular ends
+
+**Format String:**
+Supports time specifiers and literal digits:
+- `%H` - Hours (00-23)
+- `%M` - Minutes (00-59)
+- `%S` - Seconds (00-59)
+- `0-9` - Literal digits (for testing)
+- `:` - Colon separator
+
+Examples:
+- `"%H:%M:%S"` - Full time display (default)
+- `"%H:%M"` - Hours and minutes only
+- `"88:88:88"` - All 8s (tests all segments lit)
+- `"12:34:56"` - Static digits for testing
+- `"%H:00"` - Current hour with static `:00`
+
+**Flip Animation:**
+
+| Property | Options        | Default | Description                    |
+|----------|----------------|---------|--------------------------------|
+| `style`  | `none`, `fade` | `none`  | Animation style (none=disabled)|
+| `speed`  | 0.05-1.0       | 0.15    | Animation duration in seconds  |
 
 ### CPU Widget
 
@@ -648,13 +774,47 @@ Same structure as CPU widget, without `per_core`.
 
 ### DOOM Widget
 
+Plays DOOM shareware demo on the OLED display. Auto-downloads doom1.wad if not found.
+
 ```json
 {
   "type": "doom",
   "position": {"x": 0, "y": 0, "w": 128, "h": 40},
-  "wad": "doom1.wad"
+  "wad": "doom1.wad",
+  "doom": {
+    "render_mode": "posterize",
+    "posterize_levels": 4
+  }
 }
 ```
+
+#### Render Modes
+
+The `doom.render_mode` setting controls how color frames are converted to grayscale for the OLED display:
+
+| Mode | Description |
+|------|-------------|
+| `normal` | Standard luminance conversion (default) |
+| `contrast` | Auto-contrast stretching - maps actual min/max to full 0-255 range |
+| `posterize` | Reduces to N discrete gray levels - reduces noise while keeping depth |
+| `threshold` | Pure black/white conversion - maximum clarity but loses depth |
+| `dither` | Ordered dithering using Bayer matrix - retro dot-pattern look |
+| `gamma` | Gamma correction with contrast boost - brightens dark scenes |
+
+#### Render Mode Settings
+
+| Setting | Mode | Description | Default |
+|---------|------|-------------|---------|
+| `posterize_levels` | posterize | Number of gray levels (2-16) | 4 |
+| `threshold_value` | threshold | Cutoff brightness (0-255) | 128 |
+| `gamma` | gamma | Gamma value (0.1-3.0, >1 brightens midtones) | 1.5 |
+| `contrast_boost` | gamma | Contrast multiplier (1.0-3.0) | 1.2 |
+| `dither_size` | dither | Bayer matrix size (2, 4, or 8) | 4 |
+
+**Recommended settings:**
+- For best visibility: `"render_mode": "posterize"` with `"posterize_levels": 4`
+- For dark scenes: `"render_mode": "gamma"` with `"gamma": 2.0`
+- For retro look: `"render_mode": "dither"` with `"dither_size": 4`
 
 ### Winamp Widget
 
@@ -743,6 +903,581 @@ Works with `auto_hide` to show the widget when specific events occur:
 | `on_pause`        | Show when playback is paused               | false   |
 | `on_stop`         | Show when playback stops                   | false   |
 | `on_seek`         | Show when user seeks to different position | false   |
+
+### Matrix Widget
+
+Displays the classic "Matrix digital rain" effect with falling characters.
+
+```json
+{
+  "type": "matrix",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.033,
+  "matrix": {
+    "charset": "ascii",
+    "density": 0.5,
+    "min_speed": 0.5,
+    "max_speed": 2.5,
+    "min_length": 4,
+    "max_length": 12,
+    "head_color": 255,
+    "trail_fade": 0.8,
+    "char_change_rate": 0.03
+  }
+}
+```
+
+#### Character Sets
+
+| Charset    | Characters                                      |
+|------------|-------------------------------------------------|
+| `ascii`    | A-Z, 0-9, symbols (default)                     |
+| `katakana` | Japanese Katakana characters                    |
+| `binary`   | 0 and 1 only                                    |
+| `digits`   | 0-9 only                                        |
+| `hex`      | 0-9, A-F                                        |
+
+#### Matrix Configuration
+
+| Property           | Type   | Range   | Default | Description                                |
+|--------------------|--------|---------|---------|--------------------------------------------|
+| `charset`          | string | -       | "ascii" | Character set to use                       |
+| `font_size`        | string | -       | "auto"  | Font: "small" (3x5), "large" (5x7), "auto" |
+| `density`          | number | 0.0-1.0 | 0.4     | Column density (probability of active)     |
+| `min_speed`        | number | 0.1+    | 0.5     | Minimum fall speed (pixels/frame)          |
+| `max_speed`        | number | 0.1+    | 2.0     | Maximum fall speed (pixels/frame)          |
+| `min_length`       | int    | 1+      | 4       | Minimum trail length (characters)          |
+| `max_length`       | int    | 1+      | 15      | Maximum trail length (characters)          |
+| `head_color`       | int    | 0-255   | 255     | Brightness of leading character            |
+| `trail_fade`       | number | 0.0-1.0 | 0.85    | Trail fade factor (lower = faster fade)    |
+| `char_change_rate` | number | 0.0-1.0 | 0.02    | Character change probability per frame     |
+
+#### Tips
+
+- Use low `update_interval` (0.033 = 30fps) for smooth animation
+- Higher `density` = more columns active simultaneously
+- Lower `trail_fade` = shorter visible trails
+- Use `font_size: "small"` for denser rain effect with more columns
+- Use `font_size: "large"` for more readable characters
+
+### Weather Widget
+
+Displays weather information using a flexible format string system with tokens. Supports current weather, forecasts, air quality index (AQI), and UV index.
+
+```json
+{
+  "type": "weather",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 300,
+  "weather": {
+    "provider": "open-meteo",
+    "location": {
+      "lat": 51.5074,
+      "lon": -0.1278
+    },
+    "units": "metric",
+    "format": "{icon} {temp}"
+  }
+}
+```
+
+#### Format String System
+
+The weather widget uses format strings with tokens to define what to display. Tokens are enclosed in curly braces: `{token_name}`.
+
+**Basic tokens (text):**
+
+| Token          | Description                           | Example Output    |
+|----------------|---------------------------------------|-------------------|
+| `{temp}`       | Current temperature                   | `15C` or `59F`    |
+| `{feels}`      | Feels-like temperature                | `13C`             |
+| `{humidity}`   | Humidity percentage                   | `75%`             |
+| `{wind}`       | Wind speed                            | `12 km/h`         |
+| `{wind_dir}`   | Wind direction                        | `NE`              |
+| `{pressure}`   | Atmospheric pressure                  | `1013 hPa`        |
+| `{visibility}` | Visibility distance                   | `10 km`           |
+| `{condition}`  | Weather condition                     | `Cloudy`          |
+| `{description}`| Detailed description                  | `Partly cloudy`   |
+| `{aqi}`        | Air quality index value               | `42`              |
+| `{aqi_level}`  | AQI level text                        | `Good`            |
+| `{uv}`         | UV index value                        | `6.5`             |
+| `{uv_level}`   | UV level text                         | `High`            |
+
+**Icon tokens:**
+
+| Token             | Description                                            |
+|-------------------|--------------------------------------------------------|
+| `{icon}`          | Weather condition icon (sun, cloud, rain, etc.)        |
+| `{aqi_icon}`      | AQI level icon (checkmark/warning/X based on level)    |
+| `{uv_icon}`       | UV level icon (sun with varying intensity)             |
+| `{humidity_icon}` | Humidity level icon (water drop fill level)            |
+| `{wind_icon}`     | Wind level icon (wind lines with varying intensity)    |
+| `{wind_dir_icon}` | Wind direction arrow icon (N, NE, E, SE, S, SW, W, NW) |
+
+**Large tokens (expand to fill available space):**
+
+| Token              | Description                                    |
+|--------------------|------------------------------------------------|
+| `{forecast:graph}` | Temperature trend line graph for next hours    |
+| `{forecast:icons}` | Multi-day forecast with icons and temperatures |
+| `{forecast:scroll}`| Scrolling text with current weather + forecast |
+
+#### Multi-line Layouts
+
+Use `\n` in the format string to create multi-line displays:
+
+```json
+{
+  "weather": {
+    "format": "{icon} {temp}\n{humidity} {wind}"
+  }
+}
+```
+
+This displays the icon and temperature on the first line, and humidity and wind on the second line.
+
+#### Format Cycling
+
+Rotate between different formats automatically by passing an array to `format`:
+
+```json
+{
+  "weather": {
+    "format": [
+      "{icon} {temp}",
+      "{humidity} {wind}",
+      "{aqi_level}"
+    ],
+    "cycle": {
+      "interval": 10,
+      "transition": "dissolve_fade",
+      "speed": 0.5
+    }
+  }
+}
+```
+
+This rotates through three different displays every 10 seconds with a crossfade transition.
+
+#### Cycle Configuration
+
+| Property     | Type   | Default  | Description                                    |
+|--------------|--------|----------|------------------------------------------------|
+| `interval`   | int    | `10`     | Seconds between format changes (0 to disable)  |
+| `transition` | string | `"none"` | Transition effect between formats              |
+| `speed`      | number | `0.5`    | Transition duration in seconds                 |
+
+**Available transitions:**
+
+| Transition        | Description                                              |
+|-------------------|----------------------------------------------------------|
+| `none`            | Instant switch (no animation)                            |
+| `push_left`       | New content pushes old content out to the left           |
+| `push_right`      | New content pushes old content out to the right          |
+| `push_up`         | New content pushes old content up                        |
+| `push_down`       | New content pushes old content down                      |
+| `slide_left`      | New content slides in from right, covering old           |
+| `slide_right`     | New content slides in from left, covering old            |
+| `slide_up`        | New content slides in from bottom, covering old          |
+| `slide_down`      | New content slides in from top, covering old             |
+| `dissolve_fade`   | Smooth crossfade between old and new                     |
+| `dissolve_pixel`  | Random pixels switch from old to new                     |
+| `dissolve_dither` | Ordered dithering pattern reveal                         |
+| `box_in`          | Box shrinks from edges, revealing new content            |
+| `box_out`         | Box expands from center, revealing new content           |
+| `clock_wipe`      | Radial sweep from 12 o'clock clockwise                   |
+| `random`          | Randomly selects a transition for each cycle             |
+
+#### Weather Providers
+
+| Provider         | API Key Required | Location Support     | AQI Support | UV Support | Notes                        |
+|------------------|------------------|----------------------|-------------|------------|------------------------------|
+| `open-meteo`     | No               | Coordinates only     | Yes         | Yes        | Free, no registration needed |
+| `openweathermap` | Yes              | City name or coords  | Yes         | Yes        | Free tier: 1000 calls/day    |
+
+#### Weather Configuration
+
+| Property         | Type              | Default           | Description                                       |
+|------------------|-------------------|-------------------|---------------------------------------------------|
+| `provider`       | string            | `"open-meteo"`    | Weather data provider                             |
+| `api_key`        | string            | -                 | API key (required for openweathermap)             |
+| `location`       | object            | -                 | Location settings (see below)                     |
+| `units`          | string            | `"metric"`        | Temperature units: "metric" (C) or "imperial" (F) |
+| `icon_size`      | int               | `16`              | Icon size in pixels (16 or 24)                    |
+| `format`         | string or array   | `"{icon} {temp}"` | Display format(s) with tokens                     |
+| `cycle`          | object            | -                 | Cycle and transition settings (see above)         |
+
+#### Forecast Configuration
+
+| Property       | Type   | Default | Description                      |
+|----------------|--------|---------|----------------------------------|
+| `hours`        | int    | `24`    | Hours for hourly forecast (6-48) |
+| `days`         | int    | `3`     | Days for daily forecast (1-7)    |
+| `scroll_speed` | number | `30`    | Pixels/second for scroll mode    |
+
+Forecast data is automatically fetched when `{forecast:*}` tokens are used in the format string.
+
+#### Air Quality and UV Index
+
+AQI and UV data are automatically fetched when their tokens are used in the format string.
+
+**AQI levels:** Good, Moderate, Unhealthy for Sensitive, Unhealthy, Very Unhealthy, Hazardous
+
+**UV levels:** Low (0-2), Moderate (3-5), High (6-7), Very High (8-10), Extreme (11+)
+
+#### Location Configuration
+
+| Property | Type   | Description                                                       |
+|----------|--------|-------------------------------------------------------------------|
+| `city`   | string | City name (e.g., "London" or "New York,US"). OpenWeatherMap only. |
+| `lat`    | number | Latitude coordinate (-90 to 90)                                   |
+| `lon`    | number | Longitude coordinate (-180 to 180)                                |
+
+#### Weather Icons
+
+The widget displays appropriate icons for weather conditions:
+- Sun (clear sky)
+- Cloud (overcast)
+- Partly cloudy (sun with cloud)
+- Rain (cloud with raindrops)
+- Drizzle (light rain)
+- Snow (cloud with snowflakes)
+- Storm (cloud with lightning)
+- Fog (horizontal lines)
+
+#### Examples
+
+**Basic weather with icon:**
+```json
+{
+  "type": "weather",
+  "weather": {
+    "format": "{icon} {temp}",
+    "location": {"lat": 51.5074, "lon": -0.1278}
+  }
+}
+```
+
+**Multi-line with humidity and wind:**
+```json
+{
+  "type": "weather",
+  "weather": {
+    "format": "{icon} {temp} {feels}\n{humidity} {wind} {wind_dir}",
+    "location": {"lat": 51.5074, "lon": -0.1278}
+  }
+}
+```
+
+**Temperature graph:**
+```json
+{
+  "type": "weather",
+  "weather": {
+    "format": "{forecast:graph}",
+    "location": {"lat": 51.5074, "lon": -0.1278},
+    "forecast": {
+      "hours": 24
+    }
+  }
+}
+```
+
+**Multi-day forecast with icons:**
+```json
+{
+  "type": "weather",
+  "weather": {
+    "format": "{forecast:icons}",
+    "location": {"lat": 51.5074, "lon": -0.1278},
+    "forecast": {
+      "days": 3
+    }
+  }
+}
+```
+
+**Scrolling forecast:**
+```json
+{
+  "type": "weather",
+  "weather": {
+    "format": "{forecast:scroll}",
+    "location": {"lat": 51.5074, "lon": -0.1278},
+    "forecast": {
+      "scroll_speed": 30
+    }
+  }
+}
+```
+
+**With air quality:**
+```json
+{
+  "type": "weather",
+  "weather": {
+    "format": "{icon} {temp} AQI:{aqi}",
+    "location": {"lat": 51.5074, "lon": -0.1278}
+  }
+}
+```
+
+**Cycling between displays with transitions:**
+```json
+{
+  "type": "weather",
+  "weather": {
+    "format": [
+      "{icon} {temp}",
+      "{humidity} {wind}",
+      "{aqi} {uv}",
+      "{forecast:icons}"
+    ],
+    "cycle": {
+      "interval": 10,
+      "transition": "random",
+      "speed": 0.5
+    },
+    "location": {"lat": 51.5074, "lon": -0.1278}
+  }
+}
+```
+
+#### Tips
+
+- Use `update_interval: 300` (5 minutes) to avoid hitting API rate limits
+- Open-Meteo is completely free and requires no registration
+- For OpenWeatherMap, get a free API key at https://openweathermap.org/api
+- Use coordinates (lat/lon) for more precise location
+- AQI and UV tokens automatically enable their respective API fetching
+- Large tokens (forecast:*) expand to fill available horizontal space
+- Format cycling is useful for displaying more information on small screens
+- Scroll mode combines current weather with hourly and daily forecasts
+
+### Battery Widget
+
+Displays device battery level and charging status. Supports multiple display modes including a battery-shaped progressbar, text percentage, bar, gauge, and historical graph. Configuration follows the same pattern as CPU widget: widget-level `mode` with mode-specific sections.
+
+```json
+{
+  "type": "battery",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 10,
+  "mode": "battery",
+  "power_status": {
+    "show_charging": "always",
+    "show_plugged": "always",
+    "show_economy": "blink"
+  },
+  "battery": {
+    "show_percentage": true
+  }
+}
+```
+
+#### Display Modes
+
+| Mode      | Description                                              |
+|-----------|----------------------------------------------------------|
+| `battery` | Battery-shaped progressbar with fill level (default)     |
+| `text`    | Formatted text with tokens (e.g., "{percent}% {status}") |
+| `bar`     | Horizontal or vertical progress bar                      |
+| `gauge`   | Circular gauge                                           |
+| `graph`   | Historical battery level over time                       |
+
+#### Battery Configuration
+
+| Property             | Type   | Default      | Description                                  |
+|----------------------|--------|--------------|----------------------------------------------|
+| `orientation`        | string | `horizontal` | "horizontal" or "vertical" for battery mode  |
+| `show_percentage`    | bool   | `true`       | Show percentage text                         |
+| `low_threshold`      | int    | `20`         | Percentage below which battery is "low"      |
+| `critical_threshold` | int    | `10`         | Percentage below which battery is "critical" |
+
+#### Power Status Configuration
+
+Controls how power status indicators (charging, plugged, economy mode) are displayed:
+
+```json
+"power_status": {
+  "show_charging": "always",
+  "show_plugged": "notify",
+  "show_economy": "blink",
+  "notify_duration": 60
+}
+```
+
+| Property          | Type   | Default   | Description                                    |
+|-------------------|--------|-----------|------------------------------------------------|
+| `show_charging`   | string | `always`  | Display mode for charging indicator            |
+| `show_plugged`    | string | `always`  | Display mode for AC power indicator            |
+| `show_economy`    | string | `blink`   | Display mode for economy/power saver indicator |
+| `notify_duration` | int    | `60`      | Seconds to show indicator in notify modes      |
+
+**Display mode values:**
+- `always` - Show indicator constantly when status is active
+- `never` - Never show this indicator
+- `notify` - Show for `notify_duration` seconds when status becomes active
+- `blink` - Show indicator blinking when status is active
+- `notify_blink` - Show blinking indicator for duration, then hide
+
+#### Text Format Tokens
+
+When using `mode: "text"`, you can customize the display format using tokens:
+
+```json
+"text": {
+  "format": "{percent}% {status}"
+}
+```
+
+| Token             | Description                                                     |
+|-------------------|-----------------------------------------------------------------|
+| `{percent}`       | Battery percentage (e.g., "85")                                 |
+| `{pct}`           | Alias for `{percent}`                                           |
+| `{status}`        | Short status: "CHG", "AC", "ECO", or "" (respects power_status) |
+| `{status_full}`   | Full status: "Charging", "AC Power", "Economy", or ""           |
+| `{time}`          | Smart: time to full (charging) or time to empty (discharging)   |
+| `{time_left}`     | Time until empty (e.g., "1h 30m")                               |
+| `{time_to_full}`  | Time until fully charged                                        |
+| `{time_left_min}` | Raw minutes remaining as number                                 |
+| `{level}`         | Battery level: "critical", "low", or "normal"                   |
+| `{charging}`      | "CHG" if charging, "" otherwise (ignores power_status)          |
+| `{plugged}`       | "AC" if plugged, "" otherwise (ignores power_status)            |
+| `{economy}`       | "ECO" if economy mode, "" otherwise (ignores power_status)      |
+
+**Examples:**
+- `"{percent}%"` → "85%"
+- `"{percent}% {status}"` → "85% CHG"
+- `"{percent}% {time}"` → "85% 1h 30m"
+- `"{level}: {percent}%"` → "normal: 85%"
+
+#### Color Configuration (battery.colors)
+
+Colors use 0-255 range. Setting a color to 0 (black) is supported.
+
+| Property     | Type | Default | Description                        |
+|--------------|------|---------|------------------------------------|
+| `normal`     | int  | `255`   | Fill color when battery is normal  |
+| `low`        | int  | `200`   | Fill color when battery is low     |
+| `critical`   | int  | `150`   | Fill color when critical           |
+| `charging`   | int  | `255`   | Charging indicator color           |
+| `background` | int  | `0`     | Background inside battery body     |
+| `border`     | int  | `255`   | Battery outline color              |
+
+#### Mode-Specific Settings
+
+For bar/graph/gauge modes, use the shared widget-level configurations:
+
+**Bar mode (`bar`):**
+- `direction`: "left", "right", "up", "down" (up/down = vertical)
+- `border`: Show border around bar
+
+**Graph mode (`graph`):**
+- `history`: Number of data points (default: 60)
+- `filled`: Fill under the graph line
+
+**Gauge mode (`gauge`):**
+- `show_ticks`: Show tick marks
+
+#### Examples
+
+**Battery mode with percentage:**
+```json
+{
+  "type": "battery",
+  "position": {"x": 0, "y": 0, "w": 64, "h": 40},
+  "mode": "battery",
+  "power_status": {
+    "show_charging": "always",
+    "show_economy": "blink"
+  },
+  "battery": {
+    "show_percentage": true
+  }
+}
+```
+
+**Text mode with format tokens:**
+```json
+{
+  "type": "battery",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "mode": "text",
+  "text": {
+    "format": "{percent}% {status} {time}"
+  }
+}
+```
+
+**Vertical bar:**
+```json
+{
+  "type": "battery",
+  "position": {"x": 0, "y": 0, "w": 20, "h": 40},
+  "mode": "bar",
+  "bar": {
+    "direction": "up",
+    "border": true
+  }
+}
+```
+
+**Circular gauge:**
+```json
+{
+  "type": "battery",
+  "position": {"x": 0, "y": 0, "w": 40, "h": 40},
+  "mode": "gauge",
+  "gauge": {
+    "show_ticks": true
+  }
+}
+```
+
+**Historical graph:**
+```json
+{
+  "type": "battery",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "mode": "graph",
+  "graph": {
+    "history": 200,
+    "filled": true
+  }
+}
+```
+
+**Custom colors for low battery:**
+```json
+{
+  "type": "battery",
+  "mode": "icon",
+  "battery": {
+    "low_threshold": 30,
+    "critical_threshold": 15,
+    "colors": {
+      "normal": 255,
+      "low": 150,
+      "critical": 80
+    }
+  }
+}
+```
+
+#### Platform Support
+
+- **Windows**: Uses GetSystemPowerStatus API
+- **Linux**: Reads from /sys/class/power_supply/
+
+#### Tips
+
+- Use `update_interval: 10` or higher to avoid excessive system calls
+- Icon mode supports both horizontal and vertical orientation (via `bar.direction`)
+- Horizontal: Battery with terminal on right, status icon in top-left corner
+- Vertical: Battery with terminal on top, status icon at bottom-center
+- Status indicators (charging bolt, AC plug) have white fill with black border for visibility
+- All colors support 0 (black) values
 
 ## Examples
 

@@ -1,6 +1,10 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+	"strings"
+)
 
 // Validation constants
 const (
@@ -18,7 +22,8 @@ var ValidBackends = map[string]bool{
 	"any":       true,
 }
 
-// ValidWidgetTypes contains valid widget type values
+// ValidWidgetTypes contains all valid widget type names.
+// This is the single source of truth for widget types.
 var ValidWidgetTypes = map[string]bool{
 	"clock":            true,
 	"cpu":              true,
@@ -32,6 +37,24 @@ var ValidWidgetTypes = map[string]bool{
 	"audio_visualizer": true,
 	"doom":             true,
 	"winamp":           true,
+	"matrix":           true,
+	"weather":          true,
+	"battery":          true,
+}
+
+// IsValidWidgetType checks if the given type name is a valid widget type
+func IsValidWidgetType(typeName string) bool {
+	return ValidWidgetTypes[typeName]
+}
+
+// GetValidWidgetTypesList returns a sorted comma-separated list of valid widget types
+func GetValidWidgetTypesList() string {
+	types := make([]string, 0, len(ValidWidgetTypes))
+	for t := range ValidWidgetTypes {
+		types = append(types, t)
+	}
+	sort.Strings(types)
+	return strings.Join(types, ", ")
 }
 
 // Validate checks that the configuration is valid
@@ -132,9 +155,8 @@ func validateWidgetType(index int, w *WidgetConfig) error {
 		return fmt.Errorf("widget[%d]: type is required", index)
 	}
 
-	if !ValidWidgetTypes[w.Type] {
-		validTypes := "clock, cpu, memory, network, disk, keyboard, keyboard_layout, volume, volume_meter, audio_visualizer, doom, winamp"
-		return fmt.Errorf("widget[%d]: invalid type '%s' (valid: %s)", index, w.Type, validTypes)
+	if !IsValidWidgetType(w.Type) {
+		return fmt.Errorf("widget[%d]: invalid type '%s' (valid: %s)", index, w.Type, GetValidWidgetTypesList())
 	}
 
 	return nil

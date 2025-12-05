@@ -1,5 +1,37 @@
 package config
 
+import "encoding/json"
+
+// StringOrSlice is a type that can unmarshal from either a string or an array of strings.
+// When unmarshaling a single string, it becomes a slice with one element.
+type StringOrSlice []string
+
+// UnmarshalJSON implements json.Unmarshaler for StringOrSlice
+func (s *StringOrSlice) UnmarshalJSON(data []byte) error {
+	// Try to unmarshal as a string first
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		*s = []string{str}
+		return nil
+	}
+
+	// Try to unmarshal as an array of strings
+	var arr []string
+	if err := json.Unmarshal(data, &arr); err != nil {
+		return err
+	}
+	*s = arr
+	return nil
+}
+
+// MarshalJSON implements json.Marshaler for StringOrSlice
+func (s *StringOrSlice) MarshalJSON() ([]byte, error) {
+	if len(*s) == 1 {
+		return json.Marshal((*s)[0])
+	}
+	return json.Marshal([]string(*s))
+}
+
 // Config represents the complete SteelClock configuration (v2 schema)
 type Config struct {
 	SchemaVersion        int                 `json:"schema_version,omitempty"`
@@ -71,6 +103,8 @@ type WidgetConfig struct {
 	Graph        *GraphConfig        `json:"graph,omitempty"`
 	Gauge        *GaugeConfig        `json:"gauge,omitempty"`
 	Analog       *AnalogConfig       `json:"analog,omitempty"`
+	Binary       *BinaryClockConfig  `json:"binary,omitempty"`  // Clock binary mode
+	Segment      *SegmentClockConfig `json:"segment,omitempty"` // Clock segment mode
 	Spectrum     *SpectrumConfig     `json:"spectrum,omitempty"`
 	Oscilloscope *OscilloscopeConfig `json:"oscilloscope,omitempty"`
 
@@ -105,6 +139,19 @@ type WidgetConfig struct {
 	Winamp   *WinampConfig         `json:"winamp,omitempty"`    // Winamp settings (placeholder)
 	Scroll   *ScrollConfig         `json:"scroll,omitempty"`    // Text scrolling settings
 	AutoShow *WinampAutoShowConfig `json:"auto_show,omitempty"` // Auto-show events (Winamp)
+
+	// Matrix widget
+	Matrix *MatrixConfig `json:"matrix,omitempty"` // Matrix "digital rain" settings
+
+	// DOOM widget
+	Doom *DoomConfig `json:"doom,omitempty"` // DOOM display settings
+
+	// Battery widget
+	Battery     *BatteryConfig     `json:"battery,omitempty"`      // Battery display settings
+	PowerStatus *PowerStatusConfig `json:"power_status,omitempty"` // Power status indicator settings
+
+	// Weather widget
+	Weather *WeatherConfig `json:"weather,omitempty"` // Weather widget settings
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -238,7 +285,6 @@ type BarConfig struct {
 // GraphConfig represents graph mode settings
 type GraphConfig struct {
 	History int               `json:"history,omitempty"`
-	Filled  *bool             `json:"filled,omitempty"`
 	Colors  *ModeColorsConfig `json:"colors,omitempty"`
 }
 
@@ -253,6 +299,62 @@ type AnalogConfig struct {
 	ShowSeconds bool              `json:"show_seconds,omitempty"`
 	ShowTicks   bool              `json:"show_ticks,omitempty"`
 	Colors      *ModeColorsConfig `json:"colors,omitempty"`
+}
+
+// BinaryClockConfig represents binary clock mode settings
+type BinaryClockConfig struct {
+	// Format: time format like "%H:%M" or "%H:%M:%S" (default: "%H:%M:%S")
+	Format string `json:"format,omitempty"`
+	// Style: "bcd" (each digit in binary) or "true" (whole number in binary)
+	Style string `json:"style,omitempty"`
+	// Layout: "vertical" (bits top-to-bottom) or "horizontal" (bits left-to-right)
+	Layout string `json:"layout,omitempty"`
+	// ShowLabels: show H:M:S labels
+	ShowLabels bool `json:"show_labels,omitempty"`
+	// ShowHint: show decimal digits alongside binary
+	ShowHint bool `json:"show_hint,omitempty"`
+	// DotSize: diameter of dots in pixels (default: 4)
+	DotSize int `json:"dot_size,omitempty"`
+	// DotSpacing: gap between dots in pixels (default: 2)
+	DotSpacing int `json:"dot_spacing,omitempty"`
+	// DotStyle: "circle" or "square" (default: "circle")
+	DotStyle string `json:"dot_style,omitempty"`
+	// OnColor: color for "on" bits (default: 255)
+	OnColor *int `json:"on_color,omitempty"`
+	// OffColor: color for "off" bits, 0 = invisible (default: 40)
+	OffColor *int `json:"off_color,omitempty"`
+}
+
+// SegmentClockConfig represents seven-segment clock mode settings
+type SegmentClockConfig struct {
+	// Format: time format like "%H:%M" or "%H:%M:%S" (default: "%H:%M:%S")
+	Format string `json:"format,omitempty"`
+	// DigitHeight: height of digits in pixels (default: auto-fit)
+	DigitHeight int `json:"digit_height,omitempty"`
+	// SegmentThickness: thickness of segments in pixels (default: 2)
+	SegmentThickness int `json:"segment_thickness,omitempty"`
+	// SegmentStyle: shape of segments - "rectangle", "hexagon", "rounded" (default: "rectangle")
+	SegmentStyle string `json:"segment_style,omitempty"`
+	// DigitSpacing: gap between digits in pixels (default: 2)
+	DigitSpacing int `json:"digit_spacing,omitempty"`
+	// ColonStyle: "dots", "bar", or "none" (default: "dots")
+	ColonStyle string `json:"colon_style,omitempty"`
+	// ColonBlink: blink colon every second (default: true)
+	ColonBlink *bool `json:"colon_blink,omitempty"`
+	// OnColor: color for "on" segments (default: 255)
+	OnColor *int `json:"on_color,omitempty"`
+	// OffColor: color for "off" segments, 0 = invisible (default: 30)
+	OffColor *int `json:"off_color,omitempty"`
+	// Flip: flip animation settings
+	Flip *FlipEffectConfig `json:"flip,omitempty"`
+}
+
+// FlipEffectConfig represents digit flip animation settings
+type FlipEffectConfig struct {
+	// Style: "none" (disabled), "fade" (crossfade between digits)
+	Style string `json:"style,omitempty"`
+	// Speed: animation duration in seconds (default: 0.15)
+	Speed float64 `json:"speed,omitempty"`
 }
 
 // SpectrumConfig represents spectrum analyzer settings
@@ -376,4 +478,166 @@ type ScrollConfig struct {
 	PauseMs int `json:"pause_ms,omitempty"`
 	// Gap - pixels between end and start of text in continuous mode
 	Gap int `json:"gap,omitempty"`
+}
+
+// MatrixConfig represents Matrix "digital rain" widget settings
+type MatrixConfig struct {
+	// Charset: "ascii", "katakana", "binary", "digits", "hex"
+	Charset string `json:"charset,omitempty"`
+	// Density: probability of column being active (0.0-1.0, default: 0.4)
+	Density float64 `json:"density,omitempty"`
+	// MinSpeed: minimum fall speed in pixels per frame (default: 0.5)
+	MinSpeed float64 `json:"min_speed,omitempty"`
+	// MaxSpeed: maximum fall speed in pixels per frame (default: 2.0)
+	MaxSpeed float64 `json:"max_speed,omitempty"`
+	// MinLength: minimum trail length in characters (default: 4)
+	MinLength int `json:"min_length,omitempty"`
+	// MaxLength: maximum trail length in characters (default: 15)
+	MaxLength int `json:"max_length,omitempty"`
+	// HeadColor: brightness of leading character (0-255, default: 255)
+	HeadColor int `json:"head_color,omitempty"`
+	// TrailFade: how quickly trail fades (0.0-1.0, default: 0.85)
+	TrailFade float64 `json:"trail_fade,omitempty"`
+	// CharChangeRate: probability of character changing per frame (default: 0.02)
+	CharChangeRate float64 `json:"char_change_rate,omitempty"`
+	// FontSize: "small" (3x5), "large" (5x7), or "auto" (based on display height, default)
+	FontSize string `json:"font_size,omitempty"`
+}
+
+// DoomConfig represents DOOM widget display settings
+type DoomConfig struct {
+	// RenderMode: grayscale conversion mode
+	// "normal" - standard luminance (default)
+	// "contrast" - auto-contrast stretching
+	// "posterize" - reduce to N gray levels
+	// "threshold" - pure black/white
+	// "dither" - ordered dithering (Bayer matrix)
+	// "gamma" - gamma correction with contrast boost
+	RenderMode string `json:"render_mode,omitempty"`
+	// PosterizeLevels: number of gray levels for posterize mode (2-16, default: 4)
+	PosterizeLevels int `json:"posterize_levels,omitempty"`
+	// ThresholdValue: cutoff value for threshold mode (0-255, default: 128)
+	ThresholdValue int `json:"threshold_value,omitempty"`
+	// Gamma: gamma value for gamma mode (0.1-3.0, default: 1.5)
+	Gamma float64 `json:"gamma,omitempty"`
+	// ContrastBoost: contrast multiplier for gamma mode (1.0-3.0, default: 1.2)
+	ContrastBoost float64 `json:"contrast_boost,omitempty"`
+	// DitherSize: Bayer matrix size for dither mode (2, 4, or 8, default: 4)
+	DitherSize int `json:"dither_size,omitempty"`
+}
+
+// BatteryConfig represents Battery widget settings
+// Modes: "icon" (compact tray-style), "battery" (progressbar shape), "text", "bar", "gauge", "graph"
+// Note: Power status indicator display is controlled by PowerStatusConfig (power_status field)
+type BatteryConfig struct {
+	// Orientation: "horizontal" or "vertical" for battery/icon modes (default: "horizontal")
+	Orientation string `json:"orientation,omitempty"`
+	// ShowPercentage: show percentage text (default: true)
+	ShowPercentage *bool `json:"show_percentage,omitempty"`
+	// LowThreshold: percentage considered low (default: 20)
+	LowThreshold int `json:"low_threshold,omitempty"`
+	// CriticalThreshold: percentage considered critical (default: 10)
+	CriticalThreshold int `json:"critical_threshold,omitempty"`
+	// Colors: custom colors for battery states (uses pointers to allow 0/black)
+	Colors *BatteryColorsConfig `json:"colors,omitempty"`
+}
+
+// BatteryColorsConfig represents color settings for battery widget
+// Uses pointers to distinguish "not set" from "set to 0 (black)"
+type BatteryColorsConfig struct {
+	// Normal: fill color when battery level is normal (default: 255)
+	Normal *int `json:"normal,omitempty"`
+	// Low: fill color when battery is low (default: 200)
+	Low *int `json:"low,omitempty"`
+	// Critical: fill color when battery is critical (default: 150)
+	Critical *int `json:"critical,omitempty"`
+	// Charging: charging indicator color (default: 255)
+	Charging *int `json:"charging,omitempty"`
+	// Background: inner background color (default: 0)
+	Background *int `json:"background,omitempty"`
+	// Border: outline color (default: 255)
+	Border *int `json:"border,omitempty"`
+}
+
+// PowerStatusConfig represents power status indicator display settings
+// Used by battery widget to control how charging/plugged/economy indicators are shown
+type PowerStatusConfig struct {
+	// ShowEconomy: display mode for economy/power saver indicator
+	// Values: "always", "never", "notify", "blink", "notify_blink" (default: "blink")
+	ShowEconomy string `json:"show_economy,omitempty"`
+	// ShowCharging: display mode for charging indicator
+	// Values: "always", "never", "notify", "blink", "notify_blink" (default: "always")
+	ShowCharging string `json:"show_charging,omitempty"`
+	// ShowPlugged: display mode for AC power indicator
+	// Values: "always", "never", "notify", "blink", "notify_blink" (default: "always")
+	ShowPlugged string `json:"show_plugged,omitempty"`
+	// NotifyDuration: seconds to show indicator in "notify" modes (default: 60)
+	NotifyDuration int `json:"notify_duration,omitempty"`
+}
+
+// WeatherConfig represents Weather widget settings
+type WeatherConfig struct {
+	// Provider: "openweathermap" or "open-meteo" (default: "open-meteo")
+	Provider string `json:"provider,omitempty"`
+	// ApiKey: API key for OpenWeatherMap (required for openweathermap provider)
+	ApiKey string `json:"api_key,omitempty"`
+	// Location configuration
+	Location *WeatherLocationConfig `json:"location,omitempty"`
+	// Units: "metric" (Celsius, m/s) or "imperial" (Fahrenheit, mph) (default: "metric")
+	Units string `json:"units,omitempty"`
+	// IconSize: size of weather icons in pixels (default: 16)
+	IconSize int `json:"icon_size,omitempty"`
+	// Format: display format string(s) with tokens like {icon}, {temp}, {aqi}, etc.
+	// Can be a single string or an array of strings (for cycling between formats).
+	// Supports newlines (\n) for multi-line layouts.
+	// Default: "{icon} {temp}"
+	Format StringOrSlice `json:"format,omitempty"`
+	// Cycle: format cycling and transition settings
+	Cycle *WeatherCycleConfig `json:"cycle,omitempty"`
+	// Forecast: forecast display settings (hours, days, scroll_speed)
+	Forecast *WeatherForecastConfig `json:"forecast,omitempty"`
+
+	// Deprecated fields for backward compatibility
+	// ShowIcon: deprecated, use Format instead
+	ShowIcon *bool `json:"show_icon,omitempty"`
+	// ForecastHours: deprecated, use Forecast.Hours instead
+	ForecastHours int `json:"forecast_hours,omitempty"`
+	// ForecastDays: deprecated, use Forecast.Days instead
+	ForecastDays int `json:"forecast_days,omitempty"`
+	// ScrollSpeed: deprecated, use Forecast.ScrollSpeed instead
+	ScrollSpeed float64 `json:"scroll_speed,omitempty"`
+}
+
+// WeatherLocationConfig represents weather location settings
+type WeatherLocationConfig struct {
+	// City: city name (e.g., "London" or "New York,US")
+	City string `json:"city,omitempty"`
+	// Lat: latitude for coordinate-based location
+	Lat float64 `json:"lat,omitempty"`
+	// Lon: longitude for coordinate-based location
+	Lon float64 `json:"lon,omitempty"`
+}
+
+// WeatherForecastConfig represents forecast display settings
+type WeatherForecastConfig struct {
+	// Hours: number of hours for hourly forecast (default: 24, max: 48)
+	Hours int `json:"hours,omitempty"`
+	// Days: number of days for daily forecast (default: 3, max: 7)
+	Days int `json:"days,omitempty"`
+	// ScrollSpeed: pixels per second for {forecast:scroll} (default: 30)
+	ScrollSpeed float64 `json:"scroll_speed,omitempty"`
+}
+
+// WeatherCycleConfig represents format cycling and transition settings
+type WeatherCycleConfig struct {
+	// Interval: seconds between format changes (0 to disable cycling, default: 10)
+	Interval int `json:"interval,omitempty"`
+	// Transition: transition effect type (default: "none")
+	// Values: "none", "push_left", "push_right", "push_up", "push_down",
+	//         "slide_left", "slide_right", "slide_up", "slide_down",
+	//         "dissolve_fade", "dissolve_pixel", "dissolve_dither",
+	//         "box_in", "box_out", "clock_wipe", "random"
+	Transition string `json:"transition,omitempty"`
+	// Speed: transition duration in seconds (default: 0.5)
+	Speed float64 `json:"speed,omitempty"`
 }

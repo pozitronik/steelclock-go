@@ -1,6 +1,7 @@
 package widget
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -46,6 +47,11 @@ func TestCreateWidget_AllTypes(t *testing.T) {
 		{
 			name:       "create keyboard_layout widget",
 			widgetType: "keyboard_layout",
+			wantErr:    false,
+		},
+		{
+			name:       "create matrix widget",
+			widgetType: "matrix",
 			wantErr:    false,
 		},
 	}
@@ -449,9 +455,16 @@ func TestCreateWidget_ErrorMessage(t *testing.T) {
 			t.Fatal("CreateWidget() should return error for unknown type")
 		}
 
-		expectedMsg := "unknown widget type: nonexistent"
-		if err.Error() != expectedMsg {
-			t.Errorf("Error message = %q, want %q", err.Error(), expectedMsg)
+		// Error should contain the type name and list of valid types
+		errMsg := err.Error()
+		if !strings.Contains(errMsg, "unknown widget type: nonexistent") {
+			t.Errorf("Error message should contain 'unknown widget type: nonexistent', got %q", errMsg)
+		}
+		if !strings.Contains(errMsg, "valid:") {
+			t.Errorf("Error message should contain list of valid types, got %q", errMsg)
+		}
+		if !strings.Contains(errMsg, "matrix") {
+			t.Errorf("Error message should list 'matrix' as valid type, got %q", errMsg)
 		}
 	})
 

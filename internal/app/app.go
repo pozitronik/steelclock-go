@@ -310,6 +310,8 @@ func (a *App) SwitchProfile(path string) error {
 	newCfg, err := a.profileMgr.GetActiveConfig()
 	if err != nil {
 		log.Printf("ERROR: Failed to load profile config: %v", err)
+		log.Println("Stopping current instance and showing error...")
+		a.Stop()
 		return a.handleStartupError(err, nil)
 	}
 

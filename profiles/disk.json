@@ -27,7 +27,6 @@
       },
       "graph": {
         "history": 60,
-        "filled": true,
         "colors": {
           "read": 255,
           "write": 0
