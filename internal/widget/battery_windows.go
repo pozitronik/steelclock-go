@@ -23,6 +23,8 @@ type systemPowerStatus struct {
 }
 
 // ACLineStatus values
+//
+//goland:noinspection GoUnusedConst,GoUnusedConst
 const (
 	acOffline = 0
 	acOnline  = 1
@@ -30,6 +32,8 @@ const (
 )
 
 // BatteryFlag values
+//
+//goland:noinspection GoUnusedConst,GoUnusedConst,GoUnusedConst
 const (
 	batteryHigh      = 1
 	batteryLow       = 2
