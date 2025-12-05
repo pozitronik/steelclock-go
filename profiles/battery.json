@@ -42,7 +42,12 @@
         }
       },
       "gauge": {
-        "show_ticks": true
+        "show_ticks": true,
+        "colors": {
+          "arc": 200,
+          "needle": 255,
+          "ticks": 150
+        }
       },
       "text": {
         "font": null,

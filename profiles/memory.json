@@ -24,7 +24,8 @@
       "graph": {
         "history": 60,
         "colors": {
-          "fill": 255
+          "fill": 255,
+          "line": 255
         }
       },
       "gauge": {
