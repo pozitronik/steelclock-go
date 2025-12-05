@@ -183,5 +183,6 @@ func (d *HIDDriver) Reconnect() error {
 }
 
 // buildPacket is defined in platform-specific files:
-// - packet_windows.go: Format [00 ReportID] + [61 CMD] + [16 Padding] + [pixelData] = 658 bytes
-// - packet_linux.go: Format [61 CMD] + [1 Padding] + [pixelData] = 642 bytes
+// - packet_windows.go: Format [00 ReportID] + [61 CMD] + [pixelData] + [1 Padding] = 643 bytes (Report ID stripped by OS)
+// - packet_linux.go: Format [61 CMD] + [pixelData] + [1 Padding] = 642 bytes
+// Both send the same data to device: [61 CMD] + [pixelData] + [1 Padding] = 642 bytes (for 128x40)
