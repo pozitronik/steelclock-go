@@ -147,7 +147,8 @@ type WidgetConfig struct {
 	Doom *DoomConfig `json:"doom,omitempty"` // DOOM display settings
 
 	// Battery widget
-	Battery *BatteryConfig `json:"battery,omitempty"` // Battery display settings
+	Battery     *BatteryConfig     `json:"battery,omitempty"`      // Battery display settings
+	PowerStatus *PowerStatusConfig `json:"power_status,omitempty"` // Power status indicator settings
 
 	// Weather widget
 	Weather *WeatherConfig `json:"weather,omitempty"` // Weather widget settings
@@ -179,14 +180,12 @@ type StyleConfig struct {
 
 // TextConfig represents text rendering properties
 type TextConfig struct {
-	Format        string       `json:"format,omitempty"`
-	Font          string       `json:"font,omitempty"` // Font name: TTF font name/path or built-in: "pixel3x5", "pixel5x7"
-	Size          int          `json:"size,omitempty"`
-	Align         *AlignConfig `json:"align,omitempty"`
-	Unit          string       `json:"unit,omitempty"`
-	ShowUnit      *bool        `json:"show_unit,omitempty"`      // Show unit suffix in text mode (disk widget)
-	ShowStatus    *bool        `json:"show_status,omitempty"`    // Battery: show charging/AC text suffix (overrides battery.show_status)
-	ChargingBlink *bool        `json:"charging_blink,omitempty"` // Battery: blink charging text suffix (overrides battery.charging_blink)
+	Format   string       `json:"format,omitempty"`
+	Font     string       `json:"font,omitempty"` // Font name: TTF font name/path or built-in: "pixel3x5", "pixel5x7"
+	Size     int          `json:"size,omitempty"`
+	Align    *AlignConfig `json:"align,omitempty"`
+	Unit     string       `json:"unit,omitempty"`
+	ShowUnit *bool        `json:"show_unit,omitempty"` // Show unit suffix in text mode (disk widget)
 }
 
 // AlignConfig represents text alignment
@@ -278,27 +277,21 @@ type ModeColorsConfig struct {
 
 // BarConfig represents bar mode settings
 type BarConfig struct {
-	Direction     string            `json:"direction,omitempty"` // "horizontal", "vertical"
-	Border        bool              `json:"border,omitempty"`
-	Colors        *ModeColorsConfig `json:"colors,omitempty"`
-	ShowStatus    *bool             `json:"show_status,omitempty"`    // Battery: show charging/AC indicator (overrides battery.show_status)
-	ChargingBlink *bool             `json:"charging_blink,omitempty"` // Battery: blink charging indicator (overrides battery.charging_blink)
+	Direction string            `json:"direction,omitempty"` // "horizontal", "vertical"
+	Border    bool              `json:"border,omitempty"`
+	Colors    *ModeColorsConfig `json:"colors,omitempty"`
 }
 
 // GraphConfig represents graph mode settings
 type GraphConfig struct {
-	History       int               `json:"history,omitempty"`
-	Colors        *ModeColorsConfig `json:"colors,omitempty"`
-	ShowStatus    *bool             `json:"show_status,omitempty"`    // Battery: show charging/AC indicator (overrides battery.show_status)
-	ChargingBlink *bool             `json:"charging_blink,omitempty"` // Battery: blink charging indicator (overrides battery.charging_blink)
+	History int               `json:"history,omitempty"`
+	Colors  *ModeColorsConfig `json:"colors,omitempty"`
 }
 
 // GaugeConfig represents gauge mode settings
 type GaugeConfig struct {
-	ShowTicks     *bool             `json:"show_ticks,omitempty"`
-	Colors        *ModeColorsConfig `json:"colors,omitempty"`
-	ShowStatus    *bool             `json:"show_status,omitempty"`    // Battery: show charging/AC indicator (overrides battery.show_status)
-	ChargingBlink *bool             `json:"charging_blink,omitempty"` // Battery: blink charging indicator (overrides battery.charging_blink)
+	ShowTicks *bool             `json:"show_ticks,omitempty"`
+	Colors    *ModeColorsConfig `json:"colors,omitempty"`
 }
 
 // AnalogConfig represents analog clock mode settings
@@ -535,15 +528,12 @@ type DoomConfig struct {
 
 // BatteryConfig represents Battery widget settings
 // Modes: "icon" (compact tray-style), "battery" (progressbar shape), "text", "bar", "gauge", "graph"
+// Note: Power status indicator display is controlled by PowerStatusConfig (power_status field)
 type BatteryConfig struct {
 	// Orientation: "horizontal" or "vertical" for battery/icon modes (default: "horizontal")
 	Orientation string `json:"orientation,omitempty"`
 	// ShowPercentage: show percentage text (default: true)
 	ShowPercentage *bool `json:"show_percentage,omitempty"`
-	// ShowStatus: show charging/AC indicator (default: true)
-	ShowStatus *bool `json:"show_status,omitempty"`
-	// ChargingBlink: blink the charging indicator (default: false)
-	ChargingBlink *bool `json:"charging_blink,omitempty"`
 	// LowThreshold: percentage considered low (default: 20)
 	LowThreshold int `json:"low_threshold,omitempty"`
 	// CriticalThreshold: percentage considered critical (default: 10)
@@ -567,6 +557,22 @@ type BatteryColorsConfig struct {
 	Background *int `json:"background,omitempty"`
 	// Border: outline color (default: 255)
 	Border *int `json:"border,omitempty"`
+}
+
+// PowerStatusConfig represents power status indicator display settings
+// Used by battery widget to control how charging/plugged/economy indicators are shown
+type PowerStatusConfig struct {
+	// ShowEconomy: display mode for economy/power saver indicator
+	// Values: "always", "never", "notify", "blink", "notify_blink" (default: "blink")
+	ShowEconomy string `json:"show_economy,omitempty"`
+	// ShowCharging: display mode for charging indicator
+	// Values: "always", "never", "notify", "blink", "notify_blink" (default: "always")
+	ShowCharging string `json:"show_charging,omitempty"`
+	// ShowPlugged: display mode for AC power indicator
+	// Values: "always", "never", "notify", "blink", "notify_blink" (default: "always")
+	ShowPlugged string `json:"show_plugged,omitempty"`
+	// NotifyDuration: seconds to show indicator in "notify" modes (default: 60)
+	NotifyDuration int `json:"notify_duration,omitempty"`
 }
 
 // WeatherConfig represents Weather widget settings
