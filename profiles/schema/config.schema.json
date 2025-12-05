@@ -1296,6 +1296,11 @@
                 "type": "object",
                 "description": "Text mode settings",
                 "properties": {
+                  "format": {
+                    "type": "string",
+                    "description": "Format string with tokens: {percent}/{pct} (value), {status} (CHG/AC/ECO), {status_full} (Charging/AC Power/Economy), {time} (smart remaining), {time_left}, {time_to_full}, {time_left_min} (minutes), {level} (critical/low/normal), {charging}/{plugged}/{economy} (boolean indicators)",
+                    "default": "{percent}%"
+                  },
                   "font": { "type": ["string", "null"], "description": "Font name or TTF path", "default": null },
                   "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 16 },
                   "align": {

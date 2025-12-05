@@ -1256,40 +1256,101 @@ The widget displays appropriate icons for weather conditions:
 
 ### Battery Widget
 
-Displays device battery level and charging status. Supports multiple display modes including a battery-shaped icon with fill level, text percentage, bar, gauge, and historical graph. Configuration follows the same pattern as CPU widget: widget-level `mode` with mode-specific sections.
+Displays device battery level and charging status. Supports multiple display modes including a battery-shaped progressbar, text percentage, bar, gauge, and historical graph. Configuration follows the same pattern as CPU widget: widget-level `mode` with mode-specific sections.
 
 ```json
 {
   "type": "battery",
   "position": {"x": 0, "y": 0, "w": 128, "h": 40},
   "update_interval": 10,
-  "mode": "icon",
+  "mode": "battery",
+  "power_status": {
+    "show_charging": "always",
+    "show_plugged": "always",
+    "show_economy": "blink"
+  },
   "battery": {
-    "show_percentage": true,
-    "show_status": true
+    "show_percentage": true
   }
 }
 ```
 
 #### Display Modes
 
-| Mode    | Description                                                |
-|---------|-----------------------------------------------------------|
-| `icon`  | Battery-shaped icon with fill level (default)             |
-| `text`  | Percentage text only (e.g., "75%")                        |
-| `bar`   | Horizontal or vertical progress bar                       |
-| `gauge` | Circular gauge                                            |
-| `graph` | Historical battery level over time                        |
+| Mode      | Description                                              |
+|-----------|----------------------------------------------------------|
+| `battery` | Battery-shaped progressbar with fill level (default)     |
+| `text`    | Formatted text with tokens (e.g., "{percent}% {status}") |
+| `bar`     | Horizontal or vertical progress bar                      |
+| `gauge`   | Circular gauge                                           |
+| `graph`   | Historical battery level over time                       |
 
-#### Battery Configuration (icon mode settings)
+#### Battery Configuration
 
-| Property            | Type    | Default | Description                                    |
-|---------------------|---------|---------|------------------------------------------------|
-| `show_percentage`   | bool    | `true`  | Show percentage text inside icon               |
-| `show_status`       | bool    | `true`  | Show charging/AC indicator (white with black border) |
-| `low_threshold`     | int     | `20`    | Percentage below which battery is "low"        |
-| `critical_threshold`| int     | `10`    | Percentage below which battery is "critical"   |
-| `charging_blink`    | bool    | `false` | Blink the charging indicator                   |
+| Property             | Type   | Default      | Description                                  |
+|----------------------|--------|--------------|----------------------------------------------|
+| `orientation`        | string | `horizontal` | "horizontal" or "vertical" for battery mode  |
+| `show_percentage`    | bool   | `true`       | Show percentage text                         |
+| `low_threshold`      | int    | `20`         | Percentage below which battery is "low"      |
+| `critical_threshold` | int    | `10`         | Percentage below which battery is "critical" |
+
+#### Power Status Configuration
+
+Controls how power status indicators (charging, plugged, economy mode) are displayed:
+
+```json
+"power_status": {
+  "show_charging": "always",
+  "show_plugged": "notify",
+  "show_economy": "blink",
+  "notify_duration": 60
+}
+```
+
+| Property          | Type   | Default   | Description                                    |
+|-------------------|--------|-----------|------------------------------------------------|
+| `show_charging`   | string | `always`  | Display mode for charging indicator            |
+| `show_plugged`    | string | `always`  | Display mode for AC power indicator            |
+| `show_economy`    | string | `blink`   | Display mode for economy/power saver indicator |
+| `notify_duration` | int    | `60`      | Seconds to show indicator in notify modes      |
+
+**Display mode values:**
+- `always` - Show indicator constantly when status is active
+- `never` - Never show this indicator
+- `notify` - Show for `notify_duration` seconds when status becomes active
+- `blink` - Show indicator blinking when status is active
+- `notify_blink` - Show blinking indicator for duration, then hide
+
+#### Text Format Tokens
+
+When using `mode: "text"`, you can customize the display format using tokens:
+
+```json
+"text": {
+  "format": "{percent}% {status}"
+}
+```
+
+| Token             | Description                                                     |
+|-------------------|-----------------------------------------------------------------|
+| `{percent}`       | Battery percentage (e.g., "85")                                 |
+| `{pct}`           | Alias for `{percent}`                                           |
+| `{status}`        | Short status: "CHG", "AC", "ECO", or "" (respects power_status) |
+| `{status_full}`   | Full status: "Charging", "AC Power", "Economy", or ""           |
+| `{time}`          | Smart: time to full (charging) or time to empty (discharging)   |
+| `{time_left}`     | Time until empty (e.g., "1h 30m")                               |
+| `{time_to_full}`  | Time until fully charged                                        |
+| `{time_left_min}` | Raw minutes remaining as number                                 |
+| `{level}`         | Battery level: "critical", "low", or "normal"                   |
+| `{charging}`      | "CHG" if charging, "" otherwise (ignores power_status)          |
+| `{plugged}`       | "AC" if plugged, "" otherwise (ignores power_status)            |
+| `{economy}`       | "ECO" if economy mode, "" otherwise (ignores power_status)      |
+
+**Examples:**
+- `"{percent}%"` → "85%"
+- `"{percent}% {status}"` → "85% CHG"
+- `"{percent}% {time}"` → "85% 1h 30m"
+- `"{level}: {percent}%"` → "normal: 85%"
 
 #### Color Configuration (battery.colors)
 
@@ -1321,27 +1382,30 @@ For bar/graph/gauge modes, use the shared widget-level configurations:
 
 #### Examples
 
-**Icon mode with percentage:**
+**Battery mode with percentage:**
 ```json
 {
   "type": "battery",
   "position": {"x": 0, "y": 0, "w": 64, "h": 40},
-  "mode": "icon",
+  "mode": "battery",
+  "power_status": {
+    "show_charging": "always",
+    "show_economy": "blink"
+  },
   "battery": {
-    "show_percentage": true,
-    "show_status": true
+    "show_percentage": true
   }
 }
 ```
 
-**Vertical icon (bar direction controls orientation):**
+**Text mode with format tokens:**
 ```json
 {
   "type": "battery",
-  "position": {"x": 0, "y": 0, "w": 20, "h": 40},
-  "mode": "icon",
-  "bar": {
-    "direction": "up"
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "mode": "text",
+  "text": {
+    "format": "{percent}% {status} {time}"
   }
 }
 ```

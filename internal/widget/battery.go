@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -76,6 +78,7 @@ type BatteryWidget struct {
 	vertAlign  string
 	fontFace   font.Face
 	padding    int
+	textFormat string // Format string with tokens like {percent}, {status}, etc.
 
 	// Gauge settings
 	gaugeColor       uint8
@@ -202,6 +205,12 @@ func NewBatteryWidget(cfg config.WidgetConfig) (*BatteryWidget, error) {
 	graphSettings := helper.GetGraphSettings()
 	gaugeSettings := helper.GetGaugeSettings()
 
+	// Text format with tokens (default: "{percent}%")
+	textFormat := "{percent}%"
+	if cfg.Text != nil && cfg.Text.Format != "" {
+		textFormat = cfg.Text.Format
+	}
+
 	// Load font for text mode
 	fontFace, err := helper.LoadFontForTextMode(displayMode)
 	if err != nil {
@@ -241,6 +250,7 @@ func NewBatteryWidget(cfg config.WidgetConfig) (*BatteryWidget, error) {
 		vertAlign:         textSettings.VertAlign,
 		fontFace:          fontFace,
 		padding:           padding,
+		textFormat:        textFormat,
 		gaugeColor:        uint8(gaugeSettings.ArcColor),
 		gaugeNeedleColor:  uint8(gaugeSettings.NeedleColor),
 		gaugeShowTicks:    gaugeSettings.ShowTicks,
@@ -459,20 +469,127 @@ func (w *BatteryWidget) drawFilledRect(img *image.Gray, x, y, width, height int,
 	}
 }
 
-// renderText renders battery as text
-func (w *BatteryWidget) renderText(img *image.Gray, status BatteryStatus) {
-	text := fmt.Sprintf("%d%%", status.Percentage)
-
-	// Check for visible status indicator (priority: charging > economy > plugged)
-	// For text mode, we show text suffix instead of icon
-	if w.shouldShowIndicator(&w.chargingState, status.IsCharging) && !w.shouldBlinkIndicator(&w.chargingState) {
-		text += " CHG"
-	} else if w.shouldShowIndicator(&w.economyState, status.IsEconomyMode) && !w.shouldBlinkIndicator(&w.economyState) {
-		text += " ECO"
-	} else if w.shouldShowIndicator(&w.pluggedState, status.IsPluggedIn) && !w.shouldBlinkIndicator(&w.pluggedState) {
-		text += " AC"
+// formatMinutes formats a duration in minutes to a human-readable string
+func formatMinutes(minutes int) string {
+	if minutes <= 0 {
+		return "-"
 	}
+	hours := minutes / 60
+	mins := minutes % 60
+	if hours > 0 {
+		return fmt.Sprintf("%dh %dm", hours, mins)
+	}
+	return fmt.Sprintf("%dm", mins)
+}
 
+// expandToken expands a single token to its value
+func (w *BatteryWidget) expandToken(token string, status BatteryStatus) string {
+	switch token {
+	// Percentage
+	case "percent", "pct":
+		return fmt.Sprintf("%d", status.Percentage)
+
+	// Status text (respects power_status visibility and blink)
+	case "status":
+		if w.shouldShowIndicator(&w.chargingState, status.IsCharging) && !w.shouldBlinkIndicator(&w.chargingState) {
+			return "CHG"
+		}
+		if w.shouldShowIndicator(&w.economyState, status.IsEconomyMode) && !w.shouldBlinkIndicator(&w.economyState) {
+			return "ECO"
+		}
+		if w.shouldShowIndicator(&w.pluggedState, status.IsPluggedIn) && !w.shouldBlinkIndicator(&w.pluggedState) {
+			return "AC"
+		}
+		return ""
+
+	case "status_full":
+		if w.shouldShowIndicator(&w.chargingState, status.IsCharging) && !w.shouldBlinkIndicator(&w.chargingState) {
+			return "Charging"
+		}
+		if w.shouldShowIndicator(&w.economyState, status.IsEconomyMode) && !w.shouldBlinkIndicator(&w.economyState) {
+			return "Economy"
+		}
+		if w.shouldShowIndicator(&w.pluggedState, status.IsPluggedIn) && !w.shouldBlinkIndicator(&w.pluggedState) {
+			return "AC Power"
+		}
+		return ""
+
+	// Time remaining
+	case "time":
+		// Smart: time to full if charging, time to empty otherwise
+		if status.IsCharging && status.TimeToFull > 0 {
+			return formatMinutes(status.TimeToFull)
+		}
+		return formatMinutes(status.TimeToEmpty)
+
+	case "time_left":
+		return formatMinutes(status.TimeToEmpty)
+
+	case "time_to_full":
+		return formatMinutes(status.TimeToFull)
+
+	case "time_left_min":
+		if status.TimeToEmpty > 0 {
+			return fmt.Sprintf("%d", status.TimeToEmpty)
+		}
+		return "-"
+
+	// Battery level state
+	case "level":
+		if status.Percentage <= w.criticalThreshold {
+			return "critical"
+		}
+		if status.Percentage <= w.lowThreshold {
+			return "low"
+		}
+		return "normal"
+
+	// Boolean indicators (always show if status is active, ignoring visibility settings)
+	case "charging":
+		if status.IsCharging {
+			return "CHG"
+		}
+		return ""
+
+	case "plugged":
+		if status.IsPluggedIn {
+			return "AC"
+		}
+		return ""
+
+	case "economy":
+		if status.IsEconomyMode {
+			return "ECO"
+		}
+		return ""
+
+	default:
+		// Unknown token - return as-is with braces
+		return "{" + token + "}"
+	}
+}
+
+// expandFormat expands all tokens in the format string
+func (w *BatteryWidget) expandFormat(format string, status BatteryStatus) string {
+	// Regex to match {token}
+	re := regexp.MustCompile(`\{([a-zA-Z_][a-zA-Z0-9_]*)\}`)
+
+	result := re.ReplaceAllStringFunc(format, func(match string) string {
+		// Extract token name (remove braces)
+		token := match[1 : len(match)-1]
+		return w.expandToken(token, status)
+	})
+
+	// Clean up multiple spaces that may result from empty tokens
+	result = regexp.MustCompile(`\s+`).ReplaceAllString(result, " ")
+	result = strings.TrimSpace(result)
+
+	return result
+}
+
+// renderText renders battery as text using format tokens
+func (w *BatteryWidget) renderText(img *image.Gray, status BatteryStatus) {
+	text := w.expandFormat(w.textFormat, status)
 	bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 }
 

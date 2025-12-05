@@ -14,7 +14,7 @@
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
       "style": {"background": 0, "border": 0, "padding": 0},
-      "mode": "gauge",
+      "mode": "text",
       "power_status": {
         "show_economy": "blink",
         "show_charging": "always",
@@ -57,6 +57,7 @@
         }
       },
       "text": {
+        "format": "{percent}% {status}",
         "font": null,
         "size": 16,
         "align": {"h": "center", "v": "center"}
