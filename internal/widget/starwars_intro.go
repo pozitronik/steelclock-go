@@ -54,6 +54,7 @@ type StarWarsIntroWidget struct {
 	logoHoldBefore     float64
 	logoShrinkDuration float64
 	logoFinalScale     float64
+	logoLineSpacing    int // Pixels between logo lines
 
 	// Stars configuration
 	starsEnabled    bool
@@ -136,6 +137,7 @@ func NewStarWarsIntroWidget(cfg config.WidgetConfig) (*StarWarsIntroWidget, erro
 	logoHoldBefore := 0.5
 	logoShrinkDuration := 4.0
 	logoFinalScale := 0.1
+	logoLineSpacing := 1
 
 	// Stars defaults
 	starsEnabled := true
@@ -186,6 +188,9 @@ func NewStarWarsIntroWidget(cfg config.WidgetConfig) (*StarWarsIntroWidget, erro
 			}
 			if l.FinalScale > 0 {
 				logoFinalScale = l.FinalScale
+			}
+			if l.LineSpacing > 0 {
+				logoLineSpacing = l.LineSpacing
 			}
 		}
 
@@ -286,6 +291,7 @@ func NewStarWarsIntroWidget(cfg config.WidgetConfig) (*StarWarsIntroWidget, erro
 		logoHoldBefore:     logoHoldBefore,
 		logoShrinkDuration: logoShrinkDuration,
 		logoFinalScale:     logoFinalScale,
+		logoLineSpacing:    logoLineSpacing,
 		logoScale:          1.0,
 
 		starsEnabled:    starsEnabled,
@@ -525,7 +531,7 @@ func (w *StarWarsIntroWidget) renderLogo(img *image.Gray) {
 	// Calculate logo height: lines * (glyph height + spacing between lines)
 	// Last line doesn't need spacing after it
 	numLines := len(w.logoLines)
-	logoHeight := numLines*glyphHeight + (numLines-1)*w.lineSpacing
+	logoHeight := numLines*glyphHeight + (numLines-1)*w.logoLineSpacing
 
 	// Scale factor to fit width (with small margin)
 	scaleByWidth := float64(w.width-4) / float64(maxLineWidth)
@@ -545,9 +551,9 @@ func (w *StarWarsIntroWidget) renderLogo(img *image.Gray) {
 	}
 
 	// Calculate vertical position - stays centered while shrinking
-	// Each line takes glyphHeight, with lineSpacing between lines
-	lineStep := float64(glyphHeight + w.lineSpacing)
-	totalTextHeight := float64(numLines)*float64(glyphHeight)*scale + float64(numLines-1)*float64(w.lineSpacing)*scale
+	// Each line takes glyphHeight, with logoLineSpacing between lines
+	lineStep := float64(glyphHeight + w.logoLineSpacing)
+	totalTextHeight := float64(numLines)*float64(glyphHeight)*scale + float64(numLines-1)*float64(w.logoLineSpacing)*scale
 
 	// Logo shrinks toward screen center
 	centerY := float64(w.height) / 2

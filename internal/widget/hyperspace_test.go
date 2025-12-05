@@ -115,8 +115,9 @@ func TestHyperspaceWidget_Update(t *testing.T) {
 		Type:     "hyperspace",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 		Hyperspace: &config.HyperspaceConfig{
-			StarCount: 50,
-			Mode:      "continuous",
+			StarCount:    50,
+			Mode:         "continuous",
+			Acceleration: 10.0, // Fast for testing (short stretch duration)
 		},
 	}
 
@@ -127,8 +128,9 @@ func TestHyperspaceWidget_Update(t *testing.T) {
 
 	initialStretchFactor := w.stretchFactor
 
-	// Update multiple times
+	// Update multiple times with small delays to ensure time passes
 	for i := 0; i < 10; i++ {
+		time.Sleep(5 * time.Millisecond)
 		if err := w.Update(); err != nil {
 			t.Fatalf("Update() error: %v", err)
 		}

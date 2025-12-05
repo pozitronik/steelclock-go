@@ -1565,6 +1565,13 @@
                         "minimum": 0.0,
                         "maximum": 0.5,
                         "default": 0.1
+                      },
+                      "line_spacing": {
+                        "type": "integer",
+                        "description": "Pixels between logo text lines",
+                        "minimum": 0,
+                        "maximum": 20,
+                        "default": 1
                       }
                     }
                   },

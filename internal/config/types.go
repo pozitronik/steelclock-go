@@ -771,6 +771,8 @@ type StarWarsLogoConfig struct {
 	ShrinkDuration float64 `json:"shrink_duration,omitempty"`
 	// FinalScale: scale at which logo disappears (0.0-1.0, default: 0.1)
 	FinalScale float64 `json:"final_scale,omitempty"`
+	// LineSpacing: pixels between logo lines (default: 1)
+	LineSpacing int `json:"line_spacing,omitempty"`
 }
 
 // StarWarsStarsConfig contains settings for background stars
