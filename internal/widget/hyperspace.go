@@ -269,7 +269,7 @@ func (w *HyperspaceWidget) moveStars(speedFactor float64) {
 		s.screenY += s.dirY * movement
 		s.distFromCenter += movement
 
-		// If star went off screen, respawn at center
+		// If star went off the screen, respawn at center
 		if s.screenX < -20 || s.screenX > float64(w.width)+20 ||
 			s.screenY < -20 || s.screenY > float64(w.height)+20 ||
 			s.distFromCenter >= maxDist {

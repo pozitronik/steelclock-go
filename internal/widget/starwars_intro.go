@@ -571,7 +571,7 @@ func (w *StarWarsIntroWidget) drawPerspectiveLine(img *image.Gray, text string, 
 	// Text starts at bottom of screen and scrolls up
 	baseY := float64(w.height) + float64(lineIndex*w.lineSpacing) - w.scrollOffset
 
-	// Skip if completely off screen
+	// Skip if completely off the screen
 	if baseY < -float64(w.lineSpacing*2) || baseY > float64(w.height)+float64(w.lineSpacing) {
 		return
 	}
@@ -742,7 +742,7 @@ func (w *StarWarsIntroWidget) drawCharSlanted(img *image.Gray, x, y int, ch rune
 		pixelSize = 1
 	}
 
-	// Slant factor: how much pixels shift horizontally per vertical pixel
+	// Slant factor: how many pixels shift horizontally per vertical pixel
 	// tan(angle) gives the ratio, but we need to amplify for small fonts
 	slantRad := slantDegrees * math.Pi / 180.0
 	slantFactor := math.Tan(slantRad)
