@@ -14,7 +14,7 @@
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
       "style": {"background": 0, "border": 0, "padding": 0},
-      "mode": "battery",
+      "mode": "gauge",
       "battery": {
         "orientation": "horizontal",
         "show_status": true,
@@ -32,14 +32,18 @@
       },
       "bar": {
         "direction": "left",
-        "border": false
+        "border": false,
+        "show_status": true,
+        "charging_blink": false
       },
       "graph": {
         "history": 60,
         "colors": {
           "fill": 100,
           "line": 255
-        }
+        },
+        "show_status": true,
+        "charging_blink": false
       },
       "gauge": {
         "show_ticks": true,
@@ -47,12 +51,16 @@
           "arc": 200,
           "needle": 255,
           "ticks": 150
-        }
+        },
+        "show_status": true,
+        "charging_blink": false
       },
       "text": {
         "font": null,
         "size": 16,
-        "align": {"h": "center", "v": "center"}
+        "align": {"h": "center", "v": "center"},
+        "show_status": true,
+        "charging_blink": false
       },
       "update_interval": 1
     }

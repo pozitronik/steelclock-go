@@ -1247,7 +1247,9 @@
                 "description": "Bar mode settings (use direction: up/down for vertical orientation)",
                 "properties": {
                   "direction": { "type": "string", "enum": ["left", "right", "up", "down"], "default": "left" },
-                  "border": { "type": "boolean", "default": false }
+                  "border": { "type": "boolean", "default": false },
+                  "show_status": { "type": "boolean", "description": "Show charging/AC status indicator in bar mode (overrides battery.show_status)", "default": true },
+                  "charging_blink": { "type": "boolean", "description": "Blink the charging indicator in bar mode (overrides battery.charging_blink)", "default": false }
                 }
               },
               "graph": {
@@ -1262,14 +1264,35 @@
                       "fill": { "type": "integer", "description": "Graph fill color (-1 = no fill)", "minimum": -1, "maximum": 255, "default": 255 },
                       "line": { "type": "integer", "description": "Graph line color", "minimum": 0, "maximum": 255, "default": 255 }
                     }
-                  }
+                  },
+                  "show_status": { "type": "boolean", "description": "Show charging/AC status indicator in graph mode (overrides battery.show_status)", "default": true },
+                  "charging_blink": { "type": "boolean", "description": "Blink the charging indicator in graph mode (overrides battery.charging_blink)", "default": false }
                 }
               },
               "gauge": {
                 "type": "object",
                 "description": "Gauge mode settings",
                 "properties": {
-                  "show_ticks": { "type": "boolean", "default": true }
+                  "show_ticks": { "type": "boolean", "default": true },
+                  "show_status": { "type": "boolean", "description": "Show charging/AC status indicator in gauge mode (overrides battery.show_status)", "default": true },
+                  "charging_blink": { "type": "boolean", "description": "Blink the charging indicator in gauge mode (overrides battery.charging_blink)", "default": false }
+                }
+              },
+              "text": {
+                "type": "object",
+                "description": "Text mode settings",
+                "properties": {
+                  "font": { "type": ["string", "null"], "description": "Font name or TTF path", "default": null },
+                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 16 },
+                  "align": {
+                    "type": "object",
+                    "properties": {
+                      "h": { "type": "string", "enum": ["left", "center", "right"], "default": "center" },
+                      "v": { "type": "string", "enum": ["top", "center", "bottom"], "default": "center" }
+                    }
+                  },
+                  "show_status": { "type": "boolean", "description": "Show charging/AC text suffix in text mode (overrides battery.show_status)", "default": true },
+                  "charging_blink": { "type": "boolean", "description": "Blink the charging text suffix in text mode (overrides battery.charging_blink)", "default": false }
                 }
               }
             }

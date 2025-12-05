@@ -24,6 +24,12 @@ type BatteryStatus struct {
 	TimeToFull    int  // Minutes to full charge (0 if unknown)
 }
 
+// BatteryStatusSettings holds per-mode status indicator settings
+type BatteryStatusSettings struct {
+	ShowStatus    bool
+	ChargingBlink bool
+}
+
 // BatteryWidget displays battery level and power status
 type BatteryWidget struct {
 	*BaseWidget
@@ -31,9 +37,10 @@ type BatteryWidget struct {
 	// Display settings
 	displayMode    string // "icon", "text", "bar", "gauge", "graph"
 	showPercentage bool
-	showStatus     bool
 	orientation    string // "horizontal", "vertical"
-	chargingBlink  bool
+
+	// Per-mode status indicator settings
+	statusSettings map[string]BatteryStatusSettings
 
 	// Icon set for status indicators (selected based on widget size)
 	iconSet *glyphs.GlyphSet
@@ -95,19 +102,72 @@ func NewBatteryWidget(cfg config.WidgetConfig) (*BatteryWidget, error) {
 
 	// Boolean settings with defaults
 	showPercentage := true
-	showStatus := true
-	chargingBlink := false // Default false - less distracting
+	globalShowStatus := true
+	globalChargingBlink := false // Default false - less distracting
 
 	if cfg.Battery != nil {
 		if cfg.Battery.ShowPercentage != nil {
 			showPercentage = *cfg.Battery.ShowPercentage
 		}
 		if cfg.Battery.ShowStatus != nil {
-			showStatus = *cfg.Battery.ShowStatus
+			globalShowStatus = *cfg.Battery.ShowStatus
 		}
 		if cfg.Battery.ChargingBlink != nil {
-			chargingBlink = *cfg.Battery.ChargingBlink
+			globalChargingBlink = *cfg.Battery.ChargingBlink
 		}
+	}
+
+	// Build per-mode status settings with global defaults and mode-specific overrides
+	statusSettings := make(map[string]BatteryStatusSettings)
+
+	// Default for all modes (including "battery" mode)
+	for _, mode := range []string{"battery", "text", "bar", "gauge", "graph"} {
+		statusSettings[mode] = BatteryStatusSettings{
+			ShowStatus:    globalShowStatus,
+			ChargingBlink: globalChargingBlink,
+		}
+	}
+
+	// Apply mode-specific overrides
+	if cfg.Bar != nil {
+		s := statusSettings["bar"]
+		if cfg.Bar.ShowStatus != nil {
+			s.ShowStatus = *cfg.Bar.ShowStatus
+		}
+		if cfg.Bar.ChargingBlink != nil {
+			s.ChargingBlink = *cfg.Bar.ChargingBlink
+		}
+		statusSettings["bar"] = s
+	}
+	if cfg.Gauge != nil {
+		s := statusSettings["gauge"]
+		if cfg.Gauge.ShowStatus != nil {
+			s.ShowStatus = *cfg.Gauge.ShowStatus
+		}
+		if cfg.Gauge.ChargingBlink != nil {
+			s.ChargingBlink = *cfg.Gauge.ChargingBlink
+		}
+		statusSettings["gauge"] = s
+	}
+	if cfg.Graph != nil {
+		s := statusSettings["graph"]
+		if cfg.Graph.ShowStatus != nil {
+			s.ShowStatus = *cfg.Graph.ShowStatus
+		}
+		if cfg.Graph.ChargingBlink != nil {
+			s.ChargingBlink = *cfg.Graph.ChargingBlink
+		}
+		statusSettings["graph"] = s
+	}
+	if cfg.Text != nil {
+		s := statusSettings["text"]
+		if cfg.Text.ShowStatus != nil {
+			s.ShowStatus = *cfg.Text.ShowStatus
+		}
+		if cfg.Text.ChargingBlink != nil {
+			s.ChargingBlink = *cfg.Text.ChargingBlink
+		}
+		statusSettings["text"] = s
 	}
 
 	// Orientation from battery config
@@ -188,9 +248,8 @@ func NewBatteryWidget(cfg config.WidgetConfig) (*BatteryWidget, error) {
 		BaseWidget:        base,
 		displayMode:       displayMode,
 		showPercentage:    showPercentage,
-		showStatus:        showStatus,
+		statusSettings:    statusSettings,
 		orientation:       orientation,
-		chargingBlink:     chargingBlink,
 		iconSet:           iconSet,
 		lowThreshold:      lowThreshold,
 		criticalThreshold: criticalThreshold,
@@ -299,6 +358,15 @@ func selectBatteryIconSet(height int) *glyphs.GlyphSet {
 	return glyphs.BatteryIcons8x8
 }
 
+// getStatusSettings returns the status settings for the current display mode
+func (w *BatteryWidget) getStatusSettings() BatteryStatusSettings {
+	if settings, ok := w.statusSettings[w.displayMode]; ok {
+		return settings
+	}
+	// Fallback to defaults
+	return BatteryStatusSettings{ShowStatus: true, ChargingBlink: false}
+}
+
 // getStatusIconName returns the icon name to display based on battery status
 // Priority: charging > economy > ac_power (only show one icon)
 func (w *BatteryWidget) getStatusIconName(status BatteryStatus) string {
@@ -321,8 +389,9 @@ func (w *BatteryWidget) drawStatusIcon(img *image.Gray, x, y int, status Battery
 		return
 	}
 
-	// Apply blink effect for charging indicator
-	if iconName == "charging" && w.chargingBlink && time.Now().Second()%2 != 0 {
+	// Apply blink effect for charging indicator (using per-mode setting)
+	statusSettings := w.getStatusSettings()
+	if iconName == "charging" && statusSettings.ChargingBlink && time.Now().Second()%2 != 0 {
 		return
 	}
 
@@ -373,10 +442,18 @@ func (w *BatteryWidget) drawFilledRect(img *image.Gray, x, y, width, height int,
 
 // renderText renders battery as text
 func (w *BatteryWidget) renderText(img *image.Gray, status BatteryStatus) {
+	statusSettings := w.getStatusSettings()
 	text := fmt.Sprintf("%d%%", status.Percentage)
-	if w.showStatus && status.IsCharging {
+
+	// Apply blink effect for text suffix
+	showSuffix := statusSettings.ShowStatus
+	if statusSettings.ChargingBlink && status.IsCharging && time.Now().Second()%2 != 0 {
+		showSuffix = false
+	}
+
+	if showSuffix && status.IsCharging {
 		text += " CHG"
-	} else if w.showStatus && status.IsPluggedIn {
+	} else if showSuffix && status.IsPluggedIn {
 		text += " AC"
 	}
 	bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
@@ -426,10 +503,10 @@ func (w *BatteryWidget) renderBar(img *image.Gray, status BatteryStatus) {
 		bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, "center", "center", 0)
 	}
 
-	// Draw status icon (charging, economy, or AC)
-	if w.showStatus {
-		iconW, _ := w.getIconSize()
-		w.drawStatusIcon(img, pos.W-iconW-2, 2, status)
+	// Draw status icon (charging, economy, or AC) in top-left corner
+	statusSettings := w.getStatusSettings()
+	if statusSettings.ShowStatus {
+		w.drawStatusIcon(img, w.padding+2, w.padding+2, status)
 	}
 }
 
@@ -447,10 +524,10 @@ func (w *BatteryWidget) renderGauge(img *image.Gray, status BatteryStatus) {
 		bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, "center", "top", w.padding)
 	}
 
-	// Draw status icon (charging, economy, or AC)
-	if w.showStatus {
-		iconW, _ := w.getIconSize()
-		w.drawStatusIcon(img, pos.W-iconW-2, 2, status)
+	// Draw status icon (charging, economy, or AC) in top-left corner
+	statusSettings := w.getStatusSettings()
+	if statusSettings.ShowStatus {
+		w.drawStatusIcon(img, w.padding+2, w.padding+2, status)
 	}
 }
 
@@ -483,8 +560,9 @@ func (w *BatteryWidget) renderGraph(img *image.Gray, status BatteryStatus) {
 		bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, "right", "top", w.padding+2)
 	}
 
-	// Draw status icon (charging, economy, or AC) in top-left
-	if w.showStatus {
+	// Draw status icon (charging, economy, or AC) in top-left corner
+	statusSettings := w.getStatusSettings()
+	if statusSettings.ShowStatus {
 		w.drawStatusIcon(img, w.padding+2, w.padding+2, status)
 	}
 }
@@ -543,7 +621,8 @@ func (w *BatteryWidget) renderBatteryHorizontal(img *image.Gray, status BatteryS
 	}
 
 	// Draw status icon in top-left corner
-	if w.showStatus {
+	statusSettings := w.getStatusSettings()
+	if statusSettings.ShowStatus {
 		w.drawStatusIcon(img, batteryX+2, batteryY+2, status)
 	}
 }
@@ -590,8 +669,9 @@ func (w *BatteryWidget) renderBatteryVertical(img *image.Gray, status BatterySta
 		w.drawFilledRect(img, fillX, fillY, fillW, fillH, color.Gray{Y: fillColor})
 	}
 
-	// Draw status icon at bottom-center
-	if w.showStatus {
+	// Draw status icon in top-left corner (inside battery body)
+	statusSettings := w.getStatusSettings()
+	if statusSettings.ShowStatus {
 		w.drawStatusIcon(img, batteryX+2, batteryY+2, status)
 	}
 }

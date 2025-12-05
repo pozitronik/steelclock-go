@@ -179,12 +179,14 @@ type StyleConfig struct {
 
 // TextConfig represents text rendering properties
 type TextConfig struct {
-	Format   string       `json:"format,omitempty"`
-	Font     string       `json:"font,omitempty"` // Font name: TTF font name/path or built-in: "pixel3x5", "pixel5x7"
-	Size     int          `json:"size,omitempty"`
-	Align    *AlignConfig `json:"align,omitempty"`
-	Unit     string       `json:"unit,omitempty"`
-	ShowUnit *bool        `json:"show_unit,omitempty"` // Show unit suffix in text mode (disk widget)
+	Format        string       `json:"format,omitempty"`
+	Font          string       `json:"font,omitempty"` // Font name: TTF font name/path or built-in: "pixel3x5", "pixel5x7"
+	Size          int          `json:"size,omitempty"`
+	Align         *AlignConfig `json:"align,omitempty"`
+	Unit          string       `json:"unit,omitempty"`
+	ShowUnit      *bool        `json:"show_unit,omitempty"`      // Show unit suffix in text mode (disk widget)
+	ShowStatus    *bool        `json:"show_status,omitempty"`    // Battery: show charging/AC text suffix (overrides battery.show_status)
+	ChargingBlink *bool        `json:"charging_blink,omitempty"` // Battery: blink charging text suffix (overrides battery.charging_blink)
 }
 
 // AlignConfig represents text alignment
@@ -276,21 +278,27 @@ type ModeColorsConfig struct {
 
 // BarConfig represents bar mode settings
 type BarConfig struct {
-	Direction string            `json:"direction,omitempty"` // "horizontal", "vertical"
-	Border    bool              `json:"border,omitempty"`
-	Colors    *ModeColorsConfig `json:"colors,omitempty"`
+	Direction     string            `json:"direction,omitempty"` // "horizontal", "vertical"
+	Border        bool              `json:"border,omitempty"`
+	Colors        *ModeColorsConfig `json:"colors,omitempty"`
+	ShowStatus    *bool             `json:"show_status,omitempty"`    // Battery: show charging/AC indicator (overrides battery.show_status)
+	ChargingBlink *bool             `json:"charging_blink,omitempty"` // Battery: blink charging indicator (overrides battery.charging_blink)
 }
 
 // GraphConfig represents graph mode settings
 type GraphConfig struct {
-	History int               `json:"history,omitempty"`
-	Colors  *ModeColorsConfig `json:"colors,omitempty"`
+	History       int               `json:"history,omitempty"`
+	Colors        *ModeColorsConfig `json:"colors,omitempty"`
+	ShowStatus    *bool             `json:"show_status,omitempty"`    // Battery: show charging/AC indicator (overrides battery.show_status)
+	ChargingBlink *bool             `json:"charging_blink,omitempty"` // Battery: blink charging indicator (overrides battery.charging_blink)
 }
 
 // GaugeConfig represents gauge mode settings
 type GaugeConfig struct {
-	ShowTicks *bool             `json:"show_ticks,omitempty"`
-	Colors    *ModeColorsConfig `json:"colors,omitempty"`
+	ShowTicks     *bool             `json:"show_ticks,omitempty"`
+	Colors        *ModeColorsConfig `json:"colors,omitempty"`
+	ShowStatus    *bool             `json:"show_status,omitempty"`    // Battery: show charging/AC indicator (overrides battery.show_status)
+	ChargingBlink *bool             `json:"charging_blink,omitempty"` // Battery: blink charging indicator (overrides battery.charging_blink)
 }
 
 // AnalogConfig represents analog clock mode settings
