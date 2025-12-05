@@ -91,6 +91,8 @@ type StarWarsIntroWidget struct {
 }
 
 // NewStarWarsIntroWidget creates a new Star Wars intro widget
+//
+//goland:noinspection DuplicatedCode
 func NewStarWarsIntroWidget(cfg config.WidgetConfig) (*StarWarsIntroWidget, error) {
 	base := NewBaseWidget(cfg)
 	pos := base.GetPosition()
@@ -450,6 +452,9 @@ func (w *StarWarsIntroWidget) renderPreIntro(img *image.Gray, elapsed float64) {
 		if brightness < 0 {
 			brightness = 0
 		}
+	case PhaseLogoHold, PhaseLogoShrink, PhaseCrawl, PhasePauseEnd:
+		// Not applicable for pre-intro rendering
+		return
 	}
 
 	c := uint8(float64(w.preIntroColor) * brightness)
