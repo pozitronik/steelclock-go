@@ -591,7 +591,7 @@ func (w *StarWarsIntroWidget) drawPerspectiveLine(img *image.Gray, text string, 
 	scale := (1.0 - w.perspective) + w.perspective*normalizedY
 
 	// Calculate fade based on Y position
-	var fadeFactor float64 = 1.0
+	var fadeFactor = 1.0
 	if normalizedY < w.fadeTop {
 		fadeFactor = normalizedY / w.fadeTop
 	}
