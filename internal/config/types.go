@@ -152,6 +152,9 @@ type WidgetConfig struct {
 
 	// Weather widget
 	Weather *WeatherConfig `json:"weather,omitempty"` // Weather widget settings
+
+	// Game of Life widget
+	GameOfLife *GameOfLifeConfig `json:"game_of_life,omitempty"` // Game of Life settings
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -640,4 +643,34 @@ type WeatherCycleConfig struct {
 	Transition string `json:"transition,omitempty"`
 	// Speed: transition duration in seconds (default: 0.5)
 	Speed float64 `json:"speed,omitempty"`
+}
+
+// GameOfLifeConfig represents Conway's Game of Life widget settings
+type GameOfLifeConfig struct {
+	// Rules: cellular automaton rules in "B3/S23" format (default: "B3/S23" - standard Conway)
+	// B = birth (neighbor counts that cause cell birth)
+	// S = survival (neighbor counts that allow cell survival)
+	// Examples: "B3/S23" (Conway), "B36/S23" (HighLife), "B1357/S1357" (Replicator)
+	Rules string `json:"rules,omitempty"`
+	// WrapEdges: wrap edges to form a torus topology (default: true)
+	WrapEdges *bool `json:"wrap_edges,omitempty"`
+	// InitialPattern: starting pattern (default: "random")
+	// Values: "random", "clear", "glider", "r_pentomino", "acorn", "diehard", "lwss", "pulsar", "glider_gun"
+	InitialPattern string `json:"initial_pattern,omitempty"`
+	// RandomDensity: probability of cell being alive in random pattern (0.0-1.0, default: 0.3)
+	RandomDensity float64 `json:"random_density,omitempty"`
+	// CellSize: pixels per cell (1-4, default: 1)
+	CellSize int `json:"cell_size,omitempty"`
+	// TrailEffect: enable fading trail when cells die (default: true)
+	TrailEffect *bool `json:"trail_effect,omitempty"`
+	// TrailDecay: brightness decay per frame for dead cells (1-255, default: 30)
+	TrailDecay int `json:"trail_decay,omitempty"`
+	// CellColor: brightness of alive cells (1-255, default: 255)
+	CellColor int `json:"cell_color,omitempty"`
+	// RestartTimeout: seconds to wait before restarting when simulation ends (default: 3.0)
+	// 0 = restart immediately, -1 = never restart (stay in final state)
+	RestartTimeout *float64 `json:"restart_timeout,omitempty"`
+	// RestartMode: how to restart (default: "reset")
+	// "reset" = restart with initial_pattern, "inject" = add cells to existing grid, "random" = always use random
+	RestartMode string `json:"restart_mode,omitempty"`
 }

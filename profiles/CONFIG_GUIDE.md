@@ -160,6 +160,7 @@ SteelClock supports these widget types:
 | `winamp`           | Winamp media player     | -                          |
 | `matrix`           | Matrix digital rain     | -                          |
 | `weather`          | Current weather         | icon, text                 |
+| `game_of_life`     | Conway's Game of Life   | -                          |
 
 ## Common Properties
 
@@ -1478,6 +1479,135 @@ For bar/graph/gauge modes, use the shared widget-level configurations:
 - Vertical: Battery with terminal on top, status icon at bottom-center
 - Status indicators (charging bolt, AC plug) have white fill with black border for visibility
 - All colors support 0 (black) values
+
+### Game of Life Widget
+
+Displays Conway's Game of Life cellular automaton - a classic zero-player game where patterns evolve based on simple rules. The 128x40 display provides 5,120 cells for emergent complexity.
+
+```json
+{
+  "type": "game_of_life",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.1,
+  "game_of_life": {
+    "rules": "B3/S23",
+    "wrap_edges": true,
+    "initial_pattern": "random",
+    "random_density": 0.35,
+    "cell_size": 1,
+    "trail_effect": true,
+    "trail_decay": 25,
+    "cell_color": 255
+  }
+}
+```
+
+#### Speed Control
+
+The simulation speed is controlled by `update_interval` (in seconds):
+- `0.05` - Very fast (20 generations/second)
+- `0.1` - Fast (10 generations/second, recommended)
+- `0.2` - Medium (5 generations/second)
+- `0.5` - Slow (2 generations/second)
+
+#### Configuration
+
+| Property          | Type    | Default    | Description                                                |
+|-------------------|---------|------------|------------------------------------------------------------|
+| `rules`           | string  | `"B3/S23"` | Birth/Survival rules in B/S notation                       |
+| `wrap_edges`      | boolean | `true`     | Wrap edges (torus topology)                                |
+| `initial_pattern` | string  | `"random"` | Starting pattern                                           |
+| `random_density`  | number  | `0.3`      | Cell density for random pattern (0.0-1.0)                  |
+| `cell_size`       | integer | `1`        | Pixels per cell (1-4)                                      |
+| `trail_effect`    | boolean | `true`     | Enable fading trail when cells die                         |
+| `trail_decay`     | integer | `30`       | Brightness decay per frame (1-255, higher = faster)        |
+| `cell_color`      | integer | `255`      | Alive cell brightness (1-255)                              |
+| `restart_timeout` | number  | `3.0`      | Seconds to wait before restart (0 = immediate, -1 = never) |
+| `restart_mode`    | string  | `"reset"`  | How to restart: "reset", "inject", or "random"             |
+
+#### Rules Format
+
+Rules use B/S notation: `B` followed by birth neighbor counts, `/S` followed by survival counts.
+
+| Rule           | Name               | Description                                    |
+|----------------|--------------------|------------------------------------------------|
+| `B3/S23`       | Conway             | Standard rules - balanced complexity (default) |
+| `B36/S23`      | HighLife           | Like Conway but with replicators               |
+| `B1357/S1357`  | Replicator         | Patterns replicate themselves                  |
+| `B2/S`         | Seeds              | Explosive growth                               |
+| `B3/S12345678` | Life without Death | Cells never die                                |
+
+#### Initial Patterns
+
+| Pattern       | Description                                                  |
+|---------------|--------------------------------------------------------------|
+| `random`      | Random cells based on `random_density`                       |
+| `clear`       | Empty grid                                                   |
+| `glider`      | Small pattern that moves diagonally                          |
+| `r_pentomino` | Methuselah - small pattern that evolves for 1103 generations |
+| `acorn`       | Another methuselah - evolves for 5206 generations            |
+| `diehard`     | Pattern that dies after 130 generations                      |
+| `lwss`        | Lightweight spaceship - moves horizontally                   |
+| `pulsar`      | Period-3 oscillator - stable and mesmerizing                 |
+| `glider_gun`  | Gosper glider gun - produces infinite stream of gliders      |
+
+#### Examples
+
+**Fast random simulation with trails:**
+```json
+{
+  "type": "game_of_life",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.05,
+  "game_of_life": {
+    "initial_pattern": "random",
+    "random_density": 0.4,
+    "trail_effect": true,
+    "trail_decay": 20
+  }
+}
+```
+
+**Glider gun (infinite gliders):**
+```json
+{
+  "type": "game_of_life",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.1,
+  "game_of_life": {
+    "initial_pattern": "glider_gun",
+    "wrap_edges": true
+  }
+}
+```
+
+**HighLife with larger cells:**
+```json
+{
+  "type": "game_of_life",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.15,
+  "game_of_life": {
+    "rules": "B36/S23",
+    "initial_pattern": "random",
+    "cell_size": 2,
+    "trail_effect": false
+  }
+}
+```
+
+#### Tips
+
+- Use `wrap_edges: true` for patterns that move (gliders, spaceships)
+- Lower `trail_decay` for longer ghost trails
+- `cell_size: 2` gives 64x20 grid - easier to see individual cells
+- `glider_gun` needs `wrap_edges: true` or gliders pile up at edges
+- `pulsar` is good for testing - stable, predictable oscillation
+- Simulation restarts when all cells die or pattern becomes stable
+- Set `restart_timeout: -1` to disable auto-restart (stays in final state)
+- Set `restart_timeout: 0` to restart immediately without pause
+- `restart_mode: "inject"` adds new cells to existing survivors - keeps the game evolving
+- `restart_mode: "random"` always uses fresh random pattern, ignoring initial_pattern
 
 ## Examples
 

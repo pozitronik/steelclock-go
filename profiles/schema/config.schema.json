@@ -194,7 +194,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery"]
+          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life"]
         },
         "enabled": { "type": "boolean", "default": true },
         "position": { "$ref": "#/definitions/position" },
@@ -1309,6 +1309,80 @@
                       "h": { "type": "string", "enum": ["left", "center", "right"], "default": "center" },
                       "v": { "type": "string", "enum": ["top", "center", "bottom"], "default": "center" }
                     }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "game_of_life" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "game_of_life": {
+                "type": "object",
+                "description": "Conway's Game of Life cellular automaton settings",
+                "properties": {
+                  "rules": {
+                    "type": "string",
+                    "description": "Cellular automaton rules in B/S notation. B = birth neighbor counts, S = survival neighbor counts. Examples: 'B3/S23' (Conway), 'B36/S23' (HighLife), 'B1357/S1357' (Replicator)",
+                    "default": "B3/S23"
+                  },
+                  "wrap_edges": {
+                    "type": "boolean",
+                    "description": "Wrap edges to form a torus topology (patterns wrap around)",
+                    "default": true
+                  },
+                  "initial_pattern": {
+                    "type": "string",
+                    "description": "Starting pattern for the simulation",
+                    "enum": ["random", "clear", "glider", "r_pentomino", "acorn", "diehard", "lwss", "pulsar", "glider_gun"],
+                    "default": "random"
+                  },
+                  "random_density": {
+                    "type": "number",
+                    "description": "Probability of cell being alive in random pattern (0.0-1.0)",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0.3
+                  },
+                  "cell_size": {
+                    "type": "integer",
+                    "description": "Pixels per cell (1-4). Larger = fewer cells but more visible",
+                    "minimum": 1,
+                    "maximum": 4,
+                    "default": 1
+                  },
+                  "trail_effect": {
+                    "type": "boolean",
+                    "description": "Enable fading trail when cells die (grayscale ghost effect)",
+                    "default": true
+                  },
+                  "trail_decay": {
+                    "type": "integer",
+                    "description": "Brightness decay per frame for dead cells (higher = faster fade)",
+                    "minimum": 1,
+                    "maximum": 255,
+                    "default": 30
+                  },
+                  "cell_color": {
+                    "type": "integer",
+                    "description": "Brightness of alive cells (1-255)",
+                    "minimum": 1,
+                    "maximum": 255,
+                    "default": 255
+                  },
+                  "restart_timeout": {
+                    "type": "number",
+                    "description": "Seconds to wait before restarting when simulation ends (all cells dead or pattern stable). 0 = restart immediately, -1 = never restart",
+                    "minimum": -1,
+                    "default": 3.0
+                  },
+                  "restart_mode": {
+                    "type": "string",
+                    "description": "How to restart: 'reset' = use initial_pattern, 'inject' = add random cells to existing grid (keeps survivors), 'random' = always use fresh random pattern",
+                    "enum": ["reset", "inject", "random"],
+                    "default": "reset"
                   }
                 }
               }
