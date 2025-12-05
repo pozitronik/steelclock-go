@@ -194,7 +194,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather"]
+          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery"]
         },
         "enabled": { "type": "boolean", "default": true },
         "position": { "$ref": "#/definitions/position" },
@@ -1145,6 +1145,126 @@
                       }
                     }
                   }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "battery" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "mode": {
+                "type": "string",
+                "description": "Display mode: icon (compact tray-style), battery (large progressbar shape), text, bar, gauge, graph",
+                "enum": ["icon", "battery", "text", "bar", "gauge", "graph"],
+                "default": "battery"
+              },
+              "battery": {
+                "type": "object",
+                "description": "Battery widget settings for icon/battery modes.",
+                "properties": {
+                  "orientation": {
+                    "type": "string",
+                    "description": "Orientation for icon/battery modes",
+                    "enum": ["horizontal", "vertical"],
+                    "default": "horizontal"
+                  },
+                  "show_status": {
+                    "type": "boolean",
+                    "description": "Show charging/AC status indicator (lightning bolt with black border)",
+                    "default": true
+                  },
+                  "low_threshold": {
+                    "type": "integer",
+                    "description": "Percentage below which battery is considered low",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 20
+                  },
+                  "critical_threshold": {
+                    "type": "integer",
+                    "description": "Percentage below which battery is considered critical",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 10
+                  },
+                  "colors": {
+                    "type": "object",
+                    "description": "Color settings for battery display (0-255, 0=black supported)",
+                    "properties": {
+                      "normal": {
+                        "type": "integer",
+                        "description": "Fill color when battery is normal",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "low": {
+                        "type": "integer",
+                        "description": "Fill color when battery is low",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 200
+                      },
+                      "critical": {
+                        "type": "integer",
+                        "description": "Fill color when battery is critical",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 150
+                      },
+                      "charging": {
+                        "type": "integer",
+                        "description": "Charging indicator color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "background": {
+                        "type": "integer",
+                        "description": "Background color inside battery body",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 0
+                      },
+                      "border": {
+                        "type": "integer",
+                        "description": "Battery outline color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      }
+                    }
+                  },
+                  "charging_blink": {
+                    "type": "boolean",
+                    "description": "Blink the charging indicator",
+                    "default": false
+                  }
+                }
+              },
+              "bar": {
+                "type": "object",
+                "description": "Bar mode settings (use direction: up/down for vertical orientation)",
+                "properties": {
+                  "direction": { "type": "string", "enum": ["left", "right", "up", "down"], "default": "left" },
+                  "border": { "type": "boolean", "default": false }
+                }
+              },
+              "graph": {
+                "type": "object",
+                "description": "Graph mode settings",
+                "properties": {
+                  "history": { "type": "integer", "minimum": 10, "maximum": 500, "default": 60 },
+                  "filled": { "type": "boolean", "default": true }
+                }
+              },
+              "gauge": {
+                "type": "object",
+                "description": "Gauge mode settings",
+                "properties": {
+                  "show_ticks": { "type": "boolean", "default": true }
                 }
               }
             }
