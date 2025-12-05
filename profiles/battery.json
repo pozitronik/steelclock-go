@@ -14,9 +14,9 @@
       "enabled": true,
       "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
       "style": {"background": 0, "border": 0, "padding": 0},
-      "mode": "icon",
+      "mode": "battery",
       "battery": {
-        "orientation": "horizontal" ,
+        "orientation": "horizontal",
         "show_status": true,
         "low_threshold": 20,
         "critical_threshold": 10,

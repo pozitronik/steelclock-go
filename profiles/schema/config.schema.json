@@ -1156,17 +1156,17 @@
             "properties": {
               "mode": {
                 "type": "string",
-                "description": "Display mode: icon (compact tray-style), battery (large progressbar shape), text, bar, gauge, graph",
-                "enum": ["icon", "battery", "text", "bar", "gauge", "graph"],
+                "description": "Display mode: battery (progressbar in battery shape), text, bar, gauge, graph",
+                "enum": ["battery", "text", "bar", "gauge", "graph"],
                 "default": "battery"
               },
               "battery": {
                 "type": "object",
-                "description": "Battery widget settings for icon/battery modes.",
+                "description": "Battery widget settings.",
                 "properties": {
                   "orientation": {
                     "type": "string",
-                    "description": "Orientation for icon/battery modes",
+                    "description": "Battery orientation",
                     "enum": ["horizontal", "vertical"],
                     "default": "horizontal"
                   },

@@ -272,10 +272,8 @@ func (w *BatteryWidget) Render() (image.Image, error) {
 		w.renderGauge(img, status)
 	case "graph":
 		w.renderGraph(img, status)
-	case "battery":
-		w.renderBattery(img, status) // Progressbar in battery shape
-	default: // "icon" - compact tray-style icon
-		w.renderIcon(img, status)
+	default: // "battery" - progressbar in battery shape
+		w.renderBattery(img, status)
 	}
 
 	return img, nil
@@ -492,104 +490,6 @@ func (w *BatteryWidget) renderGraph(img *image.Gray, status BatteryStatus) {
 	// Draw status icon (charging, economy, or AC) in top-left
 	if w.showStatus {
 		w.drawStatusIcon(img, w.padding+2, w.padding+2, status)
-	}
-}
-
-// renderIcon renders a compact tray-style battery icon (like Windows system tray)
-func (w *BatteryWidget) renderIcon(img *image.Gray, status BatteryStatus) {
-	pos := w.GetPosition()
-
-	// Compact icon: small battery shape with optional percentage text next to it
-	// Center the icon in the widget area
-	if w.orientation == "vertical" {
-		// Vertical: nub at top (height=2), body below
-		iconW := 10
-		iconH := 16 // Total height including nub
-		// Center the icon in the widget
-		startX := (pos.W - iconW) / 2
-		startY := (pos.H - iconH) / 2
-		w.drawCompactBatteryVertical(img, startX, startY, iconW, iconH, status)
-	} else {
-		// Horizontal: body left, nub on right (width=2)
-		iconW := 16
-		iconH := 10
-		nubW := 2
-		// Account for nub width horizontally
-		startX := (pos.W - iconW - nubW) / 2
-		startY := (pos.H - iconH) / 2
-		w.drawCompactBatteryHorizontal(img, startX, startY, iconW, iconH, status)
-	}
-}
-
-// drawCompactBatteryHorizontal draws a small horizontal battery icon
-func (w *BatteryWidget) drawCompactBatteryHorizontal(img *image.Gray, x, y, width, height int, status BatteryStatus) {
-	nubW := 2
-	nubH := height / 2
-
-	// Battery body outline
-	bitmap.DrawRectangle(img, x, y, width, height, w.colorBorder)
-
-	// Positive terminal nub
-	nubX := x + width
-	nubY := y + (height-nubH)/2
-	w.drawFilledRect(img, nubX, nubY, nubW, nubH, color.Gray{Y: w.colorBorder})
-
-	// Fill level
-	fillMargin := 1
-	fillX := x + fillMargin
-	fillY := y + fillMargin
-	fillMaxW := width - 2*fillMargin
-	fillH := height - 2*fillMargin
-	fillW := int(float64(fillMaxW) * float64(status.Percentage) / 100.0)
-
-	fillColor := w.getColorForLevel(status.Percentage)
-	if fillW > 0 {
-		w.drawFilledRect(img, fillX, fillY, fillW, fillH, color.Gray{Y: fillColor})
-	}
-
-	// Draw status icon inside the battery shape
-	if w.showStatus {
-		iconW, iconH := w.getIconSize()
-		iconX := x + (width-iconW)/2
-		iconY := y + (height-iconH)/2
-		w.drawStatusIcon(img, iconX, iconY, status)
-	}
-}
-
-// drawCompactBatteryVertical draws a small vertical battery icon
-func (w *BatteryWidget) drawCompactBatteryVertical(img *image.Gray, x, y, width, height int, status BatteryStatus) {
-	nubW := width / 2
-	nubH := 2
-
-	// Positive terminal nub at top
-	nubX := x + (width-nubW)/2
-	nubY := y
-	w.drawFilledRect(img, nubX, nubY, nubW, nubH, color.Gray{Y: w.colorBorder})
-
-	// Battery body outline below nub
-	bodyY := y + nubH
-	bodyH := height - nubH
-	bitmap.DrawRectangle(img, x, bodyY, width, bodyH, w.colorBorder)
-
-	// Fill level (from bottom)
-	fillMargin := 1
-	fillX := x + fillMargin
-	fillW := width - 2*fillMargin
-	fillMaxH := bodyH - 2*fillMargin
-	fillH := int(float64(fillMaxH) * float64(status.Percentage) / 100.0)
-	fillY := bodyY + fillMargin + fillMaxH - fillH
-
-	fillColor := w.getColorForLevel(status.Percentage)
-	if fillH > 0 {
-		w.drawFilledRect(img, fillX, fillY, fillW, fillH, color.Gray{Y: fillColor})
-	}
-
-	// Draw status icon inside the battery shape
-	if w.showStatus {
-		iconW, iconH := w.getIconSize()
-		iconX := x + (width-iconW)/2
-		iconY := bodyY + (bodyH-iconH)/2
-		w.drawStatusIcon(img, iconX, iconY, status)
 	}
 }
 
