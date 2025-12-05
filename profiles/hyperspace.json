@@ -1,0 +1,33 @@
+{
+  "$schema": "schema/config.schema.json",
+  "config_name": "Hyperspace",
+  "backend": "direct",
+  "refresh_rate_ms": 33,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "hyperspace",
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40
+      },
+      "update_interval": 0.033,
+      "hyperspace": {
+        "star_count": 500,
+        "speed": 0.02,
+        "max_speed": 0.5,
+        "trail_length": 1.0,
+        "star_color": 255,
+        "mode": "cycle",
+        "idle_time": 5.0,
+        "travel_time": 10.0
+      }
+    }
+  ]
+}

@@ -194,7 +194,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life"]
+          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life", "hyperspace"]
         },
         "enabled": { "type": "boolean", "default": true },
         "position": { "$ref": "#/definitions/position" },
@@ -1383,6 +1383,89 @@
                     "description": "How to restart: 'reset' = use initial_pattern, 'inject' = add random cells to existing grid (keeps survivors), 'random' = always use fresh random pattern",
                     "enum": ["reset", "inject", "random"],
                     "default": "reset"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "hyperspace" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "hyperspace": {
+                "type": "object",
+                "description": "Star Wars hyperspace/lightspeed effect settings",
+                "properties": {
+                  "star_count": {
+                    "type": "integer",
+                    "description": "Number of stars in the field",
+                    "minimum": 10,
+                    "maximum": 500,
+                    "default": 100
+                  },
+                  "speed": {
+                    "type": "number",
+                    "description": "Base star movement speed (idle/slow mode)",
+                    "minimum": 0.001,
+                    "maximum": 1.0,
+                    "default": 0.02
+                  },
+                  "max_speed": {
+                    "type": "number",
+                    "description": "Maximum star speed during hyperspace jump",
+                    "minimum": 0.01,
+                    "maximum": 2.0,
+                    "default": 0.5
+                  },
+                  "trail_length": {
+                    "type": "number",
+                    "description": "Star trail length multiplier (1.0 = normal)",
+                    "minimum": 0.1,
+                    "maximum": 5.0,
+                    "default": 1.0
+                  },
+                  "center_x": {
+                    "type": "integer",
+                    "description": "Focal point X coordinate (null = widget center)"
+                  },
+                  "center_y": {
+                    "type": "integer",
+                    "description": "Focal point Y coordinate (null = widget center)"
+                  },
+                  "star_color": {
+                    "type": "integer",
+                    "description": "Maximum star brightness (0-255)",
+                    "minimum": 1,
+                    "maximum": 255,
+                    "default": 255
+                  },
+                  "mode": {
+                    "type": "string",
+                    "description": "Animation mode: 'continuous' (always in hyperspace), 'cycle' (phases: idle -> jump -> travel -> exit)",
+                    "enum": ["continuous", "cycle"],
+                    "default": "continuous"
+                  },
+                  "idle_time": {
+                    "type": "number",
+                    "description": "Seconds in idle phase before jumping (cycle mode only)",
+                    "minimum": 0.5,
+                    "maximum": 60.0,
+                    "default": 5.0
+                  },
+                  "travel_time": {
+                    "type": "number",
+                    "description": "Seconds spent in hyperspace (cycle mode only)",
+                    "minimum": 0.5,
+                    "maximum": 60.0,
+                    "default": 3.0
+                  },
+                  "acceleration": {
+                    "type": "number",
+                    "description": "Speed change rate during jump/exit phases (cycle mode only)",
+                    "minimum": 0.01,
+                    "maximum": 1.0,
+                    "default": 0.1
                   }
                 }
               }

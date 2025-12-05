@@ -161,6 +161,7 @@ SteelClock supports these widget types:
 | `matrix`           | Matrix digital rain     | -                          |
 | `weather`          | Current weather         | icon, text                 |
 | `game_of_life`     | Conway's Game of Life   | -                          |
+| `hyperspace`       | Star Wars lightspeed    | continuous, cycle          |
 
 ## Common Properties
 
@@ -1608,6 +1609,127 @@ Rules use B/S notation: `B` followed by birth neighbor counts, `/S` followed by 
 - Set `restart_timeout: 0` to restart immediately without pause
 - `restart_mode: "inject"` adds new cells to existing survivors - keeps the game evolving
 - `restart_mode: "random"` always uses fresh random pattern, ignoring initial_pattern
+
+### Hyperspace Widget
+
+Displays the Star Wars hyperspace/lightspeed jump effect with stars streaking toward or away from a vanishing point.
+
+```json
+{
+  "type": "hyperspace",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.033,
+  "hyperspace": {
+    "star_count": 100,
+    "speed": 0.02,
+    "max_speed": 0.5,
+    "trail_length": 1.0,
+    "star_color": 255,
+    "mode": "continuous"
+  }
+}
+```
+
+#### Animation Modes
+
+| Mode         | Description                                                       |
+|--------------|-------------------------------------------------------------------|
+| `continuous` | Always in hyperspace at max speed - constant light streaks        |
+| `cycle`      | Phases: idle (slow stars) -> jump -> hyperspace travel -> exit    |
+
+#### Configuration
+
+| Property       | Type    | Default       | Description                                       |
+|----------------|---------|---------------|---------------------------------------------------|
+| `star_count`   | integer | `100`         | Number of stars in the field (10-500)             |
+| `speed`        | number  | `0.02`        | Base speed for idle phase                         |
+| `max_speed`    | number  | `0.5`         | Maximum speed during hyperspace                   |
+| `trail_length` | number  | `1.0`         | Trail length multiplier (0.1-5.0)                 |
+| `center_x`     | integer | widget center | Focal point X coordinate                          |
+| `center_y`     | integer | widget center | Focal point Y coordinate                          |
+| `star_color`   | integer | `255`         | Maximum star brightness (1-255)                   |
+| `mode`         | string  | `"continuous"`| Animation mode: "continuous" or "cycle"           |
+| `idle_time`    | number  | `5.0`         | Seconds in idle phase before jump (cycle mode)    |
+| `travel_time`  | number  | `3.0`         | Seconds in hyperspace (cycle mode)                |
+| `acceleration` | number  | `0.1`         | Speed change rate during jump/exit (cycle mode)   |
+
+#### Cycle Mode Phases
+
+In `cycle` mode, the animation goes through four phases:
+
+1. **Idle** - Stars drift slowly toward viewer for `idle_time` seconds
+2. **Jump** - Stars accelerate from `speed` to `max_speed`
+3. **Hyperspace** - Full light-streak effect for `travel_time` seconds
+4. **Exit** - Stars decelerate back to `speed`, then returns to Idle
+
+#### Examples
+
+**Continuous hyperspace (always fast):**
+```json
+{
+  "type": "hyperspace",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.033,
+  "hyperspace": {
+    "mode": "continuous",
+    "star_count": 150,
+    "max_speed": 0.6,
+    "trail_length": 1.5
+  }
+}
+```
+
+**Cycle mode with jumps:**
+```json
+{
+  "type": "hyperspace",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.033,
+  "hyperspace": {
+    "mode": "cycle",
+    "star_count": 100,
+    "idle_time": 5.0,
+    "travel_time": 3.0,
+    "acceleration": 0.15
+  }
+}
+```
+
+**Off-center focal point:**
+```json
+{
+  "type": "hyperspace",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.033,
+  "hyperspace": {
+    "center_x": 32,
+    "center_y": 20
+  }
+}
+```
+
+**Dense starfield with long trails:**
+```json
+{
+  "type": "hyperspace",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.033,
+  "hyperspace": {
+    "star_count": 200,
+    "trail_length": 2.0,
+    "max_speed": 0.4
+  }
+}
+```
+
+#### Tips
+
+- Use `update_interval: 0.033` (30 FPS) for smooth animation
+- Higher `star_count` gives denser starfield but uses more CPU
+- `trail_length > 1.0` creates longer light streaks
+- `center_x`/`center_y` can create asymmetric "flying sideways" effect
+- In `cycle` mode, lower `acceleration` gives smoother transitions
+- Combine with transparent overlay to add hyperspace behind other widgets
 
 ## Examples
 

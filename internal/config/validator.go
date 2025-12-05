@@ -41,6 +41,7 @@ var ValidWidgetTypes = map[string]bool{
 	"weather":          true,
 	"battery":          true,
 	"game_of_life":     true,
+	"hyperspace":       true,
 }
 
 // IsValidWidgetType checks if the given type name is a valid widget type

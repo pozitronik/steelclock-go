@@ -155,6 +155,9 @@ type WidgetConfig struct {
 
 	// Game of Life widget
 	GameOfLife *GameOfLifeConfig `json:"game_of_life,omitempty"` // Game of Life settings
+
+	// Hyperspace widget
+	Hyperspace *HyperspaceConfig `json:"hyperspace,omitempty"` // Hyperspace effect settings
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -673,4 +676,30 @@ type GameOfLifeConfig struct {
 	// RestartMode: how to restart (default: "reset")
 	// "reset" = restart with initial_pattern, "inject" = add cells to existing grid, "random" = always use random
 	RestartMode string `json:"restart_mode,omitempty"`
+}
+
+// HyperspaceConfig represents Star Wars hyperspace effect widget settings
+type HyperspaceConfig struct {
+	// StarCount: number of stars (default: 100)
+	StarCount int `json:"star_count,omitempty"`
+	// Speed: base star movement speed (default: 0.02)
+	Speed float64 `json:"speed,omitempty"`
+	// MaxSpeed: maximum speed during hyperspace jump (default: 0.5)
+	MaxSpeed float64 `json:"max_speed,omitempty"`
+	// TrailLength: trail length multiplier (default: 1.0)
+	TrailLength float64 `json:"trail_length,omitempty"`
+	// CenterX: focal point X coordinate (default: center of widget)
+	CenterX *int `json:"center_x,omitempty"`
+	// CenterY: focal point Y coordinate (default: center of widget)
+	CenterY *int `json:"center_y,omitempty"`
+	// StarColor: brightness of stars (1-255, default: 255)
+	StarColor int `json:"star_color,omitempty"`
+	// Mode: "continuous" (always hyperspeed) or "cycle" (idle -> jump -> hyperspace -> exit)
+	Mode string `json:"mode,omitempty"`
+	// IdleTime: seconds in idle/normal star mode before jump (cycle mode only, default: 5.0)
+	IdleTime float64 `json:"idle_time,omitempty"`
+	// TravelTime: seconds in hyperspace (cycle mode only, default: 3.0)
+	TravelTime float64 `json:"travel_time,omitempty"`
+	// Acceleration: speed change rate during jump/exit phases (default: 0.1)
+	Acceleration float64 `json:"acceleration,omitempty"`
 }
