@@ -1130,11 +1130,6 @@ func (w *WeatherWidget) renderTokenInRectWithAlign(img *image.Gray, t *Token, x,
 	return 0
 }
 
-// renderIconToken renders an icon token using widget's vertical alignment
-func (w *WeatherWidget) renderIconToken(img *image.Gray, t *Token, x, y, height int, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
-	return w.renderIconTokenWithAlign(img, t, x, y, height, w.vertAlign, weather, forecast, aqi, uv)
-}
-
 // renderIconTokenWithAlign renders an icon token with explicit vertical alignment
 func (w *WeatherWidget) renderIconTokenWithAlign(img *image.Gray, t *Token, x, y, height int, vAlign string, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
 	iconSize := w.getIconSize(t)
@@ -1398,7 +1393,7 @@ func (w *WeatherWidget) renderForecastGraph(img *image.Gray, x, y, width, height
 	if tempRange < 2 {
 		tempRange = 2
 		minTemp -= 1
-		maxTemp += 1
+		// Note: maxTemp not updated as it's not used after this point
 	}
 
 	// Draw the graph line

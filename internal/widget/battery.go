@@ -446,14 +446,6 @@ func (w *BatteryWidget) drawStatusIcon(img *image.Gray, x, y int, status Battery
 	glyphs.DrawGlyph(img, icon, x, y, white)
 }
 
-// getIconSize returns the width and height of the current icon set
-func (w *BatteryWidget) getIconSize() (int, int) {
-	if w.iconSet == nil {
-		return 8, 8
-	}
-	return w.iconSet.GlyphWidth, w.iconSet.GlyphHeight
-}
-
 // drawFilledRect draws a filled rectangle
 func (w *BatteryWidget) drawFilledRect(img *image.Gray, x, y, width, height int, c color.Gray) {
 	bounds := img.Bounds()
