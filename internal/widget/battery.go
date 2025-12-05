@@ -73,8 +73,8 @@ type BatteryWidget struct {
 	barBorder    bool
 
 	// Graph settings
-	graphFilled bool
-	fillColor   uint8
+	fillColor int // -1 = no fill, 0-255 = fill color
+	lineColor int // 0-255 = line color
 
 	// Current state
 	currentStatus BatteryStatus
@@ -169,7 +169,6 @@ func NewBatteryWidget(cfg config.WidgetConfig) (*BatteryWidget, error) {
 	barSettings := helper.GetBarSettings()
 	graphSettings := helper.GetGraphSettings()
 	gaugeSettings := helper.GetGaugeSettings()
-	fillColor := helper.GetFillColorForMode(displayMode)
 
 	// Load font for text mode
 	fontFace, err := helper.LoadFontForTextMode(displayMode)
@@ -215,8 +214,8 @@ func NewBatteryWidget(cfg config.WidgetConfig) (*BatteryWidget, error) {
 		gaugeTicksColor:   uint8(gaugeSettings.TicksColor),
 		barDirection:      barSettings.Direction,
 		barBorder:         barSettings.Border,
-		graphFilled:       graphSettings.Filled,
-		fillColor:         uint8(fillColor),
+		fillColor:         graphSettings.FillColor,
+		lineColor:         graphSettings.LineColor,
 	}, nil
 }
 
@@ -475,11 +474,8 @@ func (w *BatteryWidget) renderGraph(img *image.Gray, status BatteryStatus) {
 	graphW := pos.W - 2*w.padding
 	graphH := pos.H - 2*w.padding
 
-	// Draw border
-	bitmap.DrawRectangle(img, graphX, graphY, graphW, graphH, w.colorBorder)
-
 	// Use existing DrawGraph function (values are 0-100 for percentage)
-	bitmap.DrawGraph(img, graphX+1, graphY+1, graphW-2, graphH-2, floatHistory, w.graphHistory, w.fillColor, w.graphFilled)
+	bitmap.DrawGraph(img, graphX, graphY, graphW, graphH, floatHistory, w.graphHistory, w.fillColor, w.lineColor)
 
 	// Draw current percentage
 	if w.showPercentage {

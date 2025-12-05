@@ -32,8 +32,8 @@ type GaugeSettings struct {
 // GraphSettings holds extracted graph configuration with defaults
 type GraphSettings struct {
 	HistoryLen int
-	Filled     bool
-	FillColor  int
+	FillColor  int // -1 = disabled, 0-255 = fill color
+	LineColor  int // 0-255 = line color
 }
 
 // ConfigHelper provides centralized extraction of common widget configuration settings.
@@ -145,19 +145,21 @@ func (h *ConfigHelper) GetGaugeSettings() GaugeSettings {
 func (h *ConfigHelper) GetGraphSettings() GraphSettings {
 	settings := GraphSettings{
 		HistoryLen: 30,
-		Filled:     true,
-		FillColor:  255,
+		FillColor:  255, // Default: filled with white. Use -1 to disable fill.
+		LineColor:  255, // Default: white line
 	}
 
 	if h.cfg.Graph != nil {
 		if h.cfg.Graph.History > 0 {
 			settings.HistoryLen = h.cfg.Graph.History
 		}
-		if h.cfg.Graph.Filled != nil {
-			settings.Filled = *h.cfg.Graph.Filled
-		}
-		if h.cfg.Graph.Colors != nil && h.cfg.Graph.Colors.Fill != nil {
-			settings.FillColor = *h.cfg.Graph.Colors.Fill
+		if h.cfg.Graph.Colors != nil {
+			if h.cfg.Graph.Colors.Fill != nil {
+				settings.FillColor = *h.cfg.Graph.Colors.Fill
+			}
+			if h.cfg.Graph.Colors.Line != nil {
+				settings.LineColor = *h.cfg.Graph.Colors.Line
+			}
 		}
 	}
 

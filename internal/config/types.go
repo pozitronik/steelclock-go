@@ -284,7 +284,6 @@ type BarConfig struct {
 // GraphConfig represents graph mode settings
 type GraphConfig struct {
 	History int               `json:"history,omitempty"`
-	Filled  *bool             `json:"filled,omitempty"`
 	Colors  *ModeColorsConfig `json:"colors,omitempty"`
 }
 

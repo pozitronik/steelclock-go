@@ -36,17 +36,20 @@
       },
       "graph": {
         "history": 60,
-        "filled": true
+        "colors": {
+          "fill": 100,
+          "line": 255
+        }
       },
       "gauge": {
         "show_ticks": true
       },
       "text": {
         "font": null,
-        "size": 10,
+        "size": 16,
         "align": {"h": "center", "v": "center"}
       },
-      "update_interval": 10
+      "update_interval": 1
     }
   ]
 }

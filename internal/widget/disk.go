@@ -49,9 +49,8 @@ type DiskWidget struct {
 	padding         int
 	barDirection    string
 	barBorder       bool
-	graphFilled     bool
-	readColor       int // -1 means transparent (skip drawing)
-	writeColor      int // -1 means transparent (skip drawing)
+	readColor       int // -1 means transparent/no fill (skip drawing)
+	writeColor      int // -1 means transparent/no fill (skip drawing)
 	historyLen      int
 	unit            string // "auto", "B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s"
 	showUnit        bool   // Show unit suffix in text mode
@@ -144,7 +143,6 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 		padding:      padding,
 		barDirection: barSettings.Direction,
 		barBorder:    barSettings.Border,
-		graphFilled:  graphSettings.Filled,
 		readColor:    readColor,
 		writeColor:   writeColor,
 		historyLen:   graphSettings.HistoryLen,
@@ -424,11 +422,12 @@ func (w *DiskWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 		writePercent[i] = (w.writeHistory[i] / maxSpeed) * 100
 	}
 
-	// Draw both graphs (Read and Write overlaid) if color is not transparent
+	// Draw both graphs (Read and Write overlaid) if color is not -1 (transparent)
+	// Each channel uses the same color for both fill and line
 	if w.readColor >= 0 {
-		bitmap.DrawGraph(img, x, y, width, height, readPercent, w.historyLen, uint8(w.readColor), w.graphFilled)
+		bitmap.DrawGraph(img, x, y, width, height, readPercent, w.historyLen, w.readColor, w.readColor)
 	}
 	if w.writeColor >= 0 {
-		bitmap.DrawGraph(img, x, y, width, height, writePercent, w.historyLen, uint8(w.writeColor), w.graphFilled)
+		bitmap.DrawGraph(img, x, y, width, height, writePercent, w.historyLen, w.writeColor, w.writeColor)
 	}
 }

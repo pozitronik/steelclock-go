@@ -225,23 +225,23 @@ func TestConfigHelper_GetGraphSettings(t *testing.T) {
 		if settings.HistoryLen != 30 {
 			t.Errorf("HistoryLen = %d, want 30", settings.HistoryLen)
 		}
-		if settings.Filled != true {
-			t.Errorf("Filled = %v, want true", settings.Filled)
-		}
 		if settings.FillColor != 255 {
-			t.Errorf("FillColor = %d, want 255", settings.FillColor)
+			t.Errorf("FillColor = %d, want 255 (default fill)", settings.FillColor)
+		}
+		if settings.LineColor != 255 {
+			t.Errorf("LineColor = %d, want 255 (default line)", settings.LineColor)
 		}
 	})
 
 	t.Run("custom values", func(t *testing.T) {
 		fillColor := 180
-		filled := false
+		lineColor := 200
 		cfg := config.WidgetConfig{
 			Graph: &config.GraphConfig{
 				History: 60,
-				Filled:  &filled,
 				Colors: &config.ModeColorsConfig{
 					Fill: &fillColor,
+					Line: &lineColor,
 				},
 			},
 		}
@@ -251,11 +251,34 @@ func TestConfigHelper_GetGraphSettings(t *testing.T) {
 		if settings.HistoryLen != 60 {
 			t.Errorf("HistoryLen = %d, want 60", settings.HistoryLen)
 		}
-		if settings.Filled != false {
-			t.Errorf("Filled = %v, want false", settings.Filled)
-		}
 		if settings.FillColor != 180 {
 			t.Errorf("FillColor = %d, want 180", settings.FillColor)
+		}
+		if settings.LineColor != 200 {
+			t.Errorf("LineColor = %d, want 200", settings.LineColor)
+		}
+	})
+
+	t.Run("no fill (-1)", func(t *testing.T) {
+		noFill := -1
+		lineColor := 255
+		cfg := config.WidgetConfig{
+			Graph: &config.GraphConfig{
+				History: 30,
+				Colors: &config.ModeColorsConfig{
+					Fill: &noFill,
+					Line: &lineColor,
+				},
+			},
+		}
+		h := NewConfigHelper(cfg)
+		settings := h.GetGraphSettings()
+
+		if settings.FillColor != -1 {
+			t.Errorf("FillColor = %d, want -1 (no fill)", settings.FillColor)
+		}
+		if settings.LineColor != 255 {
+			t.Errorf("LineColor = %d, want 255", settings.LineColor)
 		}
 	})
 }

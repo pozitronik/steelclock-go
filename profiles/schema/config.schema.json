@@ -296,12 +296,12 @@
                 "description": "Graph mode settings",
                 "properties": {
                   "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
-                  "filled": { "type": "boolean", "description": "Fill area under graph line", "default": true },
                   "colors": {
                     "type": "object",
                     "description": "Graph colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Graph fill/line color", "minimum": 0, "maximum": 255, "default": 255 }
+                      "fill": { "type": "integer", "description": "Graph fill color (-1 = no fill)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "line": { "type": "integer", "description": "Graph line color", "minimum": 0, "maximum": 255, "default": 255 }
                     }
                   }
                 }
@@ -360,12 +360,12 @@
                 "description": "Graph mode settings",
                 "properties": {
                   "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
-                  "filled": { "type": "boolean", "description": "Fill area under graph line", "default": true },
                   "colors": {
                     "type": "object",
                     "description": "Graph colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Graph fill/line color", "minimum": 0, "maximum": 255, "default": 255 }
+                      "fill": { "type": "integer", "description": "Graph fill color (-1 = no fill)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "line": { "type": "integer", "description": "Graph line color", "minimum": 0, "maximum": 255, "default": 255 }
                     }
                   }
                 }
@@ -435,13 +435,12 @@
                 "description": "Graph mode settings",
                 "properties": {
                   "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
-                  "filled": { "type": "boolean", "description": "Fill area under graph lines", "default": true },
                   "colors": {
                     "type": "object",
-                    "description": "Graph colors for RX/TX (-1 = transparent/hidden)",
+                    "description": "Graph colors for RX/TX (-1 = line only/no fill)",
                     "properties": {
-                      "rx": { "type": "integer", "description": "Receive (download) line color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "tx": { "type": "integer", "description": "Transmit (upload) line color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 128 }
+                      "rx": { "type": "integer", "description": "Receive (download) line/fill color (-1 = line only)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "description": "Transmit (upload) line/fill color (-1 = line only)", "minimum": -1, "maximum": 255, "default": 128 }
                     }
                   }
                 }
@@ -510,13 +509,12 @@
                 "description": "Graph mode settings",
                 "properties": {
                   "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
-                  "filled": { "type": "boolean", "description": "Fill area under graph lines", "default": true },
                   "colors": {
                     "type": "object",
-                    "description": "Graph colors for read/write (-1 = transparent/hidden)",
+                    "description": "Graph colors for read/write (-1 = line only/no fill)",
                     "properties": {
-                      "read": { "type": "integer", "description": "Read line color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "write": { "type": "integer", "description": "Write line color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 200 }
+                      "read": { "type": "integer", "description": "Read line/fill color (-1 = line only)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "write": { "type": "integer", "description": "Write line/fill color (-1 = line only)", "minimum": -1, "maximum": 255, "default": 200 }
                     }
                   }
                 }
@@ -1257,7 +1255,14 @@
                 "description": "Graph mode settings",
                 "properties": {
                   "history": { "type": "integer", "minimum": 10, "maximum": 500, "default": 60 },
-                  "filled": { "type": "boolean", "default": true }
+                  "colors": {
+                    "type": "object",
+                    "description": "Graph colors",
+                    "properties": {
+                      "fill": { "type": "integer", "description": "Graph fill color (-1 = no fill)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "line": { "type": "integer", "description": "Graph line color", "minimum": 0, "maximum": 255, "default": 255 }
+                    }
+                  }
                 }
               },
               "gauge": {

@@ -23,7 +23,6 @@
       },
       "graph": {
         "history": 128,
-        "filled": true,
         "colors": {
           "fill": 255
         }

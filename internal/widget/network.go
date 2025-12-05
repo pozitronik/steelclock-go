@@ -60,9 +60,8 @@ type NetworkWidget struct {
 	padding       int
 	barDirection  string
 	barBorder     bool
-	graphFilled   bool
-	rxColor       int // -1 means transparent (skip drawing)
-	txColor       int // -1 means transparent (skip drawing)
+	rxColor       int // -1 means transparent/no fill (skip drawing)
+	txColor       int // -1 means transparent/no fill (skip drawing)
 	rxNeedleColor int // -1 means transparent (skip drawing)
 	txNeedleColor int // -1 means transparent (skip drawing)
 	historyLen    int
@@ -177,7 +176,6 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		padding:       padding,
 		barDirection:  barSettings.Direction,
 		barBorder:     barSettings.Border,
-		graphFilled:   graphSettings.Filled,
 		rxColor:       rxColor,
 		txColor:       txColor,
 		rxNeedleColor: rxNeedleColor,
@@ -464,12 +462,13 @@ func (w *NetworkWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 		txPercent[i] = (w.txHistory[i] / maxSpeed) * 100
 	}
 
-	// Draw both graphs (RX and TX overlaid) if color is not transparent
+	// Draw both graphs (RX and TX overlaid) if color is not -1 (transparent)
+	// Each channel uses the same color for both fill and line
 	if w.rxColor >= 0 {
-		bitmap.DrawGraph(img, x, y, width, height, rxPercent, w.historyLen, uint8(w.rxColor), w.graphFilled)
+		bitmap.DrawGraph(img, x, y, width, height, rxPercent, w.historyLen, w.rxColor, w.rxColor)
 	}
 	if w.txColor >= 0 {
-		bitmap.DrawGraph(img, x, y, width, height, txPercent, w.historyLen, uint8(w.txColor), w.graphFilled)
+		bitmap.DrawGraph(img, x, y, width, height, txPercent, w.historyLen, w.txColor, w.txColor)
 	}
 }
 

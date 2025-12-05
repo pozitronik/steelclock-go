@@ -338,7 +338,6 @@ func TestStyle_BarFillColor(t *testing.T) {
 func TestStyle_GraphColors(t *testing.T) {
 	fillColor := 180
 	lineColor := 255
-	filled := true
 	widgetCfg := config.WidgetConfig{
 		ID:       "test",
 		Type:     "memory",
@@ -346,7 +345,6 @@ func TestStyle_GraphColors(t *testing.T) {
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 		Mode:     "graph",
 		Graph: &config.GraphConfig{
-			Filled:  &filled,
 			History: 128,
 			Colors: &config.ModeColorsConfig{
 				Fill: &fillColor,
