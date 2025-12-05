@@ -1639,19 +1639,19 @@ Displays the Star Wars hyperspace/lightspeed jump effect with stars streaking to
 
 #### Configuration
 
-| Property       | Type    | Default       | Description                                       |
-|----------------|---------|---------------|---------------------------------------------------|
-| `star_count`   | integer | `100`         | Number of stars in the field (10-500)             |
-| `speed`        | number  | `0.02`        | Base speed for idle phase                         |
-| `max_speed`    | number  | `0.5`         | Maximum speed during hyperspace                   |
-| `trail_length` | number  | `1.0`         | Trail length multiplier (0.1-5.0)                 |
-| `center_x`     | integer | widget center | Focal point X coordinate                          |
-| `center_y`     | integer | widget center | Focal point Y coordinate                          |
-| `star_color`   | integer | `255`         | Maximum star brightness (1-255)                   |
-| `mode`         | string  | `"continuous"`| Animation mode: "continuous" or "cycle"           |
-| `idle_time`    | number  | `5.0`         | Seconds in idle phase before jump (cycle mode)    |
-| `travel_time`  | number  | `3.0`         | Seconds in hyperspace (cycle mode)                |
-| `acceleration` | number  | `0.1`         | Speed change rate during jump/exit (cycle mode)   |
+| Property       | Type    | Default        | Description                                     |
+|----------------|---------|----------------|-------------------------------------------------|
+| `star_count`   | integer | `100`          | Number of stars in the field (10-500)           |
+| `speed`        | number  | `0.02`         | Base speed for idle phase                       |
+| `max_speed`    | number  | `0.5`          | Maximum speed during hyperspace                 |
+| `trail_length` | number  | `1.0`          | Trail length multiplier (0.1-5.0)               |
+| `center_x`     | integer | widget center  | Focal point X coordinate                        |
+| `center_y`     | integer | widget center  | Focal point Y coordinate                        |
+| `star_color`   | integer | `255`          | Maximum star brightness (1-255)                 |
+| `mode`         | string  | `"continuous"` | Animation mode: "continuous" or "cycle"         |
+| `idle_time`    | number  | `5.0`          | Seconds in idle phase before jump (cycle mode)  |
+| `travel_time`  | number  | `3.0`          | Seconds in hyperspace (cycle mode)              |
+| `acceleration` | number  | `0.1`          | Speed change rate during jump/exit (cycle mode) |
 
 #### Cycle Mode Phases
 
@@ -1730,6 +1730,173 @@ In `cycle` mode, the animation goes through four phases:
 - `center_x`/`center_y` can create asymmetric "flying sideways" effect
 - In `cycle` mode, lower `acceleration` gives smoother transitions
 - Combine with transparent overlay to add hyperspace behind other widgets
+
+### Star Wars Intro Widget
+
+Displays the complete iconic Star Wars opening sequence with three phases:
+1. **Pre-intro**: "A long time ago in a galaxy far, far away...." fades in and out
+2. **Logo**: "STAR WARS" logo appears at full size and shrinks toward the vanishing point
+3. **Crawl**: Text scrolls upward with perspective, slanted letters matching the tilt angle
+
+Background stars are displayed during the logo and crawl phases.
+
+```json
+{
+  "type": "starwars_intro",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.05,
+  "starwars_intro": {
+    "pre_intro": {
+      "enabled": true,
+      "text": "A long time ago in a galaxy far, far away...."
+    },
+    "logo": {
+      "enabled": true,
+      "text": "STAR\nWARS"
+    },
+    "text": [
+      "Episode IV",
+      "A NEW HOPE",
+      "",
+      "It is a period of civil war."
+    ]
+  }
+}
+```
+
+#### Animation Phases
+
+| Phase     | Description                                              |
+|-----------|----------------------------------------------------------|
+| Pre-intro | Blue text fades in, holds, then fades out                |
+| Logo      | Logo displays at full size, then shrinks toward center   |
+| Crawl     | Perspective text scrolls upward with slanted letters     |
+| End pause | Optional pause before looping (if loop enabled)          |
+
+#### Pre-intro Configuration (`pre_intro`)
+
+| Option     | Type    | Default                                           | Description                                |
+|------------|---------|---------------------------------------------------|--------------------------------------------|
+| `enabled`  | boolean | `true`                                            | Show the pre-intro phase                   |
+| `text`     | string  | `"A long time ago in a galaxy far, far away...."` | The pre-intro message (use `\n` for lines) |
+| `color`    | integer | `80`                                              | Text brightness (dim blue look)            |
+| `fade_in`  | number  | `2.0`                                             | Fade in duration (seconds)                 |
+| `hold`     | number  | `2.0`                                             | Hold duration after fade in                |
+| `fade_out` | number  | `1.0`                                             | Fade out duration (seconds)                |
+
+#### Logo Configuration (`logo`)
+
+| Option            | Type    | Default        | Description                              |
+|-------------------|---------|----------------|------------------------------------------|
+| `enabled`         | boolean | `true`         | Show the logo phase                      |
+| `text`            | string  | `"STAR\nWARS"` | Logo text (use \n for line breaks)       |
+| `color`           | integer | `255`          | Logo brightness                          |
+| `hold_before`     | number  | `0.5`          | Seconds to hold at full size             |
+| `shrink_duration` | number  | `4.0`          | Seconds for shrink animation             |
+| `final_scale`     | number  | `0.1`          | Scale at which logo disappears (0.0-0.5) |
+
+#### Stars Configuration (`stars`)
+
+| Option       | Type    | Default | Description              |
+|--------------|---------|---------|--------------------------|
+| `enabled`    | boolean | `true`  | Show background stars    |
+| `count`      | integer | `50`    | Number of stars (10-200) |
+| `brightness` | integer | `200`   | Maximum star brightness  |
+
+#### Crawl Configuration
+
+| Option         | Type    | Default        | Description                                      |
+|----------------|---------|----------------|--------------------------------------------------|
+| `text`         | array   | (default text) | Array of strings for the crawl                   |
+| `scroll_speed` | number  | `0.5`          | Scroll speed in pixels per frame                 |
+| `perspective`  | number  | `0.7`          | Perspective strength (0.0 = none, 1.0 = maximum) |
+| `slant`        | number  | `30.0`         | Text italic/slant angle in degrees               |
+| `fade_top`     | number  | `0.3`          | Position where fade starts (0.0 = top)           |
+| `text_color`   | integer | `255`          | Text brightness (1-255)                          |
+| `line_spacing` | integer | `8`            | Pixels between text lines                        |
+| `loop`         | boolean | `true`         | Loop the entire sequence                         |
+| `pause_at_end` | number  | `3.0`          | Seconds to pause before looping                  |
+
+#### Examples
+
+**Full movie-accurate intro:**
+```json
+{
+  "type": "starwars_intro",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.05,
+  "starwars_intro": {
+    "pre_intro": {
+      "fade_in": 2.5,
+      "hold": 3.0,
+      "fade_out": 1.5
+    },
+    "logo": {
+      "shrink_duration": 5.0
+    },
+    "stars": {
+      "count": 80
+    },
+    "text": [
+      "Episode IV",
+      "A NEW HOPE",
+      "",
+      "It is a period of civil war.",
+      "Rebel spaceships, striking",
+      "from a hidden base, have won",
+      "their first victory against",
+      "the evil Galactic Empire."
+    ],
+    "slant": 20.0
+  }
+}
+```
+
+**Crawl only (skip intro and logo):**
+```json
+{
+  "type": "starwars_intro",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.05,
+  "starwars_intro": {
+    "pre_intro": {"enabled": false},
+    "logo": {"enabled": false},
+    "text": ["Custom message", "scrolling with", "perspective effect"]
+  }
+}
+```
+
+**Custom branding:**
+```json
+{
+  "type": "starwars_intro",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.05,
+  "starwars_intro": {
+    "pre_intro": {
+      "text": "In a workspace not so far away...."
+    },
+    "logo": {
+      "text": "STEEL\nCLOCK"
+    },
+    "text": [
+      "Version 1.0",
+      "",
+      "A powerful tool for",
+      "keyboard displays."
+    ]
+  }
+}
+```
+
+#### Tips
+
+- Use `update_interval: 0.05` (20 FPS) for smooth animation
+- The `slant` angle should roughly match `perspective` for natural appearance
+- Higher `perspective` values create stronger "receding into distance" effect
+- Empty strings in `text` array create blank lines for spacing
+- Keep text lines short to fit within the display width at perspective scale
+- Set `pre_intro.enabled: false` and `logo.enabled: false` to skip directly to crawl
 
 ## Examples
 

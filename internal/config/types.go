@@ -158,6 +158,9 @@ type WidgetConfig struct {
 
 	// Hyperspace widget
 	Hyperspace *HyperspaceConfig `json:"hyperspace,omitempty"` // Hyperspace effect settings
+
+	// Star Wars intro crawl widget
+	StarWarsIntro *StarWarsIntroConfig `json:"starwars_intro,omitempty"` // Star Wars intro crawl settings
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -702,4 +705,80 @@ type HyperspaceConfig struct {
 	TravelTime float64 `json:"travel_time,omitempty"`
 	// Acceleration: speed change rate during jump/exit phases (default: 0.1)
 	Acceleration float64 `json:"acceleration,omitempty"`
+}
+
+// StarWarsIntroConfig contains settings for the Star Wars intro crawl widget
+type StarWarsIntroConfig struct {
+	// Pre-intro phase: "A long time ago in a galaxy far, far away...."
+	PreIntro *StarWarsPreIntroConfig `json:"pre_intro,omitempty"`
+
+	// Logo phase: "STAR WARS" shrinking toward center
+	Logo *StarWarsLogoConfig `json:"logo,omitempty"`
+
+	// Background stars (visible during logo and crawl phases)
+	Stars *StarWarsStarsConfig `json:"stars,omitempty"`
+
+	// Crawl phase settings
+	// Text: lines of text to display in the crawl
+	Text []string `json:"text,omitempty"`
+	// ScrollSpeed: how fast the text scrolls up (pixels per frame, default: 0.5)
+	ScrollSpeed float64 `json:"scroll_speed,omitempty"`
+	// Perspective: perspective strength (0.0 = none, 1.0 = strong, default: 0.7)
+	Perspective float64 `json:"perspective,omitempty"`
+	// Slant: text italic/slant angle in degrees (0.0 = upright, default: 15.0 to match perspective)
+	Slant float64 `json:"slant,omitempty"`
+	// FadeTop: where fade starts from top (0.0-1.0, default: 0.3)
+	FadeTop float64 `json:"fade_top,omitempty"`
+	// TextColor: brightness of text (1-255, default: 255)
+	TextColor int `json:"text_color,omitempty"`
+	// LineSpacing: pixels between lines (default: 8)
+	LineSpacing int `json:"line_spacing,omitempty"`
+
+	// General settings
+	// Loop: whether to loop the entire sequence (default: true)
+	Loop *bool `json:"loop,omitempty"`
+	// PauseAtEnd: seconds to pause at end before looping (default: 3.0)
+	PauseAtEnd float64 `json:"pause_at_end,omitempty"`
+}
+
+// StarWarsPreIntroConfig contains settings for the pre-intro text phase
+type StarWarsPreIntroConfig struct {
+	// Enabled: show the pre-intro phase (default: true)
+	Enabled *bool `json:"enabled,omitempty"`
+	// Text: the pre-intro message (default: "A long time ago in a galaxy far, far away....")
+	Text string `json:"text,omitempty"`
+	// Color: text brightness (1-255, default: 80 - bluish dim appearance)
+	Color int `json:"color,omitempty"`
+	// FadeIn: fade in duration in seconds (default: 2.0)
+	FadeIn float64 `json:"fade_in,omitempty"`
+	// Hold: hold duration in seconds after fade in (default: 2.0)
+	Hold float64 `json:"hold,omitempty"`
+	// FadeOut: fade out duration in seconds (default: 1.0)
+	FadeOut float64 `json:"fade_out,omitempty"`
+}
+
+// StarWarsLogoConfig contains settings for the logo shrinking phase
+type StarWarsLogoConfig struct {
+	// Enabled: show the logo phase (default: true)
+	Enabled *bool `json:"enabled,omitempty"`
+	// Text: logo text, use \n for line breaks (default: "STAR\nWARS")
+	Text string `json:"text,omitempty"`
+	// Color: logo brightness (1-255, default: 255)
+	Color int `json:"color,omitempty"`
+	// HoldBefore: seconds to hold at full size before shrinking (default: 0.5)
+	HoldBefore float64 `json:"hold_before,omitempty"`
+	// ShrinkDuration: seconds for the shrink animation (default: 4.0)
+	ShrinkDuration float64 `json:"shrink_duration,omitempty"`
+	// FinalScale: scale at which logo disappears (0.0-1.0, default: 0.1)
+	FinalScale float64 `json:"final_scale,omitempty"`
+}
+
+// StarWarsStarsConfig contains settings for background stars
+type StarWarsStarsConfig struct {
+	// Enabled: show background stars (default: true)
+	Enabled *bool `json:"enabled,omitempty"`
+	// Count: number of stars (default: 50)
+	Count int `json:"count,omitempty"`
+	// Brightness: maximum star brightness (1-255, default: 200)
+	Brightness int `json:"brightness,omitempty"`
 }

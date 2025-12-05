@@ -194,7 +194,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life", "hyperspace"]
+          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life", "hyperspace", "starwars_intro"]
         },
         "enabled": { "type": "boolean", "default": true },
         "position": { "$ref": "#/definitions/position" },
@@ -1466,6 +1466,193 @@
                     "minimum": 0.01,
                     "maximum": 1.0,
                     "default": 0.1
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "starwars_intro" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "starwars_intro": {
+                "type": "object",
+                "description": "Star Wars opening crawl with pre-intro text, shrinking logo, and perspective text crawl",
+                "properties": {
+                  "pre_intro": {
+                    "type": "object",
+                    "description": "Pre-intro phase settings ('A long time ago in a galaxy far, far away....')",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Show the pre-intro phase",
+                        "default": true
+                      },
+                      "text": {
+                        "type": "string",
+                        "description": "The pre-intro message text (use \\n for line breaks)",
+                        "default": "A long time ago in a galaxy far, far away...."
+                      },
+                      "color": {
+                        "type": "integer",
+                        "description": "Text brightness (1-255, bluish dim appearance)",
+                        "minimum": 1,
+                        "maximum": 255,
+                        "default": 80
+                      },
+                      "fade_in": {
+                        "type": "number",
+                        "description": "Fade in duration in seconds",
+                        "minimum": 0.0,
+                        "maximum": 10.0,
+                        "default": 2.0
+                      },
+                      "hold": {
+                        "type": "number",
+                        "description": "Hold duration in seconds after fade in",
+                        "minimum": 0.0,
+                        "maximum": 30.0,
+                        "default": 2.0
+                      },
+                      "fade_out": {
+                        "type": "number",
+                        "description": "Fade out duration in seconds",
+                        "minimum": 0.0,
+                        "maximum": 10.0,
+                        "default": 1.0
+                      }
+                    }
+                  },
+                  "logo": {
+                    "type": "object",
+                    "description": "Logo phase settings (shrinking 'STAR WARS' logo)",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Show the logo phase",
+                        "default": true
+                      },
+                      "text": {
+                        "type": "string",
+                        "description": "Logo text (use \\n for line breaks)",
+                        "default": "STAR\\nWARS"
+                      },
+                      "color": {
+                        "type": "integer",
+                        "description": "Logo brightness (1-255)",
+                        "minimum": 1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "hold_before": {
+                        "type": "number",
+                        "description": "Seconds to hold at full size before shrinking",
+                        "minimum": 0.0,
+                        "maximum": 10.0,
+                        "default": 0.5
+                      },
+                      "shrink_duration": {
+                        "type": "number",
+                        "description": "Seconds for the shrink animation",
+                        "minimum": 0.5,
+                        "maximum": 30.0,
+                        "default": 4.0
+                      },
+                      "final_scale": {
+                        "type": "number",
+                        "description": "Scale at which logo disappears (0.0-1.0)",
+                        "minimum": 0.0,
+                        "maximum": 0.5,
+                        "default": 0.1
+                      }
+                    }
+                  },
+                  "stars": {
+                    "type": "object",
+                    "description": "Background starfield settings (visible during logo and crawl)",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Show background stars",
+                        "default": true
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of stars",
+                        "minimum": 10,
+                        "maximum": 200,
+                        "default": 50
+                      },
+                      "brightness": {
+                        "type": "integer",
+                        "description": "Maximum star brightness (1-255)",
+                        "minimum": 1,
+                        "maximum": 255,
+                        "default": 200
+                      }
+                    }
+                  },
+                  "text": {
+                    "type": "array",
+                    "description": "Lines of text to display in the crawl",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "scroll_speed": {
+                    "type": "number",
+                    "description": "Scroll speed in pixels per frame",
+                    "minimum": 0.1,
+                    "maximum": 5.0,
+                    "default": 0.5
+                  },
+                  "perspective": {
+                    "type": "number",
+                    "description": "Perspective strength (0.0 = no perspective, 1.0 = maximum narrowing toward top)",
+                    "minimum": 0.0,
+                    "maximum": 1.0,
+                    "default": 0.7
+                  },
+                  "slant": {
+                    "type": "number",
+                    "description": "Text radial slant angle in degrees (characters lean toward center)",
+                    "minimum": 0.0,
+                    "maximum": 90.0,
+                    "default": 60.0
+                  },
+                  "fade_top": {
+                    "type": "number",
+                    "description": "Fade start position from top (0.0 = fade from very top, 1.0 = no fade)",
+                    "minimum": 0.0,
+                    "maximum": 1.0,
+                    "default": 0.3
+                  },
+                  "text_color": {
+                    "type": "integer",
+                    "description": "Text brightness (1-255)",
+                    "minimum": 1,
+                    "maximum": 255,
+                    "default": 255
+                  },
+                  "line_spacing": {
+                    "type": "integer",
+                    "description": "Pixels between text lines",
+                    "minimum": 4,
+                    "maximum": 20,
+                    "default": 8
+                  },
+                  "loop": {
+                    "type": "boolean",
+                    "description": "Loop the entire sequence when complete",
+                    "default": true
+                  },
+                  "pause_at_end": {
+                    "type": "number",
+                    "description": "Seconds to pause after crawl completes before looping",
+                    "minimum": 0.0,
+                    "maximum": 30.0,
+                    "default": 3.0
                   }
                 }
               }
