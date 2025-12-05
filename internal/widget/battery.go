@@ -501,22 +501,22 @@ func (w *BatteryWidget) renderIcon(img *image.Gray, status BatteryStatus) {
 
 	// Compact icon: small battery shape with optional percentage text next to it
 	// Center the icon in the widget area
-	iconW := 16
-	iconH := 10
-	nubW := 2
-
 	if w.orientation == "vertical" {
-		iconW = 10
-		iconH = 16
-	}
-
-	// Center position
-	startX := (pos.W - iconW - nubW) / 2
-	startY := (pos.H - iconH) / 2
-
-	if w.orientation == "vertical" {
+		// Vertical: nub at top (height=2), body below
+		iconW := 10
+		iconH := 16 // Total height including nub
+		// Center the icon in the widget
+		startX := (pos.W - iconW) / 2
+		startY := (pos.H - iconH) / 2
 		w.drawCompactBatteryVertical(img, startX, startY, iconW, iconH, status)
 	} else {
+		// Horizontal: body left, nub on right (width=2)
+		iconW := 16
+		iconH := 10
+		nubW := 2
+		// Account for nub width horizontally
+		startX := (pos.W - iconW - nubW) / 2
+		startY := (pos.H - iconH) / 2
 		w.drawCompactBatteryHorizontal(img, startX, startY, iconW, iconH, status)
 	}
 }
@@ -613,11 +613,12 @@ func (w *BatteryWidget) renderBatteryHorizontal(img *image.Gray, status BatteryS
 	batteryW := pos.W - w.padding*2 - nubW - 1
 	batteryH := pos.H - w.padding*2
 
-	if batteryW < 20 {
-		batteryW = 20
+	// Ensure minimum usable size but don't exceed widget bounds
+	if batteryW < 8 {
+		batteryW = 8
 	}
-	if batteryH < 10 {
-		batteryH = 10
+	if batteryH < 6 {
+		batteryH = 6
 	}
 
 	// Draw battery body outline
@@ -660,11 +661,12 @@ func (w *BatteryWidget) renderBatteryVertical(img *image.Gray, status BatterySta
 	batteryW := pos.W - w.padding*2
 	batteryH := pos.H - w.padding*2 - nubH - 1
 
-	if batteryW < 10 {
-		batteryW = 10
+	// Ensure minimum usable size but don't exceed widget bounds
+	if batteryW < 6 {
+		batteryW = 6
 	}
-	if batteryH < 20 {
-		batteryH = 20
+	if batteryH < 8 {
+		batteryH = 8
 	}
 
 	// Draw battery body outline
