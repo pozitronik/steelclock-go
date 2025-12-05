@@ -651,17 +651,6 @@ func (w *StarWarsIntroWidget) drawPerspectiveLine(img *image.Gray, text string, 
 	}
 }
 
-// drawText draws text at the specified position
-func (w *StarWarsIntroWidget) drawText(img *image.Gray, text string, x, y int, brightness uint8, scale float64, slant float64) {
-	for i, ch := range text {
-		if ch == ' ' {
-			continue
-		}
-		charX := x + int(float64(i*w.charWidth)*scale)
-		w.drawCharSlanted(img, charX, y, ch, brightness, scale, slant)
-	}
-}
-
 // drawTextCompact draws text with half-width spaces and narrow punctuation
 func (w *StarWarsIntroWidget) drawTextCompact(img *image.Gray, text string, x, y int, brightness uint8) {
 	halfWidth := w.charWidth / 2
