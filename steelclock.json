@@ -201,15 +201,15 @@
       "type": "volume",
       "enabled": true,
       "position": {
-        "x": 66,
+        "x": 64,
         "y": 0,
-        "w": 36,
+        "w": 40,
         "h": 20,
         "z": 0
       },
       "style": {
-        "background": -1,
-        "border": 255,
+        "background": 0,
+        "border": 0,
         "padding": 0
       },
       "mode": "text",
@@ -364,6 +364,58 @@
         "timeout": 5,
         "on_show": "always"
       }
+    },
+    {
+      "type": "battery",
+      "enabled": true,
+      "position": {
+        "x": 64,
+        "y": 0,
+        "w": 40,
+        "h": 20,
+        "z": 0
+      },
+      "style": {
+        "background": 0,
+        "border": -1,
+        "padding": 0
+      },
+      "mode": "battery",
+      "battery": {
+        "orientation": "horizontal",
+        "show_status": true,
+        "low_threshold": 20,
+        "critical_threshold": 10,
+        "colors": {
+          "normal": 255,
+          "low": 200,
+          "critical": 150,
+          "charging": 255,
+          "background": 0,
+          "border": 255
+        },
+        "charging_blink": false
+      },
+      "bar": {
+        "direction": "left",
+        "border": false
+      },
+      "graph": {
+        "history": 60,
+        "filled": true
+      },
+      "gauge": {
+        "show_ticks": true
+      },
+      "text": {
+        "font": null,
+        "size": 10,
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
+      },
+      "update_interval": 10
     }
   ]
 }

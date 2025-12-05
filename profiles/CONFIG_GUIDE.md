@@ -1254,6 +1254,167 @@ The widget displays appropriate icons for weather conditions:
 - Format cycling is useful for displaying more information on small screens
 - Scroll mode combines current weather with hourly and daily forecasts
 
+### Battery Widget
+
+Displays device battery level and charging status. Supports multiple display modes including a battery-shaped icon with fill level, text percentage, bar, gauge, and historical graph. Configuration follows the same pattern as CPU widget: widget-level `mode` with mode-specific sections.
+
+```json
+{
+  "type": "battery",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 10,
+  "mode": "icon",
+  "battery": {
+    "show_percentage": true,
+    "show_status": true
+  }
+}
+```
+
+#### Display Modes
+
+| Mode    | Description                                                |
+|---------|-----------------------------------------------------------|
+| `icon`  | Battery-shaped icon with fill level (default)             |
+| `text`  | Percentage text only (e.g., "75%")                        |
+| `bar`   | Horizontal or vertical progress bar                       |
+| `gauge` | Circular gauge                                            |
+| `graph` | Historical battery level over time                        |
+
+#### Battery Configuration (icon mode settings)
+
+| Property            | Type    | Default | Description                                    |
+|---------------------|---------|---------|------------------------------------------------|
+| `show_percentage`   | bool    | `true`  | Show percentage text inside icon               |
+| `show_status`       | bool    | `true`  | Show charging/AC indicator (white with black border) |
+| `low_threshold`     | int     | `20`    | Percentage below which battery is "low"        |
+| `critical_threshold`| int     | `10`    | Percentage below which battery is "critical"   |
+| `charging_blink`    | bool    | `false` | Blink the charging indicator                   |
+
+#### Color Configuration (battery.colors)
+
+Colors use 0-255 range. Setting a color to 0 (black) is supported.
+
+| Property     | Type | Default | Description                        |
+|--------------|------|---------|------------------------------------|
+| `normal`     | int  | `255`   | Fill color when battery is normal  |
+| `low`        | int  | `200`   | Fill color when battery is low     |
+| `critical`   | int  | `150`   | Fill color when critical           |
+| `charging`   | int  | `255`   | Charging indicator color           |
+| `background` | int  | `0`     | Background inside battery body     |
+| `border`     | int  | `255`   | Battery outline color              |
+
+#### Mode-Specific Settings
+
+For bar/graph/gauge modes, use the shared widget-level configurations:
+
+**Bar mode (`bar`):**
+- `direction`: "left", "right", "up", "down" (up/down = vertical)
+- `border`: Show border around bar
+
+**Graph mode (`graph`):**
+- `history`: Number of data points (default: 60)
+- `filled`: Fill under the graph line
+
+**Gauge mode (`gauge`):**
+- `show_ticks`: Show tick marks
+
+#### Examples
+
+**Icon mode with percentage:**
+```json
+{
+  "type": "battery",
+  "position": {"x": 0, "y": 0, "w": 64, "h": 40},
+  "mode": "icon",
+  "battery": {
+    "show_percentage": true,
+    "show_status": true
+  }
+}
+```
+
+**Vertical icon (bar direction controls orientation):**
+```json
+{
+  "type": "battery",
+  "position": {"x": 0, "y": 0, "w": 20, "h": 40},
+  "mode": "icon",
+  "bar": {
+    "direction": "up"
+  }
+}
+```
+
+**Vertical bar:**
+```json
+{
+  "type": "battery",
+  "position": {"x": 0, "y": 0, "w": 20, "h": 40},
+  "mode": "bar",
+  "bar": {
+    "direction": "up",
+    "border": true
+  }
+}
+```
+
+**Circular gauge:**
+```json
+{
+  "type": "battery",
+  "position": {"x": 0, "y": 0, "w": 40, "h": 40},
+  "mode": "gauge",
+  "gauge": {
+    "show_ticks": true
+  }
+}
+```
+
+**Historical graph:**
+```json
+{
+  "type": "battery",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "mode": "graph",
+  "graph": {
+    "history": 200,
+    "filled": true
+  }
+}
+```
+
+**Custom colors for low battery:**
+```json
+{
+  "type": "battery",
+  "mode": "icon",
+  "battery": {
+    "low_threshold": 30,
+    "critical_threshold": 15,
+    "colors": {
+      "normal": 255,
+      "low": 150,
+      "critical": 80
+    }
+  }
+}
+```
+
+#### Platform Support
+
+- **Windows**: Uses GetSystemPowerStatus API
+- **Linux**: Reads from /sys/class/power_supply/
+
+#### Tips
+
+- Use `update_interval: 10` or higher to avoid excessive system calls
+- Icon mode supports both horizontal and vertical orientation (via `bar.direction`)
+- Horizontal: Battery with terminal on right, status icon in top-left corner
+- Vertical: Battery with terminal on top, status icon at bottom-center
+- Status indicators (charging bolt, AC plug) have white fill with black border for visibility
+- All colors support 0 (black) values
+
 ## Examples
 
 ### Example 1: Simple Clock

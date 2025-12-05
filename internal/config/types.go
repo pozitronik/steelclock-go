@@ -146,6 +146,9 @@ type WidgetConfig struct {
 	// DOOM widget
 	Doom *DoomConfig `json:"doom,omitempty"` // DOOM display settings
 
+	// Battery widget
+	Battery *BatteryConfig `json:"battery,omitempty"` // Battery display settings
+
 	// Weather widget
 	Weather *WeatherConfig `json:"weather,omitempty"` // Weather widget settings
 }
@@ -521,6 +524,42 @@ type DoomConfig struct {
 	ContrastBoost float64 `json:"contrast_boost,omitempty"`
 	// DitherSize: Bayer matrix size for dither mode (2, 4, or 8, default: 4)
 	DitherSize int `json:"dither_size,omitempty"`
+}
+
+// BatteryConfig represents Battery widget settings
+// Modes: "icon" (compact tray-style), "battery" (progressbar shape), "text", "bar", "gauge", "graph"
+type BatteryConfig struct {
+	// Orientation: "horizontal" or "vertical" for battery/icon modes (default: "horizontal")
+	Orientation string `json:"orientation,omitempty"`
+	// ShowPercentage: show percentage text (default: true)
+	ShowPercentage *bool `json:"show_percentage,omitempty"`
+	// ShowStatus: show charging/AC indicator (default: true)
+	ShowStatus *bool `json:"show_status,omitempty"`
+	// ChargingBlink: blink the charging indicator (default: false)
+	ChargingBlink *bool `json:"charging_blink,omitempty"`
+	// LowThreshold: percentage considered low (default: 20)
+	LowThreshold int `json:"low_threshold,omitempty"`
+	// CriticalThreshold: percentage considered critical (default: 10)
+	CriticalThreshold int `json:"critical_threshold,omitempty"`
+	// Colors: custom colors for battery states (uses pointers to allow 0/black)
+	Colors *BatteryColorsConfig `json:"colors,omitempty"`
+}
+
+// BatteryColorsConfig represents color settings for battery widget
+// Uses pointers to distinguish "not set" from "set to 0 (black)"
+type BatteryColorsConfig struct {
+	// Normal: fill color when battery level is normal (default: 255)
+	Normal *int `json:"normal,omitempty"`
+	// Low: fill color when battery is low (default: 200)
+	Low *int `json:"low,omitempty"`
+	// Critical: fill color when battery is critical (default: 150)
+	Critical *int `json:"critical,omitempty"`
+	// Charging: charging indicator color (default: 255)
+	Charging *int `json:"charging,omitempty"`
+	// Background: inner background color (default: 0)
+	Background *int `json:"background,omitempty"`
+	// Border: outline color (default: 255)
+	Border *int `json:"border,omitempty"`
 }
 
 // WeatherConfig represents Weather widget settings

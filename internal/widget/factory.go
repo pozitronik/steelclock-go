@@ -42,6 +42,8 @@ func CreateWidget(cfg config.WidgetConfig) (Widget, error) {
 		return NewMatrixWidget(cfg)
 	case "weather":
 		return NewWeatherWidget(cfg)
+	case "battery":
+		return NewBatteryWidget(cfg)
 	default:
 		return nil, fmt.Errorf("unknown widget type: %s (valid: %s)", cfg.Type, config.GetValidWidgetTypesList())
 	}
