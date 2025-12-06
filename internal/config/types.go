@@ -788,18 +788,58 @@ type StarWarsStarsConfig struct {
 	Brightness int `json:"brightness,omitempty"`
 }
 
+// SeparatorConfig represents a separator line between elements
+type SeparatorConfig struct {
+	// Color: separator color (-1 = disabled, 0-255 = grayscale, default: 128)
+	Color int `json:"color,omitempty"`
+	// Thickness: separator thickness in pixels (default: 1)
+	Thickness int `json:"thickness,omitempty"`
+}
+
+// TransitionConfig represents transition effect settings
+// Transition types: "none", "push_left", "push_right", "push_up", "push_down",
+// "slide_left", "slide_right", "slide_up", "slide_down",
+// "dissolve_fade", "dissolve_pixel", "dissolve_dither",
+// "box_in", "box_out", "clock_wipe", "random"
+type TransitionConfig struct {
+	// In: transition effect when showing (default: "none")
+	In string `json:"in,omitempty"`
+	// InSpeed: transition duration in seconds (default: 0.5)
+	InSpeed float64 `json:"in_speed,omitempty"`
+	// Out: transition effect when hiding (default: "none")
+	Out string `json:"out,omitempty"`
+	// OutSpeed: transition duration in seconds (default: 0.5)
+	OutSpeed float64 `json:"out_speed,omitempty"`
+}
+
 // TelegramConfig contains settings for the Telegram notifications widget
 type TelegramConfig struct {
 	// Auth: Telegram API authentication settings (required)
 	Auth *TelegramAuthConfig `json:"auth,omitempty"`
-	// SessionPath: path to session file (default: telegram/{phone}.session)
+	// SessionPath: path to session file (default: telegram/{api_id}_{phone}.session)
 	SessionPath string `json:"session_path,omitempty"`
-	// Filters: notification source filters
-	Filters *TelegramFiltersConfig `json:"filters,omitempty"`
-	// Display: notification display settings
-	Display *TelegramDisplayConfig `json:"display,omitempty"`
 	// PollInterval: seconds between update checks (default: 1.0)
 	PollInterval float64 `json:"poll_interval,omitempty"`
+	// PrivateChats: private message settings
+	PrivateChats *TelegramChatConfig `json:"private_chats,omitempty"`
+	// Groups: group chat settings
+	Groups *TelegramChatConfig `json:"groups,omitempty"`
+	// Channels: channel settings
+	Channels *TelegramChatConfig `json:"channels,omitempty"`
+	// Unread: unread counter display settings (for telegram_unread widget)
+	Unread *TelegramUnreadConfig `json:"unread,omitempty"`
+}
+
+// TelegramUnreadConfig contains settings for the unread counter widget
+type TelegramUnreadConfig struct {
+	// Format: display format - "count" (just number), "badge" (number in parentheses), "text" ("N unread")
+	Format string `json:"format,omitempty"`
+	// ShowZero: whether to show when unread count is 0 (default: false)
+	ShowZero *bool `json:"show_zero,omitempty"`
+	// Blink: when to blink - "never", "always", "nonzero" (default: "never")
+	Blink string `json:"blink,omitempty"`
+	// Text: text rendering settings (font, size)
+	Text *TextConfig `json:"text,omitempty"`
 }
 
 // TelegramAuthConfig contains Telegram API authentication credentials
@@ -812,50 +852,44 @@ type TelegramAuthConfig struct {
 	PhoneNumber string `json:"phone_number"`
 }
 
-// TelegramFiltersConfig contains notification source filters
-type TelegramFiltersConfig struct {
-	// PrivateChats: private message filter settings
-	PrivateChats *TelegramChatFilterConfig `json:"private_chats,omitempty"`
-	// Groups: group chat filter settings
-	Groups *TelegramChatFilterConfig `json:"groups,omitempty"`
-	// Channels: channel filter settings
-	Channels *TelegramChatFilterConfig `json:"channels,omitempty"`
-	// ShowPinnedMessages: show notifications for pinned messages (default: true)
-	ShowPinnedMessages *bool `json:"show_pinned_messages,omitempty"`
-}
-
-// TelegramChatFilterConfig contains filter settings for a chat type
-type TelegramChatFilterConfig struct {
+// TelegramChatConfig contains settings for a chat type (private/group/channel)
+type TelegramChatConfig struct {
 	// Enabled: enable notifications from this chat type (default: true for private, false for groups/channels)
 	Enabled *bool `json:"enabled,omitempty"`
 	// Whitelist: always show notifications from these IDs, even if this chat type is disabled
 	Whitelist []string `json:"whitelist,omitempty"`
 	// Blacklist: never show notifications from these IDs, even if this chat type is enabled
 	Blacklist []string `json:"blacklist,omitempty"`
+	// ShowPinnedMessages: show notifications for pinned messages (default: true for private/groups, false for channels)
+	ShowPinnedMessages *bool `json:"show_pinned_messages,omitempty"`
+	// Appearance: notification appearance settings
+	Appearance *TelegramAppearanceConfig `json:"appearance,omitempty"`
 }
 
-// TelegramDisplayConfig contains display settings for notifications
-type TelegramDisplayConfig struct {
-	// Mode: display mode - "last_message", "unread_count", "ticker", "notification" (default: "last_message")
-	Mode string `json:"mode,omitempty"`
-	// MaxMessages: maximum messages to show in ticker mode (default: 5)
-	MaxMessages int `json:"max_messages,omitempty"`
-	// ShowSender: show sender name (default: true)
-	ShowSender *bool `json:"show_sender,omitempty"`
-	// ShowChat: show chat/group name for group messages (default: true)
-	ShowChat *bool `json:"show_chat,omitempty"`
-	// ShowTime: show message time (default: false)
-	ShowTime *bool `json:"show_time,omitempty"`
-	// TimeFormat: time format string (default: "15:04")
-	TimeFormat string `json:"time_format,omitempty"`
-	// TruncateLength: max characters per message (default: 50)
-	TruncateLength int `json:"truncate_length,omitempty"`
-	// NotificationDuration: seconds to show notification flash (default: 3.0)
-	NotificationDuration float64 `json:"notification_duration,omitempty"`
-	// ScrollSpeed: ticker scroll speed in pixels per frame (default: 1.0)
-	ScrollSpeed float64 `json:"scroll_speed,omitempty"`
-	// UnreadBadge: show unread count badge (default: true)
-	UnreadBadge *bool `json:"unread_badge,omitempty"`
-	// TextColor: text brightness (1-255, default: 255)
-	TextColor int `json:"text_color,omitempty"`
+// TelegramAppearanceConfig contains appearance settings for notifications
+type TelegramAppearanceConfig struct {
+	// Header: header element settings (sender/chat name)
+	Header *TelegramElementConfig `json:"header,omitempty"`
+	// Message: message text element settings
+	Message *TelegramElementConfig `json:"message,omitempty"`
+	// Separator: separator line between header and message
+	Separator *SeparatorConfig `json:"separator,omitempty"`
+	// Timeout: seconds to show notification (0 = show until next message, default: 0)
+	Timeout int `json:"timeout,omitempty"`
+	// Transitions: transition effects for showing/hiding notifications
+	Transitions *TransitionConfig `json:"transitions,omitempty"`
+}
+
+// TelegramElementConfig contains settings for a notification element (header or message)
+type TelegramElementConfig struct {
+	// Enabled: show this element (default: true)
+	Enabled *bool `json:"enabled,omitempty"`
+	// Blink: make element blink (default: false)
+	Blink bool `json:"blink,omitempty"`
+	// Text: text rendering settings (font, size, alignment)
+	Text *TextConfig `json:"text,omitempty"`
+	// Scroll: text scrolling settings when text doesn't fit
+	Scroll *ScrollConfig `json:"scroll,omitempty"`
+	// WordBreak: how to break lines - "normal" (break on spaces) or "break-all" (break anywhere)
+	WordBreak string `json:"word_break,omitempty"`
 }

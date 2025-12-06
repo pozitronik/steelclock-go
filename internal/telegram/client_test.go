@@ -146,14 +146,18 @@ func TestClient_Filters(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		filters      *config.TelegramFiltersConfig
+		privateChats *config.TelegramChatConfig
+		groups       *config.TelegramChatConfig
+		channels     *config.TelegramChatConfig
 		checkPrivate func(*Client) bool
 		checkGroup   func(*Client) bool
 		checkChannel func(*Client) bool
 	}{
 		{
-			name:    "nil filters - defaults",
-			filters: nil,
+			name:         "nil configs - defaults",
+			privateChats: nil,
+			groups:       nil,
+			channels:     nil,
 			checkPrivate: func(c *Client) bool {
 				return c.shouldShowPrivate(123)
 			},
@@ -166,10 +170,8 @@ func TestClient_Filters(t *testing.T) {
 		},
 		{
 			name: "private disabled",
-			filters: &config.TelegramFiltersConfig{
-				PrivateChats: &config.TelegramChatFilterConfig{
-					Enabled: &falseVal,
-				},
+			privateChats: &config.TelegramChatConfig{
+				Enabled: &falseVal,
 			},
 			checkPrivate: func(c *Client) bool {
 				return !c.shouldShowPrivate(123)
@@ -183,10 +185,8 @@ func TestClient_Filters(t *testing.T) {
 		},
 		{
 			name: "groups enabled",
-			filters: &config.TelegramFiltersConfig{
-				Groups: &config.TelegramChatFilterConfig{
-					Enabled: &trueVal,
-				},
+			groups: &config.TelegramChatConfig{
+				Enabled: &trueVal,
 			},
 			checkPrivate: func(c *Client) bool {
 				return true // Not checking private
@@ -200,11 +200,9 @@ func TestClient_Filters(t *testing.T) {
 		},
 		{
 			name: "whitelist overrides disabled",
-			filters: &config.TelegramFiltersConfig{
-				PrivateChats: &config.TelegramChatFilterConfig{
-					Enabled:   &falseVal, // disabled
-					Whitelist: []string{"123"},
-				},
+			privateChats: &config.TelegramChatConfig{
+				Enabled:   &falseVal, // disabled
+				Whitelist: []string{"123"},
 			},
 			checkPrivate: func(c *Client) bool {
 				// 123 is whitelisted - shown even though private chats are disabled
@@ -220,11 +218,9 @@ func TestClient_Filters(t *testing.T) {
 		},
 		{
 			name: "blacklist overrides enabled",
-			filters: &config.TelegramFiltersConfig{
-				PrivateChats: &config.TelegramChatFilterConfig{
-					Enabled:   &trueVal, // enabled
-					Blacklist: []string{"123"},
-				},
+			privateChats: &config.TelegramChatConfig{
+				Enabled:   &trueVal, // enabled
+				Blacklist: []string{"123"},
 			},
 			checkPrivate: func(c *Client) bool {
 				// 123 is blacklisted - not shown even though private chats are enabled
@@ -240,12 +236,10 @@ func TestClient_Filters(t *testing.T) {
 		},
 		{
 			name: "blacklist has highest priority",
-			filters: &config.TelegramFiltersConfig{
-				PrivateChats: &config.TelegramChatFilterConfig{
-					Enabled:   &trueVal,
-					Whitelist: []string{"123"},
-					Blacklist: []string{"123", "456"}, // 123 is in both lists
-				},
+			privateChats: &config.TelegramChatConfig{
+				Enabled:   &trueVal,
+				Whitelist: []string{"123"},
+				Blacklist: []string{"123", "456"}, // 123 is in both lists
 			},
 			checkPrivate: func(c *Client) bool {
 				// 123 is in both - blacklist wins, not shown
@@ -262,11 +256,9 @@ func TestClient_Filters(t *testing.T) {
 		},
 		{
 			name: "whitelist for disabled groups",
-			filters: &config.TelegramFiltersConfig{
-				Groups: &config.TelegramChatFilterConfig{
-					Enabled:   &falseVal, // groups disabled by default
-					Whitelist: []string{"999"},
-				},
+			groups: &config.TelegramChatConfig{
+				Enabled:   &falseVal, // groups disabled by default
+				Whitelist: []string{"999"},
 			},
 			checkPrivate: func(c *Client) bool {
 				return true
@@ -290,7 +282,9 @@ func TestClient_Filters(t *testing.T) {
 					APIHash:     "testhash",
 					PhoneNumber: "+1234567890",
 				},
-				Filters: tt.filters,
+				PrivateChats: tt.privateChats,
+				Groups:       tt.groups,
+				Channels:     tt.channels,
 			}
 
 			client, err := NewClient(cfg)
@@ -306,6 +300,76 @@ func TestClient_Filters(t *testing.T) {
 			}
 			if !tt.checkChannel(client) {
 				t.Error("Channel filter check failed")
+			}
+		})
+	}
+}
+
+func TestClient_ShowPinnedMessages(t *testing.T) {
+	trueVal := true
+	falseVal := false
+
+	tests := []struct {
+		name         string
+		privateChats *config.TelegramChatConfig
+		groups       *config.TelegramChatConfig
+		channels     *config.TelegramChatConfig
+		wantPrivate  bool
+		wantGroup    bool
+		wantChannel  bool
+	}{
+		{
+			name:        "defaults",
+			wantPrivate: true,  // Default: show pinned for private
+			wantGroup:   true,  // Default: show pinned for groups
+			wantChannel: false, // Default: don't show pinned for channels
+		},
+		{
+			name: "private pinned disabled",
+			privateChats: &config.TelegramChatConfig{
+				ShowPinnedMessages: &falseVal,
+			},
+			wantPrivate: false,
+			wantGroup:   true,
+			wantChannel: false,
+		},
+		{
+			name: "channel pinned enabled",
+			channels: &config.TelegramChatConfig{
+				ShowPinnedMessages: &trueVal,
+			},
+			wantPrivate: true,
+			wantGroup:   true,
+			wantChannel: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.TelegramConfig{
+				Auth: &config.TelegramAuthConfig{
+					APIID:       12345,
+					APIHash:     "testhash",
+					PhoneNumber: "+1234567890",
+				},
+				PrivateChats: tt.privateChats,
+				Groups:       tt.groups,
+				Channels:     tt.channels,
+			}
+
+			client, err := NewClient(cfg)
+			if err != nil {
+				t.Fatalf("NewClient() error = %v", err)
+			}
+
+			if got := client.shouldShowPinned(ChatTypePrivate); got != tt.wantPrivate {
+				t.Errorf("shouldShowPinned(Private) = %v, want %v", got, tt.wantPrivate)
+			}
+			if got := client.shouldShowPinned(ChatTypeGroup); got != tt.wantGroup {
+				t.Errorf("shouldShowPinned(Group) = %v, want %v", got, tt.wantGroup)
+			}
+			if got := client.shouldShowPinned(ChatTypeChannel); got != tt.wantChannel {
+				t.Errorf("shouldShowPinned(Channel) = %v, want %v", got, tt.wantChannel)
 			}
 		})
 	}

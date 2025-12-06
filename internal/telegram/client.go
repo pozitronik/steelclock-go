@@ -4,6 +4,7 @@ package telegram
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,6 +28,7 @@ type MessageInfo struct {
 	ChatTitle   string
 	SenderName  string
 	Text        string
+	MediaType   string // "photo", "video", "audio", "voice", "sticker", "document", "contact", "location", "poll", etc.
 	Time        time.Time
 	IsPinned    bool
 	IsOutgoing  bool
@@ -90,7 +92,7 @@ func NewClient(cfg *config.TelegramConfig) (*Client, error) {
 	// Determine session path
 	sessionPath := cfg.SessionPath
 	if sessionPath == "" {
-		// Default: telegram/{phone}.session in executable directory
+		// Default: telegram/{api_id}_{phone}.session in executable directory
 		exePath, err := os.Executable()
 		if err != nil {
 			exePath = "."
@@ -99,7 +101,8 @@ func NewClient(cfg *config.TelegramConfig) (*Client, error) {
 		// Sanitize phone number for filename
 		phone := strings.ReplaceAll(cfg.Auth.PhoneNumber, "+", "")
 		phone = strings.ReplaceAll(phone, " ", "")
-		sessionPath = filepath.Join(exeDir, "telegram", phone+".session")
+		// Include api_id to avoid conflicts between different accounts
+		sessionPath = filepath.Join(exeDir, "telegram", fmt.Sprintf("%d_%s.session", cfg.Auth.APIID, phone))
 	}
 
 	// Ensure session directory exists
@@ -109,9 +112,6 @@ func NewClient(cfg *config.TelegramConfig) (*Client, error) {
 	}
 
 	maxMessages := 10
-	if cfg.Display != nil && cfg.Display.MaxMessages > 0 {
-		maxMessages = cfg.Display.MaxMessages
-	}
 
 	c := &Client{
 		cfg:         cfg,
@@ -166,7 +166,7 @@ func (c *Client) Connect(ctx context.Context) error {
 
 			if !status.Authorized {
 				if err := c.authenticate(ctx); err != nil {
-					return fmt.Errorf("authentication failed: %w", err)
+					return err
 				}
 			}
 
@@ -221,6 +221,8 @@ func (c *Client) Connect(ctx context.Context) error {
 
 // authenticate performs interactive authentication
 func (c *Client) authenticate(ctx context.Context) error {
+	log.Printf("Telegram: Starting authentication for %s", c.cfg.Auth.PhoneNumber)
+
 	// Create GUI auth flow
 	flow := auth.NewFlow(
 		guiAuth{phone: c.cfg.Auth.PhoneNumber},
@@ -228,9 +230,11 @@ func (c *Client) authenticate(ctx context.Context) error {
 	)
 
 	if err := c.client.Auth().IfNecessary(ctx, flow); err != nil {
+		log.Printf("Telegram: Authentication error: %v", err)
 		return err
 	}
 
+	log.Printf("Telegram: Authentication successful")
 	return nil
 }
 
@@ -322,12 +326,11 @@ func (c *Client) handleUpdate(ctx context.Context, update tg.UpdateClass, users 
 	case *tg.UpdateNewChannelMessage:
 		c.processMessage(ctx, u.Message)
 	case *tg.UpdatePinnedMessages:
-		if c.shouldShowPinned() {
-			// Handle pinned message notification
-			c.handlePinnedUpdate(ctx, u.Peer, u.Messages)
-		}
+		// Handle pinned message notification - check filter in handlePinnedUpdate
+		c.handlePinnedUpdate(ctx, u.Peer, u.Messages)
 	case *tg.UpdatePinnedChannelMessages:
-		if c.shouldShowPinned() {
+		// Check if channel pinned messages should be shown
+		if c.shouldShowPinned(ChatTypeChannel) {
 			c.handlePinnedChannelUpdate(ctx, u.ChannelID, u.Messages)
 		}
 	}
@@ -442,6 +445,7 @@ func (c *Client) processMessage(ctx context.Context, msg tg.MessageClass) {
 		ChatTitle:  chatTitle,
 		SenderName: senderName,
 		Text:       message.Message,
+		MediaType:  getMediaType(message.Media),
 		Time:       time.Unix(int64(message.Date), 0),
 		IsPinned:   message.Pinned,
 		IsOutgoing: message.Out,
@@ -454,20 +458,23 @@ func (c *Client) processMessage(ctx context.Context, msg tg.MessageClass) {
 func (c *Client) handlePinnedUpdate(ctx context.Context, peer tg.PeerClass, messageIDs []int) {
 	var chatID int64
 	var chatType ChatType
+	var chatTitle string
 
 	switch p := peer.(type) {
 	case *tg.PeerUser:
-		if !c.shouldShowPrivate(p.UserID) {
+		if !c.shouldShowPrivate(p.UserID) || !c.shouldShowPinned(ChatTypePrivate) {
 			return
 		}
 		chatID = p.UserID
 		chatType = ChatTypePrivate
+		chatTitle = c.getUserName(p.UserID)
 	case *tg.PeerChat:
-		if !c.shouldShowGroup(p.ChatID) {
+		if !c.shouldShowGroup(p.ChatID) || !c.shouldShowPinned(ChatTypeGroup) {
 			return
 		}
 		chatID = p.ChatID
 		chatType = ChatTypeGroup
+		chatTitle = c.getChatName(p.ChatID)
 	default:
 		return
 	}
@@ -475,7 +482,7 @@ func (c *Client) handlePinnedUpdate(ctx context.Context, peer tg.PeerClass, mess
 	msg := MessageInfo{
 		ChatID:    chatID,
 		ChatType:  chatType,
-		ChatTitle: c.getChatName(chatID),
+		ChatTitle: chatTitle,
 		Text:      "[Message pinned]",
 		Time:      time.Now(),
 		IsPinned:  true,
@@ -525,63 +532,68 @@ func (c *Client) addMessage(msg MessageInfo) {
 // Filter methods
 
 func (c *Client) shouldShowPrivate(userID int64) bool {
-	defaultEnabled := true // Default: show private chats
-	if c.cfg.Filters == nil {
-		return defaultEnabled
-	}
-	return c.shouldShow(c.cfg.Filters.PrivateChats, userID, defaultEnabled)
+	return c.shouldShow(c.cfg.PrivateChats, userID, true) // Default: show private chats
 }
 
 func (c *Client) shouldShowGroup(chatID int64) bool {
-	defaultEnabled := false // Default: don't show groups
-	if c.cfg.Filters == nil {
-		return defaultEnabled
-	}
-	return c.shouldShow(c.cfg.Filters.Groups, chatID, defaultEnabled)
+	return c.shouldShow(c.cfg.Groups, chatID, false) // Default: don't show groups
 }
 
 func (c *Client) shouldShowChannel(channelID int64) bool {
-	defaultEnabled := false // Default: don't show channels
-	if c.cfg.Filters == nil {
-		return defaultEnabled
-	}
-	return c.shouldShow(c.cfg.Filters.Channels, channelID, defaultEnabled)
+	return c.shouldShow(c.cfg.Channels, channelID, false) // Default: don't show channels
 }
 
-func (c *Client) shouldShow(filter *config.TelegramChatFilterConfig, id int64, defaultEnabled bool) bool {
-	if filter == nil {
+func (c *Client) shouldShow(chatCfg *config.TelegramChatConfig, id int64, defaultEnabled bool) bool {
+	if chatCfg == nil {
 		return defaultEnabled
 	}
 
 	idStr := fmt.Sprintf("%d", id)
 
 	// Blacklist has highest priority - never show these
-	for _, item := range filter.Blacklist {
+	for _, item := range chatCfg.Blacklist {
 		if item == idStr {
 			return false
 		}
 	}
 
 	// Whitelist overrides enabled setting - always show these
-	for _, item := range filter.Whitelist {
+	for _, item := range chatCfg.Whitelist {
 		if item == idStr {
 			return true
 		}
 	}
 
 	// Check if this chat type is enabled
-	if filter.Enabled != nil {
-		return *filter.Enabled
+	if chatCfg.Enabled != nil {
+		return *chatCfg.Enabled
 	}
 
 	return defaultEnabled
 }
 
-func (c *Client) shouldShowPinned() bool {
-	if c.cfg.Filters == nil || c.cfg.Filters.ShowPinnedMessages == nil {
-		return true // Default: show pinned
+func (c *Client) shouldShowPinned(chatType ChatType) bool {
+	var chatCfg *config.TelegramChatConfig
+	var defaultVal bool
+
+	switch chatType {
+	case ChatTypePrivate:
+		chatCfg = c.cfg.PrivateChats
+		defaultVal = true
+	case ChatTypeGroup:
+		chatCfg = c.cfg.Groups
+		defaultVal = true
+	case ChatTypeChannel:
+		chatCfg = c.cfg.Channels
+		defaultVal = false
+	default:
+		return true
 	}
-	return *c.cfg.Filters.ShowPinnedMessages
+
+	if chatCfg == nil || chatCfg.ShowPinnedMessages == nil {
+		return defaultVal
+	}
+	return *chatCfg.ShowPinnedMessages
 }
 
 // Cache methods
@@ -615,12 +627,54 @@ func (c *Client) cacheEntities(users []tg.UserClass, chats []tg.ChatClass) {
 
 func (c *Client) getUserName(userID int64) string {
 	c.mu.RLock()
-	defer c.mu.RUnlock()
+	name, ok := c.userCache[userID]
+	c.mu.RUnlock()
 
-	if name, ok := c.userCache[userID]; ok {
+	if ok {
 		return name
 	}
+
+	// Try to fetch user info from API
+	if c.api != nil && c.ctx != nil {
+		name = c.fetchUserName(userID)
+		if name != "" {
+			c.mu.Lock()
+			c.userCache[userID] = name
+			c.mu.Unlock()
+			return name
+		}
+	}
+
 	return fmt.Sprintf("User %d", userID)
+}
+
+// fetchUserName fetches user info from Telegram API
+func (c *Client) fetchUserName(userID int64) string {
+	ctx, cancel := context.WithTimeout(c.ctx, 5*time.Second)
+	defer cancel()
+
+	users, err := c.api.UsersGetUsers(ctx, []tg.InputUserClass{
+		&tg.InputUser{UserID: userID},
+	})
+	if err != nil {
+		log.Printf("Telegram: Failed to fetch user %d: %v", userID, err)
+		return ""
+	}
+
+	for _, u := range users {
+		if user, ok := u.(*tg.User); ok && user.ID == userID {
+			name := user.FirstName
+			if user.LastName != "" {
+				name += " " + user.LastName
+			}
+			if name == "" {
+				name = user.Username
+			}
+			return name
+		}
+	}
+
+	return ""
 }
 
 func (c *Client) getChatName(chatID int64) string {
@@ -653,33 +707,46 @@ func (a guiAuth) Phone(_ context.Context) (string, error) {
 }
 
 func (a guiAuth) Password(_ context.Context) (string, error) {
+	log.Printf("Telegram: Password (2FA) callback called for %s", a.phone)
 	password, ok := dialog.InputBox(
-		"Telegram 2FA",
-		"Enter your Two-Factor Authentication password:",
+		fmt.Sprintf("Telegram 2FA (%s)", a.phone),
+		fmt.Sprintf("Enter your Two-Factor Authentication password for account %s:", a.phone),
 		true, // masked
 	)
+	log.Printf("Telegram: Password dialog result: ok=%v", ok)
 	if !ok {
-		return "", fmt.Errorf("authentication cancelled by user")
+		return "", fmt.Errorf("2FA entry cancelled")
+	}
+	if password == "" {
+		return "", fmt.Errorf("empty password entered")
 	}
 	return password, nil
 }
 
 func (a guiAuth) Code(_ context.Context, sentCode *tg.AuthSentCode) (string, error) {
-	prompt := "Enter the verification code sent to your Telegram:"
+	log.Printf("Telegram: Code callback called for %s", a.phone)
+	prompt := fmt.Sprintf("Enter the verification code sent to %s:", a.phone)
 
 	// Provide more context if available
-	switch t := sentCode.Type.(type) {
-	case *tg.AuthSentCodeTypeApp:
-		prompt = fmt.Sprintf("Enter the %d-digit code from your Telegram app:", t.Length)
-	case *tg.AuthSentCodeTypeSMS:
-		prompt = fmt.Sprintf("Enter the %d-digit code sent via SMS:", t.Length)
-	case *tg.AuthSentCodeTypeCall:
-		prompt = fmt.Sprintf("Enter the %d-digit code from the phone call:", t.Length)
+	if sentCode != nil && sentCode.Type != nil {
+		switch t := sentCode.Type.(type) {
+		case *tg.AuthSentCodeTypeApp:
+			prompt = fmt.Sprintf("Enter the %d-digit code from your Telegram app (%s):", t.Length, a.phone)
+		case *tg.AuthSentCodeTypeSMS:
+			prompt = fmt.Sprintf("Enter the %d-digit code sent via SMS to %s:", t.Length, a.phone)
+		case *tg.AuthSentCodeTypeCall:
+			prompt = fmt.Sprintf("Enter the %d-digit code from the phone call to %s:", t.Length, a.phone)
+		}
 	}
 
-	code, ok := dialog.InputBox("Telegram Verification", prompt, false)
+	log.Printf("Telegram: Showing code dialog for %s", a.phone)
+	code, ok := dialog.InputBox(fmt.Sprintf("Telegram Verification (%s)", a.phone), prompt, false)
+	log.Printf("Telegram: Code dialog result: ok=%v, code_len=%d", ok, len(code))
 	if !ok {
-		return "", fmt.Errorf("authentication cancelled by user")
+		return "", fmt.Errorf("code entry cancelled")
+	}
+	if code == "" {
+		return "", fmt.Errorf("empty code entered")
 	}
 	return code, nil
 }
@@ -690,4 +757,66 @@ func (a guiAuth) SignUp(_ context.Context) (auth.UserInfo, error) {
 
 func (a guiAuth) AcceptTermsOfService(_ context.Context, tos tg.HelpTermsOfService) error {
 	return nil
+}
+
+// getMediaType returns a human-readable media type from a message's media
+func getMediaType(media tg.MessageMediaClass) string {
+	if media == nil {
+		return ""
+	}
+
+	switch media.(type) {
+	case *tg.MessageMediaPhoto:
+		return "Photo"
+	case *tg.MessageMediaGeo:
+		return "Location"
+	case *tg.MessageMediaContact:
+		return "Contact"
+	case *tg.MessageMediaDocument:
+		// Documents can be various types - check for specific document types
+		doc, ok := media.(*tg.MessageMediaDocument)
+		if ok {
+			if d, ok := doc.Document.(*tg.Document); ok {
+				for _, attr := range d.Attributes {
+					switch attr.(type) {
+					case *tg.DocumentAttributeSticker:
+						return "Sticker"
+					case *tg.DocumentAttributeVideo:
+						return "Video"
+					case *tg.DocumentAttributeAudio:
+						audio := attr.(*tg.DocumentAttributeAudio)
+						if audio.Voice {
+							return "Voice message"
+						}
+						return "Audio"
+					case *tg.DocumentAttributeAnimated:
+						return "GIF"
+					}
+				}
+			}
+		}
+		return "Document"
+	case *tg.MessageMediaVenue:
+		return "Venue"
+	case *tg.MessageMediaGame:
+		return "Game"
+	case *tg.MessageMediaInvoice:
+		return "Invoice"
+	case *tg.MessageMediaGeoLive:
+		return "Live location"
+	case *tg.MessageMediaPoll:
+		return "Poll"
+	case *tg.MessageMediaDice:
+		return "Dice"
+	case *tg.MessageMediaStory:
+		return "Story"
+	case *tg.MessageMediaGiveaway:
+		return "Giveaway"
+	case *tg.MessageMediaGiveawayResults:
+		return "Giveaway results"
+	case *tg.MessageMediaPaidMedia:
+		return "Paid media"
+	default:
+		return "Media"
+	}
 }

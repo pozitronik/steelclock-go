@@ -48,7 +48,7 @@ func TestNewTelegramWidget(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "valid config with display settings",
+			name: "valid config with appearance settings",
 			cfg: config.WidgetConfig{
 				Type:     "telegram",
 				Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -58,11 +58,17 @@ func TestNewTelegramWidget(t *testing.T) {
 						APIHash:     "testhash",
 						PhoneNumber: "+1234567890",
 					},
-					Display: &config.TelegramDisplayConfig{
-						Mode:           "ticker",
-						MaxMessages:    10,
-						TruncateLength: 100,
-						ScrollSpeed:    2.0,
+					PrivateChats: &config.TelegramChatConfig{
+						Appearance: &config.TelegramAppearanceConfig{
+							Header: &config.TelegramElementConfig{
+								Blink: true,
+							},
+							Separator: &config.SeparatorConfig{
+								Color:     200,
+								Thickness: 2,
+							},
+							Timeout: 10,
+						},
 					},
 				},
 			},
@@ -137,11 +143,103 @@ func TestTelegramWidget_Update(t *testing.T) {
 	}
 }
 
-func TestTelegramWidget_DisplayModes(t *testing.T) {
-	modes := []string{"last_message", "unread_count", "ticker", "notification"}
+func TestTelegramWidget_AppearanceSettings(t *testing.T) {
+	trueVal := true
+	falseVal := false
 
-	for _, mode := range modes {
-		t.Run(mode, func(t *testing.T) {
+	tests := []struct {
+		name              string
+		headerEnabled     *bool
+		messageEnabled    *bool
+		headerBlink       bool
+		separatorColor    int
+		timeout           int
+		wantHeaderEnabled bool
+		wantMsgEnabled    bool
+		wantBlink         bool
+		wantSepColor      int
+		wantTimeout       int
+	}{
+		{
+			name:              "default settings",
+			headerEnabled:     nil,
+			messageEnabled:    nil,
+			headerBlink:       false,
+			separatorColor:    0,
+			timeout:           0,
+			wantHeaderEnabled: true,  // default
+			wantMsgEnabled:    true,  // default
+			wantBlink:         false, // default
+			wantSepColor:      128,   // default
+			wantTimeout:       0,     // default
+		},
+		{
+			name:              "header disabled",
+			headerEnabled:     &falseVal,
+			messageEnabled:    nil,
+			headerBlink:       false,
+			separatorColor:    0,
+			timeout:           0,
+			wantHeaderEnabled: false,
+			wantMsgEnabled:    true,
+			wantBlink:         false,
+			wantSepColor:      128,
+			wantTimeout:       0,
+		},
+		{
+			name:              "blink enabled",
+			headerEnabled:     &trueVal,
+			messageEnabled:    nil,
+			headerBlink:       true,
+			separatorColor:    0,
+			timeout:           0,
+			wantHeaderEnabled: true,
+			wantMsgEnabled:    true,
+			wantBlink:         true,
+			wantSepColor:      128,
+			wantTimeout:       0,
+		},
+		{
+			name:              "custom separator and timeout",
+			headerEnabled:     nil,
+			messageEnabled:    nil,
+			headerBlink:       false,
+			separatorColor:    200,
+			timeout:           5,
+			wantHeaderEnabled: true,
+			wantMsgEnabled:    true,
+			wantBlink:         false,
+			wantSepColor:      200,
+			wantTimeout:       5,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			appearance := &config.TelegramAppearanceConfig{
+				Timeout: tt.timeout,
+			}
+
+			if tt.headerEnabled != nil || tt.headerBlink {
+				appearance.Header = &config.TelegramElementConfig{
+					Enabled: tt.headerEnabled,
+					Blink:   tt.headerBlink,
+				}
+			}
+
+			if tt.messageEnabled != nil {
+				appearance.Message = &config.TelegramElementConfig{
+					Enabled: tt.messageEnabled,
+				}
+			}
+
+			if tt.separatorColor != 0 {
+				appearance.Separator = &config.SeparatorConfig{
+					Color:     tt.separatorColor,
+					Thickness: 1,
+				}
+			}
+
 			cfg := config.WidgetConfig{
 				Type:     "telegram",
 				Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -151,8 +249,8 @@ func TestTelegramWidget_DisplayModes(t *testing.T) {
 						APIHash:     "testhash",
 						PhoneNumber: "+1234567890",
 					},
-					Display: &config.TelegramDisplayConfig{
-						Mode: mode,
+					PrivateChats: &config.TelegramChatConfig{
+						Appearance: appearance,
 					},
 				},
 			}
@@ -162,8 +260,20 @@ func TestTelegramWidget_DisplayModes(t *testing.T) {
 				t.Fatalf("NewTelegramWidget() error = %v", err)
 			}
 
-			if w.displayMode != mode {
-				t.Errorf("displayMode = %s, want %s", w.displayMode, mode)
+			if w.privateAppearance.Header.Enabled != tt.wantHeaderEnabled {
+				t.Errorf("Header.Enabled = %v, want %v", w.privateAppearance.Header.Enabled, tt.wantHeaderEnabled)
+			}
+			if w.privateAppearance.Message.Enabled != tt.wantMsgEnabled {
+				t.Errorf("Message.Enabled = %v, want %v", w.privateAppearance.Message.Enabled, tt.wantMsgEnabled)
+			}
+			if w.privateAppearance.Header.Blink != tt.wantBlink {
+				t.Errorf("Header.Blink = %v, want %v", w.privateAppearance.Header.Blink, tt.wantBlink)
+			}
+			if w.privateAppearance.Separator.Color != tt.wantSepColor {
+				t.Errorf("Separator.Color = %v, want %v", w.privateAppearance.Separator.Color, tt.wantSepColor)
+			}
+			if w.privateAppearance.Timeout != tt.wantTimeout {
+				t.Errorf("Timeout = %v, want %v", w.privateAppearance.Timeout, tt.wantTimeout)
 			}
 		})
 	}
@@ -191,84 +301,53 @@ func TestTelegramWidget_Stop(t *testing.T) {
 	w.Stop()
 }
 
-func TestTelegramWidget_FormatHeader(t *testing.T) {
+func TestTelegramWidget_GetAppearance(t *testing.T) {
 	trueVal := true
 	falseVal := false
 
-	tests := []struct {
-		name       string
-		showSender bool
-		showChat   bool
-		showTime   bool
-		wantEmpty  bool
-	}{
-		{
-			name:       "all enabled",
-			showSender: true,
-			showChat:   true,
-			showTime:   true,
-			wantEmpty:  false,
-		},
-		{
-			name:       "all disabled",
-			showSender: false,
-			showChat:   false,
-			showTime:   false,
-			wantEmpty:  true,
-		},
-		{
-			name:       "only sender",
-			showSender: true,
-			showChat:   false,
-			showTime:   false,
-			wantEmpty:  false,
+	cfg := config.WidgetConfig{
+		Type:     "telegram",
+		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+		Telegram: &config.TelegramConfig{
+			Auth: &config.TelegramAuthConfig{
+				APIID:       12345,
+				APIHash:     "testhash",
+				PhoneNumber: "+1234567890",
+			},
+			PrivateChats: &config.TelegramChatConfig{
+				Enabled: &trueVal,
+				Appearance: &config.TelegramAppearanceConfig{
+					Timeout: 10,
+				},
+			},
+			Groups: &config.TelegramChatConfig{
+				Enabled: &falseVal,
+				Appearance: &config.TelegramAppearanceConfig{
+					Timeout: 20,
+				},
+			},
+			Channels: &config.TelegramChatConfig{
+				Enabled: &falseVal,
+				Appearance: &config.TelegramAppearanceConfig{
+					Timeout: 30,
+				},
+			},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := config.WidgetConfig{
-				Type:     "telegram",
-				Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-				Telegram: &config.TelegramConfig{
-					Auth: &config.TelegramAuthConfig{
-						APIID:       12345,
-						APIHash:     "testhash",
-						PhoneNumber: "+1234567890",
-					},
-					Display: &config.TelegramDisplayConfig{
-						ShowSender: &trueVal,
-						ShowChat:   &trueVal,
-						ShowTime:   &trueVal,
-					},
-				},
-			}
+	w, err := NewTelegramWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewTelegramWidget() error = %v", err)
+	}
 
-			// Override display settings
-			if !tt.showSender {
-				cfg.Telegram.Display.ShowSender = &falseVal
-			}
-			if !tt.showChat {
-				cfg.Telegram.Display.ShowChat = &falseVal
-			}
-			if !tt.showTime {
-				cfg.Telegram.Display.ShowTime = &falseVal
-			}
-
-			w, err := NewTelegramWidget(cfg)
-			if err != nil {
-				t.Fatalf("NewTelegramWidget() error = %v", err)
-			}
-
-			if w.showSender != tt.showSender {
-				t.Errorf("showSender = %v, want %v", w.showSender, tt.showSender)
-			}
-			if w.showChat != tt.showChat {
-				t.Errorf("showChat = %v, want %v", w.showChat, tt.showChat)
-			}
-			if w.showTime != tt.showTime {
-				t.Errorf("showTime = %v, want %v", w.showTime, tt.showTime)
-			}
-		})
+	// Test that different chat types get different appearances
+	if w.privateAppearance.Timeout != 10 {
+		t.Errorf("privateAppearance.Timeout = %d, want 10", w.privateAppearance.Timeout)
+	}
+	if w.groupAppearance.Timeout != 20 {
+		t.Errorf("groupAppearance.Timeout = %d, want 20", w.groupAppearance.Timeout)
+	}
+	if w.channelAppearance.Timeout != 30 {
+		t.Errorf("channelAppearance.Timeout = %d, want 30", w.channelAppearance.Timeout)
 	}
 }

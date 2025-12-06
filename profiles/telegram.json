@@ -17,45 +17,175 @@
         "w": 128,
         "h": 40
       },
+      "style": {
+        "border": -1,
+        "background": 0
+      },
       "update_interval": 1.0,
       "telegram": {
         "auth": {
-          "api_id": 37422471,
-          "api_hash": "495d53c377c7767f6c915475fb3670ac",
-          "phone_number": "+995599088293"
+          "api_id": 12345678,
+          "api_hash": "your_api_hash_here",
+          "phone_number": "+1234567890"
         },
         "session_path": "",
         "poll_interval": 1.0,
-        "filters": {
-          "private_chats": {
-            "enabled": true,
-            "whitelist": [],
-            "blacklist": []
-          },
-          "groups": {
-            "enabled": false,
-            "whitelist": [],
-            "blacklist": []
-          },
-          "channels": {
-            "enabled": false,
-            "whitelist": [],
-            "blacklist": []
-          },
-          "show_pinned_messages": true
+
+        "private_chats": {
+          "enabled": true,
+          "whitelist": [],
+          "blacklist": [],
+          "show_pinned_messages": true,
+          "appearance": {
+            "header": {
+              "enabled": true,
+              "blink": false,
+              "text": {
+                "font": "5x7",
+                "size": 1,
+                "align": { "h": "left", "v": "top" }
+              },
+              "scroll": {
+                "enabled": false,
+                "direction": "left",
+                "speed": 30,
+                "mode": "continuous",
+                "gap": 20
+              }
+            },
+            "message": {
+              "enabled": true,
+              "blink": false,
+              "text": {
+                "font": "5x7",
+                "size": 16,
+                "align": { "h": "left", "v": "top" }
+              },
+              "scroll": {
+                "enabled": true,
+                "direction": "left",
+                "speed": 30,
+                "mode": "continuous",
+                "gap": 1
+              },
+              "word_break": "break-all"
+            },
+            "separator": {
+              "color": 255,
+              "thickness": 0
+            },
+            "timeout": 10,
+            "transitions": {
+              "in": "random",
+              "in_speed": 0.5,
+              "out": "random",
+              "out_speed": 0.5
+            }
+          }
         },
-        "display": {
-          "mode": "last_message",
-          "max_messages": 5,
-          "show_sender": true,
-          "show_chat": true,
-          "show_time": false,
-          "time_format": "15:04",
-          "truncate_length": 50,
-          "notification_duration": 3.0,
-          "scroll_speed": 1.0,
-          "unread_badge": true,
-          "text_color": 255
+
+        "groups": {
+          "enabled": false,
+          "whitelist": [],
+          "blacklist": [],
+          "show_pinned_messages": true,
+          "appearance": {
+            "header": {
+              "enabled": true,
+              "blink": false,
+              "text": {
+                "font": null,
+                "size": 16,
+                "align": { "h": "left", "v": "top" }
+              },
+              "scroll": {
+                "enabled": true,
+                "direction": "left",
+                "speed": 30,
+                "mode": "continuous",
+                "gap": 20
+              }
+            },
+            "message": {
+              "enabled": true,
+              "blink": false,
+              "text": {
+                "font": null,
+                "size": 16,
+                "align": { "h": "left", "v": "top" }
+              },
+              "scroll": {
+                "enabled": true,
+                "direction": "left",
+                "speed": 30,
+                "mode": "continuous",
+                "gap": 20
+              }
+            },
+            "separator": {
+              "color": 128,
+              "thickness": 1
+            },
+            "timeout": 0,
+            "transitions": {
+              "in": "none",
+              "in_speed": 0.5,
+              "out": "none",
+              "out_speed": 0.5
+            }
+          }
+        },
+
+        "channels": {
+          "enabled": false,
+          "whitelist": [],
+          "blacklist": [],
+          "show_pinned_messages": false,
+          "appearance": {
+            "header": {
+              "enabled": true,
+              "blink": false,
+              "text": {
+                "font": null,
+                "size": 16,
+                "align": { "h": "left", "v": "top" }
+              },
+              "scroll": {
+                "enabled": true,
+                "direction": "left",
+                "speed": 30,
+                "mode": "continuous",
+                "gap": 20
+              }
+            },
+            "message": {
+              "enabled": true,
+              "blink": false,
+              "text": {
+                "font": null,
+                "size": 16,
+                "align": { "h": "left", "v": "top" }
+              },
+              "scroll": {
+                "enabled": true,
+                "direction": "left",
+                "speed": 30,
+                "mode": "continuous",
+                "gap": 20
+              }
+            },
+            "separator": {
+              "color": 128,
+              "thickness": 1
+            },
+            "timeout": 0,
+            "transitions": {
+              "in": "none",
+              "in_speed": 0.5,
+              "out": "none",
+              "out_speed": 0.5
+            }
+          }
         }
       }
     }

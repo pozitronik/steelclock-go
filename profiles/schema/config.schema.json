@@ -188,6 +188,76 @@
         "silence_time": { "type": "number", "description": "Silence duration before hiding", "minimum": 0.1, "default": 2.0 }
       }
     },
+    "scrollConfig": {
+      "type": "object",
+      "description": "Text scrolling settings",
+      "properties": {
+        "enabled": { "type": "boolean", "description": "Enable text scrolling", "default": true },
+        "direction": { "type": "string", "enum": ["left", "right", "up", "down"], "description": "Scroll direction", "default": "left" },
+        "speed": { "type": "number", "description": "Scroll speed in pixels per second", "minimum": 1, "default": 30 },
+        "mode": { "type": "string", "enum": ["continuous", "bounce", "pause_ends"], "description": "Scroll mode", "default": "continuous" },
+        "gap": { "type": "integer", "description": "Gap in pixels between text repetitions (continuous mode)", "minimum": 0, "default": 20 }
+      }
+    },
+    "separatorConfig": {
+      "type": "object",
+      "description": "Separator line between elements",
+      "properties": {
+        "color": { "type": "integer", "description": "Separator color (-1=disabled, 0-255=grayscale)", "minimum": -1, "maximum": 255, "default": 128 },
+        "thickness": { "type": "integer", "description": "Separator thickness in pixels (0=disabled)", "minimum": 0, "default": 1 }
+      }
+    },
+    "transitionConfig": {
+      "type": "object",
+      "description": "Transition effects for showing/hiding",
+      "properties": {
+        "in": { "type": "string", "enum": ["none", "push_left", "push_right", "push_up", "push_down", "slide_left", "slide_right", "slide_up", "slide_down", "dissolve_fade", "dissolve_pixel", "dissolve_dither", "box_in", "box_out", "clock_wipe", "random"], "description": "Transition effect when showing", "default": "none" },
+        "in_speed": { "type": "number", "description": "Transition in duration in seconds", "minimum": 0.1, "maximum": 5.0, "default": 0.5 },
+        "out": { "type": "string", "enum": ["none", "push_left", "push_right", "push_up", "push_down", "slide_left", "slide_right", "slide_up", "slide_down", "dissolve_fade", "dissolve_pixel", "dissolve_dither", "box_in", "box_out", "clock_wipe", "random"], "description": "Transition effect when hiding", "default": "none" },
+        "out_speed": { "type": "number", "description": "Transition out duration in seconds", "minimum": 0.1, "maximum": 5.0, "default": 0.5 }
+      }
+    },
+    "telegramElementConfig": {
+      "type": "object",
+      "description": "Telegram notification element (header or message)",
+      "properties": {
+        "enabled": { "type": "boolean", "description": "Show this element", "default": true },
+        "blink": { "type": "boolean", "description": "Make element blink", "default": false },
+        "text": { "$ref": "#/definitions/textObject" },
+        "scroll": { "$ref": "#/definitions/scrollConfig" },
+        "word_break": { "type": "string", "enum": ["normal", "break-all"], "description": "How to break lines: normal (break on spaces) or break-all (break anywhere)", "default": "normal" }
+      }
+    },
+    "telegramAppearanceConfig": {
+      "type": "object",
+      "description": "Appearance settings for telegram notifications",
+      "properties": {
+        "header": { "$ref": "#/definitions/telegramElementConfig" },
+        "message": { "$ref": "#/definitions/telegramElementConfig" },
+        "separator": { "$ref": "#/definitions/separatorConfig" },
+        "timeout": { "type": "integer", "description": "Seconds to show notification (0 = until next message)", "minimum": 0, "default": 0 },
+        "transitions": { "$ref": "#/definitions/transitionConfig" }
+      }
+    },
+    "telegramChatConfig": {
+      "type": "object",
+      "description": "Settings for a chat type (private/group/channel)",
+      "properties": {
+        "enabled": { "type": "boolean", "description": "Enable notifications from this chat type" },
+        "whitelist": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Always show notifications from these IDs, even if this chat type is disabled"
+        },
+        "blacklist": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Never show notifications from these IDs, even if this chat type is enabled"
+        },
+        "show_pinned_messages": { "type": "boolean", "description": "Show notifications for pinned messages" },
+        "appearance": { "$ref": "#/definitions/telegramAppearanceConfig" }
+      }
+    },
     "widget": {
       "type": "object",
       "required": ["type", "position"],
@@ -1705,152 +1775,9 @@
                     "maximum": 60.0,
                     "default": 1.0
                   },
-                  "filters": {
-                    "type": "object",
-                    "description": "Notification source filters",
-                    "properties": {
-                      "private_chats": {
-                        "type": "object",
-                        "description": "Private message filter",
-                        "properties": {
-                          "enabled": {
-                            "type": "boolean",
-                            "description": "Show notifications from private chats",
-                            "default": true
-                          },
-                          "whitelist": {
-                            "type": "array",
-                            "items": { "type": "string" },
-                            "description": "Always show notifications from these IDs, even if private chats are disabled"
-                          },
-                          "blacklist": {
-                            "type": "array",
-                            "items": { "type": "string" },
-                            "description": "Never show notifications from these IDs, even if private chats are enabled"
-                          }
-                        }
-                      },
-                      "groups": {
-                        "type": "object",
-                        "description": "Group chat filter",
-                        "properties": {
-                          "enabled": {
-                            "type": "boolean",
-                            "description": "Show notifications from groups",
-                            "default": false
-                          },
-                          "whitelist": {
-                            "type": "array",
-                            "items": { "type": "string" },
-                            "description": "Always show notifications from these group IDs, even if groups are disabled"
-                          },
-                          "blacklist": {
-                            "type": "array",
-                            "items": { "type": "string" },
-                            "description": "Never show notifications from these group IDs, even if groups are enabled"
-                          }
-                        }
-                      },
-                      "channels": {
-                        "type": "object",
-                        "description": "Channel filter",
-                        "properties": {
-                          "enabled": {
-                            "type": "boolean",
-                            "description": "Show notifications from channels",
-                            "default": false
-                          },
-                          "whitelist": {
-                            "type": "array",
-                            "items": { "type": "string" },
-                            "description": "Always show notifications from these channel IDs, even if channels are disabled"
-                          },
-                          "blacklist": {
-                            "type": "array",
-                            "items": { "type": "string" },
-                            "description": "Never show notifications from these channel IDs, even if channels are enabled"
-                          }
-                        }
-                      },
-                      "show_pinned_messages": {
-                        "type": "boolean",
-                        "description": "Show notifications for pinned messages",
-                        "default": true
-                      }
-                    }
-                  },
-                  "display": {
-                    "type": "object",
-                    "description": "Display settings",
-                    "properties": {
-                      "mode": {
-                        "type": "string",
-                        "enum": ["last_message", "unread_count", "ticker", "notification"],
-                        "description": "Display mode",
-                        "default": "last_message"
-                      },
-                      "max_messages": {
-                        "type": "integer",
-                        "description": "Maximum messages to show in ticker mode",
-                        "minimum": 1,
-                        "maximum": 50,
-                        "default": 5
-                      },
-                      "show_sender": {
-                        "type": "boolean",
-                        "description": "Show sender name",
-                        "default": true
-                      },
-                      "show_chat": {
-                        "type": "boolean",
-                        "description": "Show chat/group name for group messages",
-                        "default": true
-                      },
-                      "show_time": {
-                        "type": "boolean",
-                        "description": "Show message time",
-                        "default": false
-                      },
-                      "time_format": {
-                        "type": "string",
-                        "description": "Time format string (Go time format)",
-                        "default": "15:04"
-                      },
-                      "truncate_length": {
-                        "type": "integer",
-                        "description": "Max characters per message",
-                        "minimum": 10,
-                        "maximum": 200,
-                        "default": 50
-                      },
-                      "notification_duration": {
-                        "type": "number",
-                        "description": "Seconds to show notification flash",
-                        "minimum": 0.5,
-                        "maximum": 30.0,
-                        "default": 3.0
-                      },
-                      "scroll_speed": {
-                        "type": "number",
-                        "description": "Ticker scroll speed in pixels per frame",
-                        "minimum": 0.1,
-                        "maximum": 10.0,
-                        "default": 1.0
-                      },
-                      "unread_badge": {
-                        "type": "boolean",
-                        "description": "Show unread count badge",
-                        "default": true
-                      },
-                      "text_color": {
-                        "type": "integer",
-                        "description": "Text brightness (1-255)",
-                        "minimum": 1,
-                        "maximum": 255,
-                        "default": 255
-                      }
-                    }
-                  }
+                  "private_chats": { "$ref": "#/definitions/telegramChatConfig" },
+                  "groups": { "$ref": "#/definitions/telegramChatConfig" },
+                  "channels": { "$ref": "#/definitions/telegramChatConfig" }
                 }
               }
             }
