@@ -50,6 +50,8 @@ func CreateWidget(cfg config.WidgetConfig) (Widget, error) {
 		return NewHyperspaceWidget(cfg)
 	case "starwars_intro":
 		return NewStarWarsIntroWidget(cfg)
+	case "telegram":
+		return NewTelegramWidget(cfg)
 	default:
 		return nil, fmt.Errorf("unknown widget type: %s (valid: %s)", cfg.Type, config.GetValidWidgetTypesList())
 	}

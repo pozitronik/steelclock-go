@@ -1898,6 +1898,108 @@ Background stars are displayed during the logo and crawl phases.
 - Keep text lines short to fit within the display width at perspective scale
 - Set `pre_intro.enabled: false` and `logo.enabled: false` to skip directly to crawl
 
+### Telegram Widget
+
+Displays notifications from your personal Telegram account. Uses the official Telegram MTProto API to receive real-time messages from private chats, groups, and channels.
+
+#### Prerequisites
+
+1. **Create Telegram App**: Go to [my.telegram.org](https://my.telegram.org) and create an application to get your `api_id` and `api_hash`.
+2. **First Run Authentication**: On first run, you'll be prompted to enter a verification code sent to your Telegram account.
+
+#### Configuration Properties
+
+| Property            | Type    | Default                    | Description                                                |
+|---------------------|---------|----------------------------|------------------------------------------------------------|
+| `auth.api_id`       | integer | required                   | Telegram API ID from my.telegram.org                       |
+| `auth.api_hash`     | string  | required                   | Telegram API Hash from my.telegram.org                     |
+| `auth.phone_number` | string  | required                   | Phone number in international format (e.g., "+1234567890") |
+| `session_path`      | string  | "telegram/{phone}.session" | Path to session file for persistent login                  |
+| `poll_interval`     | number  | 1.0                        | Seconds between update checks                              |
+
+#### Filter Configuration
+
+| Property                        | Type    | Default | Description                                   |
+|---------------------------------|---------|---------|-----------------------------------------------|
+| `filters.private_chats.enabled` | boolean | true    | Show notifications from private chats         |
+| `filters.private_chats.mode`    | string  | "all"   | Filter mode: "all", "whitelist", "blacklist"  |
+| `filters.private_chats.list`    | array   | []      | Chat IDs or usernames for whitelist/blacklist |
+| `filters.groups.enabled`        | boolean | false   | Show notifications from groups                |
+| `filters.groups.mode`           | string  | "all"   | Filter mode                                   |
+| `filters.groups.list`           | array   | []      | Group IDs for whitelist/blacklist             |
+| `filters.channels.enabled`      | boolean | false   | Show notifications from channels              |
+| `filters.channels.mode`         | string  | "all"   | Filter mode                                   |
+| `filters.channels.list`         | array   | []      | Channel IDs for whitelist/blacklist           |
+| `filters.show_pinned_messages`  | boolean | true    | Show notifications for pinned messages        |
+
+#### Display Configuration
+
+| Property                        | Type    | Default        | Description                             |
+|---------------------------------|---------|----------------|-----------------------------------------|
+| `display.mode`                  | string  | "last_message" | Display mode (see below)                |
+| `display.max_messages`          | integer | 5              | Maximum messages in ticker mode         |
+| `display.show_sender`           | boolean | true           | Show sender name                        |
+| `display.show_chat`             | boolean | true           | Show chat/group name for group messages |
+| `display.show_time`             | boolean | false          | Show message time                       |
+| `display.time_format`           | string  | "15:04"        | Time format (Go time format)            |
+| `display.truncate_length`       | integer | 50             | Maximum characters per message          |
+| `display.notification_duration` | number  | 3.0            | Seconds to show notification flash      |
+| `display.scroll_speed`          | number  | 1.0            | Ticker scroll speed (pixels per frame)  |
+| `display.unread_badge`          | boolean | true           | Show unread count badge                 |
+| `display.text_color`            | integer | 255            | Text brightness (1-255)                 |
+
+#### Display Modes
+
+- **`last_message`**: Shows the most recent message with sender info
+- **`unread_count`**: Large centered unread message count
+- **`ticker`**: Scrolling ticker of recent messages
+- **`notification`**: Flashing notification when new message arrives, shows last message otherwise
+
+#### Example Configuration
+
+```json
+{
+  "type": "telegram",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "telegram": {
+    "auth": {
+      "api_id": 12345678,
+      "api_hash": "your_api_hash_here",
+      "phone_number": "+1234567890"
+    },
+    "filters": {
+      "private_chats": {
+        "enabled": true,
+        "mode": "all"
+      },
+      "groups": {
+        "enabled": true,
+        "mode": "whitelist",
+        "list": ["123456789", "-100123456789"]
+      },
+      "channels": {
+        "enabled": false
+      }
+    },
+    "display": {
+      "mode": "last_message",
+      "show_sender": true,
+      "show_time": true,
+      "time_format": "15:04",
+      "unread_badge": true
+    }
+  }
+}
+```
+
+#### Tips
+
+- **Security**: The session file contains your Telegram login credentials. Keep it secure and don't share it.
+- **First Run**: Authentication happens on first run via console prompts. Ensure you can see the console output.
+- **Group/Channel IDs**: You can find chat IDs using Telegram bots like @userinfobot or by forwarding a message to @RawDataBot.
+- **Whitelist Mode**: Use whitelist for groups/channels to only see messages from specific chats you care about.
+- **2FA**: If you have Two-Factor Authentication enabled, you'll be prompted for your password on first login.
+
 ## Examples
 
 ### Example 1: Simple Clock

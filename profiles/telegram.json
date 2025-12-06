@@ -1,0 +1,63 @@
+{
+  "$schema": "schema/config.schema.json",
+  "config_name": "Telegram Notifications",
+  "backend": "direct",
+  "refresh_rate_ms": 100,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "telegram",
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40
+      },
+      "update_interval": 1.0,
+      "telegram": {
+        "auth": {
+          "api_id": 0,
+          "api_hash": "YOUR_API_HASH_HERE",
+          "phone_number": "+1234567890"
+        },
+        "session_path": "",
+        "poll_interval": 1.0,
+        "filters": {
+          "private_chats": {
+            "enabled": true,
+            "mode": "all",
+            "list": []
+          },
+          "groups": {
+            "enabled": false,
+            "mode": "all",
+            "list": []
+          },
+          "channels": {
+            "enabled": false,
+            "mode": "all",
+            "list": []
+          },
+          "show_pinned_messages": true
+        },
+        "display": {
+          "mode": "last_message",
+          "max_messages": 5,
+          "show_sender": true,
+          "show_chat": true,
+          "show_time": false,
+          "time_format": "15:04",
+          "truncate_length": 50,
+          "notification_duration": 3.0,
+          "scroll_speed": 1.0,
+          "unread_badge": true,
+          "text_color": 255
+        }
+      }
+    }
+  ]
+}

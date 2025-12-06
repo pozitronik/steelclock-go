@@ -194,7 +194,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life", "hyperspace", "starwars_intro"]
+          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life", "hyperspace", "starwars_intro", "telegram"]
         },
         "enabled": { "type": "boolean", "default": true },
         "position": { "$ref": "#/definitions/position" },
@@ -1660,6 +1660,199 @@
                     "minimum": 0.0,
                     "maximum": 30.0,
                     "default": 3.0
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "telegram" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "telegram": {
+                "type": "object",
+                "description": "Telegram notifications widget - displays messages from your Telegram account",
+                "required": ["auth"],
+                "properties": {
+                  "auth": {
+                    "type": "object",
+                    "description": "Telegram API authentication (required)",
+                    "required": ["api_id", "api_hash", "phone_number"],
+                    "properties": {
+                      "api_id": {
+                        "type": "integer",
+                        "description": "Telegram API ID from my.telegram.org"
+                      },
+                      "api_hash": {
+                        "type": "string",
+                        "description": "Telegram API Hash from my.telegram.org"
+                      },
+                      "phone_number": {
+                        "type": "string",
+                        "description": "Phone number in international format (e.g., +1234567890)"
+                      }
+                    }
+                  },
+                  "session_path": {
+                    "type": "string",
+                    "description": "Path to session file (default: telegram/{phone}.session)"
+                  },
+                  "poll_interval": {
+                    "type": "number",
+                    "description": "Seconds between update checks",
+                    "minimum": 0.1,
+                    "maximum": 60.0,
+                    "default": 1.0
+                  },
+                  "filters": {
+                    "type": "object",
+                    "description": "Notification source filters",
+                    "properties": {
+                      "private_chats": {
+                        "type": "object",
+                        "description": "Private message filter",
+                        "properties": {
+                          "enabled": {
+                            "type": "boolean",
+                            "description": "Show notifications from private chats",
+                            "default": true
+                          },
+                          "mode": {
+                            "type": "string",
+                            "enum": ["all", "whitelist", "blacklist"],
+                            "description": "Filter mode",
+                            "default": "all"
+                          },
+                          "list": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "Chat IDs or usernames for whitelist/blacklist"
+                          }
+                        }
+                      },
+                      "groups": {
+                        "type": "object",
+                        "description": "Group chat filter",
+                        "properties": {
+                          "enabled": {
+                            "type": "boolean",
+                            "description": "Show notifications from groups",
+                            "default": false
+                          },
+                          "mode": {
+                            "type": "string",
+                            "enum": ["all", "whitelist", "blacklist"],
+                            "description": "Filter mode",
+                            "default": "all"
+                          },
+                          "list": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "Chat IDs for whitelist/blacklist"
+                          }
+                        }
+                      },
+                      "channels": {
+                        "type": "object",
+                        "description": "Channel filter",
+                        "properties": {
+                          "enabled": {
+                            "type": "boolean",
+                            "description": "Show notifications from channels",
+                            "default": false
+                          },
+                          "mode": {
+                            "type": "string",
+                            "enum": ["all", "whitelist", "blacklist"],
+                            "description": "Filter mode",
+                            "default": "all"
+                          },
+                          "list": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "Channel IDs for whitelist/blacklist"
+                          }
+                        }
+                      },
+                      "show_pinned_messages": {
+                        "type": "boolean",
+                        "description": "Show notifications for pinned messages",
+                        "default": true
+                      }
+                    }
+                  },
+                  "display": {
+                    "type": "object",
+                    "description": "Display settings",
+                    "properties": {
+                      "mode": {
+                        "type": "string",
+                        "enum": ["last_message", "unread_count", "ticker", "notification"],
+                        "description": "Display mode",
+                        "default": "last_message"
+                      },
+                      "max_messages": {
+                        "type": "integer",
+                        "description": "Maximum messages to show in ticker mode",
+                        "minimum": 1,
+                        "maximum": 50,
+                        "default": 5
+                      },
+                      "show_sender": {
+                        "type": "boolean",
+                        "description": "Show sender name",
+                        "default": true
+                      },
+                      "show_chat": {
+                        "type": "boolean",
+                        "description": "Show chat/group name for group messages",
+                        "default": true
+                      },
+                      "show_time": {
+                        "type": "boolean",
+                        "description": "Show message time",
+                        "default": false
+                      },
+                      "time_format": {
+                        "type": "string",
+                        "description": "Time format string (Go time format)",
+                        "default": "15:04"
+                      },
+                      "truncate_length": {
+                        "type": "integer",
+                        "description": "Max characters per message",
+                        "minimum": 10,
+                        "maximum": 200,
+                        "default": 50
+                      },
+                      "notification_duration": {
+                        "type": "number",
+                        "description": "Seconds to show notification flash",
+                        "minimum": 0.5,
+                        "maximum": 30.0,
+                        "default": 3.0
+                      },
+                      "scroll_speed": {
+                        "type": "number",
+                        "description": "Ticker scroll speed in pixels per frame",
+                        "minimum": 0.1,
+                        "maximum": 10.0,
+                        "default": 1.0
+                      },
+                      "unread_badge": {
+                        "type": "boolean",
+                        "description": "Show unread count badge",
+                        "default": true
+                      },
+                      "text_color": {
+                        "type": "integer",
+                        "description": "Text brightness (1-255)",
+                        "minimum": 1,
+                        "maximum": 255,
+                        "default": 255
+                      }
+                    }
                   }
                 }
               }

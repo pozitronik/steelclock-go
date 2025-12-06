@@ -161,6 +161,9 @@ type WidgetConfig struct {
 
 	// Star Wars intro crawl widget
 	StarWarsIntro *StarWarsIntroConfig `json:"starwars_intro,omitempty"` // Star Wars intro crawl settings
+
+	// Telegram widget
+	Telegram *TelegramConfig `json:"telegram,omitempty"` // Telegram notifications settings
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -783,4 +786,76 @@ type StarWarsStarsConfig struct {
 	Count int `json:"count,omitempty"`
 	// Brightness: maximum star brightness (1-255, default: 200)
 	Brightness int `json:"brightness,omitempty"`
+}
+
+// TelegramConfig contains settings for the Telegram notifications widget
+type TelegramConfig struct {
+	// Auth: Telegram API authentication settings (required)
+	Auth *TelegramAuthConfig `json:"auth,omitempty"`
+	// SessionPath: path to session file (default: telegram/{phone}.session)
+	SessionPath string `json:"session_path,omitempty"`
+	// Filters: notification source filters
+	Filters *TelegramFiltersConfig `json:"filters,omitempty"`
+	// Display: notification display settings
+	Display *TelegramDisplayConfig `json:"display,omitempty"`
+	// PollInterval: seconds between update checks (default: 1.0)
+	PollInterval float64 `json:"poll_interval,omitempty"`
+}
+
+// TelegramAuthConfig contains Telegram API authentication credentials
+type TelegramAuthConfig struct {
+	// APIID: Telegram API ID from my.telegram.org (required)
+	APIID int `json:"api_id"`
+	// APIHash: Telegram API Hash from my.telegram.org (required)
+	APIHash string `json:"api_hash"`
+	// PhoneNumber: phone number in international format, e.g., "+1234567890" (required)
+	PhoneNumber string `json:"phone_number"`
+}
+
+// TelegramFiltersConfig contains notification source filters
+type TelegramFiltersConfig struct {
+	// PrivateChats: private message filter settings
+	PrivateChats *TelegramChatFilterConfig `json:"private_chats,omitempty"`
+	// Groups: group chat filter settings
+	Groups *TelegramChatFilterConfig `json:"groups,omitempty"`
+	// Channels: channel filter settings
+	Channels *TelegramChatFilterConfig `json:"channels,omitempty"`
+	// ShowPinnedMessages: show notifications for pinned messages (default: true)
+	ShowPinnedMessages *bool `json:"show_pinned_messages,omitempty"`
+}
+
+// TelegramChatFilterConfig contains filter settings for a chat type
+type TelegramChatFilterConfig struct {
+	// Enabled: enable notifications from this chat type (default: true for private, false for groups/channels)
+	Enabled *bool `json:"enabled,omitempty"`
+	// Mode: filter mode - "all", "whitelist", "blacklist" (default: "all")
+	Mode string `json:"mode,omitempty"`
+	// List: list of chat IDs or usernames for whitelist/blacklist mode
+	List []string `json:"list,omitempty"`
+}
+
+// TelegramDisplayConfig contains display settings for notifications
+type TelegramDisplayConfig struct {
+	// Mode: display mode - "last_message", "unread_count", "ticker", "notification" (default: "last_message")
+	Mode string `json:"mode,omitempty"`
+	// MaxMessages: maximum messages to show in ticker mode (default: 5)
+	MaxMessages int `json:"max_messages,omitempty"`
+	// ShowSender: show sender name (default: true)
+	ShowSender *bool `json:"show_sender,omitempty"`
+	// ShowChat: show chat/group name for group messages (default: true)
+	ShowChat *bool `json:"show_chat,omitempty"`
+	// ShowTime: show message time (default: false)
+	ShowTime *bool `json:"show_time,omitempty"`
+	// TimeFormat: time format string (default: "15:04")
+	TimeFormat string `json:"time_format,omitempty"`
+	// TruncateLength: max characters per message (default: 50)
+	TruncateLength int `json:"truncate_length,omitempty"`
+	// NotificationDuration: seconds to show notification flash (default: 3.0)
+	NotificationDuration float64 `json:"notification_duration,omitempty"`
+	// ScrollSpeed: ticker scroll speed in pixels per frame (default: 1.0)
+	ScrollSpeed float64 `json:"scroll_speed,omitempty"`
+	// UnreadBadge: show unread count badge (default: true)
+	UnreadBadge *bool `json:"unread_badge,omitempty"`
+	// TextColor: text brightness (1-255, default: 255)
+	TextColor int `json:"text_color,omitempty"`
 }
