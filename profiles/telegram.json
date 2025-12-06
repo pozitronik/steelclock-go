@@ -20,27 +20,27 @@
       "update_interval": 1.0,
       "telegram": {
         "auth": {
-          "api_id": 0,
-          "api_hash": "YOUR_API_HASH_HERE",
-          "phone_number": "+1234567890"
+          "api_id": 37422471,
+          "api_hash": "495d53c377c7767f6c915475fb3670ac",
+          "phone_number": "+995599088293"
         },
         "session_path": "",
         "poll_interval": 1.0,
         "filters": {
           "private_chats": {
             "enabled": true,
-            "mode": "all",
-            "list": []
+            "whitelist": [],
+            "blacklist": []
           },
           "groups": {
             "enabled": false,
-            "mode": "all",
-            "list": []
+            "whitelist": [],
+            "blacklist": []
           },
           "channels": {
             "enabled": false,
-            "mode": "all",
-            "list": []
+            "whitelist": [],
+            "blacklist": []
           },
           "show_pinned_messages": true
         },

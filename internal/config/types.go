@@ -828,10 +828,10 @@ type TelegramFiltersConfig struct {
 type TelegramChatFilterConfig struct {
 	// Enabled: enable notifications from this chat type (default: true for private, false for groups/channels)
 	Enabled *bool `json:"enabled,omitempty"`
-	// Mode: filter mode - "all", "whitelist", "blacklist" (default: "all")
-	Mode string `json:"mode,omitempty"`
-	// List: list of chat IDs or usernames for whitelist/blacklist mode
-	List []string `json:"list,omitempty"`
+	// Whitelist: always show notifications from these IDs, even if this chat type is disabled
+	Whitelist []string `json:"whitelist,omitempty"`
+	// Blacklist: never show notifications from these IDs, even if this chat type is enabled
+	Blacklist []string `json:"blacklist,omitempty"`
 }
 
 // TelegramDisplayConfig contains display settings for notifications

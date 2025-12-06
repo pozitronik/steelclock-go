@@ -1718,16 +1718,15 @@
                             "description": "Show notifications from private chats",
                             "default": true
                           },
-                          "mode": {
-                            "type": "string",
-                            "enum": ["all", "whitelist", "blacklist"],
-                            "description": "Filter mode",
-                            "default": "all"
-                          },
-                          "list": {
+                          "whitelist": {
                             "type": "array",
                             "items": { "type": "string" },
-                            "description": "Chat IDs or usernames for whitelist/blacklist"
+                            "description": "Always show notifications from these IDs, even if private chats are disabled"
+                          },
+                          "blacklist": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "Never show notifications from these IDs, even if private chats are enabled"
                           }
                         }
                       },
@@ -1740,16 +1739,15 @@
                             "description": "Show notifications from groups",
                             "default": false
                           },
-                          "mode": {
-                            "type": "string",
-                            "enum": ["all", "whitelist", "blacklist"],
-                            "description": "Filter mode",
-                            "default": "all"
-                          },
-                          "list": {
+                          "whitelist": {
                             "type": "array",
                             "items": { "type": "string" },
-                            "description": "Chat IDs for whitelist/blacklist"
+                            "description": "Always show notifications from these group IDs, even if groups are disabled"
+                          },
+                          "blacklist": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "Never show notifications from these group IDs, even if groups are enabled"
                           }
                         }
                       },
@@ -1762,16 +1760,15 @@
                             "description": "Show notifications from channels",
                             "default": false
                           },
-                          "mode": {
-                            "type": "string",
-                            "enum": ["all", "whitelist", "blacklist"],
-                            "description": "Filter mode",
-                            "default": "all"
-                          },
-                          "list": {
+                          "whitelist": {
                             "type": "array",
                             "items": { "type": "string" },
-                            "description": "Channel IDs for whitelist/blacklist"
+                            "description": "Always show notifications from these channel IDs, even if channels are disabled"
+                          },
+                          "blacklist": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "Never show notifications from these channel IDs, even if channels are enabled"
                           }
                         }
                       },

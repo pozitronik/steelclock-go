@@ -199,16 +199,17 @@ func TestClient_Filters(t *testing.T) {
 			},
 		},
 		{
-			name: "whitelist mode",
+			name: "whitelist overrides disabled",
 			filters: &config.TelegramFiltersConfig{
 				PrivateChats: &config.TelegramChatFilterConfig{
-					Enabled: &trueVal,
-					Mode:    "whitelist",
-					List:    []string{"123", "456"},
+					Enabled:   &falseVal, // disabled
+					Whitelist: []string{"123"},
 				},
 			},
 			checkPrivate: func(c *Client) bool {
-				return c.shouldShowPrivate(123) && !c.shouldShowPrivate(789)
+				// 123 is whitelisted - shown even though private chats are disabled
+				// 456 is not whitelisted - not shown because disabled
+				return c.shouldShowPrivate(123) && !c.shouldShowPrivate(456)
 			},
 			checkGroup: func(c *Client) bool {
 				return true
@@ -218,19 +219,62 @@ func TestClient_Filters(t *testing.T) {
 			},
 		},
 		{
-			name: "blacklist mode",
+			name: "blacklist overrides enabled",
 			filters: &config.TelegramFiltersConfig{
 				PrivateChats: &config.TelegramChatFilterConfig{
-					Enabled: &trueVal,
-					Mode:    "blacklist",
-					List:    []string{"123"},
+					Enabled:   &trueVal, // enabled
+					Blacklist: []string{"123"},
 				},
 			},
 			checkPrivate: func(c *Client) bool {
+				// 123 is blacklisted - not shown even though private chats are enabled
+				// 456 is not blacklisted - shown because enabled
 				return !c.shouldShowPrivate(123) && c.shouldShowPrivate(456)
 			},
 			checkGroup: func(c *Client) bool {
 				return true
+			},
+			checkChannel: func(c *Client) bool {
+				return true
+			},
+		},
+		{
+			name: "blacklist has highest priority",
+			filters: &config.TelegramFiltersConfig{
+				PrivateChats: &config.TelegramChatFilterConfig{
+					Enabled:   &trueVal,
+					Whitelist: []string{"123"},
+					Blacklist: []string{"123", "456"}, // 123 is in both lists
+				},
+			},
+			checkPrivate: func(c *Client) bool {
+				// 123 is in both - blacklist wins, not shown
+				// 456 is only in blacklist - not shown
+				// 789 is in neither - shown (enabled)
+				return !c.shouldShowPrivate(123) && !c.shouldShowPrivate(456) && c.shouldShowPrivate(789)
+			},
+			checkGroup: func(c *Client) bool {
+				return true
+			},
+			checkChannel: func(c *Client) bool {
+				return true
+			},
+		},
+		{
+			name: "whitelist for disabled groups",
+			filters: &config.TelegramFiltersConfig{
+				Groups: &config.TelegramChatFilterConfig{
+					Enabled:   &falseVal, // groups disabled by default
+					Whitelist: []string{"999"},
+				},
+			},
+			checkPrivate: func(c *Client) bool {
+				return true
+			},
+			checkGroup: func(c *Client) bool {
+				// 999 is whitelisted - shown even though groups are disabled
+				// 888 is not whitelisted - not shown
+				return c.shouldShowGroup(999) && !c.shouldShowGroup(888)
 			},
 			checkChannel: func(c *Client) bool {
 				return true

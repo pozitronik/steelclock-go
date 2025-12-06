@@ -525,42 +525,56 @@ func (c *Client) addMessage(msg MessageInfo) {
 // Filter methods
 
 func (c *Client) shouldShowPrivate(userID int64) bool {
-	if c.cfg.Filters == nil || c.cfg.Filters.PrivateChats == nil {
-		return true // Default: show private chats
+	defaultEnabled := true // Default: show private chats
+	if c.cfg.Filters == nil {
+		return defaultEnabled
 	}
-
-	filter := c.cfg.Filters.PrivateChats
-	if filter.Enabled != nil && !*filter.Enabled {
-		return false
-	}
-
-	return c.matchesFilter(filter, fmt.Sprintf("%d", userID))
+	return c.shouldShow(c.cfg.Filters.PrivateChats, userID, defaultEnabled)
 }
 
 func (c *Client) shouldShowGroup(chatID int64) bool {
-	if c.cfg.Filters == nil || c.cfg.Filters.Groups == nil {
-		return false // Default: don't show groups
+	defaultEnabled := false // Default: don't show groups
+	if c.cfg.Filters == nil {
+		return defaultEnabled
 	}
-
-	filter := c.cfg.Filters.Groups
-	if filter.Enabled != nil && !*filter.Enabled {
-		return false
-	}
-
-	return c.matchesFilter(filter, fmt.Sprintf("%d", chatID))
+	return c.shouldShow(c.cfg.Filters.Groups, chatID, defaultEnabled)
 }
 
 func (c *Client) shouldShowChannel(channelID int64) bool {
-	if c.cfg.Filters == nil || c.cfg.Filters.Channels == nil {
-		return false // Default: don't show channels
+	defaultEnabled := false // Default: don't show channels
+	if c.cfg.Filters == nil {
+		return defaultEnabled
+	}
+	return c.shouldShow(c.cfg.Filters.Channels, channelID, defaultEnabled)
+}
+
+func (c *Client) shouldShow(filter *config.TelegramChatFilterConfig, id int64, defaultEnabled bool) bool {
+	if filter == nil {
+		return defaultEnabled
 	}
 
-	filter := c.cfg.Filters.Channels
-	if filter.Enabled != nil && !*filter.Enabled {
-		return false
+	idStr := fmt.Sprintf("%d", id)
+
+	// Blacklist has highest priority - never show these
+	for _, item := range filter.Blacklist {
+		if item == idStr {
+			return false
+		}
 	}
 
-	return c.matchesFilter(filter, fmt.Sprintf("%d", channelID))
+	// Whitelist overrides enabled setting - always show these
+	for _, item := range filter.Whitelist {
+		if item == idStr {
+			return true
+		}
+	}
+
+	// Check if this chat type is enabled
+	if filter.Enabled != nil {
+		return *filter.Enabled
+	}
+
+	return defaultEnabled
 }
 
 func (c *Client) shouldShowPinned() bool {
@@ -568,29 +582,6 @@ func (c *Client) shouldShowPinned() bool {
 		return true // Default: show pinned
 	}
 	return *c.cfg.Filters.ShowPinnedMessages
-}
-
-func (c *Client) matchesFilter(filter *config.TelegramChatFilterConfig, id string) bool {
-	if filter.Mode == "" || filter.Mode == "all" {
-		return true
-	}
-
-	inList := false
-	for _, item := range filter.List {
-		if item == id {
-			inList = true
-			break
-		}
-	}
-
-	switch filter.Mode {
-	case "whitelist":
-		return inList
-	case "blacklist":
-		return !inList
-	default:
-		return true
-	}
 }
 
 // Cache methods
