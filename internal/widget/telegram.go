@@ -156,10 +156,11 @@ func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
 		// Update messages list
 		w.messages = w.client.GetMessages()
 
-		// Start transition if we have a current message
-		if w.currentMessage != nil {
-			w.startTransition(msg.ChatType)
-		}
+		// Start transition for new message
+		// This works for both:
+		// - Transitioning between messages (currentMessage != nil)
+		// - First message appearance (currentMessage == nil, transitions from empty)
+		w.startTransition(msg.ChatType)
 
 		// Set new current message
 		msgCopy := msg
@@ -170,6 +171,9 @@ func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
 		// Reset scroll offsets for new message
 		w.headerScroller.Reset()
 		w.messageScroller.Reset()
+
+		// Trigger auto-hide timer (widget becomes visible when message arrives)
+		w.TriggerAutoHide()
 	})
 
 	// Add error callback (using Add instead of Set for proper multi-widget support)
@@ -524,6 +528,11 @@ func (w *TelegramWidget) startTransition(chatType tgclient.ChatType) {
 
 // Render draws the widget
 func (w *TelegramWidget) Render() (image.Image, error) {
+	// Check if widget should be hidden (auto-hide mode)
+	if w.ShouldHide() {
+		return nil, nil
+	}
+
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 

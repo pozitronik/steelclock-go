@@ -25,6 +25,10 @@
         "padding": 0
       },
       "update_interval": 1.0,
+      "auto_hide": {
+        "enabled": false,
+        "timeout": 5.0
+      },
       "auth": {
         "api_id": 12345678,
         "api_hash": "your_api_hash_here",

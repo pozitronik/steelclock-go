@@ -298,3 +298,95 @@ func TestTelegramWidget_GetAppearance(t *testing.T) {
 		t.Errorf("appearance.Timeout = %d, want 10", w.appearance.Timeout)
 	}
 }
+
+func TestTelegramWidget_AutoHide(t *testing.T) {
+	t.Run("widget hidden when auto_hide enabled and no message", func(t *testing.T) {
+		cfg := config.WidgetConfig{
+			Type:     "telegram",
+			Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+			Auth: &config.TelegramAuthConfig{
+				APIID:       12345,
+				APIHash:     "testhash",
+				PhoneNumber: "+1234567890",
+			},
+			AutoHide: &config.AutoHideConfig{
+				Enabled: true,
+				Timeout: 1.0,
+			},
+		}
+
+		w, err := NewTelegramWidget(cfg)
+		if err != nil {
+			t.Fatalf("NewTelegramWidget() error = %v", err)
+		}
+
+		// Widget should be hidden initially (no message received)
+		img, err := w.Render()
+		if err != nil {
+			t.Fatalf("Render() error = %v", err)
+		}
+		if img != nil {
+			t.Error("Render() should return nil when auto_hide is enabled and no message received")
+		}
+	})
+
+	t.Run("widget visible after TriggerAutoHide", func(t *testing.T) {
+		cfg := config.WidgetConfig{
+			Type:     "telegram",
+			Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+			Auth: &config.TelegramAuthConfig{
+				APIID:       12345,
+				APIHash:     "testhash",
+				PhoneNumber: "+1234567890",
+			},
+			AutoHide: &config.AutoHideConfig{
+				Enabled: true,
+				Timeout: 5.0, // Long timeout so we can check visibility
+			},
+		}
+
+		w, err := NewTelegramWidget(cfg)
+		if err != nil {
+			t.Fatalf("NewTelegramWidget() error = %v", err)
+		}
+
+		// Trigger auto-hide (simulates message arrival)
+		w.TriggerAutoHide()
+
+		// Widget should be visible now
+		img, err := w.Render()
+		if err != nil {
+			t.Fatalf("Render() error = %v", err)
+		}
+		if img == nil {
+			t.Error("Render() should return image after TriggerAutoHide")
+		}
+	})
+
+	t.Run("widget remains visible when auto_hide disabled", func(t *testing.T) {
+		cfg := config.WidgetConfig{
+			Type:     "telegram",
+			Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
+			Auth: &config.TelegramAuthConfig{
+				APIID:       12345,
+				APIHash:     "testhash",
+				PhoneNumber: "+1234567890",
+			},
+			// No AutoHide config = disabled
+		}
+
+		w, err := NewTelegramWidget(cfg)
+		if err != nil {
+			t.Fatalf("NewTelegramWidget() error = %v", err)
+		}
+
+		// Widget should be visible without TriggerAutoHide
+		img, err := w.Render()
+		if err != nil {
+			t.Fatalf("Render() error = %v", err)
+		}
+		if img == nil {
+			t.Error("Render() should return image when auto_hide is disabled")
+		}
+	})
+}
