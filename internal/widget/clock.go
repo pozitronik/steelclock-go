@@ -915,20 +915,6 @@ func (w *ClockWidget) drawDot(img *image.Gray, cx, cy int, c color.Gray) {
 	}
 }
 
-// Segment patterns for digits 0-9 (bits: gfedcba)
-var segmentPatterns = [10]byte{
-	0b0111111, // 0: abcdef
-	0b0000110, // 1: bc
-	0b1011011, // 2: abdeg
-	0b1001111, // 3: abcdg
-	0b1100110, // 4: bcfg
-	0b1101101, // 5: acdfg
-	0b1111101, // 6: acdefg
-	0b0000111, // 7: abc
-	0b1111111, // 8: all
-	0b1101111, // 9: abcdfg
-}
-
 // segmentDigitSource represents a digit source for segment display
 type segmentDigitSource struct {
 	isLiteral    bool // true = use literalValue, false = use time component
@@ -1121,261 +1107,34 @@ func (w *ClockWidget) renderSegmentClock(img *image.Gray) {
 
 // drawSegmentDigit draws a single seven-segment digit
 func (w *ClockWidget) drawSegmentDigit(img *image.Gray, x, y, width, height int, digit int, animProgress float64) {
-	pattern := segmentPatterns[digit]
-	thickness := w.segmentThickness
-
-	// Calculate middle Y position first to properly center the middle segment
-	// Using (height-thickness)/2 instead of height/2-thickness/2 avoids integer truncation asymmetry
-	middleY := y + (height-thickness)/2
-
-	// Calculate segment lengths
-	// Upper and lower vertical segments may have different lengths due to integer division
-	upperVSegLen := middleY - y - thickness                        // from bottom of segment A to top of segment G
-	lowerVSegLen := height - thickness - (middleY - y) - thickness // from bottom of segment G to top of segment D
-	// Horizontal segments span between vertical segments (with slight overlap for corners)
-	hSegLen := width - 2*thickness + 2 // +2 for 1px overlap on each side
-
-	// Calculate colors based on animation progress
-	onColor := uint8(float64(w.segmentOnColor) * animProgress)
-	offColor := uint8(w.segmentOffColor)
-
-	// Segment positions:
-	//  aaa
-	// f   b
-	//  ggg
-	// e   c
-	//  ddd
-
-	// Decode segment pattern
-	segA := pattern&0x01 != 0
-	segB := pattern&0x02 != 0
-	segC := pattern&0x04 != 0
-	segD := pattern&0x08 != 0
-	segE := pattern&0x10 != 0
-	segF := pattern&0x20 != 0
-	segG := pattern&0x40 != 0
-
-	// Draw horizontal segments (with 1px overlap into vertical segment area)
-	hStartX := x + thickness - 1
-	w.drawHSegment(img, hStartX, y, hSegLen, thickness, segA, onColor, offColor)                  // a (top)
-	w.drawHSegment(img, hStartX, middleY, hSegLen, thickness, segG, onColor, offColor)            // g (middle)
-	w.drawHSegment(img, hStartX, y+height-thickness, hSegLen, thickness, segD, onColor, offColor) // d (bottom)
-
-	// Draw vertical segments (upper use upperVSegLen, lower use lowerVSegLen)
-	w.drawVSegment(img, x+width-thickness, y+thickness, upperVSegLen, thickness, segB, onColor, offColor)       // b (top-right)
-	w.drawVSegment(img, x+width-thickness, middleY+thickness, lowerVSegLen, thickness, segC, onColor, offColor) // c (bottom-right)
-	w.drawVSegment(img, x, y+thickness, upperVSegLen, thickness, segF, onColor, offColor)                       // f (top-left)
-	w.drawVSegment(img, x, middleY+thickness, lowerVSegLen, thickness, segE, onColor, offColor)                 // e (bottom-left)
-}
-
-// drawHSegment draws a horizontal segment with the configured style
-func (w *ClockWidget) drawHSegment(img *image.Gray, x, y, length, thickness int, on bool, onColor, offColor uint8) {
-	c := offColor
-	if on {
-		c = onColor
-	}
-	col := color.Gray{Y: c}
-
+	style := bitmap.SegmentStyleRectangle
 	switch w.segmentStyle {
 	case "hexagon":
-		w.drawHSegmentHexagon(img, x, y, length, thickness, col)
+		style = bitmap.SegmentStyleHexagon
 	case "rounded":
-		w.drawHSegmentRounded(img, x, y, length, thickness, col)
-	default: // "rectangle"
-		w.drawHSegmentRectangle(img, x, y, length, thickness, col)
+		style = bitmap.SegmentStyleRounded
 	}
-}
 
-// drawVSegment draws a vertical segment with the configured style
-func (w *ClockWidget) drawVSegment(img *image.Gray, x, y, length, thickness int, on bool, onColor, offColor uint8) {
-	c := offColor
-	if on {
-		c = onColor
-	}
-	col := color.Gray{Y: c}
-
-	switch w.segmentStyle {
-	case "hexagon":
-		w.drawVSegmentHexagon(img, x, y, length, thickness, col)
-	case "rounded":
-		w.drawVSegmentRounded(img, x, y, length, thickness, col)
-	default: // "rectangle"
-		w.drawVSegmentRectangle(img, x, y, length, thickness, col)
-	}
-}
-
-// drawHSegmentRectangle draws a simple rectangular horizontal segment
-func (w *ClockWidget) drawHSegmentRectangle(img *image.Gray, x, y, length, thickness int, col color.Gray) {
-	for dy := 0; dy < thickness; dy++ {
-		for dx := 0; dx < length; dx++ {
-			img.SetGray(x+dx, y+dy, col)
-		}
-	}
-}
-
-// drawVSegmentRectangle draws a simple rectangular vertical segment
-func (w *ClockWidget) drawVSegmentRectangle(img *image.Gray, x, y, length, thickness int, col color.Gray) {
-	for dy := 0; dy < length; dy++ {
-		for dx := 0; dx < thickness; dx++ {
-			img.SetGray(x+dx, y+dy, col)
-		}
-	}
-}
-
-// drawHSegmentHexagon draws a horizontal segment with angled/pointed ends (classic LCD style)
-// Shape: <======>
-func (w *ClockWidget) drawHSegmentHexagon(img *image.Gray, x, y, length, thickness int, col color.Gray) {
-	halfThick := thickness / 2
-
-	for dy := 0; dy < thickness; dy++ {
-		// Calculate taper at ends based on distance from center
-		distFromCenter := dy
-		if dy > halfThick {
-			distFromCenter = thickness - 1 - dy
-		}
-		// Taper amount: 0 at center row, increases toward top/bottom
-		taper := halfThick - distFromCenter
-
-		startX := x + taper
-		endX := x + length - taper
-
-		for dx := startX; dx < endX; dx++ {
-			img.SetGray(dx, y+dy, col)
-		}
-	}
-}
-
-// drawVSegmentHexagon draws a vertical segment with angled/pointed ends (classic LCD style)
-// Shape: pointed at top and bottom
-func (w *ClockWidget) drawVSegmentHexagon(img *image.Gray, x, y, length, thickness int, col color.Gray) {
-	halfThick := thickness / 2
-
-	for dy := 0; dy < length; dy++ {
-		// Calculate taper at ends based on distance from top/bottom
-		var taper int
-		if dy < halfThick {
-			// Top taper
-			taper = halfThick - dy
-		} else if dy >= length-halfThick {
-			// Bottom taper
-			taper = halfThick - (length - 1 - dy)
-		} else {
-			// Middle section - full width
-			taper = 0
-		}
-
-		startX := x + taper
-		endX := x + thickness - taper
-
-		for dx := startX; dx < endX; dx++ {
-			img.SetGray(dx, y+dy, col)
-		}
-	}
-}
-
-// drawHSegmentRounded draws a horizontal segment with rounded/semicircular ends
-func (w *ClockWidget) drawHSegmentRounded(img *image.Gray, x, y, length, thickness int, col color.Gray) {
-	halfThick := thickness / 2
-	radiusSq := halfThick * halfThick
-
-	for dy := 0; dy < thickness; dy++ {
-		// Distance from center line
-		distY := dy - halfThick
-
-		for dx := 0; dx < length; dx++ {
-			draw := false
-
-			if dx < halfThick {
-				// Left cap - check if within semicircle
-				distX := dx - halfThick
-				if distX*distX+distY*distY <= radiusSq {
-					draw = true
-				}
-			} else if dx >= length-halfThick {
-				// Right cap - check if within semicircle
-				distX := dx - (length - halfThick - 1)
-				if distX*distX+distY*distY <= radiusSq {
-					draw = true
-				}
-			} else {
-				// Middle section - always draw
-				draw = true
-			}
-
-			if draw {
-				img.SetGray(x+dx, y+dy, col)
-			}
-		}
-	}
-}
-
-// drawVSegmentRounded draws a vertical segment with rounded/semicircular ends
-func (w *ClockWidget) drawVSegmentRounded(img *image.Gray, x, y, length, thickness int, col color.Gray) {
-	halfThick := thickness / 2
-	radiusSq := halfThick * halfThick
-
-	for dy := 0; dy < length; dy++ {
-		for dx := 0; dx < thickness; dx++ {
-			draw := false
-			// Distance from center line
-			distX := dx - halfThick
-
-			if dy < halfThick {
-				// Top cap - check if within semicircle
-				distY := dy - halfThick
-				if distX*distX+distY*distY <= radiusSq {
-					draw = true
-				}
-			} else if dy >= length-halfThick {
-				// Bottom cap - check if within semicircle
-				distY := dy - (length - halfThick - 1)
-				if distX*distX+distY*distY <= radiusSq {
-					draw = true
-				}
-			} else {
-				// Middle section - always draw
-				draw = true
-			}
-
-			if draw {
-				img.SetGray(x+dx, y+dy, col)
-			}
-		}
-	}
+	bitmap.DrawSegmentDigitAnimated(img, x, y, width, height, digit, style,
+		w.segmentThickness, uint8(w.segmentOnColor), uint8(w.segmentOffColor), animProgress)
 }
 
 // drawColon draws the colon separator between digit pairs
 func (w *ClockWidget) drawColon(img *image.Gray, x, y, width, height int, now time.Time) {
-	if w.colonStyle == "none" {
-		return
-	}
-
 	// Determine if colon should be visible (blinking)
 	visible := true
 	if w.colonBlink {
 		visible = now.Second()%2 == 0
 	}
 
-	if !visible {
-		return
+	// Convert style string to bitmap.ColonStyle
+	style := bitmap.ColonStyleDots
+	switch w.colonStyle {
+	case "bar":
+		style = bitmap.ColonStyleBar
+	case "none":
+		style = bitmap.ColonStyleNone
 	}
 
-	onColor := color.Gray{Y: uint8(w.segmentOnColor)}
-	centerX := x + width/2
-	dotY1 := y + height/3
-	dotY2 := y + height*2/3
-
-	if w.colonStyle == "bar" {
-		// Draw vertical bar
-		for dy := dotY1; dy <= dotY2; dy++ {
-			for dx := -w.segmentThickness / 2; dx <= w.segmentThickness/2; dx++ {
-				img.SetGray(centerX+dx, dy, onColor)
-			}
-		}
-	} else {
-		// Draw dots (default)
-		dotRadius := w.segmentThickness
-		bitmap.DrawFilledCircle(img, centerX, dotY1, dotRadius, onColor)
-		bitmap.DrawFilledCircle(img, centerX, dotY2, dotRadius, onColor)
-	}
+	bitmap.DrawSegmentColon(img, x, y, width, height, style, w.segmentThickness, uint8(w.segmentOnColor), visible)
 }
