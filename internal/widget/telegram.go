@@ -1,7 +1,6 @@
 package widget
 
 import (
-	"context"
 	"fmt"
 	"image"
 	"image/color"
@@ -54,8 +53,6 @@ type TelegramWidget struct {
 	// Telegram client (shared via registry)
 	client  *tgclient.Client
 	authCfg *config.TelegramAuthConfig // stored for releasing client
-	ctx     context.Context
-	cancel  context.CancelFunc
 
 	// Appearance (single appearance for all chat types now)
 	appearance ChatAppearance
@@ -65,10 +62,9 @@ type TelegramWidget struct {
 	currentMessage     *tgclient.MessageInfo
 	messageStartTime   time.Time
 	dismissedMessageID int // Track dismissed message to prevent re-showing after timeout
-	connectionError    error
-	connecting         bool
-	lastConnectionTry  time.Time
-	reconnectInterval  time.Duration
+
+	// Connection manager (shared module)
+	connection *shared.ConnectionManager
 
 	// Scroll state (per element)
 	headerScroller  *shared.TextScroller
@@ -133,19 +129,19 @@ func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
 	}
 
 	w := &TelegramWidget{
-		BaseWidget:        base,
-		client:            client,
-		authCfg:           cfg.Auth,
-		appearance:        appearance,
-		messages:          make([]tgclient.MessageInfo, 0),
-		reconnectInterval: 30 * time.Second,
-		width:             pos.W,
-		height:            pos.H,
-		statusRenderer:    statusRenderer,
-		headerScroller:    shared.NewTextScroller(headerScrollerCfg),
-		messageScroller:   shared.NewTextScroller(messageScrollerCfg),
-		blink:             shared.NewBlinkAnimator(shared.BlinkAlways, 500*time.Millisecond),
-		transition:        shared.NewTransitionManager(pos.W, pos.H),
+		BaseWidget:      base,
+		client:          client,
+		authCfg:         cfg.Auth,
+		appearance:      appearance,
+		messages:        make([]tgclient.MessageInfo, 0),
+		connection:      shared.NewConnectionManager(client, 30*time.Second, 60*time.Second),
+		width:           pos.W,
+		height:          pos.H,
+		statusRenderer:  statusRenderer,
+		headerScroller:  shared.NewTextScroller(headerScrollerCfg),
+		messageScroller: shared.NewTextScroller(messageScrollerCfg),
+		blink:           shared.NewBlinkAnimator(shared.BlinkAlways, 500*time.Millisecond),
+		transition:      shared.NewTransitionManager(pos.W, pos.H),
 	}
 
 	// Add message callback (using Add instead of Set for proper multi-widget support)
@@ -177,10 +173,10 @@ func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
 	})
 
 	// Add error callback (using Add instead of Set for proper multi-widget support)
+	// Note: ConnectionManager handles connection errors internally,
+	// but we keep this for client-level errors (e.g., message fetch failures)
 	client.AddErrorCallback(func(err error) {
-		w.mu.Lock()
-		defer w.mu.Unlock()
-		w.connectionError = err
+		// Connection manager handles errors internally
 	})
 
 	return w, nil
@@ -394,52 +390,8 @@ func (w *TelegramWidget) Update() error {
 	// Update blink state (pass message count for potential progressive blinking)
 	w.blink.Update(len(w.messages))
 
-	// Handle connection
-	if !w.client.IsConnected() && !w.connecting {
-		if time.Since(w.lastConnectionTry) > w.reconnectInterval {
-			w.connecting = true
-			w.lastConnectionTry = time.Now()
-			w.connectionError = nil
-
-			go func() {
-				ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-				defer cancel()
-
-				err := w.client.Connect(ctx)
-				if err != nil {
-					w.mu.Lock()
-					w.connecting = false
-					w.connectionError = err
-					w.mu.Unlock()
-					return
-				}
-
-				// Wait for full connection (including authentication)
-				// Connect() returns when TCP is established, but IsConnected()
-				// requires both connected AND authenticated
-				ticker := time.NewTicker(100 * time.Millisecond)
-				defer ticker.Stop()
-
-				for {
-					select {
-					case <-ctx.Done():
-						w.mu.Lock()
-						w.connecting = false
-						w.connectionError = ctx.Err()
-						w.mu.Unlock()
-						return
-					case <-ticker.C:
-						if w.client.IsConnected() {
-							w.mu.Lock()
-							w.connecting = false
-							w.mu.Unlock()
-							return
-						}
-					}
-				}
-			}()
-		}
-	}
+	// Handle connection via shared manager
+	w.connection.Update()
 
 	// Handle transition progress
 	if w.transition.IsActive() {
@@ -487,7 +439,7 @@ func (w *TelegramWidget) Update() error {
 	}
 
 	// Refresh messages from client
-	if w.client.IsConnected() {
+	if w.connection.IsConnected() {
 		w.messages = w.client.GetMessages()
 		// If no current message, show latest (unless it was dismissed)
 		if w.currentMessage == nil && len(w.messages) > 0 {
@@ -543,14 +495,14 @@ func (w *TelegramWidget) Render() (image.Image, error) {
 	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 
 	// Draw based on state
-	if w.connecting {
+	if w.connection.IsConnecting() {
 		w.drawStatusText(img, "Connecting...")
-	} else if w.connectionError != nil {
+	} else if w.connection.GetError() != nil {
 		w.renderError(img)
-	} else if !w.client.IsConnected() {
+	} else if !w.connection.IsConnected() {
 		// Show "Connecting..." on initial state (before first connection attempt)
 		// to avoid brief "Disconnected" flash
-		if w.lastConnectionTry.IsZero() {
+		if w.connection.IsInitialState() {
 			w.drawStatusText(img, "Connecting...")
 		} else {
 			w.drawStatusText(img, "Disconnected")
@@ -579,7 +531,11 @@ func (w *TelegramWidget) Render() (image.Image, error) {
 
 // renderError displays error message on two lines
 func (w *TelegramWidget) renderError(img *image.Gray) {
-	errMsg := w.connectionError.Error()
+	connErr := w.connection.GetError()
+	if connErr == nil {
+		return
+	}
+	errMsg := connErr.Error()
 	maxLen := 22
 	line1 := errMsg
 	line2 := ""
@@ -1204,9 +1160,6 @@ func (w *TelegramWidget) Stop() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if w.cancel != nil {
-		w.cancel()
-	}
 	// Release client via registry (will disconnect when ref count reaches 0)
 	if w.authCfg != nil {
 		tgclient.ReleaseClient(w.authCfg)
