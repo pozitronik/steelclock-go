@@ -3,7 +3,6 @@ package widget
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"log"
 	"math"
 	"runtime/debug"
@@ -608,22 +607,17 @@ func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, displayPeak, pe
 	}
 
 	// Draw filled bar
-	for y := 0; y < pos.H; y++ {
-		for x := 0; x < barWidth; x++ {
-			img.SetGray(x, y, color.Gray{Y: fillColor})
-		}
+	if barWidth > 0 {
+		bitmap.DrawFilledRectangle(img, 0, 0, barWidth, pos.H, fillColor)
 	}
 
 	// Draw peak hold line
 	if w.showPeakHold && peakHold > 0 {
 		peakX := int(float64(pos.W) * peakHold)
 		if peakX < pos.W {
-			for y := 0; y < pos.H; y++ {
-				img.SetGray(peakX, y, color.Gray{Y: w.peakColor})
-			}
+			bitmap.DrawVerticalLine(img, peakX, 0, pos.H-1, w.peakColor)
 		}
 	}
-
 }
 
 // renderBarVertical renders vertical bar display
@@ -638,22 +632,17 @@ func (w *VolumeMeterWidget) renderBarVertical(img *image.Gray, displayPeak, peak
 	}
 
 	// Draw filled bar (from bottom)
-	for y := startY; y < pos.H; y++ {
-		for x := 0; x < pos.W; x++ {
-			img.SetGray(x, y, color.Gray{Y: fillColor})
-		}
+	if barHeight > 0 {
+		bitmap.DrawFilledRectangle(img, 0, startY, pos.W, barHeight, fillColor)
 	}
 
 	// Draw peak hold line
 	if w.showPeakHold && peakHold > 0 {
 		peakY := pos.H - int(float64(pos.H)*peakHold)
 		if peakY >= 0 {
-			for x := 0; x < pos.W; x++ {
-				img.SetGray(x, peakY, color.Gray{Y: w.peakColor})
-			}
+			bitmap.DrawHorizontalLine(img, 0, pos.W-1, peakY, w.peakColor)
 		}
 	}
-
 }
 
 // renderGauge renders gauge display
@@ -705,29 +694,23 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 
 	// Left channel (top)
 	leftWidth := int(float64(pos.W) * channelPeaks[0])
-	for y := 0; y < halfHeight; y++ {
-		for x := 0; x < leftWidth; x++ {
-			img.SetGray(x, y, color.Gray{Y: fillColor})
-		}
+	if leftWidth > 0 {
+		bitmap.DrawFilledRectangle(img, 0, 0, leftWidth, halfHeight, fillColor)
 	}
 
 	// Right channel (bottom)
 	rightWidth := int(float64(pos.W) * channelPeaks[1])
-	for y := halfHeight; y < pos.H; y++ {
-		for x := 0; x < rightWidth; x++ {
-			img.SetGray(x, y, color.Gray{Y: fillColor})
-		}
+	if rightWidth > 0 {
+		bitmap.DrawFilledRectangle(img, 0, halfHeight, rightWidth, pos.H-halfHeight, fillColor)
 	}
 
-	// Draw peak hold lines per channel (slightly dimmer)
+	// Draw peak hold lines per channel
 	if w.showPeakHold && len(peakHoldValues) >= 2 {
 		// Left channel peak hold (top half)
 		if peakHoldValues[0] > 0 {
 			leftPeakX := int(float64(pos.W) * peakHoldValues[0])
 			if leftPeakX < pos.W {
-				for y := 0; y < halfHeight; y++ {
-					img.SetGray(leftPeakX, y, color.Gray{Y: w.peakColor})
-				}
+				bitmap.DrawVerticalLine(img, leftPeakX, 0, halfHeight-1, w.peakColor)
 			}
 		}
 
@@ -735,9 +718,7 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 		if peakHoldValues[1] > 0 {
 			rightPeakX := int(float64(pos.W) * peakHoldValues[1])
 			if rightPeakX < pos.W {
-				for y := halfHeight; y < pos.H; y++ {
-					img.SetGray(rightPeakX, y, color.Gray{Y: w.peakColor})
-				}
+				bitmap.DrawVerticalLine(img, rightPeakX, halfHeight, pos.H-1, w.peakColor)
 			}
 		}
 	}
@@ -818,29 +799,23 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 
 	// Left channel (left half)
 	leftHeight := int(float64(pos.H) * channelPeaks[0])
-	for y := pos.H - leftHeight; y < pos.H; y++ {
-		for x := 0; x < halfWidth; x++ {
-			img.SetGray(x, y, color.Gray{Y: fillColor})
-		}
+	if leftHeight > 0 {
+		bitmap.DrawFilledRectangle(img, 0, pos.H-leftHeight, halfWidth, leftHeight, fillColor)
 	}
 
 	// Right channel (right half)
 	rightHeight := int(float64(pos.H) * channelPeaks[1])
-	for y := pos.H - rightHeight; y < pos.H; y++ {
-		for x := halfWidth; x < pos.W; x++ {
-			img.SetGray(x, y, color.Gray{Y: fillColor})
-		}
+	if rightHeight > 0 {
+		bitmap.DrawFilledRectangle(img, halfWidth, pos.H-rightHeight, pos.W-halfWidth, rightHeight, fillColor)
 	}
 
-	// Draw peak hold lines per channel (slightly dimmer)
+	// Draw peak hold lines per channel
 	if w.showPeakHold && len(peakHoldValues) >= 2 {
 		// Left channel peak hold (left half)
 		if peakHoldValues[0] > 0 {
 			leftPeakY := pos.H - int(float64(pos.H)*peakHoldValues[0])
 			if leftPeakY >= 0 && leftPeakY < pos.H {
-				for x := 0; x < halfWidth; x++ {
-					img.SetGray(x, leftPeakY, color.Gray{Y: w.peakColor})
-				}
+				bitmap.DrawHorizontalLine(img, 0, halfWidth-1, leftPeakY, w.peakColor)
 			}
 		}
 
@@ -848,9 +823,7 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 		if peakHoldValues[1] > 0 {
 			rightPeakY := pos.H - int(float64(pos.H)*peakHoldValues[1])
 			if rightPeakY >= 0 && rightPeakY < pos.H {
-				for x := halfWidth; x < pos.W; x++ {
-					img.SetGray(x, rightPeakY, color.Gray{Y: w.peakColor})
-				}
+				bitmap.DrawHorizontalLine(img, halfWidth, pos.W-1, rightPeakY, w.peakColor)
 			}
 		}
 	}

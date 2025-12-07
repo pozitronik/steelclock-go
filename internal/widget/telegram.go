@@ -3,7 +3,6 @@ package widget
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"strings"
 	"sync"
 	"time"
@@ -614,11 +613,7 @@ func (w *TelegramWidget) renderMessage(img *image.Gray, msg tgclient.MessageInfo
 
 	// Render separator directly (no scrolling, no clipping needed)
 	if appearance.Separator.Color >= 0 && appearance.Separator.Thickness > 0 && appearance.Header.Enabled && appearance.Message.Enabled {
-		for dy := 0; dy < appearance.Separator.Thickness; dy++ {
-			for x := 0; x < w.width; x++ {
-				img.SetGray(x, separatorY+dy, color.Gray{Y: uint8(appearance.Separator.Color)})
-			}
-		}
+		bitmap.DrawFilledRectangle(img, 0, separatorY, w.width, appearance.Separator.Thickness, uint8(appearance.Separator.Color))
 	}
 
 	// Render message area to sub-image (provides natural clipping)

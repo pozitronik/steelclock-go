@@ -3,7 +3,6 @@ package widget
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"log"
 	"runtime/debug"
 	"sync"
@@ -350,14 +349,9 @@ func (w *VolumeWidget) renderBarHorizontal(img *image.Gray, pos config.PositionC
 	barImg := bitmap.NewGrayscaleImage(width, height, w.GetRenderBackgroundColor())
 
 	// Draw fill based on volume
-	fillColor := color.Gray{Y: w.fillColor}
 	fillWidth := int(float64(width) * (w.volume / 100.0))
 	if fillWidth > 0 {
-		for dy := 0; dy < height; dy++ {
-			for dx := 0; dx < fillWidth; dx++ {
-				barImg.Set(dx, dy, fillColor)
-			}
-		}
+		bitmap.DrawFilledRectangle(barImg, 0, 0, fillWidth, height, w.fillColor)
 	}
 
 	// Draw bar border if enabled
@@ -366,11 +360,7 @@ func (w *VolumeWidget) renderBarHorizontal(img *image.Gray, pos config.PositionC
 	}
 
 	// Copy to main image
-	for dy := 0; dy < height && y+dy < pos.H; dy++ {
-		for dx := 0; dx < width && x+dx < pos.W; dx++ {
-			img.Set(x+dx, y+dy, barImg.GrayAt(dx, dy))
-		}
-	}
+	bitmap.CopyGrayRegion(img, barImg, x, y)
 
 	// Draw mute indicator
 	if w.isMuted {
@@ -398,16 +388,11 @@ func (w *VolumeWidget) renderBarVertical(img *image.Gray, pos config.PositionCon
 	barImg := bitmap.NewGrayscaleImage(width, height, w.GetRenderBackgroundColor())
 
 	// Draw fill based on volume (from bottom)
-	fillColor := color.Gray{Y: w.fillColor}
 	fillHeight := int(float64(height) * (w.volume / 100.0))
 	startY := height - fillHeight
 
 	if fillHeight > 0 {
-		for dy := startY; dy < height; dy++ {
-			for dx := 0; dx < width; dx++ {
-				barImg.Set(dx, dy, fillColor)
-			}
-		}
+		bitmap.DrawFilledRectangle(barImg, 0, startY, width, fillHeight, w.fillColor)
 	}
 
 	// Draw bar border if enabled
@@ -416,11 +401,7 @@ func (w *VolumeWidget) renderBarVertical(img *image.Gray, pos config.PositionCon
 	}
 
 	// Copy to main image
-	for dy := 0; dy < height && y+dy < pos.H; dy++ {
-		for dx := 0; dx < width && x+dx < pos.W; dx++ {
-			img.Set(x+dx, y+dy, barImg.GrayAt(dx, dy))
-		}
-	}
+	bitmap.CopyGrayRegion(img, barImg, x, y)
 
 	// Draw mute indicator
 	if w.isMuted {
