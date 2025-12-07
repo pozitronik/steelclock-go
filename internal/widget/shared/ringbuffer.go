@@ -1,4 +1,4 @@
-package widget
+package shared
 
 // RingBuffer is a fixed-size circular buffer that overwrites oldest elements when full.
 // It provides O(1) push operations with zero allocations after initialization.

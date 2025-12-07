@@ -8,6 +8,7 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"github.com/shirou/gopsutil/v4/net"
 	"golang.org/x/image/font"
 )
@@ -72,8 +73,8 @@ type NetworkWidget struct {
 	lastTime      time.Time
 	currentRxBps  float64 // Current RX speed in bytes per second
 	currentTxBps  float64 // Current TX speed in bytes per second
-	rxHistory     []float64
-	txHistory     []float64
+	rxHistory     *shared.RingBuffer[float64]
+	txHistory     *shared.RingBuffer[float64]
 	fontFace      font.Face
 	mu            sync.RWMutex // Protects currentRxBps, currentTxBps, rxHistory, txHistory
 }
@@ -183,8 +184,8 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		historyLen:    graphSettings.HistoryLen,
 		unit:          unit,
 		showUnit:      showUnit,
-		rxHistory:     make([]float64, 0, graphSettings.HistoryLen),
-		txHistory:     make([]float64, 0, graphSettings.HistoryLen),
+		rxHistory:     shared.NewRingBuffer[float64](graphSettings.HistoryLen),
+		txHistory:     shared.NewRingBuffer[float64](graphSettings.HistoryLen),
 		fontFace:      fontFace,
 	}, nil
 }
@@ -292,15 +293,8 @@ func (w *NetworkWidget) Update() error {
 
 			// Add to history (store raw bytes per second)
 			if w.displayMode == "graph" {
-				w.rxHistory = append(w.rxHistory, rxDelta)
-				if len(w.rxHistory) > w.historyLen {
-					w.rxHistory = w.rxHistory[1:]
-				}
-
-				w.txHistory = append(w.txHistory, txDelta)
-				if len(w.txHistory) > w.historyLen {
-					w.txHistory = w.txHistory[1:]
-				}
+				w.rxHistory.Push(rxDelta)
+				w.txHistory.Push(txDelta)
 			}
 			w.mu.Unlock()
 		}
@@ -433,33 +427,37 @@ func (w *NetworkWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	if len(w.rxHistory) < 2 {
+	if w.rxHistory.Len() < 2 {
 		return
 	}
+
+	// Get history slices
+	rxData := w.rxHistory.ToSlice()
+	txData := w.txHistory.ToSlice()
 
 	// Normalize to 0-100 scale using bytes per second
 	maxSpeed := w.maxSpeedBps
 	if maxSpeed < 0 {
 		// Find max in history
 		maxSpeed = 1.0
-		for _, v := range w.rxHistory {
+		for _, v := range rxData {
 			if v > maxSpeed {
 				maxSpeed = v
 			}
 		}
-		for _, v := range w.txHistory {
+		for _, v := range txData {
 			if v > maxSpeed {
 				maxSpeed = v
 			}
 		}
 	}
 
-	rxPercent := make([]float64, len(w.rxHistory))
-	txPercent := make([]float64, len(w.txHistory))
+	rxPercent := make([]float64, len(rxData))
+	txPercent := make([]float64, len(txData))
 
-	for i := range w.rxHistory {
-		rxPercent[i] = (w.rxHistory[i] / maxSpeed) * 100
-		txPercent[i] = (w.txHistory[i] / maxSpeed) * 100
+	for i := range rxData {
+		rxPercent[i] = (rxData[i] / maxSpeed) * 100
+		txPercent[i] = (txData[i] / maxSpeed) * 100
 	}
 
 	// Draw both graphs (RX and TX overlaid) if color is not -1 (transparent)

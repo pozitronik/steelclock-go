@@ -12,6 +12,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
@@ -69,7 +70,7 @@ type BatteryWidget struct {
 
 	// Graph mode
 	graphHistory int
-	history      *RingBuffer[int]
+	history      *shared.RingBuffer[int]
 
 	// Font for text rendering
 	fontSize   int
@@ -243,7 +244,7 @@ func NewBatteryWidget(cfg config.WidgetConfig) (*BatteryWidget, error) {
 		colorBackground:   colorBackground,
 		colorBorder:       colorBorder,
 		graphHistory:      graphHistory,
-		history:           NewRingBuffer[int](graphHistory),
+		history:           shared.NewRingBuffer[int](graphHistory),
 		fontSize:          textSettings.FontSize,
 		fontName:          textSettings.FontName,
 		horizAlign:        textSettings.HorizAlign,

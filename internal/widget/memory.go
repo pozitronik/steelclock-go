@@ -7,6 +7,7 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"github.com/shirou/gopsutil/v4/mem"
 	"golang.org/x/image/font"
 )
@@ -30,7 +31,7 @@ type MemoryWidget struct {
 	gaugeTicksColor  uint8
 	historyLen       int
 	currentUsage     float64
-	history          *RingBuffer[float64] // Ring buffer for graph history - O(1) push with zero allocations
+	history          *shared.RingBuffer[float64] // Ring buffer for graph history - O(1) push with zero allocations
 	fontFace         font.Face
 	mu               sync.RWMutex // Protects currentUsage and history
 }
@@ -71,7 +72,7 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 		gaugeShowTicks:   gaugeSettings.ShowTicks,
 		gaugeTicksColor:  uint8(gaugeSettings.TicksColor),
 		historyLen:       graphSettings.HistoryLen,
-		history:          NewRingBuffer[float64](graphSettings.HistoryLen),
+		history:          shared.NewRingBuffer[float64](graphSettings.HistoryLen),
 		fontFace:         fontFace,
 	}, nil
 }

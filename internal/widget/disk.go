@@ -8,6 +8,7 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"github.com/shirou/gopsutil/v4/disk"
 	"golang.org/x/image/font"
 )
@@ -59,8 +60,8 @@ type DiskWidget struct {
 	lastTime        time.Time
 	currentReadBps  float64 // Current read speed in bytes per second
 	currentWriteBps float64 // Current write speed in bytes per second
-	readHistory     []float64
-	writeHistory    []float64
+	readHistory     *shared.RingBuffer[float64]
+	writeHistory    *shared.RingBuffer[float64]
 	fontFace        font.Face
 	mu              sync.RWMutex // Protects currentReadBps, currentWriteBps, readHistory, writeHistory
 }
@@ -148,8 +149,8 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 		historyLen:   graphSettings.HistoryLen,
 		unit:         unit,
 		showUnit:     showUnit,
-		readHistory:  make([]float64, 0, graphSettings.HistoryLen),
-		writeHistory: make([]float64, 0, graphSettings.HistoryLen),
+		readHistory:  shared.NewRingBuffer[float64](graphSettings.HistoryLen),
+		writeHistory: shared.NewRingBuffer[float64](graphSettings.HistoryLen),
 		fontFace:     fontFace,
 	}, nil
 }
@@ -250,15 +251,8 @@ func (w *DiskWidget) Update() error {
 
 			// Add to history (store raw bytes per second)
 			if w.displayMode == "graph" {
-				w.readHistory = append(w.readHistory, readDelta)
-				if len(w.readHistory) > w.historyLen {
-					w.readHistory = w.readHistory[1:]
-				}
-
-				w.writeHistory = append(w.writeHistory, writeDelta)
-				if len(w.writeHistory) > w.historyLen {
-					w.writeHistory = w.writeHistory[1:]
-				}
+				w.readHistory.Push(readDelta)
+				w.writeHistory.Push(writeDelta)
 			}
 			w.mu.Unlock()
 		}
@@ -393,33 +387,37 @@ func (w *DiskWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	if len(w.readHistory) < 2 {
+	if w.readHistory.Len() < 2 {
 		return
 	}
+
+	// Get history slices
+	readData := w.readHistory.ToSlice()
+	writeData := w.writeHistory.ToSlice()
 
 	// Normalize to 0-100 scale using bytes per second
 	maxSpeed := w.maxSpeedBps
 	if maxSpeed < 0 {
 		// Find max in history
 		maxSpeed = 1.0
-		for _, v := range w.readHistory {
+		for _, v := range readData {
 			if v > maxSpeed {
 				maxSpeed = v
 			}
 		}
-		for _, v := range w.writeHistory {
+		for _, v := range writeData {
 			if v > maxSpeed {
 				maxSpeed = v
 			}
 		}
 	}
 
-	readPercent := make([]float64, len(w.readHistory))
-	writePercent := make([]float64, len(w.writeHistory))
+	readPercent := make([]float64, len(readData))
+	writePercent := make([]float64, len(writeData))
 
-	for i := range w.readHistory {
-		readPercent[i] = (w.readHistory[i] / maxSpeed) * 100
-		writePercent[i] = (w.writeHistory[i] / maxSpeed) * 100
+	for i := range readData {
+		readPercent[i] = (readData[i] / maxSpeed) * 100
+		writePercent[i] = (writeData[i] / maxSpeed) * 100
 	}
 
 	// Draw both graphs (Read and Write overlaid) if color is not -1 (transparent)

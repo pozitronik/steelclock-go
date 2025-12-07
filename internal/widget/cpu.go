@@ -9,6 +9,7 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"golang.org/x/image/font"
 )
@@ -38,9 +39,9 @@ type CPUWidget struct {
 	currentUsageSingle  float64   // Aggregate CPU usage (when perCore=false)
 	currentUsagePerCore []float64 // Per-core CPU usage (when perCore=true)
 	// Ring buffers for graph history - O(1) push with zero allocations
-	historySingle  *RingBuffer[float64]   // Aggregate history (when perCore=false)
-	historyPerCore *RingBuffer[[]float64] // Per-core history (when perCore=true)
-	hasData        bool                   // Indicates if currentUsage has been set
+	historySingle  *shared.RingBuffer[float64]   // Aggregate history (when perCore=false)
+	historyPerCore *shared.RingBuffer[[]float64] // Per-core history (when perCore=true)
+	hasData        bool                          // Indicates if currentUsage has been set
 	coreCount      int
 	fontFace       font.Face
 	mu             sync.RWMutex // Protects currentUsage and history
@@ -92,8 +93,8 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 		gaugeShowTicks:   gaugeSettings.ShowTicks,
 		gaugeTicksColor:  uint8(gaugeSettings.TicksColor),
 		historyLen:       graphSettings.HistoryLen,
-		historySingle:    NewRingBuffer[float64](graphSettings.HistoryLen),
-		historyPerCore:   NewRingBuffer[[]float64](graphSettings.HistoryLen),
+		historySingle:    shared.NewRingBuffer[float64](graphSettings.HistoryLen),
+		historyPerCore:   shared.NewRingBuffer[[]float64](graphSettings.HistoryLen),
 		coreCount:        cores,
 		fontFace:         fontFace,
 	}, nil
