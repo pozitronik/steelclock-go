@@ -268,9 +268,6 @@ func (w *DiskWidget) renderBarHorizontal(img *image.Gray, x, y, width, height in
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	// Split into two halves: Read top, Write bottom
-	halfH := height / 2
-
 	maxSpeed := w.maxSpeedBps
 	if maxSpeed < 0 {
 		// Auto-scale
@@ -283,21 +280,12 @@ func (w *DiskWidget) renderBarHorizontal(img *image.Gray, x, y, width, height in
 	readPercent := (w.currentReadBps / maxSpeed) * 100
 	writePercent := (w.currentWriteBps / maxSpeed) * 100
 
-	// Only draw if color is not transparent (-1)
-	if w.readColor >= 0 {
-		bitmap.DrawHorizontalBar(img, x, y, width, halfH, readPercent, uint8(w.readColor), w.barBorder)
-	}
-	if w.writeColor >= 0 {
-		bitmap.DrawHorizontalBar(img, x, y+halfH, width, height-halfH, writePercent, uint8(w.writeColor), w.barBorder)
-	}
+	bitmap.DrawDualHorizontalBar(img, x, y, width, height, readPercent, writePercent, w.readColor, w.writeColor, w.barBorder)
 }
 
 func (w *DiskWidget) renderBarVertical(img *image.Gray, x, y, width, height int) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
-
-	// Split into two halves: Read left, Write right
-	halfW := width / 2
 
 	maxSpeed := w.maxSpeedBps
 	if maxSpeed < 0 {
@@ -310,13 +298,7 @@ func (w *DiskWidget) renderBarVertical(img *image.Gray, x, y, width, height int)
 	readPercent := (w.currentReadBps / maxSpeed) * 100
 	writePercent := (w.currentWriteBps / maxSpeed) * 100
 
-	// Only draw if color is not transparent (-1)
-	if w.readColor >= 0 {
-		bitmap.DrawVerticalBar(img, x, y, halfW, height, readPercent, uint8(w.readColor), w.barBorder)
-	}
-	if w.writeColor >= 0 {
-		bitmap.DrawVerticalBar(img, x+halfW, y, width-halfW, height, writePercent, uint8(w.writeColor), w.barBorder)
-	}
+	bitmap.DrawDualVerticalBar(img, x, y, width, height, readPercent, writePercent, w.readColor, w.writeColor, w.barBorder)
 }
 
 func (w *DiskWidget) renderGraph(img *image.Gray, x, y, width, height int) {
@@ -356,12 +338,6 @@ func (w *DiskWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 		writePercent[i] = (writeData[i] / maxSpeed) * 100
 	}
 
-	// Draw both graphs (Read and Write overlaid) if color is not -1 (transparent)
-	// Each channel uses the same color for both fill and line
-	if w.readColor >= 0 {
-		bitmap.DrawGraph(img, x, y, width, height, readPercent, w.historyLen, w.readColor, w.readColor)
-	}
-	if w.writeColor >= 0 {
-		bitmap.DrawGraph(img, x, y, width, height, writePercent, w.historyLen, w.writeColor, w.writeColor)
-	}
+	// Draw both graphs overlaid (read and write)
+	bitmap.DrawDualGraph(img, x, y, width, height, readPercent, writePercent, w.historyLen, w.readColor, w.readColor, w.writeColor, w.writeColor)
 }

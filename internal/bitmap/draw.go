@@ -472,6 +472,63 @@ func DrawRectangle(img *image.Gray, x, y, w, h int, borderColor uint8) {
 	}
 }
 
+// DrawDualHorizontalBar draws two horizontal bars stacked vertically (top/bottom)
+// Each bar gets half the height. Use color -1 to skip drawing a bar (transparent).
+func DrawDualHorizontalBar(img *image.Gray, x, y, w, h int, topPercent, bottomPercent float64, topColor, bottomColor int, drawBorder bool) {
+	halfH := h / 2
+
+	// Draw top bar if color is not transparent
+	if topColor >= 0 {
+		DrawHorizontalBar(img, x, y, w, halfH, topPercent, uint8(topColor), drawBorder)
+	}
+
+	// Draw bottom bar if color is not transparent
+	if bottomColor >= 0 {
+		DrawHorizontalBar(img, x, y+halfH, w, h-halfH, bottomPercent, uint8(bottomColor), drawBorder)
+	}
+}
+
+// DrawDualVerticalBar draws two vertical bars side by side (left/right)
+// Each bar gets half the width. Use color -1 to skip drawing a bar (transparent).
+func DrawDualVerticalBar(img *image.Gray, x, y, w, h int, leftPercent, rightPercent float64, leftColor, rightColor int, drawBorder bool) {
+	halfW := w / 2
+
+	// Draw left bar if color is not transparent
+	if leftColor >= 0 {
+		DrawVerticalBar(img, x, y, halfW, h, leftPercent, uint8(leftColor), drawBorder)
+	}
+
+	// Draw right bar if color is not transparent
+	if rightColor >= 0 {
+		DrawVerticalBar(img, x+halfW, y, w-halfW, h, rightPercent, uint8(rightColor), drawBorder)
+	}
+}
+
+// DrawDualGraph draws two overlaid graphs on the same area
+// Use color -1 to skip drawing a graph (transparent).
+// Each graph has its own fill and line color.
+func DrawDualGraph(img *image.Gray, x, y, w, h int, history1, history2 []float64, maxHistory int, fill1, line1, fill2, line2 int) {
+	// Draw first graph if colors are valid
+	if fill1 >= 0 || line1 >= 0 {
+		effectiveFill := fill1
+		effectiveLine := line1
+		if effectiveLine < 0 {
+			effectiveLine = 255 // Default line color if only fill is transparent
+		}
+		DrawGraph(img, x, y, w, h, history1, maxHistory, effectiveFill, effectiveLine)
+	}
+
+	// Draw second graph on top if colors are valid
+	if fill2 >= 0 || line2 >= 0 {
+		effectiveFill := fill2
+		effectiveLine := line2
+		if effectiveLine < 0 {
+			effectiveLine = 255 // Default line color if only fill is transparent
+		}
+		DrawGraph(img, x, y, w, h, history2, maxHistory, effectiveFill, effectiveLine)
+	}
+}
+
 func abs(x int) int {
 	if x < 0 {
 		return -x

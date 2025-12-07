@@ -293,9 +293,6 @@ func (w *NetworkWidget) renderBarHorizontal(img *image.Gray, x, y, width, height
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	// Split into two halves: RX top, TX bottom
-	halfH := height / 2
-
 	maxSpeed := w.maxSpeedBps
 	if maxSpeed < 0 {
 		// Auto-scale
@@ -308,21 +305,12 @@ func (w *NetworkWidget) renderBarHorizontal(img *image.Gray, x, y, width, height
 	rxPercent := (w.currentRxBps / maxSpeed) * 100
 	txPercent := (w.currentTxBps / maxSpeed) * 100
 
-	// Only draw if color is not transparent (-1)
-	if w.rxColor >= 0 {
-		bitmap.DrawHorizontalBar(img, x, y, width, halfH, rxPercent, uint8(w.rxColor), w.barBorder)
-	}
-	if w.txColor >= 0 {
-		bitmap.DrawHorizontalBar(img, x, y+halfH, width, height-halfH, txPercent, uint8(w.txColor), w.barBorder)
-	}
+	bitmap.DrawDualHorizontalBar(img, x, y, width, height, rxPercent, txPercent, w.rxColor, w.txColor, w.barBorder)
 }
 
 func (w *NetworkWidget) renderBarVertical(img *image.Gray, x, y, width, height int) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
-
-	// Split into two halves: RX left, TX right
-	halfW := width / 2
 
 	maxSpeed := w.maxSpeedBps
 	if maxSpeed < 0 {
@@ -335,13 +323,7 @@ func (w *NetworkWidget) renderBarVertical(img *image.Gray, x, y, width, height i
 	rxPercent := (w.currentRxBps / maxSpeed) * 100
 	txPercent := (w.currentTxBps / maxSpeed) * 100
 
-	// Only draw if color is not transparent (-1)
-	if w.rxColor >= 0 {
-		bitmap.DrawVerticalBar(img, x, y, halfW, height, rxPercent, uint8(w.rxColor), w.barBorder)
-	}
-	if w.txColor >= 0 {
-		bitmap.DrawVerticalBar(img, x+halfW, y, width-halfW, height, txPercent, uint8(w.txColor), w.barBorder)
-	}
+	bitmap.DrawDualVerticalBar(img, x, y, width, height, rxPercent, txPercent, w.rxColor, w.txColor, w.barBorder)
 }
 
 func (w *NetworkWidget) renderGraph(img *image.Gray, x, y, width, height int) {
@@ -381,14 +363,8 @@ func (w *NetworkWidget) renderGraph(img *image.Gray, x, y, width, height int) {
 		txPercent[i] = (txData[i] / maxSpeed) * 100
 	}
 
-	// Draw both graphs (RX and TX overlaid) if color is not -1 (transparent)
-	// Each channel uses the same color for both fill and line
-	if w.rxColor >= 0 {
-		bitmap.DrawGraph(img, x, y, width, height, rxPercent, w.historyLen, w.rxColor, w.rxColor)
-	}
-	if w.txColor >= 0 {
-		bitmap.DrawGraph(img, x, y, width, height, txPercent, w.historyLen, w.txColor, w.txColor)
-	}
+	// Draw both graphs overlaid (RX and TX)
+	bitmap.DrawDualGraph(img, x, y, width, height, rxPercent, txPercent, w.historyLen, w.rxColor, w.rxColor, w.txColor, w.txColor)
 }
 
 func (w *NetworkWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
