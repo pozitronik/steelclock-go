@@ -23,17 +23,19 @@ import (
 
 // MessageInfo contains parsed message information for display
 type MessageInfo struct {
-	ID          int
-	ChatID      int64
-	ChatType    ChatType
-	ChatTitle   string
-	SenderName  string
-	Text        string
-	MediaType   string // "photo", "video", "audio", "voice", "sticker", "document", "contact", "location", "poll", etc.
-	Time        time.Time
-	IsPinned    bool
-	IsOutgoing  bool
-	UnreadCount int
+	ID            int
+	ChatID        int64
+	ChatType      ChatType
+	ChatTitle     string
+	SenderName    string
+	Text          string
+	MediaType     string // "photo", "video", "audio", "voice", "sticker", "document", "contact", "location", "poll", etc.
+	Time          time.Time
+	IsPinned      bool
+	IsOutgoing    bool
+	UnreadCount   int
+	IsForwarded   bool   // True if this is a forwarded message
+	ForwardedFrom string // Original sender name for forwarded messages
 }
 
 // ChatType represents the type of chat
@@ -74,9 +76,11 @@ type Client struct {
 	// Detailed unread stats
 	unreadStats UnreadStats
 
-	// Callbacks
-	onMessage func(MessageInfo)
-	onError   func(error)
+	// Callbacks (support multiple listeners for shared client)
+	onMessageCallbacks []func(MessageInfo)
+	onErrorCallbacks   []func(error)
+	nextCallbackID     int
+	callbackIDs        map[int]bool // tracks valid callback IDs
 
 	// Chat cache for resolving names
 	chatCache map[int64]string
@@ -147,6 +151,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 		messages:    make([]MessageInfo, 0, maxMessages),
 		chatCache:   make(map[int64]string),
 		userCache:   make(map[int64]string),
+		callbackIDs: make(map[int]bool),
 	}
 
 	return c, nil
@@ -213,8 +218,8 @@ func (c *Client) Connect(ctx context.Context) error {
 			return ctx.Err()
 		})
 
-		if err != nil && c.onError != nil && !errors.Is(err, context.Canceled) {
-			c.onError(err)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			c.notifyError(err)
 		}
 
 		c.mu.Lock()
@@ -430,18 +435,50 @@ func (c *Client) countUnreadFromDialog(d tg.DialogClass) (int, UnreadStats) {
 	return unread, stats
 }
 
-// SetMessageCallback sets the callback for new messages
+// AddMessageCallback adds a callback for new messages and returns an ID for removal.
+// Multiple callbacks can be registered; all will be called when a message arrives.
+func (c *Client) AddMessageCallback(fn func(MessageInfo)) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	id := c.nextCallbackID
+	c.nextCallbackID++
+	c.callbackIDs[id] = true
+	c.onMessageCallbacks = append(c.onMessageCallbacks, fn)
+
+	return id
+}
+
+// AddErrorCallback adds a callback for errors and returns an ID for removal.
+// Multiple callbacks can be registered; all will be called when an error occurs.
+func (c *Client) AddErrorCallback(fn func(error)) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	id := c.nextCallbackID
+	c.nextCallbackID++
+	c.callbackIDs[id] = true
+	c.onErrorCallbacks = append(c.onErrorCallbacks, fn)
+
+	return id
+}
+
+// SetMessageCallback sets the callback for new messages (for backward compatibility).
+// Deprecated: Use AddMessageCallback instead for proper multi-widget support.
 func (c *Client) SetMessageCallback(fn func(MessageInfo)) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.onMessage = fn
+	// Clear existing callbacks and add the new one
+	c.onMessageCallbacks = []func(MessageInfo){fn}
 }
 
-// SetErrorCallback sets the callback for errors
+// SetErrorCallback sets the callback for errors (for backward compatibility).
+// Deprecated: Use AddErrorCallback instead for proper multi-widget support.
 func (c *Client) SetErrorCallback(fn func(error)) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.onError = fn
+	// Clear existing callbacks and add the new one
+	c.onErrorCallbacks = []func(error){fn}
 }
 
 // Handle implements telegram.UpdateHandler
@@ -486,6 +523,37 @@ func (c *Client) handleUpdate(update tg.UpdateClass, users []tg.UserClass, chats
 	}
 }
 
+// extractForwardInfo extracts forwarded message info from a GetFwdFrom function
+func (c *Client) extractForwardInfo(getFwdFrom func() (tg.MessageFwdHeader, bool)) (bool, string) {
+	fwdFrom, ok := getFwdFrom()
+	if !ok {
+		return false, ""
+	}
+
+	forwardedFrom := ""
+	// Try to get original sender name
+	if fromName, nameOk := fwdFrom.GetFromName(); nameOk && fromName != "" {
+		// Privacy-hidden forward - use provided name
+		forwardedFrom = fromName
+	} else if fromID, idOk := fwdFrom.GetFromID(); idOk {
+		// Have original sender ID
+		switch from := fromID.(type) {
+		case *tg.PeerUser:
+			forwardedFrom = c.getUserName(from.UserID)
+		case *tg.PeerChannel:
+			forwardedFrom = c.getChannelName(from.ChannelID)
+		}
+	}
+	// Try post author for channels
+	if forwardedFrom == "" {
+		if postAuthor, authorOk := fwdFrom.GetPostAuthor(); authorOk && postAuthor != "" {
+			forwardedFrom = postAuthor
+		}
+	}
+
+	return true, forwardedFrom
+}
+
 // handleShortMessage handles UpdateShortMessage (private message optimization)
 func (c *Client) handleShortMessage(u *tg.UpdateShortMessage) {
 	if !c.shouldShowPrivate(u.UserID) {
@@ -497,15 +565,20 @@ func (c *Client) handleShortMessage(u *tg.UpdateShortMessage) {
 		senderID = c.selfID
 	}
 
+	// Check for forwarded message
+	isForwarded, forwardedFrom := c.extractForwardInfo(u.GetFwdFrom)
+
 	msg := MessageInfo{
-		ID:         u.ID,
-		ChatID:     u.UserID,
-		ChatType:   ChatTypePrivate,
-		ChatTitle:  c.getUserName(u.UserID),
-		SenderName: c.getUserName(senderID),
-		Text:       u.Message,
-		Time:       time.Unix(int64(u.Date), 0),
-		IsOutgoing: u.Out,
+		ID:            u.ID,
+		ChatID:        u.UserID,
+		ChatType:      ChatTypePrivate,
+		ChatTitle:     c.getUserName(u.UserID),
+		SenderName:    c.getUserName(senderID),
+		Text:          u.Message,
+		Time:          time.Unix(int64(u.Date), 0),
+		IsOutgoing:    u.Out,
+		IsForwarded:   isForwarded,
+		ForwardedFrom: forwardedFrom,
 	}
 
 	c.addMessage(msg)
@@ -517,15 +590,20 @@ func (c *Client) handleShortChatMessage(u *tg.UpdateShortChatMessage) {
 		return
 	}
 
+	// Check for forwarded message
+	isForwarded, forwardedFrom := c.extractForwardInfo(u.GetFwdFrom)
+
 	msg := MessageInfo{
-		ID:         u.ID,
-		ChatID:     u.ChatID,
-		ChatType:   ChatTypeGroup,
-		ChatTitle:  c.getChatName(u.ChatID),
-		SenderName: c.getUserName(u.FromID),
-		Text:       u.Message,
-		Time:       time.Unix(int64(u.Date), 0),
-		IsOutgoing: u.Out,
+		ID:            u.ID,
+		ChatID:        u.ChatID,
+		ChatType:      ChatTypeGroup,
+		ChatTitle:     c.getChatName(u.ChatID),
+		SenderName:    c.getUserName(u.FromID),
+		Text:          u.Message,
+		Time:          time.Unix(int64(u.Date), 0),
+		IsOutgoing:    u.Out,
+		IsForwarded:   isForwarded,
+		ForwardedFrom: forwardedFrom,
 	}
 
 	c.addMessage(msg)
@@ -588,17 +666,22 @@ func (c *Client) processMessage(msg tg.MessageClass) {
 		}
 	}
 
+	// Check for forwarded message
+	isForwarded, forwardedFrom := c.extractForwardInfo(message.GetFwdFrom)
+
 	info := MessageInfo{
-		ID:         message.ID,
-		ChatID:     chatID,
-		ChatType:   chatType,
-		ChatTitle:  chatTitle,
-		SenderName: senderName,
-		Text:       message.Message,
-		MediaType:  getMediaType(message.Media),
-		Time:       time.Unix(int64(message.Date), 0),
-		IsPinned:   message.Pinned,
-		IsOutgoing: message.Out,
+		ID:            message.ID,
+		ChatID:        chatID,
+		ChatType:      chatType,
+		ChatTitle:     chatTitle,
+		SenderName:    senderName,
+		Text:          message.Message,
+		MediaType:     getMediaType(message.Media),
+		Time:          time.Unix(int64(message.Date), 0),
+		IsPinned:      message.Pinned,
+		IsOutgoing:    message.Out,
+		IsForwarded:   isForwarded,
+		ForwardedFrom: forwardedFrom,
 	}
 
 	c.addMessage(info)
@@ -671,11 +754,30 @@ func (c *Client) addMessage(msg MessageInfo) {
 		c.messages = c.messages[:c.maxMessages]
 	}
 
-	callback := c.onMessage
+	// Copy callbacks to avoid holding lock during callback execution
+	callbacks := make([]func(MessageInfo), len(c.onMessageCallbacks))
+	copy(callbacks, c.onMessageCallbacks)
 	c.mu.Unlock()
 
-	if callback != nil {
-		callback(msg)
+	// Call all registered callbacks
+	for _, callback := range callbacks {
+		if callback != nil {
+			callback(msg)
+		}
+	}
+}
+
+// notifyError calls all registered error callbacks
+func (c *Client) notifyError(err error) {
+	c.mu.RLock()
+	callbacks := make([]func(error), len(c.onErrorCallbacks))
+	copy(callbacks, c.onErrorCallbacks)
+	c.mu.RUnlock()
+
+	for _, callback := range callbacks {
+		if callback != nil {
+			callback(err)
+		}
 	}
 }
 

@@ -150,8 +150,8 @@ func NewTelegramCounterWidget(cfg config.WidgetConfig) (*TelegramCounterWidget, 
 		lastBlink:         time.Now(),
 	}
 
-	// Set error callback
-	client.SetErrorCallback(func(err error) {
+	// Add error callback (using Add instead of Set for proper multi-widget support)
+	client.AddErrorCallback(func(err error) {
 		w.mu.Lock()
 		defer w.mu.Unlock()
 		w.connectionError = err

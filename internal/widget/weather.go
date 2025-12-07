@@ -501,7 +501,6 @@ func (w *WeatherWidget) Render() (image.Image, error) {
 	lastError := w.lastError
 	tokens := w.tokens
 	scrollOffset := w.scrollOffset
-	transitionActive := w.transition.IsActive()
 	pendingFormat := w.pendingFormat
 	w.mu.RUnlock()
 
@@ -518,14 +517,15 @@ func (w *WeatherWidget) Render() (image.Image, error) {
 	}
 
 	// If transition is active, render both frames and composite
-	if transitionActive && w.transition.OldFrame() != nil {
+	// Use IsActiveLive for accurate timing regardless of Update() frequency
+	if w.transition.IsActiveLive() && w.transition.OldFrame() != nil {
 		// Render new frame
 		newFrame := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 		newTokens := w.parseFormat(w.formatCycle[pendingFormat])
 		w.renderTokens(newFrame, newTokens, weather, forecast, aqi, uv, 0) // Reset scroll for new format
 
-		// Apply transition
-		w.transition.Apply(img, newFrame)
+		// Apply transition with live progress for smooth animation
+		w.transition.ApplyLive(img, newFrame)
 	} else {
 		// Normal rendering
 		w.renderTokens(img, tokens, weather, forecast, aqi, uv, scrollOffset)

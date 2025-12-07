@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"math/rand"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,6 +25,8 @@ type ElementAppearance struct {
 	FontSize   int
 	HorizAlign string
 	VertAlign  string
+	// Format string with tokens: {sender}, {chat}, {type}, {time}, {date}, {forwarded}
+	Format string
 	// Scroll settings
 	ScrollEnabled   bool
 	ScrollDirection string
@@ -69,20 +71,14 @@ type TelegramWidget struct {
 	reconnectInterval  time.Duration
 
 	// Scroll state (per element)
-	headerScrollOffset  float64
-	messageScrollOffset float64
-	lastUpdateTime      time.Time
+	headerScroller  *shared.TextScroller
+	messageScroller *shared.TextScroller
 
 	// Blink animator
 	blink *shared.BlinkAnimator
 
-	// Transition state
-	transitionActive    bool
-	transitionProgress  float64
-	transitionStartTime time.Time
-	oldFrame            *image.Gray
-	activeTransition    string
-	pixelOrder          []int
+	// Transition manager
+	transition *shared.TransitionManager
 
 	// Display dimensions
 	width  int
@@ -122,6 +118,20 @@ func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
 	// Create status renderer for connection/error messages
 	statusRenderer := shared.NewStatusRenderer("5x7")
 
+	// Create scrollers from appearance config
+	headerScrollerCfg := shared.ScrollerConfig{
+		Speed:     appearance.Header.ScrollSpeed,
+		Mode:      shared.ScrollMode(appearance.Header.ScrollMode),
+		Direction: shared.ScrollDirection(appearance.Header.ScrollDirection),
+		Gap:       appearance.Header.ScrollGap,
+	}
+	messageScrollerCfg := shared.ScrollerConfig{
+		Speed:     appearance.Message.ScrollSpeed,
+		Mode:      shared.ScrollMode(appearance.Message.ScrollMode),
+		Direction: shared.ScrollDirection(appearance.Message.ScrollDirection),
+		Gap:       appearance.Message.ScrollGap,
+	}
+
 	w := &TelegramWidget{
 		BaseWidget:        base,
 		client:            client,
@@ -132,12 +142,14 @@ func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
 		width:             pos.W,
 		height:            pos.H,
 		statusRenderer:    statusRenderer,
-		lastUpdateTime:    time.Now(),
+		headerScroller:    shared.NewTextScroller(headerScrollerCfg),
+		messageScroller:   shared.NewTextScroller(messageScrollerCfg),
 		blink:             shared.NewBlinkAnimator(shared.BlinkAlways, 500*time.Millisecond),
+		transition:        shared.NewTransitionManager(pos.W, pos.H),
 	}
 
-	// Set message callback
-	client.SetMessageCallback(func(msg tgclient.MessageInfo) {
+	// Add message callback (using Add instead of Set for proper multi-widget support)
+	client.AddMessageCallback(func(msg tgclient.MessageInfo) {
 		w.mu.Lock()
 		defer w.mu.Unlock()
 
@@ -156,12 +168,12 @@ func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
 		w.dismissedMessageID = 0 // Reset dismissed ID when new message arrives
 
 		// Reset scroll offsets for new message
-		w.headerScrollOffset = 0
-		w.messageScrollOffset = 0
+		w.headerScroller.Reset()
+		w.messageScroller.Reset()
 	})
 
-	// Set error callback
-	client.SetErrorCallback(func(err error) {
+	// Add error callback (using Add instead of Set for proper multi-widget support)
+	client.AddErrorCallback(func(err error) {
 		w.mu.Lock()
 		defer w.mu.Unlock()
 		w.connectionError = err
@@ -180,6 +192,7 @@ func parseAppearance(appCfg *config.TelegramAppearanceConfig) (ChatAppearance, e
 			FontSize:        16,
 			HorizAlign:      "left",
 			VertAlign:       "top",
+			Format:          "", // empty = auto format based on chat type
 			ScrollEnabled:   true,
 			ScrollDirection: "left",
 			ScrollSpeed:     30,
@@ -194,6 +207,7 @@ func parseAppearance(appCfg *config.TelegramAppearanceConfig) (ChatAppearance, e
 			FontSize:        16,
 			HorizAlign:      "left",
 			VertAlign:       "top",
+			Format:          "", // not used for message
 			ScrollEnabled:   true,
 			ScrollDirection: "left",
 			ScrollSpeed:     30,
@@ -251,6 +265,9 @@ func parseAppearance(appCfg *config.TelegramAppearanceConfig) (ChatAppearance, e
 				if app.Header.Text.Align.V != "" {
 					appearance.Header.VertAlign = app.Header.Text.Align.V
 				}
+			}
+			if app.Header.Text.Format != "" {
+				appearance.Header.Format = app.Header.Text.Format
 			}
 		}
 
@@ -367,8 +384,6 @@ func (w *TelegramWidget) getAppearance(_ tgclient.ChatType) *ChatAppearance {
 
 // Update handles widget state updates
 func (w *TelegramWidget) Update() error {
-	now := time.Now()
-
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -399,42 +414,35 @@ func (w *TelegramWidget) Update() error {
 	}
 
 	// Handle transition progress
-	if w.transitionActive && w.currentMessage != nil {
-		appearance := w.getAppearance(w.currentMessage.ChatType)
-		transitionSpeed := appearance.Transitions.InSpeed
-		if transitionSpeed <= 0 {
-			transitionSpeed = 0.5
+	if w.transition.IsActive() {
+		if w.currentMessage != nil {
+			w.transition.Update()
+		} else {
+			// Cancel transition if message was cleared
+			w.transition.Cancel()
 		}
-
-		elapsed := now.Sub(w.transitionStartTime).Seconds()
-		w.transitionProgress = elapsed / transitionSpeed
-		if w.transitionProgress >= 1.0 {
-			w.transitionProgress = 1.0
-			w.transitionActive = false
-			w.oldFrame = nil
-		}
-	} else if w.transitionActive && w.currentMessage == nil {
-		// Cancel transition if message was cleared
-		w.transitionActive = false
-		w.oldFrame = nil
 	}
 
-	// Update scroll offsets
+	// Update scroll offsets via scrollers
+	// Note: scrollers manage their own timing internally
+	// We pass 0 for content/container size here as the actual dimensions
+	// are determined during rendering. This just advances the offset.
 	if w.currentMessage != nil {
-		elapsed := now.Sub(w.lastUpdateTime).Seconds()
 		appearance := w.getAppearance(w.currentMessage.ChatType)
 
 		// Update header scroll
+		// Pass large content size to prevent scroller's internal wrap-around
+		// The rendering code handles wrap via modulo with actual content size
 		if appearance.Header.ScrollEnabled {
-			w.headerScrollOffset += appearance.Header.ScrollSpeed * elapsed
+			w.headerScroller.Update(1000000, w.width)
 		}
 
-		// Update message scroll
+		// Update message scroll - same approach
+		// Actual wrap-around happens in renderMultiLineText based on real content height
 		if appearance.Message.ScrollEnabled {
-			w.messageScrollOffset += appearance.Message.ScrollSpeed * elapsed
+			w.messageScroller.Update(1000000, w.height)
 		}
 	}
-	w.lastUpdateTime = now
 
 	// Check message timeout
 	if w.currentMessage != nil {
@@ -444,8 +452,8 @@ func (w *TelegramWidget) Update() error {
 				// Remember dismissed message ID to prevent re-showing
 				w.dismissedMessageID = w.currentMessage.ID
 				w.currentMessage = nil
-				w.headerScrollOffset = 0
-				w.messageScrollOffset = 0
+				w.headerScroller.Reset()
+				w.messageScroller.Reset()
 			}
 		}
 	}
@@ -475,50 +483,19 @@ func (w *TelegramWidget) startTransition(chatType tgclient.ChatType) {
 	}
 
 	// Capture current frame
-	w.oldFrame = bitmap.NewGrayscaleImage(w.width, w.height, w.GetRenderBackgroundColor())
+	oldFrame := bitmap.NewGrayscaleImage(w.width, w.height, w.GetRenderBackgroundColor())
 	if w.currentMessage != nil {
-		w.renderMessage(w.oldFrame, *w.currentMessage)
+		w.renderMessage(oldFrame, *w.currentMessage)
 	}
 
-	// Set up transition
-	w.transitionActive = true
-	w.transitionProgress = 0.0
-	w.transitionStartTime = time.Now()
-	w.activeTransition = w.selectTransition(appearance.Transitions.In)
-
-	// Pre-generate pixel order for dissolve_pixel
-	if w.activeTransition == "dissolve_pixel" {
-		w.pixelOrder = w.generatePixelOrder(w.width, w.height)
-	}
-}
-
-// selectTransition returns the actual transition type (handles "random")
-func (w *TelegramWidget) selectTransition(transitionType string) string {
-	if transitionType != "random" {
-		return transitionType
+	// Get transition duration
+	transitionSpeed := appearance.Transitions.InSpeed
+	if transitionSpeed <= 0 {
+		transitionSpeed = 0.5
 	}
 
-	transitions := []string{
-		"push_left", "push_right", "push_up", "push_down",
-		"slide_left", "slide_right", "slide_up", "slide_down",
-		"dissolve_fade", "dissolve_pixel", "dissolve_dither",
-		"box_in", "box_out", "clock_wipe",
-	}
-	return transitions[rand.Intn(len(transitions))]
-}
-
-// generatePixelOrder creates a shuffled list of pixel indices for dissolve_pixel
-func (w *TelegramWidget) generatePixelOrder(width, height int) []int {
-	total := width * height
-	order := make([]int, total)
-	for i := 0; i < total; i++ {
-		order[i] = i
-	}
-	for i := total - 1; i > 0; i-- {
-		j := rand.Intn(i + 1)
-		order[i], order[j] = order[j], order[i]
-	}
-	return order
+	// Start transition via manager
+	w.transition.Start(shared.TransitionType(appearance.Transitions.In), transitionSpeed, oldFrame)
 }
 
 // Render draws the widget
@@ -538,16 +515,22 @@ func (w *TelegramWidget) Render() (image.Image, error) {
 	} else if w.connectionError != nil {
 		w.renderError(img)
 	} else if !w.client.IsConnected() {
-		w.drawStatusText(img, "Disconnected")
+		// Show "Connecting..." on initial state (before first connection attempt)
+		// to avoid brief "Disconnected" flash
+		if w.lastConnectionTry.IsZero() {
+			w.drawStatusText(img, "Connecting...")
+		} else {
+			w.drawStatusText(img, "Disconnected")
+		}
 	} else if w.currentMessage == nil {
 		// No message to display - return empty/transparent widget
 		// (don't show "No messages" - widget should disappear after timeout)
 	} else {
-		// Handle transition
-		if w.transitionActive && w.oldFrame != nil {
+		// Handle transition - use Live methods for accurate timing regardless of Update() frequency
+		if w.transition.IsActiveLive() {
 			newFrame := bitmap.NewGrayscaleImage(w.width, w.height, w.GetRenderBackgroundColor())
 			w.renderMessage(newFrame, *w.currentMessage)
-			w.applyTransition(img, w.oldFrame, newFrame, w.transitionProgress, w.activeTransition, w.pixelOrder)
+			w.transition.ApplyLive(img, newFrame)
 		} else {
 			w.renderMessage(img, *w.currentMessage)
 		}
@@ -588,6 +571,7 @@ func (w *TelegramWidget) drawStatusText(img *image.Gray, text string) {
 }
 
 // renderMessage renders a message with header, separator, and message text
+// Each region (header, message) is rendered to a sub-image for proper clipping
 func (w *TelegramWidget) renderMessage(img *image.Gray, msg tgclient.MessageInfo) {
 	appearance := w.getAppearance(msg.ChatType)
 
@@ -616,20 +600,30 @@ func (w *TelegramWidget) renderMessage(img *image.Gray, msg tgclient.MessageInfo
 		}
 	}
 
-	// Render header
-	if appearance.Header.Enabled {
+	// Render header to sub-image (provides natural clipping)
+	if appearance.Header.Enabled && headerHeight > 0 {
 		headerText := w.formatHeader(msg)
 		if headerText != "" {
 			// Apply blink effect
 			if appearance.Header.Blink && !w.blink.ShouldRender() {
 				// Skip rendering when blinking off
 			} else {
-				w.renderScrollingText(img, headerText, appearance.Header, w.headerScrollOffset, 0, 0, w.width, headerHeight)
+				// Create sub-image for header region
+				headerImg := image.NewGray(image.Rect(0, 0, w.width, headerHeight))
+				// Fill with background color
+				bgColor := w.GetRenderBackgroundColor()
+				for i := range headerImg.Pix {
+					headerImg.Pix[i] = bgColor
+				}
+				// Render header (coordinates relative to sub-image: 0,0)
+				w.renderScrollingText(headerImg, headerText, appearance.Header, w.headerScroller.GetOffset(), 0, 0, w.width, headerHeight)
+				// Copy to main image at (0, 0)
+				copyGrayRegion(img, headerImg, 0, 0)
 			}
 		}
 	}
 
-	// Render separator
+	// Render separator directly (no scrolling, no clipping needed)
 	if appearance.Separator.Color >= 0 && appearance.Separator.Thickness > 0 && appearance.Header.Enabled && appearance.Message.Enabled {
 		for dy := 0; dy < appearance.Separator.Thickness; dy++ {
 			for x := 0; x < w.width; x++ {
@@ -638,15 +632,20 @@ func (w *TelegramWidget) renderMessage(img *image.Gray, msg tgclient.MessageInfo
 		}
 	}
 
-	// Render message area
+	// Render message area to sub-image (provides natural clipping)
 	msgHeight := w.height - messageY
 	if msgHeight > 0 {
 		var messageText string
 		if appearance.Message.Enabled {
-			messageText = msg.Text
-			// If text is empty but there's media, show media type as placeholder
-			if messageText == "" && msg.MediaType != "" {
+			// Build message text: media placeholder(s) + caption
+			if msg.MediaType != "" {
 				messageText = "[" + msg.MediaType + "]"
+				// Add caption on new line if present
+				if msg.Text != "" {
+					messageText += "\n" + msg.Text
+				}
+			} else {
+				messageText = msg.Text
 			}
 		} else {
 			// Show placeholder when message display is disabled
@@ -657,7 +656,33 @@ func (w *TelegramWidget) renderMessage(img *image.Gray, msg tgclient.MessageInfo
 		if appearance.Message.Blink && !w.blink.ShouldRender() {
 			// Skip rendering when blinking off
 		} else {
-			w.renderMultiLineText(img, messageText, appearance.Message, w.messageScrollOffset, 0, messageY, w.width, msgHeight)
+			// Create sub-image for message region
+			msgImg := image.NewGray(image.Rect(0, 0, w.width, msgHeight))
+			// Fill with background color
+			bgColor := w.GetRenderBackgroundColor()
+			for i := range msgImg.Pix {
+				msgImg.Pix[i] = bgColor
+			}
+			// Render message (coordinates relative to sub-image: 0,0)
+			w.renderMultiLineText(msgImg, messageText, appearance.Message, w.messageScroller.GetOffset(), 0, 0, w.width, msgHeight)
+			// Copy to main image at (0, messageY)
+			copyGrayRegion(img, msgImg, 0, messageY)
+		}
+	}
+}
+
+// copyGrayRegion copies src image to dst at the specified offset
+func copyGrayRegion(dst, src *image.Gray, dstX, dstY int) {
+	srcBounds := src.Bounds()
+	dstBounds := dst.Bounds()
+
+	for y := 0; y < srcBounds.Dy(); y++ {
+		for x := 0; x < srcBounds.Dx(); x++ {
+			dx := dstX + x
+			dy := dstY + y
+			if dx >= dstBounds.Min.X && dx < dstBounds.Max.X && dy >= dstBounds.Min.Y && dy < dstBounds.Max.Y {
+				dst.SetGray(dx, dy, src.GrayAt(x+srcBounds.Min.X, y+srcBounds.Min.Y))
+			}
 		}
 	}
 }
@@ -1063,266 +1088,82 @@ func (w *TelegramWidget) renderScrollingText(img *image.Gray, text string, elem 
 }
 
 // formatHeader creates the header string for a message
+// Supports format tokens: {sender}, {chat}, {type}, {time}, {date}, {forwarded}
+// If format is empty, uses auto format based on chat type
 func (w *TelegramWidget) formatHeader(msg tgclient.MessageInfo) string {
+	appearance := w.getAppearance(msg.ChatType)
+
+	// Get sender name with fallback for private chats
+	senderName := msg.SenderName
+	if senderName == "" {
+		// For private chats, use ChatTitle as sender (it's the other person's name)
+		if msg.ChatType == tgclient.ChatTypePrivate {
+			senderName = msg.ChatTitle
+		}
+		// Final fallback to ID
+		if senderName == "" {
+			senderName = fmt.Sprintf("User %d", msg.ChatID)
+		}
+	}
+
+	// Get chat title with fallback
+	chatTitle := msg.ChatTitle
+	if chatTitle == "" {
+		chatTitle = fmt.Sprintf("Chat %d", msg.ChatID)
+	}
+
+	// Get chat type string
+	chatTypeStr := ""
 	switch msg.ChatType {
 	case tgclient.ChatTypePrivate:
-		if msg.SenderName != "" {
-			return msg.SenderName
-		}
-		return fmt.Sprintf("User %d", msg.ChatID)
-	case tgclient.ChatTypeGroup, tgclient.ChatTypeChannel:
-		if msg.ChatTitle != "" {
-			return msg.ChatTitle
-		}
-		return fmt.Sprintf("Chat %d", msg.ChatID)
-	default:
-		return ""
+		chatTypeStr = "private"
+	case tgclient.ChatTypeGroup:
+		chatTypeStr = "group"
+	case tgclient.ChatTypeChannel:
+		chatTypeStr = "channel"
 	}
-}
 
-// applyTransition composites old and new frames based on transition type and progress
-func (w *TelegramWidget) applyTransition(dst, oldFrame, newFrame *image.Gray, progress float64, transitionType string, pixelOrder []int) {
-	bounds := dst.Bounds()
-	width := bounds.Dx()
-	height := bounds.Dy()
-
-	switch transitionType {
-	case "none":
-		if progress < 0.5 {
-			shared.CopyGrayImage(dst, oldFrame)
+	// Build forwarded info string
+	forwardedStr := ""
+	if msg.IsForwarded {
+		if msg.ForwardedFrom != "" {
+			forwardedStr = "Fwd: " + msg.ForwardedFrom
 		} else {
-			shared.CopyGrayImage(dst, newFrame)
+			forwardedStr = "Forwarded"
 		}
-
-	case "push_left":
-		w.applyPushTransition(dst, oldFrame, newFrame, progress, -1, 0)
-	case "push_right":
-		w.applyPushTransition(dst, oldFrame, newFrame, progress, 1, 0)
-	case "push_up":
-		w.applyPushTransition(dst, oldFrame, newFrame, progress, 0, -1)
-	case "push_down":
-		w.applyPushTransition(dst, oldFrame, newFrame, progress, 0, 1)
-
-	case "slide_left":
-		w.applySlideTransition(dst, oldFrame, newFrame, progress, -1, 0)
-	case "slide_right":
-		w.applySlideTransition(dst, oldFrame, newFrame, progress, 1, 0)
-	case "slide_up":
-		w.applySlideTransition(dst, oldFrame, newFrame, progress, 0, -1)
-	case "slide_down":
-		w.applySlideTransition(dst, oldFrame, newFrame, progress, 0, 1)
-
-	case "dissolve_fade":
-		for y := 0; y < height; y++ {
-			for x := 0; x < width; x++ {
-				oldVal := oldFrame.GrayAt(x, y).Y
-				newVal := newFrame.GrayAt(x, y).Y
-				blended := uint8(float64(oldVal)*(1-progress) + float64(newVal)*progress)
-				dst.SetGray(x, y, color.Gray{Y: blended})
-			}
-		}
-
-	case "dissolve_pixel":
-		shared.CopyGrayImage(dst, oldFrame)
-		pixelsToShow := int(float64(len(pixelOrder)) * progress)
-		for i := 0; i < pixelsToShow && i < len(pixelOrder); i++ {
-			idx := pixelOrder[i]
-			x := idx % width
-			y := idx / width
-			dst.SetGray(x, y, newFrame.GrayAt(x, y))
-		}
-
-	case "dissolve_dither":
-		threshold := uint8(progress * 255)
-		for y := 0; y < height; y++ {
-			for x := 0; x < width; x++ {
-				ditherVal := uint8(((x ^ y) * 17) % 256)
-				if ditherVal < threshold {
-					dst.SetGray(x, y, newFrame.GrayAt(x, y))
-				} else {
-					dst.SetGray(x, y, oldFrame.GrayAt(x, y))
-				}
-			}
-		}
-
-	case "box_in":
-		centerX, centerY := width/2, height/2
-		maxDist := centerX
-		if centerY > maxDist {
-			maxDist = centerY
-		}
-		revealDist := int(float64(maxDist) * progress)
-		for y := 0; y < height; y++ {
-			for x := 0; x < width; x++ {
-				dx := telegramAbs(x - centerX)
-				dy := telegramAbs(y - centerY)
-				dist := dx
-				if dy > dist {
-					dist = dy
-				}
-				if dist <= revealDist {
-					dst.SetGray(x, y, newFrame.GrayAt(x, y))
-				} else {
-					dst.SetGray(x, y, oldFrame.GrayAt(x, y))
-				}
-			}
-		}
-
-	case "box_out":
-		centerX, centerY := width/2, height/2
-		maxDist := centerX
-		if centerY > maxDist {
-			maxDist = centerY
-		}
-		hideDist := int(float64(maxDist) * progress)
-		for y := 0; y < height; y++ {
-			for x := 0; x < width; x++ {
-				dx := telegramAbs(x - centerX)
-				dy := telegramAbs(y - centerY)
-				dist := dx
-				if dy > dist {
-					dist = dy
-				}
-				if dist >= maxDist-hideDist {
-					dst.SetGray(x, y, newFrame.GrayAt(x, y))
-				} else {
-					dst.SetGray(x, y, oldFrame.GrayAt(x, y))
-				}
-			}
-		}
-
-	case "clock_wipe":
-		pi := 3.14159265358979323846
-		centerX, centerY := float64(width)/2, float64(height)/2
-		for y := 0; y < height; y++ {
-			for x := 0; x < width; x++ {
-				dx := float64(x) - centerX
-				dy := float64(y) - centerY
-				angle := atan2(dy, dx) + pi
-				normalizedAngle := angle / (2 * pi)
-				if normalizedAngle <= progress {
-					dst.SetGray(x, y, newFrame.GrayAt(x, y))
-				} else {
-					dst.SetGray(x, y, oldFrame.GrayAt(x, y))
-				}
-			}
-		}
-
-	default:
-		shared.CopyGrayImage(dst, newFrame)
 	}
-}
 
-// atan2 calculates arctangent of y/x
-func atan2(y, x float64) float64 {
-	if x > 0 {
-		return atan(y / x)
-	} else if x < 0 {
-		if y >= 0 {
-			return atan(y/x) + 3.14159265358979323846
+	// If no custom format, use auto format based on chat type
+	format := appearance.Header.Format
+	if format == "" {
+		header := ""
+		switch msg.ChatType {
+		case tgclient.ChatTypePrivate:
+			header = senderName
+		case tgclient.ChatTypeGroup, tgclient.ChatTypeChannel:
+			header = chatTitle
 		}
-		return atan(y/x) - 3.14159265358979323846
-	} else {
-		if y > 0 {
-			return 3.14159265358979323846 / 2
-		} else if y < 0 {
-			return -3.14159265358979323846 / 2
+		// Append forwarded info for default format
+		if msg.IsForwarded && forwardedStr != "" {
+			if header != "" {
+				header += " | " + forwardedStr
+			} else {
+				header = forwardedStr
+			}
 		}
-		return 0
+		return header
 	}
-}
 
-// atan calculates arctangent using Taylor series
-func atan(x float64) float64 {
-	if x > 1 {
-		return 3.14159265358979323846/2 - atan(1/x)
-	} else if x < -1 {
-		return -3.14159265358979323846/2 - atan(1/x)
-	}
-	result := x
-	term := x
-	for i := 1; i < 20; i++ {
-		term *= -x * x
-		result += term / float64(2*i+1)
-	}
+	// Apply format tokens
+	result := format
+	result = strings.ReplaceAll(result, "{sender}", senderName)
+	result = strings.ReplaceAll(result, "{chat}", chatTitle)
+	result = strings.ReplaceAll(result, "{type}", chatTypeStr)
+	result = strings.ReplaceAll(result, "{time}", msg.Time.Format("15:04"))
+	result = strings.ReplaceAll(result, "{date}", msg.Time.Format("Jan 2"))
+	result = strings.ReplaceAll(result, "{forwarded}", forwardedStr)
+
 	return result
-}
-
-// applyPushTransition applies push transition
-func (w *TelegramWidget) applyPushTransition(dst, oldFrame, newFrame *image.Gray, progress float64, dirX, dirY int) {
-	bounds := dst.Bounds()
-	width := bounds.Dx()
-	height := bounds.Dy()
-
-	offsetX := int(float64(width) * progress * float64(dirX))
-	offsetY := int(float64(height) * progress * float64(dirY))
-
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			oldX := x - offsetX
-			oldY := y - offsetY
-			newX := x - offsetX - width*dirX
-			newY := y - offsetY - height*dirY
-
-			if oldX >= 0 && oldX < width && oldY >= 0 && oldY < height {
-				dst.SetGray(x, y, oldFrame.GrayAt(oldX, oldY))
-			} else if newX >= 0 && newX < width && newY >= 0 && newY < height {
-				dst.SetGray(x, y, newFrame.GrayAt(newX, newY))
-			}
-		}
-	}
-}
-
-// applySlideTransition applies slide transition (new slides over old)
-func (w *TelegramWidget) applySlideTransition(dst, oldFrame, newFrame *image.Gray, progress float64, dirX, dirY int) {
-	bounds := dst.Bounds()
-	width := bounds.Dx()
-	height := bounds.Dy()
-
-	// First, copy old frame
-	shared.CopyGrayImage(dst, oldFrame)
-
-	// Calculate how much of new frame to show
-	revealX := int(float64(width) * progress)
-	revealY := int(float64(height) * progress)
-
-	// Draw new frame sliding in
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			var newX, newY int
-			var inRange bool
-
-			switch {
-			case dirX < 0: // slide left
-				newX = x + width - revealX
-				newY = y
-				inRange = x < revealX
-			case dirX > 0: // slide right
-				newX = x - (width - revealX)
-				newY = y
-				inRange = x >= width-revealX
-			case dirY < 0: // slide up
-				newX = x
-				newY = y + height - revealY
-				inRange = y < revealY
-			case dirY > 0: // slide down
-				newX = x
-				newY = y - (height - revealY)
-				inRange = y >= height-revealY
-			}
-
-			if inRange && newX >= 0 && newX < width && newY >= 0 && newY < height {
-				dst.SetGray(x, y, newFrame.GrayAt(newX, newY))
-			}
-		}
-	}
-}
-
-func telegramAbs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
 }
 
 // Stop cleans up resources

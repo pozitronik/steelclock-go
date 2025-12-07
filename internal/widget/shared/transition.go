@@ -100,14 +100,41 @@ func (t *TransitionManager) Update() bool {
 	return t.active
 }
 
-// IsActive returns true if a transition is currently in progress
+// IsActive returns true if a transition is currently in progress (based on stored state).
+// Note: For accurate timing in Render(), use IsActiveLive() instead.
 func (t *TransitionManager) IsActive() bool {
 	return t.active
+}
+
+// IsActiveLive returns true if a transition is currently in progress based on elapsed time.
+// This is safe to call from read-only contexts (like Render) and provides accurate state
+// regardless of how often Update() is called.
+func (t *TransitionManager) IsActiveLive() bool {
+	if !t.active {
+		return false
+	}
+	elapsed := time.Since(t.startTime).Seconds()
+	return elapsed < t.duration
 }
 
 // Progress returns the current transition progress (0.0 to 1.0)
 func (t *TransitionManager) Progress() float64 {
 	return t.progress
+}
+
+// LiveProgress calculates and returns the current progress based on elapsed time.
+// This is safe to call from read-only contexts (like Render) as it doesn't modify state.
+// Returns progress clamped to 0.0-1.0 range.
+func (t *TransitionManager) LiveProgress() float64 {
+	if !t.active {
+		return 0.0
+	}
+	elapsed := time.Since(t.startTime).Seconds()
+	progress := elapsed / t.duration
+	if progress > 1.0 {
+		progress = 1.0
+	}
+	return progress
 }
 
 // OldFrame returns the captured old frame (may be nil)
@@ -125,13 +152,26 @@ func (t *TransitionManager) PixelOrder() []int {
 	return t.pixelOrder
 }
 
-// Apply composites old and new frames to dst based on current progress
+// Apply composites old and new frames to dst based on stored progress.
+// Note: For accurate timing in Render(), use ApplyLive() instead.
 func (t *TransitionManager) Apply(dst, newFrame *image.Gray) {
 	if t.oldFrame == nil {
 		CopyGrayImage(dst, newFrame)
 		return
 	}
 	ApplyTransition(dst, t.oldFrame, newFrame, t.progress, t.transitionType, t.pixelOrder)
+}
+
+// ApplyLive composites old and new frames using live progress calculated from elapsed time.
+// This is safe to call from read-only contexts (like Render) and provides smooth transitions
+// regardless of how often Update() is called.
+func (t *TransitionManager) ApplyLive(dst, newFrame *image.Gray) {
+	if t.oldFrame == nil {
+		CopyGrayImage(dst, newFrame)
+		return
+	}
+	progress := t.LiveProgress()
+	ApplyTransition(dst, t.oldFrame, newFrame, progress, t.transitionType, t.pixelOrder)
 }
 
 // Reset clears the transition state
