@@ -211,7 +211,7 @@ func (w *MatrixWidget) initColumns() {
 			if j == 0 {
 				w.columns[i].brightness[j] = w.headColor
 			} else {
-				w.columns[i].brightness[j] = uint8(float64(w.headColor) * pow(w.trailFade, float64(j)))
+				w.columns[i].brightness[j] = uint8(float64(w.headColor) * math.Pow(w.trailFade, float64(j)))
 			}
 		}
 	}
@@ -328,21 +328,4 @@ func (w *MatrixWidget) drawChar(img *image.Gray, x, y int, char rune, brightness
 
 	c := color.Gray{Y: brightness}
 	glyphs.DrawGlyph(img, glyph, x, y, c)
-}
-
-// pow calculates x^y for float64 (simple implementation)
-func pow(x, y float64) float64 {
-	if y == 0 {
-		return 1
-	}
-	result := 1.0
-	for i := 0; i < int(y); i++ {
-		result *= x
-	}
-	// Handle fractional part approximately
-	frac := y - float64(int(y))
-	if frac > 0 {
-		result *= (1 - frac) + frac*x
-	}
-	return result
 }
