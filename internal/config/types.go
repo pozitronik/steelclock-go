@@ -826,12 +826,12 @@ type TelegramConfig struct {
 	Groups *TelegramChatConfig `json:"groups,omitempty"`
 	// Channels: channel settings
 	Channels *TelegramChatConfig `json:"channels,omitempty"`
-	// Unread: unread counter display settings (for telegram_unread widget)
-	Unread *TelegramUnreadConfig `json:"unread,omitempty"`
+	// Counter: counter display settings (for telegram_counter widget)
+	Counter *TelegramCounterConfig `json:"counter,omitempty"`
 }
 
-// TelegramUnreadConfig contains settings for the unread counter widget
-type TelegramUnreadConfig struct {
+// TelegramCounterConfig contains settings for the unread counter widget
+type TelegramCounterConfig struct {
 	// Format: display format - "count" (just number), "badge" (number in parentheses), "text" ("N unread")
 	Format string `json:"format,omitempty"`
 	// ShowZero: whether to show when unread count is 0 (default: false)

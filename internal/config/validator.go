@@ -44,7 +44,7 @@ var ValidWidgetTypes = map[string]bool{
 	"hyperspace":       true,
 	"starwars_intro":   true,
 	"telegram":         true,
-	"telegram_unread":  true,
+	"telegram_counter": true,
 }
 
 // IsValidWidgetType checks if the given type name is a valid widget type

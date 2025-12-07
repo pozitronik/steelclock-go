@@ -15,8 +15,8 @@ import (
 	"golang.org/x/image/font"
 )
 
-// TelegramUnreadWidget displays unread message count
-type TelegramUnreadWidget struct {
+// TelegramCounterWidget displays unread message count
+type TelegramCounterWidget struct {
 	*BaseWidget
 	mu sync.RWMutex
 
@@ -40,6 +40,8 @@ type TelegramUnreadWidget struct {
 	connecting        bool
 	lastConnectionTry time.Time
 	reconnectInterval time.Duration
+	lastFetch         time.Time
+	fetchInterval     time.Duration
 
 	// Blink state
 	blinkState bool
@@ -53,8 +55,8 @@ type TelegramUnreadWidget struct {
 	glyphSet *glyphs.GlyphSet
 }
 
-// NewTelegramUnreadWidget creates a new Telegram unread count widget
-func NewTelegramUnreadWidget(cfg config.WidgetConfig) (*TelegramUnreadWidget, error) {
+// NewTelegramCounterWidget creates a new Telegram unread count widget
+func NewTelegramCounterWidget(cfg config.WidgetConfig) (*TelegramCounterWidget, error) {
 	base := NewBaseWidget(cfg)
 	pos := base.GetPosition()
 
@@ -68,29 +70,29 @@ func NewTelegramUnreadWidget(cfg config.WidgetConfig) (*TelegramUnreadWidget, er
 		return nil, fmt.Errorf("failed to get telegram client: %w", err)
 	}
 
-	// Parse unread-specific settings from telegram config
+	// Parse counter-specific settings from telegram config
 	format := "count"
 	showZero := false
 	blinkWhen := "never"
 	fontName := ""
 	fontSize := 16
 
-	if cfg.Telegram.Unread != nil {
-		if cfg.Telegram.Unread.Format != "" {
-			format = cfg.Telegram.Unread.Format
+	if cfg.Telegram.Counter != nil {
+		if cfg.Telegram.Counter.Format != "" {
+			format = cfg.Telegram.Counter.Format
 		}
-		if cfg.Telegram.Unread.ShowZero != nil {
-			showZero = *cfg.Telegram.Unread.ShowZero
+		if cfg.Telegram.Counter.ShowZero != nil {
+			showZero = *cfg.Telegram.Counter.ShowZero
 		}
-		if cfg.Telegram.Unread.Blink != "" {
-			blinkWhen = cfg.Telegram.Unread.Blink
+		if cfg.Telegram.Counter.Blink != "" {
+			blinkWhen = cfg.Telegram.Counter.Blink
 		}
-		if cfg.Telegram.Unread.Text != nil {
-			if cfg.Telegram.Unread.Text.Font != "" {
-				fontName = cfg.Telegram.Unread.Text.Font
+		if cfg.Telegram.Counter.Text != nil {
+			if cfg.Telegram.Counter.Text.Font != "" {
+				fontName = cfg.Telegram.Counter.Text.Font
 			}
-			if cfg.Telegram.Unread.Text.Size > 0 {
-				fontSize = cfg.Telegram.Unread.Text.Size
+			if cfg.Telegram.Counter.Text.Size > 0 {
+				fontSize = cfg.Telegram.Counter.Text.Size
 			}
 		}
 	}
@@ -107,7 +109,7 @@ func NewTelegramUnreadWidget(cfg config.WidgetConfig) (*TelegramUnreadWidget, er
 		glyphSet = glyphs.Font5x7
 	}
 
-	w := &TelegramUnreadWidget{
+	w := &TelegramCounterWidget{
 		BaseWidget:        base,
 		client:            client,
 		clientCfg:         cfg.Telegram,
@@ -118,6 +120,7 @@ func NewTelegramUnreadWidget(cfg config.WidgetConfig) (*TelegramUnreadWidget, er
 		fontName:          fontName,
 		fontSize:          fontSize,
 		reconnectInterval: 30 * time.Second,
+		fetchInterval:     5 * time.Second, // Fetch unread count every 5 seconds
 		width:             pos.W,
 		height:            pos.H,
 		glyphSet:          glyphSet,
@@ -135,7 +138,7 @@ func NewTelegramUnreadWidget(cfg config.WidgetConfig) (*TelegramUnreadWidget, er
 }
 
 // Update handles widget state updates
-func (w *TelegramUnreadWidget) Update() error {
+func (w *TelegramCounterWidget) Update() error {
 	now := time.Now()
 
 	w.mu.Lock()
@@ -170,8 +173,17 @@ func (w *TelegramUnreadWidget) Update() error {
 		}
 	}
 
-	// Get unread count
+	// Fetch unread count periodically
 	if w.client.IsConnected() {
+		if time.Since(w.lastFetch) >= w.fetchInterval {
+			w.lastFetch = now
+			// Fetch in background to avoid blocking
+			go func() {
+				if err := w.client.FetchUnreadCount(); err != nil {
+					// Log error but don't fail - will retry next interval
+				}
+			}()
+		}
 		w.unreadCount = w.client.GetUnreadCount()
 	}
 
@@ -179,7 +191,7 @@ func (w *TelegramUnreadWidget) Update() error {
 }
 
 // Render draws the widget
-func (w *TelegramUnreadWidget) Render() (image.Image, error) {
+func (w *TelegramCounterWidget) Render() (image.Image, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
@@ -227,31 +239,63 @@ func (w *TelegramUnreadWidget) Render() (image.Image, error) {
 }
 
 // renderUnreadCount renders the unread count in the configured format
-func (w *TelegramUnreadWidget) renderUnreadCount(img *image.Gray) {
-	var text string
-
+func (w *TelegramCounterWidget) renderUnreadCount(img *image.Gray) {
 	switch w.format {
 	case "badge":
-		// Circle/badge with number
-		text = fmt.Sprintf("(%d)", w.unreadCount)
+		// Draw Telegram icon (paper airplane) centered
+		w.drawTelegramIcon(img)
 	case "text":
-		// Full text
+		// Formatted text with count
+		var text string
 		if w.unreadCount == 1 {
 			text = "1 unread"
 		} else {
 			text = fmt.Sprintf("%d unread", w.unreadCount)
 		}
-	default: // "count"
-		text = fmt.Sprintf("%d", w.unreadCount)
+		textX, textY := bitmap.SmartCalculateTextPosition(text, w.fontFace, w.fontName, 0, 0, w.width, w.height, "center", "center")
+		bitmap.SmartDrawTextAtPosition(img, text, w.fontFace, w.fontName, textX, textY, 0, 0, w.width, w.height)
+	default: // "count" - just the number
+		text := fmt.Sprintf("%d", w.unreadCount)
+		textX, textY := bitmap.SmartCalculateTextPosition(text, w.fontFace, w.fontName, 0, 0, w.width, w.height, "center", "center")
+		bitmap.SmartDrawTextAtPosition(img, text, w.fontFace, w.fontName, textX, textY, 0, 0, w.width, w.height)
+	}
+}
+
+// drawTelegramIcon draws the Telegram paper airplane icon centered in the widget
+func (w *TelegramCounterWidget) drawTelegramIcon(img *image.Gray) {
+	// Select appropriate icon size based on widget dimensions
+	// Use the smaller dimension to ensure icon fits
+	iconSize := w.width
+	if w.height < iconSize {
+		iconSize = w.height
+	}
+	// Leave some margin (use 80% of available space)
+	iconSet := glyphs.GetTelegramIcon(iconSize)
+	icon := iconSet.Icons["telegram"]
+	if icon == nil {
+		return
 	}
 
-	// Calculate centered position
-	textX, textY := bitmap.SmartCalculateTextPosition(text, w.fontFace, w.fontName, 0, 0, w.width, w.height, "center", "center")
-	bitmap.SmartDrawTextAtPosition(img, text, w.fontFace, w.fontName, textX, textY, 0, 0, w.width, w.height)
+	// Center the icon
+	x := (w.width - icon.Width) / 2
+	y := (w.height - icon.Height) / 2
+
+	c := color.Gray{Y: 255}
+
+	for row := 0; row < icon.Height && row < len(icon.Data); row++ {
+		for col := 0; col < icon.Width && col < len(icon.Data[row]); col++ {
+			if icon.Data[row][col] {
+				px, py := x+col, y+row
+				if px >= 0 && px < w.width && py >= 0 && py < w.height {
+					img.Set(px, py, c)
+				}
+			}
+		}
+	}
 }
 
 // drawStatusText draws status text centered using internal font
-func (w *TelegramUnreadWidget) drawStatusText(img *image.Gray, text string) {
+func (w *TelegramCounterWidget) drawStatusText(img *image.Gray, text string) {
 	c := color.Gray{Y: 255}
 
 	// Calculate total text width
@@ -290,7 +334,7 @@ func (w *TelegramUnreadWidget) drawStatusText(img *image.Gray, text string) {
 }
 
 // Stop cleans up resources
-func (w *TelegramUnreadWidget) Stop() {
+func (w *TelegramCounterWidget) Stop() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 

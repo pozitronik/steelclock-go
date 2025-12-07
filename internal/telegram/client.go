@@ -61,6 +61,7 @@ type Client struct {
 	selfID        int64
 	messages      []MessageInfo
 	maxMessages   int
+	unreadCount   int // Total unread messages count
 
 	// Callbacks
 	onMessage func(MessageInfo)
@@ -272,12 +273,78 @@ func (c *Client) GetMessages() []MessageInfo {
 func (c *Client) GetUnreadCount() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+	return c.unreadCount
+}
 
-	count := 0
-	for _, msg := range c.messages {
-		count += msg.UnreadCount
+// FetchUnreadCount fetches the current unread count from Telegram dialogs
+func (c *Client) FetchUnreadCount() error {
+	c.mu.RLock()
+	api := c.api
+	ctx := c.ctx
+	c.mu.RUnlock()
+
+	if api == nil || ctx == nil {
+		return fmt.Errorf("client not connected")
 	}
-	return count
+
+	// Fetch dialogs to get unread counts
+	result, err := api.MessagesGetDialogs(ctx, &tg.MessagesGetDialogsRequest{
+		OffsetDate: 0,
+		OffsetID:   0,
+		OffsetPeer: &tg.InputPeerEmpty{},
+		Limit:      100, // Get up to 100 dialogs
+		Hash:       0,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get dialogs: %w", err)
+	}
+
+	totalUnread := 0
+
+	switch dialogs := result.(type) {
+	case *tg.MessagesDialogs:
+		for _, d := range dialogs.Dialogs {
+			totalUnread += c.countUnreadFromDialog(d)
+		}
+	case *tg.MessagesDialogsSlice:
+		for _, d := range dialogs.Dialogs {
+			totalUnread += c.countUnreadFromDialog(d)
+		}
+	}
+
+	c.mu.Lock()
+	c.unreadCount = totalUnread
+	c.mu.Unlock()
+
+	return nil
+}
+
+// countUnreadFromDialog extracts unread count from a dialog based on filters
+func (c *Client) countUnreadFromDialog(d tg.DialogClass) int {
+	dialog, ok := d.(*tg.Dialog)
+	if !ok {
+		return 0
+	}
+
+	// Check if this dialog type should be counted based on config
+	switch peer := dialog.Peer.(type) {
+	case *tg.PeerUser:
+		if !c.shouldShowPrivate(peer.UserID) {
+			return 0
+		}
+	case *tg.PeerChat:
+		if !c.shouldShowGroup(peer.ChatID) {
+			return 0
+		}
+	case *tg.PeerChannel:
+		if !c.shouldShowChannel(peer.ChannelID) {
+			return 0
+		}
+	default:
+		return 0
+	}
+
+	return dialog.UnreadCount
 }
 
 // SetMessageCallback sets the callback for new messages

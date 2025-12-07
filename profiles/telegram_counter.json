@@ -1,6 +1,6 @@
 {
   "$schema": "schema/config.schema.json",
-  "config_name": "Telegram Unread Counter",
+  "config_name": "Telegram Counter",
   "backend": "direct",
   "refresh_rate_ms": 100,
   "display": {
@@ -10,12 +10,12 @@
   },
   "widgets": [
     {
-      "type": "telegram_unread",
+      "type": "telegram_counter",
       "position": {
         "x": 0,
-        "y": 32,
+        "y": 0,
         "w": 128,
-        "h": 8
+        "h": 40
       },
       "style": {
         "border": -1,
@@ -28,7 +28,7 @@
           "api_hash": "your_api_hash_here",
           "phone_number": "+1234567890"
         },
-        "unread": {
+        "counter": {
           "format": "text",
           "show_zero": false,
           "blink": "nonzero",
