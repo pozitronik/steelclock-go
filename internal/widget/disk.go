@@ -13,30 +13,6 @@ import (
 	"golang.org/x/image/font"
 )
 
-// DiskUnit represents a disk speed unit
-type DiskUnit struct {
-	Name     string  // Display name (e.g., "MB/s")
-	Divisor  float64 // Divisor to convert from bytes
-	IsBinary bool    // True for binary units (KiB, MiB, GiB)
-}
-
-// Predefined disk units
-var diskUnits = map[string]DiskUnit{
-	"B/s":   {Name: "B/s", Divisor: 1, IsBinary: false},
-	"KB/s":  {Name: "KB/s", Divisor: 1000, IsBinary: false},
-	"MB/s":  {Name: "MB/s", Divisor: 1000000, IsBinary: false},
-	"GB/s":  {Name: "GB/s", Divisor: 1000000000, IsBinary: false},
-	"KiB/s": {Name: "KiB/s", Divisor: 1024, IsBinary: true},
-	"MiB/s": {Name: "MiB/s", Divisor: 1048576, IsBinary: true},
-	"GiB/s": {Name: "GiB/s", Divisor: 1073741824, IsBinary: true},
-}
-
-// autoScaleUnits defines the order for auto-scaling (decimal units)
-var autoScaleUnitsDecimal = []string{"B/s", "KB/s", "MB/s", "GB/s"}
-
-// autoScaleUnitsBinary defines the order for auto-scaling (binary units)
-var autoScaleUnitsBinary = []string{"B/s", "KiB/s", "MiB/s", "GiB/s"}
-
 // DiskWidget displays disk I/O
 type DiskWidget struct {
 	*BaseWidget
@@ -55,6 +31,7 @@ type DiskWidget struct {
 	historyLen      int
 	unit            string // "auto", "B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s"
 	showUnit        bool   // Show unit suffix in text mode
+	converter       *shared.ByteRateConverter
 	lastRead        uint64
 	lastWrite       uint64
 	lastTime        time.Time
@@ -114,11 +91,12 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 		unit = "MB/s"
 	}
 	// Validate unit
-	if unit != "auto" {
-		if _, ok := diskUnits[unit]; !ok {
-			unit = "MB/s" // Fallback to default
-		}
+	if unit != "auto" && !shared.IsValidUnit(unit) {
+		unit = "MB/s" // Fallback to default
 	}
+
+	// Create byte rate converter
+	converter := shared.NewByteRateConverter(unit)
 
 	// Show unit suffix in text mode
 	showUnit := false
@@ -149,6 +127,7 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 		historyLen:   graphSettings.HistoryLen,
 		unit:         unit,
 		showUnit:     showUnit,
+		converter:    converter,
 		readHistory:  shared.NewRingBuffer[float64](graphSettings.HistoryLen),
 		writeHistory: shared.NewRingBuffer[float64](graphSettings.HistoryLen),
 		fontFace:     fontFace,
@@ -157,50 +136,7 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 
 // convertToUnit converts bytes per second to the specified unit
 func (w *DiskWidget) convertToUnit(bps float64, unitName string) (float64, string) {
-	if unitName == "auto" {
-		return w.autoScale(bps)
-	}
-
-	unit, ok := diskUnits[unitName]
-	if !ok {
-		// Fallback to MB/s
-		unit = diskUnits["MB/s"]
-	}
-
-	return bps / unit.Divisor, unit.Name
-}
-
-// autoScale automatically selects the best unit based on the value
-func (w *DiskWidget) autoScale(bps float64) (float64, string) {
-	// Determine if we should use binary or decimal units
-	// Use binary if the configured unit (when not auto) is binary
-	useBinary := false
-	if w.unit != "auto" {
-		if u, ok := diskUnits[w.unit]; ok {
-			useBinary = u.IsBinary
-		}
-	}
-
-	var units []string
-	if useBinary {
-		units = autoScaleUnitsBinary
-	} else {
-		units = autoScaleUnitsDecimal
-	}
-
-	// Find the best unit (largest unit where value >= 1)
-	selectedUnit := units[0]
-	for _, unitName := range units {
-		unit := diskUnits[unitName]
-		if bps/unit.Divisor >= 1 {
-			selectedUnit = unitName
-		} else {
-			break
-		}
-	}
-
-	unit := diskUnits[selectedUnit]
-	return bps / unit.Divisor, unit.Name
+	return w.converter.Convert(bps, unitName)
 }
 
 // formatValue formats a value with appropriate precision
@@ -304,8 +240,8 @@ func (w *DiskWidget) renderText(img *image.Gray) {
 	var text string
 	if w.unit == "auto" {
 		// Auto-scale each value independently
-		readVal, readUnit := w.autoScale(w.currentReadBps)
-		writeVal, writeUnit := w.autoScale(w.currentWriteBps)
+		readVal, readUnit := w.converter.AutoScale(w.currentReadBps)
+		writeVal, writeUnit := w.converter.AutoScale(w.currentWriteBps)
 
 		if w.showUnit {
 			text = fmt.Sprintf("R%s%s W%s%s", formatValue(readVal), readUnit, formatValue(writeVal), writeUnit)

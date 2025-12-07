@@ -13,41 +13,6 @@ import (
 	"golang.org/x/image/font"
 )
 
-// NetworkUnit represents a network speed unit
-type NetworkUnit struct {
-	Name     string  // Display name (e.g., "Mbps")
-	Divisor  float64 // Divisor to convert from bytes per second
-	IsBits   bool    // True for bit-based units (bps, Kbps, Mbps, Gbps)
-	IsBinary bool    // True for binary units (KiB/s, MiB/s, GiB/s)
-}
-
-// Predefined network units
-var networkUnits = map[string]NetworkUnit{
-	// Bit-based units (standard for network)
-	"bps":  {Name: "bps", Divisor: 1.0 / 8, IsBits: true, IsBinary: false}, // bytes to bits
-	"Kbps": {Name: "Kbps", Divisor: 1000.0 / 8, IsBits: true, IsBinary: false},
-	"Mbps": {Name: "Mbps", Divisor: 1000000.0 / 8, IsBits: true, IsBinary: false},
-	"Gbps": {Name: "Gbps", Divisor: 1000000000.0 / 8, IsBits: true, IsBinary: false},
-	// Byte-based units (decimal)
-	"B/s":  {Name: "B/s", Divisor: 1, IsBits: false, IsBinary: false},
-	"KB/s": {Name: "KB/s", Divisor: 1000, IsBits: false, IsBinary: false},
-	"MB/s": {Name: "MB/s", Divisor: 1000000, IsBits: false, IsBinary: false},
-	"GB/s": {Name: "GB/s", Divisor: 1000000000, IsBits: false, IsBinary: false},
-	// Byte-based units (binary)
-	"KiB/s": {Name: "KiB/s", Divisor: 1024, IsBits: false, IsBinary: true},
-	"MiB/s": {Name: "MiB/s", Divisor: 1048576, IsBits: false, IsBinary: true},
-	"GiB/s": {Name: "GiB/s", Divisor: 1073741824, IsBits: false, IsBinary: true},
-}
-
-// autoScaleUnitsBits defines the order for auto-scaling (bit-based units)
-var autoScaleUnitsBits = []string{"bps", "Kbps", "Mbps", "Gbps"}
-
-// autoScaleUnitsBytes defines the order for auto-scaling (byte-based decimal units)
-var autoScaleUnitsBytes = []string{"B/s", "KB/s", "MB/s", "GB/s"}
-
-// autoScaleUnitsBinary defines the order for auto-scaling (byte-based binary units)
-var autoScaleUnitsBinaryNet = []string{"B/s", "KiB/s", "MiB/s", "GiB/s"}
-
 // NetworkWidget displays network I/O
 type NetworkWidget struct {
 	*BaseWidget
@@ -68,6 +33,7 @@ type NetworkWidget struct {
 	historyLen    int
 	unit          string // "auto", "bps", "Kbps", "Mbps", "Gbps", "B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s"
 	showUnit      bool   // Show unit suffix in text mode
+	converter     *shared.ByteRateConverter
 	lastRx        uint64
 	lastTx        uint64
 	lastTime      time.Time
@@ -147,11 +113,12 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		unit = "Mbps"
 	}
 	// Validate unit
-	if unit != "auto" {
-		if _, ok := networkUnits[unit]; !ok {
-			unit = "Mbps" // Fallback to default
-		}
+	if unit != "auto" && !shared.IsValidUnit(unit) {
+		unit = "Mbps" // Fallback to default
 	}
+
+	// Create byte rate converter
+	converter := shared.NewByteRateConverter(unit)
 
 	// Show unit suffix in text mode
 	showUnit := false
@@ -184,6 +151,7 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		historyLen:    graphSettings.HistoryLen,
 		unit:          unit,
 		showUnit:      showUnit,
+		converter:     converter,
 		rxHistory:     shared.NewRingBuffer[float64](graphSettings.HistoryLen),
 		txHistory:     shared.NewRingBuffer[float64](graphSettings.HistoryLen),
 		fontFace:      fontFace,
@@ -192,54 +160,7 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 
 // convertToUnit converts bytes per second to the specified unit
 func (w *NetworkWidget) convertToUnit(bps float64, unitName string) (float64, string) {
-	if unitName == "auto" {
-		return w.autoScale(bps)
-	}
-
-	unit, ok := networkUnits[unitName]
-	if !ok {
-		// Fallback to Mbps
-		unit = networkUnits["Mbps"]
-	}
-
-	return bps / unit.Divisor, unit.Name
-}
-
-// autoScale automatically selects the best unit based on the value
-func (w *NetworkWidget) autoScale(bps float64) (float64, string) {
-	// Determine which unit family to use based on the configured unit
-	var units []string
-
-	if w.unit != "auto" {
-		if u, ok := networkUnits[w.unit]; ok {
-			if u.IsBits {
-				units = autoScaleUnitsBits
-			} else if u.IsBinary {
-				units = autoScaleUnitsBinaryNet
-			} else {
-				units = autoScaleUnitsBytes
-			}
-		}
-	}
-
-	// Default to bits if not determined
-	if units == nil {
-		units = autoScaleUnitsBits
-	}
-
-	// Find the best unit (largest unit where value >= 1)
-	selectedUnit := units[0]
-	for _, unitName := range units {
-		unit := networkUnits[unitName]
-		if bps/unit.Divisor >= 1 {
-			selectedUnit = unitName
-		} else {
-			break
-		}
-	}
-
-	unit := networkUnits[selectedUnit]
-	return bps / unit.Divisor, unit.Name
+	return w.converter.Convert(bps, unitName)
 }
 
 // formatNetValue formats a value with appropriate precision
@@ -348,8 +269,8 @@ func (w *NetworkWidget) renderText(img *image.Gray) {
 	var text string
 	if w.unit == "auto" {
 		// Auto-scale each value independently
-		rxVal, rxUnit := w.autoScale(w.currentRxBps)
-		txVal, txUnit := w.autoScale(w.currentTxBps)
+		rxVal, rxUnit := w.converter.AutoScale(w.currentRxBps)
+		txVal, txUnit := w.converter.AutoScale(w.currentTxBps)
 
 		// Always show unit for auto mode to distinguish scales
 		text = fmt.Sprintf("↓%s%s ↑%s%s", formatNetValue(rxVal), rxUnit, formatNetValue(txVal), txUnit)
