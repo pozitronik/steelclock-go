@@ -3,6 +3,7 @@ package telegram
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -44,11 +45,18 @@ const (
 	ChatTypeChannel
 )
 
+// ClientConfig holds configuration for the Telegram client
+type ClientConfig struct {
+	Auth    *config.TelegramAuthConfig
+	Filters *config.TelegramFiltersConfig
+}
+
 // Client wraps the Telegram client with notification handling
 type Client struct {
 	mu sync.RWMutex
 
-	cfg         *config.TelegramConfig
+	auth        *config.TelegramAuthConfig
+	filters     *config.TelegramFiltersConfig
 	client      *telegram.Client
 	api         *tg.Client
 	sessionPath string
@@ -63,6 +71,9 @@ type Client struct {
 	maxMessages   int
 	unreadCount   int // Total unread messages count
 
+	// Detailed unread stats
+	unreadStats UnreadStats
+
 	// Callbacks
 	onMessage func(MessageInfo)
 	onError   func(error)
@@ -72,8 +83,22 @@ type Client struct {
 	userCache map[int64]string
 }
 
+// UnreadStats contains detailed unread message statistics
+type UnreadStats struct {
+	Total         int // Total unread messages
+	Mentions      int // Unread @mentions
+	Reactions     int // Unread reactions
+	Private       int // Unread in private chats
+	Groups        int // Unread in groups
+	Channels      int // Unread in channels
+	Muted         int // Unread in muted chats
+	PrivateMuted  int // Unread in muted private chats
+	GroupsMuted   int // Unread in muted groups
+	ChannelsMuted int // Unread in muted channels
+}
+
 // NewClient creates a new Telegram client
-func NewClient(cfg *config.TelegramConfig) (*Client, error) {
+func NewClient(cfg *ClientConfig) (*Client, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("telegram configuration is required")
 	}
@@ -91,7 +116,7 @@ func NewClient(cfg *config.TelegramConfig) (*Client, error) {
 	}
 
 	// Determine session path
-	sessionPath := cfg.SessionPath
+	sessionPath := cfg.Auth.SessionPath
 	if sessionPath == "" {
 		// Default: telegram/{api_id}_{phone}.session in executable directory
 		exePath, err := os.Executable()
@@ -115,7 +140,8 @@ func NewClient(cfg *config.TelegramConfig) (*Client, error) {
 	maxMessages := 10
 
 	c := &Client{
-		cfg:         cfg,
+		auth:        cfg.Auth,
+		filters:     cfg.Filters,
 		sessionPath: sessionPath,
 		maxMessages: maxMessages,
 		messages:    make([]MessageInfo, 0, maxMessages),
@@ -143,7 +169,7 @@ func (c *Client) Connect(ctx context.Context) error {
 	}
 
 	// Create client
-	c.client = telegram.NewClient(c.cfg.Auth.APIID, c.cfg.Auth.APIHash, telegram.Options{
+	c.client = telegram.NewClient(c.auth.APIID, c.auth.APIHash, telegram.Options{
 		SessionStorage: sessionStorage,
 		UpdateHandler:  c,
 	})
@@ -187,7 +213,7 @@ func (c *Client) Connect(ctx context.Context) error {
 			return ctx.Err()
 		})
 
-		if err != nil && c.onError != nil && err != context.Canceled {
+		if err != nil && c.onError != nil && !errors.Is(err, context.Canceled) {
 			c.onError(err)
 		}
 
@@ -222,11 +248,11 @@ func (c *Client) Connect(ctx context.Context) error {
 
 // authenticate performs interactive authentication
 func (c *Client) authenticate(ctx context.Context) error {
-	log.Printf("Telegram: Starting authentication for %s", c.cfg.Auth.PhoneNumber)
+	log.Printf("Telegram: Starting authentication for %s", c.auth.PhoneNumber)
 
 	// Create GUI auth flow
 	flow := auth.NewFlow(
-		guiAuth{phone: c.cfg.Auth.PhoneNumber},
+		guiAuth{phone: c.auth.PhoneNumber},
 		auth.SendCodeOptions{},
 	)
 
@@ -276,6 +302,13 @@ func (c *Client) GetUnreadCount() int {
 	return c.unreadCount
 }
 
+// GetUnreadStats returns detailed unread statistics
+func (c *Client) GetUnreadStats() UnreadStats {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.unreadStats
+}
+
 // FetchUnreadCount fetches the current unread count from Telegram dialogs
 func (c *Client) FetchUnreadCount() error {
 	c.mu.RLock()
@@ -300,51 +333,101 @@ func (c *Client) FetchUnreadCount() error {
 	}
 
 	totalUnread := 0
+	stats := UnreadStats{}
 
 	switch dialogs := result.(type) {
 	case *tg.MessagesDialogs:
 		for _, d := range dialogs.Dialogs {
-			totalUnread += c.countUnreadFromDialog(d)
+			unread, dialogStats := c.countUnreadFromDialog(d)
+			totalUnread += unread
+			c.mergeStats(&stats, dialogStats)
 		}
 	case *tg.MessagesDialogsSlice:
 		for _, d := range dialogs.Dialogs {
-			totalUnread += c.countUnreadFromDialog(d)
+			unread, dialogStats := c.countUnreadFromDialog(d)
+			totalUnread += unread
+			c.mergeStats(&stats, dialogStats)
 		}
 	}
 
+	stats.Total = totalUnread
+
 	c.mu.Lock()
 	c.unreadCount = totalUnread
+	c.unreadStats = stats
 	c.mu.Unlock()
 
 	return nil
 }
 
+// mergeStats merges dialog stats into the total stats
+func (c *Client) mergeStats(total *UnreadStats, dialog UnreadStats) {
+	total.Mentions += dialog.Mentions
+	total.Reactions += dialog.Reactions
+	total.Private += dialog.Private
+	total.Groups += dialog.Groups
+	total.Channels += dialog.Channels
+	total.Muted += dialog.Muted
+	total.PrivateMuted += dialog.PrivateMuted
+	total.GroupsMuted += dialog.GroupsMuted
+	total.ChannelsMuted += dialog.ChannelsMuted
+}
+
 // countUnreadFromDialog extracts unread count from a dialog based on filters
-func (c *Client) countUnreadFromDialog(d tg.DialogClass) int {
-	dialog, ok := d.(*tg.Dialog)
+// Returns total unread count (filtered) and detailed stats (unfiltered for stats)
+func (c *Client) countUnreadFromDialog(d tg.DialogClass) (int, UnreadStats) {
+	dialogInstance, ok := d.(*tg.Dialog)
 	if !ok {
-		return 0
+		return 0, UnreadStats{}
 	}
 
-	// Check if this dialog type should be counted based on config
-	switch peer := dialog.Peer.(type) {
+	stats := UnreadStats{}
+	unread := dialogInstance.UnreadCount
+	mentions := dialogInstance.UnreadMentionsCount
+	reactions := dialogInstance.UnreadReactionsCount
+
+	// Check mute status from notify settings
+	isMuted := dialogInstance.NotifySettings.MuteUntil > 0
+
+	// Categorize by chat type and collect stats
+	var filtered bool
+	switch peer := dialogInstance.Peer.(type) {
 	case *tg.PeerUser:
-		if !c.shouldShowPrivate(peer.UserID) {
-			return 0
+		stats.Private = unread
+		stats.Mentions += mentions
+		stats.Reactions += reactions
+		if isMuted {
+			stats.Muted += unread
+			stats.PrivateMuted = unread
 		}
+		filtered = !c.shouldShowPrivate(peer.UserID)
 	case *tg.PeerChat:
-		if !c.shouldShowGroup(peer.ChatID) {
-			return 0
+		stats.Groups = unread
+		stats.Mentions += mentions
+		stats.Reactions += reactions
+		if isMuted {
+			stats.Muted += unread
+			stats.GroupsMuted = unread
 		}
+		filtered = !c.shouldShowGroup(peer.ChatID)
 	case *tg.PeerChannel:
-		if !c.shouldShowChannel(peer.ChannelID) {
-			return 0
+		stats.Channels = unread
+		stats.Mentions += mentions
+		stats.Reactions += reactions
+		if isMuted {
+			stats.Muted += unread
+			stats.ChannelsMuted = unread
 		}
+		filtered = !c.shouldShowChannel(peer.ChannelID)
 	default:
-		return 0
+		return 0, stats
 	}
 
-	return dialog.UnreadCount
+	if filtered {
+		return 0, stats
+	}
+
+	return unread, stats
 }
 
 // SetMessageCallback sets the callback for new messages
@@ -362,49 +445,49 @@ func (c *Client) SetErrorCallback(fn func(error)) {
 }
 
 // Handle implements telegram.UpdateHandler
-func (c *Client) Handle(ctx context.Context, u tg.UpdatesClass) error {
+func (c *Client) Handle(_ context.Context, u tg.UpdatesClass) error {
 	switch updates := u.(type) {
 	case *tg.Updates:
 		for _, update := range updates.Updates {
-			c.handleUpdate(ctx, update, updates.Users, updates.Chats)
+			c.handleUpdate(update, updates.Users, updates.Chats)
 		}
 	case *tg.UpdatesCombined:
 		for _, update := range updates.Updates {
-			c.handleUpdate(ctx, update, updates.Users, updates.Chats)
+			c.handleUpdate(update, updates.Users, updates.Chats)
 		}
 	case *tg.UpdateShort:
-		c.handleUpdate(ctx, updates.Update, nil, nil)
+		c.handleUpdate(updates.Update, nil, nil)
 	case *tg.UpdateShortMessage:
-		c.handleShortMessage(ctx, updates)
+		c.handleShortMessage(updates)
 	case *tg.UpdateShortChatMessage:
-		c.handleShortChatMessage(ctx, updates)
+		c.handleShortChatMessage(updates)
 	}
 	return nil
 }
 
 // handleUpdate processes a single update
-func (c *Client) handleUpdate(ctx context.Context, update tg.UpdateClass, users []tg.UserClass, chats []tg.ChatClass) {
+func (c *Client) handleUpdate(update tg.UpdateClass, users []tg.UserClass, chats []tg.ChatClass) {
 	// Cache users and chats
 	c.cacheEntities(users, chats)
 
 	switch u := update.(type) {
 	case *tg.UpdateNewMessage:
-		c.processMessage(ctx, u.Message)
+		c.processMessage(u.Message)
 	case *tg.UpdateNewChannelMessage:
-		c.processMessage(ctx, u.Message)
+		c.processMessage(u.Message)
 	case *tg.UpdatePinnedMessages:
 		// Handle pinned message notification - check filter in handlePinnedUpdate
-		c.handlePinnedUpdate(ctx, u.Peer, u.Messages)
+		c.handlePinnedUpdate(u.Peer, u.Messages)
 	case *tg.UpdatePinnedChannelMessages:
 		// Check if channel pinned messages should be shown
 		if c.shouldShowPinned(ChatTypeChannel) {
-			c.handlePinnedChannelUpdate(ctx, u.ChannelID, u.Messages)
+			c.handlePinnedChannelUpdate(u.ChannelID, u.Messages)
 		}
 	}
 }
 
 // handleShortMessage handles UpdateShortMessage (private message optimization)
-func (c *Client) handleShortMessage(ctx context.Context, u *tg.UpdateShortMessage) {
+func (c *Client) handleShortMessage(u *tg.UpdateShortMessage) {
 	if !c.shouldShowPrivate(u.UserID) {
 		return
 	}
@@ -429,7 +512,7 @@ func (c *Client) handleShortMessage(ctx context.Context, u *tg.UpdateShortMessag
 }
 
 // handleShortChatMessage handles UpdateShortChatMessage (group message optimization)
-func (c *Client) handleShortChatMessage(ctx context.Context, u *tg.UpdateShortChatMessage) {
+func (c *Client) handleShortChatMessage(u *tg.UpdateShortChatMessage) {
 	if !c.shouldShowGroup(u.ChatID) {
 		return
 	}
@@ -449,7 +532,7 @@ func (c *Client) handleShortChatMessage(ctx context.Context, u *tg.UpdateShortCh
 }
 
 // processMessage processes a full message object
-func (c *Client) processMessage(ctx context.Context, msg tg.MessageClass) {
+func (c *Client) processMessage(msg tg.MessageClass) {
 	message, ok := msg.(*tg.Message)
 	if !ok {
 		return
@@ -522,7 +605,7 @@ func (c *Client) processMessage(ctx context.Context, msg tg.MessageClass) {
 }
 
 // handlePinnedUpdate handles pinned message updates
-func (c *Client) handlePinnedUpdate(ctx context.Context, peer tg.PeerClass, messageIDs []int) {
+func (c *Client) handlePinnedUpdate(peer tg.PeerClass, _ []int) {
 	var chatID int64
 	var chatType ChatType
 	var chatTitle string
@@ -559,7 +642,7 @@ func (c *Client) handlePinnedUpdate(ctx context.Context, peer tg.PeerClass, mess
 }
 
 // handlePinnedChannelUpdate handles channel pinned message updates
-func (c *Client) handlePinnedChannelUpdate(ctx context.Context, channelID int64, messageIDs []int) {
+func (c *Client) handlePinnedChannelUpdate(channelID int64, _ []int) {
 	if !c.shouldShowChannel(channelID) {
 		return
 	}
@@ -599,25 +682,34 @@ func (c *Client) addMessage(msg MessageInfo) {
 // Filter methods
 
 func (c *Client) shouldShowPrivate(userID int64) bool {
-	return c.shouldShow(c.cfg.PrivateChats, userID, true) // Default: show private chats
+	if c.filters == nil {
+		return true // Default: show private chats
+	}
+	return c.shouldShow(c.filters.PrivateChats, userID, true)
 }
 
 func (c *Client) shouldShowGroup(chatID int64) bool {
-	return c.shouldShow(c.cfg.Groups, chatID, false) // Default: don't show groups
+	if c.filters == nil {
+		return false // Default: don't show groups
+	}
+	return c.shouldShow(c.filters.Groups, chatID, false)
 }
 
 func (c *Client) shouldShowChannel(channelID int64) bool {
-	return c.shouldShow(c.cfg.Channels, channelID, false) // Default: don't show channels
+	if c.filters == nil {
+		return false // Default: don't show channels
+	}
+	return c.shouldShow(c.filters.Channels, channelID, false)
 }
 
-func (c *Client) shouldShow(chatCfg *config.TelegramChatConfig, id int64, defaultEnabled bool) bool {
+func (c *Client) shouldShow(chatCfg *config.TelegramChatFilterConfig, id int64, defaultEnabled bool) bool {
 	if chatCfg == nil {
 		return defaultEnabled
 	}
 
 	idStr := fmt.Sprintf("%d", id)
 
-	// Blacklist has highest priority - never show these
+	// Blacklist has the highest priority - never show these
 	for _, item := range chatCfg.Blacklist {
 		if item == idStr {
 			return false
@@ -640,27 +732,37 @@ func (c *Client) shouldShow(chatCfg *config.TelegramChatConfig, id int64, defaul
 }
 
 func (c *Client) shouldShowPinned(chatType ChatType) bool {
-	var chatCfg *config.TelegramChatConfig
+	if c.filters == nil {
+		// No filters configured - use defaults
+		switch chatType {
+		case ChatTypeChannel:
+			return false
+		default:
+			return true
+		}
+	}
+
+	var chatCfg *config.TelegramChatFilterConfig
 	var defaultVal bool
 
 	switch chatType {
 	case ChatTypePrivate:
-		chatCfg = c.cfg.PrivateChats
+		chatCfg = c.filters.PrivateChats
 		defaultVal = true
 	case ChatTypeGroup:
-		chatCfg = c.cfg.Groups
+		chatCfg = c.filters.Groups
 		defaultVal = true
 	case ChatTypeChannel:
-		chatCfg = c.cfg.Channels
+		chatCfg = c.filters.Channels
 		defaultVal = false
 	default:
 		return true
 	}
 
-	if chatCfg == nil || chatCfg.ShowPinnedMessages == nil {
+	if chatCfg == nil || chatCfg.PinnedMessages == nil {
 		return defaultVal
 	}
-	return *chatCfg.ShowPinnedMessages
+	return *chatCfg.PinnedMessages
 }
 
 // Cache methods
@@ -822,7 +924,7 @@ func (a guiAuth) SignUp(_ context.Context) (auth.UserInfo, error) {
 	return auth.UserInfo{}, fmt.Errorf("sign up not supported - please create a Telegram account first")
 }
 
-func (a guiAuth) AcceptTermsOfService(_ context.Context, tos tg.HelpTermsOfService) error {
+func (a guiAuth) AcceptTermsOfService(_ context.Context, _ tg.HelpTermsOfService) error {
 	return nil
 }
 

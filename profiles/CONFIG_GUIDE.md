@@ -144,24 +144,24 @@ Widgets can reference default colors with `@name` syntax: `"fill": "@primary"`.
 
 SteelClock supports these widget types:
 
-| Type               | Description             | Modes                           |
-|--------------------|-------------------------|---------------------------------|
-| `clock`            | Time display            | text, analog, binary, segment   |
-| `cpu`              | CPU usage monitor       | text, bar, graph, gauge    |
-| `memory`           | RAM usage monitor       | text, bar, graph, gauge    |
-| `network`          | Network I/O monitor     | text, bar, graph, gauge    |
-| `disk`             | Disk I/O monitor        | text, bar, graph           |
-| `volume`           | System volume           | text, bar, gauge, triangle |
-| `volume_meter`     | Audio peak meter        | text, bar, gauge           |
-| `audio_visualizer` | Spectrum/oscilloscope   | spectrum, oscilloscope     |
-| `keyboard`         | Lock key indicators     | -                          |
-| `keyboard_layout`  | Current keyboard layout | -                          |
-| `doom`             | DOOM game               | -                          |
-| `winamp`           | Winamp media player     | -                          |
-| `matrix`           | Matrix digital rain     | -                          |
-| `weather`          | Current weather         | icon, text                 |
-| `game_of_life`     | Conway's Game of Life   | -                          |
-| `hyperspace`       | Star Wars lightspeed    | continuous, cycle          |
+| Type               | Description             | Modes                         |
+|--------------------|-------------------------|-------------------------------|
+| `clock`            | Time display            | text, analog, binary, segment |
+| `cpu`              | CPU usage monitor       | text, bar, graph, gauge       |
+| `memory`           | RAM usage monitor       | text, bar, graph, gauge       |
+| `network`          | Network I/O monitor     | text, bar, graph, gauge       |
+| `disk`             | Disk I/O monitor        | text, bar, graph              |
+| `volume`           | System volume           | text, bar, gauge, triangle    |
+| `volume_meter`     | Audio peak meter        | text, bar, gauge              |
+| `audio_visualizer` | Spectrum/oscilloscope   | spectrum, oscilloscope        |
+| `keyboard`         | Lock key indicators     | -                             |
+| `keyboard_layout`  | Current keyboard layout | -                             |
+| `doom`             | DOOM game               | -                             |
+| `winamp`           | Winamp media player     | -                             |
+| `matrix`           | Matrix digital rain     | -                             |
+| `weather`          | Current weather         | icon, text                    |
+| `game_of_life`     | Conway's Game of Life   | -                             |
+| `hyperspace`       | Star Wars lightspeed    | continuous, cycle             |
 
 ## Common Properties
 
@@ -385,18 +385,18 @@ Vertical layout:           Horizontal layout:
 }
 ```
 
-| Property      | Options              | Default      | Description                              |
-|---------------|----------------------|--------------|------------------------------------------|
-| `format`      | strftime             | `%H:%M:%S`   | Which components to show (%H, %M, %S)    |
-| `style`       | `bcd`, `true`        | `bcd`        | Binary representation style              |
-| `layout`      | `vertical`, `horizontal` | `vertical` | Bit layout orientation                 |
-| `dot_size`    | 1+                   | 4            | Dot diameter in pixels                   |
-| `dot_spacing` | 0+                   | 2            | Gap between dots in pixels               |
-| `dot_style`   | `circle`, `square`   | `circle`     | Dot shape                                |
-| `on_color`    | 0-255                | 255          | Color for "on" bits (1)                  |
-| `off_color`   | 0-255                | 40           | Color for "off" bits (0 = invisible)     |
-| `show_labels` | true/false           | false        | Show H/M/S labels                        |
-| `show_hint`   | true/false           | false        | Show decimal values alongside binary     |
+| Property      | Options                  | Default    | Description                           |
+|---------------|--------------------------|------------|---------------------------------------|
+| `format`      | strftime                 | `%H:%M:%S` | Which components to show (%H, %M, %S) |
+| `style`       | `bcd`, `true`            | `bcd`      | Binary representation style           |
+| `layout`      | `vertical`, `horizontal` | `vertical` | Bit layout orientation                |
+| `dot_size`    | 1+                       | 4          | Dot diameter in pixels                |
+| `dot_spacing` | 0+                       | 2          | Gap between dots in pixels            |
+| `dot_style`   | `circle`, `square`       | `circle`   | Dot shape                             |
+| `on_color`    | 0-255                    | 255        | Color for "on" bits (1)               |
+| `off_color`   | 0-255                    | 40         | Color for "off" bits (0 = invisible)  |
+| `show_labels` | true/false               | false      | Show H/M/S labels                     |
+| `show_hint`   | true/false               | false      | Show decimal values alongside binary  |
 
 #### Segment Mode
 
@@ -433,17 +433,17 @@ Displays time using a seven-segment display style, like digital alarm clocks.
 }
 ```
 
-| Property            | Options                         | Default     | Description                          |
-|---------------------|---------------------------------|-------------|--------------------------------------|
-| `format`            | see below                       | `%H:%M:%S`  | Time format with optional literals   |
-| `digit_height`      | 0+                              | 0           | Digit height (0 = auto-fit)          |
-| `segment_thickness` | 1+                              | 2           | Segment line thickness               |
-| `segment_style`     | `rectangle`, `hexagon`, `rounded` | `rectangle` | Segment shape style                |
-| `digit_spacing`     | 0+                              | 2           | Space between digits                 |
-| `colon_style`       | `dots`, `bar`, `none`           | `dots`      | Colon separator style                |
-| `colon_blink`       | true/false                      | true        | Blink colons each second             |
-| `on_color`          | 0-255                           | 255         | Active segment color                 |
-| `off_color`         | 0-255                           | 30          | Inactive segment color (0=invisible) |
+| Property            | Options                           | Default     | Description                          |
+|---------------------|-----------------------------------|-------------|--------------------------------------|
+| `format`            | see below                         | `%H:%M:%S`  | Time format with optional literals   |
+| `digit_height`      | 0+                                | 0           | Digit height (0 = auto-fit)          |
+| `segment_thickness` | 1+                                | 2           | Segment line thickness               |
+| `segment_style`     | `rectangle`, `hexagon`, `rounded` | `rectangle` | Segment shape style                  |
+| `digit_spacing`     | 0+                                | 2           | Space between digits                 |
+| `colon_style`       | `dots`, `bar`, `none`             | `dots`      | Colon separator style                |
+| `colon_blink`       | true/false                        | true        | Blink colons each second             |
+| `on_color`          | 0-255                             | 255         | Active segment color                 |
+| `off_color`         | 0-255                             | 30          | Inactive segment color (0=invisible) |
 
 **Segment Styles:**
 - `rectangle` - Simple rectangular bars (default)
@@ -467,10 +467,10 @@ Examples:
 
 **Flip Animation:**
 
-| Property | Options        | Default | Description                    |
-|----------|----------------|---------|--------------------------------|
-| `style`  | `none`, `fade` | `none`  | Animation style (none=disabled)|
-| `speed`  | 0.05-1.0       | 0.15    | Animation duration in seconds  |
+| Property | Options        | Default | Description                     |
+|----------|----------------|---------|---------------------------------|
+| `style`  | `none`, `fade` | `none`  | Animation style (none=disabled) |
+| `speed`  | 0.05-1.0       | 0.15    | Animation duration in seconds   |
 
 ### CPU Widget
 
@@ -794,24 +794,24 @@ Plays DOOM shareware demo on the OLED display. Auto-downloads doom1.wad if not f
 
 The `doom.render_mode` setting controls how color frames are converted to grayscale for the OLED display:
 
-| Mode | Description |
-|------|-------------|
-| `normal` | Standard luminance conversion (default) |
-| `contrast` | Auto-contrast stretching - maps actual min/max to full 0-255 range |
+| Mode        | Description                                                           |
+|-------------|-----------------------------------------------------------------------|
+| `normal`    | Standard luminance conversion (default)                               |
+| `contrast`  | Auto-contrast stretching - maps actual min/max to full 0-255 range    |
 | `posterize` | Reduces to N discrete gray levels - reduces noise while keeping depth |
-| `threshold` | Pure black/white conversion - maximum clarity but loses depth |
-| `dither` | Ordered dithering using Bayer matrix - retro dot-pattern look |
-| `gamma` | Gamma correction with contrast boost - brightens dark scenes |
+| `threshold` | Pure black/white conversion - maximum clarity but loses depth         |
+| `dither`    | Ordered dithering using Bayer matrix - retro dot-pattern look         |
+| `gamma`     | Gamma correction with contrast boost - brightens dark scenes          |
 
 #### Render Mode Settings
 
-| Setting | Mode | Description | Default |
-|---------|------|-------------|---------|
-| `posterize_levels` | posterize | Number of gray levels (2-16) | 4 |
-| `threshold_value` | threshold | Cutoff brightness (0-255) | 128 |
-| `gamma` | gamma | Gamma value (0.1-3.0, >1 brightens midtones) | 1.5 |
-| `contrast_boost` | gamma | Contrast multiplier (1.0-3.0) | 1.2 |
-| `dither_size` | dither | Bayer matrix size (2, 4, or 8) | 4 |
+| Setting            | Mode      | Description                                  | Default |
+|--------------------|-----------|----------------------------------------------|---------|
+| `posterize_levels` | posterize | Number of gray levels (2-16)                 | 4       |
+| `threshold_value`  | threshold | Cutoff brightness (0-255)                    | 128     |
+| `gamma`            | gamma     | Gamma value (0.1-3.0, >1 brightens midtones) | 1.5     |
+| `contrast_boost`   | gamma     | Contrast multiplier (1.0-3.0)                | 1.2     |
+| `dither_size`      | dither    | Bayer matrix size (2, 4, or 8)               | 4       |
 
 **Recommended settings:**
 - For best visibility: `"render_mode": "posterize"` with `"posterize_levels": 4`
@@ -885,14 +885,14 @@ Displays information from Winamp media player. Windows only (shows placeholder o
 
 #### Scroll Configuration
 
-| Property    | Description                                                              |
-|-------------|--------------------------------------------------------------------------|
-| `enabled`   | Enable text scrolling                                                    |
-| `direction` | Scroll direction: `left`, `right`, `up`, `down`                          |
-| `speed`     | Scroll speed in pixels per second (default: 30)                          |
-| `mode`      | `continuous` (loop), `bounce` (reverse at edges), `pause_ends` (pause)   |
-| `pause_ms`  | Pause duration at ends in ms (for bounce/pause_ends modes, default: 1000)|
-| `gap`       | Gap between text repetitions in pixels (for continuous mode, default: 20)|
+| Property    | Description                                                               |
+|-------------|---------------------------------------------------------------------------|
+| `enabled`   | Enable text scrolling                                                     |
+| `direction` | Scroll direction: `left`, `right`, `up`, `down`                           |
+| `speed`     | Scroll speed in pixels per second (default: 30)                           |
+| `mode`      | `continuous` (loop), `bounce` (reverse at edges), `pause_ends` (pause)    |
+| `pause_ms`  | Pause duration at ends in ms (for bounce/pause_ends modes, default: 1000) |
+| `gap`       | Gap between text repetitions in pixels (for continuous mode, default: 20) |
 
 #### Auto-Show Events
 
@@ -989,21 +989,21 @@ The weather widget uses format strings with tokens to define what to display. To
 
 **Basic tokens (text):**
 
-| Token          | Description                           | Example Output    |
-|----------------|---------------------------------------|-------------------|
-| `{temp}`       | Current temperature                   | `15C` or `59F`    |
-| `{feels}`      | Feels-like temperature                | `13C`             |
-| `{humidity}`   | Humidity percentage                   | `75%`             |
-| `{wind}`       | Wind speed                            | `12 km/h`         |
-| `{wind_dir}`   | Wind direction                        | `NE`              |
-| `{pressure}`   | Atmospheric pressure                  | `1013 hPa`        |
-| `{visibility}` | Visibility distance                   | `10 km`           |
-| `{condition}`  | Weather condition                     | `Cloudy`          |
-| `{description}`| Detailed description                  | `Partly cloudy`   |
-| `{aqi}`        | Air quality index value               | `42`              |
-| `{aqi_level}`  | AQI level text                        | `Good`            |
-| `{uv}`         | UV index value                        | `6.5`             |
-| `{uv_level}`   | UV level text                         | `High`            |
+| Token           | Description             | Example Output  |
+|-----------------|-------------------------|-----------------|
+| `{temp}`        | Current temperature     | `15C` or `59F`  |
+| `{feels}`       | Feels-like temperature  | `13C`           |
+| `{humidity}`    | Humidity percentage     | `75%`           |
+| `{wind}`        | Wind speed              | `12 km/h`       |
+| `{wind_dir}`    | Wind direction          | `NE`            |
+| `{pressure}`    | Atmospheric pressure    | `1013 hPa`      |
+| `{visibility}`  | Visibility distance     | `10 km`         |
+| `{condition}`   | Weather condition       | `Cloudy`        |
+| `{description}` | Detailed description    | `Partly cloudy` |
+| `{aqi}`         | Air quality index value | `42`            |
+| `{aqi_level}`   | AQI level text          | `Good`          |
+| `{uv}`          | UV index value          | `6.5`           |
+| `{uv_level}`    | UV level text           | `High`          |
 
 **Icon tokens:**
 
@@ -1018,11 +1018,11 @@ The weather widget uses format strings with tokens to define what to display. To
 
 **Large tokens (expand to fill available space):**
 
-| Token              | Description                                    |
-|--------------------|------------------------------------------------|
-| `{forecast:graph}` | Temperature trend line graph for next hours    |
-| `{forecast:icons}` | Multi-day forecast with icons and temperatures |
-| `{forecast:scroll}`| Scrolling text with current weather + forecast |
+| Token               | Description                                    |
+|---------------------|------------------------------------------------|
+| `{forecast:graph}`  | Temperature trend line graph for next hours    |
+| `{forecast:icons}`  | Multi-day forecast with icons and temperatures |
+| `{forecast:scroll}` | Scrolling text with current weather + forecast |
 
 #### Multi-line Layouts
 
@@ -1907,53 +1907,50 @@ Displays notifications from your personal Telegram account. Uses the official Te
 1. **Create Telegram App**: Go to [my.telegram.org](https://my.telegram.org) and create an application to get your `api_id` and `api_hash`.
 2. **First Run Authentication**: On first run, you'll be prompted to enter a verification code sent to your Telegram account.
 
-#### Configuration Properties
+#### Authentication Properties (at widget root level)
 
-| Property            | Type    | Default                    | Description                                                |
-|---------------------|---------|----------------------------|------------------------------------------------------------|
-| `auth.api_id`       | integer | required                   | Telegram API ID from my.telegram.org                       |
-| `auth.api_hash`     | string  | required                   | Telegram API Hash from my.telegram.org                     |
-| `auth.phone_number` | string  | required                   | Phone number in international format (e.g., "+1234567890") |
-| `session_path`      | string  | "telegram/{phone}.session" | Path to session file for persistent login                  |
-| `poll_interval`     | number  | 1.0                        | Seconds between update checks                              |
+| Property              | Type    | Default                              | Description                                                |
+|-----------------------|---------|--------------------------------------|------------------------------------------------------------|
+| `auth.api_id`         | integer | required                             | Telegram API ID from my.telegram.org                       |
+| `auth.api_hash`       | string  | required                             | Telegram API Hash from my.telegram.org                     |
+| `auth.phone_number`   | string  | required                             | Phone number in international format (e.g., "+1234567890") |
+| `auth.session_path`   | string  | "telegram/{api_id}_{phone}.session"  | Path to session file for persistent login                  |
 
-#### Filter Configuration
+#### Filter Configuration (at widget root level)
 
-| Property                        | Type    | Default | Description                                   |
-|---------------------------------|---------|---------|-----------------------------------------------|
-| `filters.private_chats.enabled` | boolean | true    | Show notifications from private chats         |
-| `filters.private_chats.mode`    | string  | "all"   | Filter mode: "all", "whitelist", "blacklist"  |
-| `filters.private_chats.list`    | array   | []      | Chat IDs or usernames for whitelist/blacklist |
-| `filters.groups.enabled`        | boolean | false   | Show notifications from groups                |
-| `filters.groups.mode`           | string  | "all"   | Filter mode                                   |
-| `filters.groups.list`           | array   | []      | Group IDs for whitelist/blacklist             |
-| `filters.channels.enabled`      | boolean | false   | Show notifications from channels              |
-| `filters.channels.mode`         | string  | "all"   | Filter mode                                   |
-| `filters.channels.list`         | array   | []      | Channel IDs for whitelist/blacklist           |
-| `filters.show_pinned_messages`  | boolean | true    | Show notifications for pinned messages        |
+| Property                                | Type    | Default | Description                                             |
+|-----------------------------------------|---------|---------|---------------------------------------------------------|
+| `filters.private_chats.enabled`         | boolean | true    | Include messages from private chats                     |
+| `filters.private_chats.whitelist`       | array   | []      | Always include these chat IDs, even if type is disabled |
+| `filters.private_chats.blacklist`       | array   | []      | Never include these chat IDs, even if type is enabled   |
+| `filters.private_chats.pinned_messages` | boolean | true    | Include pinned message notifications                    |
+| `filters.groups.enabled`                | boolean | false   | Include messages from groups                            |
+| `filters.groups.whitelist`              | array   | []      | Always include these group IDs                          |
+| `filters.groups.blacklist`              | array   | []      | Never include these group IDs                           |
+| `filters.groups.pinned_messages`        | boolean | true    | Include pinned message notifications                    |
+| `filters.channels.enabled`              | boolean | false   | Include messages from channels                          |
+| `filters.channels.whitelist`            | array   | []      | Always include these channel IDs                        |
+| `filters.channels.blacklist`            | array   | []      | Never include these channel IDs                         |
+| `filters.channels.pinned_messages`      | boolean | false   | Include pinned message notifications                    |
 
-#### Display Configuration
+#### Appearance Configuration (at widget root level)
 
-| Property                        | Type    | Default        | Description                             |
-|---------------------------------|---------|----------------|-----------------------------------------|
-| `display.mode`                  | string  | "last_message" | Display mode (see below)                |
-| `display.max_messages`          | integer | 5              | Maximum messages in ticker mode         |
-| `display.show_sender`           | boolean | true           | Show sender name                        |
-| `display.show_chat`             | boolean | true           | Show chat/group name for group messages |
-| `display.show_time`             | boolean | false          | Show message time                       |
-| `display.time_format`           | string  | "15:04"        | Time format (Go time format)            |
-| `display.truncate_length`       | integer | 50             | Maximum characters per message          |
-| `display.notification_duration` | number  | 3.0            | Seconds to show notification flash      |
-| `display.scroll_speed`          | number  | 1.0            | Ticker scroll speed (pixels per frame)  |
-| `display.unread_badge`          | boolean | true           | Show unread count badge                 |
-| `display.text_color`            | integer | 255            | Text brightness (1-255)                 |
-
-#### Display Modes
-
-- **`last_message`**: Shows the most recent message with sender info
-- **`unread_count`**: Large centered unread message count
-- **`ticker`**: Scrolling ticker of recent messages
-- **`notification`**: Flashing notification when new message arrives, shows last message otherwise
+| Property                         | Type    | Default  | Description                                   |
+|----------------------------------|---------|----------|-----------------------------------------------|
+| `appearance.header.enabled`      | boolean | true     | Show header (sender/chat name)                |
+| `appearance.header.blink`        | boolean | false    | Make header blink                             |
+| `appearance.header.text`         | object  | -        | Text rendering settings (font, size, align)   |
+| `appearance.header.scroll`       | object  | -        | Scroll settings (enabled, direction, speed)   |
+| `appearance.message.enabled`     | boolean | true     | Show message content                          |
+| `appearance.message.blink`       | boolean | false    | Make message blink                            |
+| `appearance.message.text`        | object  | -        | Text rendering settings                       |
+| `appearance.message.scroll`      | object  | -        | Scroll settings                               |
+| `appearance.message.word_break`  | string  | "normal" | How to break lines: "normal" or "break-all"   |
+| `appearance.separator.color`     | integer | 128      | Separator line color (0-255)                  |
+| `appearance.separator.thickness` | integer | 1        | Separator line thickness (0 = disabled)       |
+| `appearance.timeout`             | integer | 0        | Seconds to show notification (0 = until next) |
+| `appearance.transitions.in`      | string  | "none"   | Transition effect when showing                |
+| `appearance.transitions.out`     | string  | "none"   | Transition effect when hiding                 |
 
 #### Example Configuration
 
@@ -1961,33 +1958,38 @@ Displays notifications from your personal Telegram account. Uses the official Te
 {
   "type": "telegram",
   "position": {"x": 0, "y": 0, "w": 128, "h": 40},
-  "telegram": {
-    "auth": {
-      "api_id": 12345678,
-      "api_hash": "your_api_hash_here",
-      "phone_number": "+1234567890"
+  "auth": {
+    "api_id": 12345678,
+    "api_hash": "your_api_hash_here",
+    "phone_number": "+1234567890"
+  },
+  "filters": {
+    "private_chats": {
+      "enabled": true,
+      "whitelist": [],
+      "blacklist": [],
+      "pinned_messages": true
     },
-    "filters": {
-      "private_chats": {
-        "enabled": true,
-        "mode": "all"
-      },
-      "groups": {
-        "enabled": true,
-        "mode": "whitelist",
-        "list": ["123456789", "-100123456789"]
-      },
-      "channels": {
-        "enabled": false
-      }
+    "groups": {
+      "enabled": false,
+      "whitelist": ["123456789"],
+      "blacklist": []
     },
-    "display": {
-      "mode": "last_message",
-      "show_sender": true,
-      "show_time": true,
-      "time_format": "15:04",
-      "unread_badge": true
+    "channels": {
+      "enabled": false
     }
+  },
+  "appearance": {
+    "header": {
+      "enabled": true,
+      "text": {"font": "5x7", "size": 1}
+    },
+    "message": {
+      "enabled": true,
+      "scroll": {"enabled": true, "direction": "left", "speed": 30}
+    },
+    "timeout": 10,
+    "transitions": {"in": "random", "out": "random"}
   }
 }
 ```
@@ -1997,8 +1999,169 @@ Displays notifications from your personal Telegram account. Uses the official Te
 - **Security**: The session file contains your Telegram login credentials. Keep it secure and don't share it.
 - **First Run**: Authentication happens on first run via console prompts. Ensure you can see the console output.
 - **Group/Channel IDs**: You can find chat IDs using Telegram bots like @userinfobot or by forwarding a message to @RawDataBot.
-- **Whitelist Mode**: Use whitelist for groups/channels to only see messages from specific chats you care about.
+- **Whitelist/Blacklist**: Whitelist has priority over enabled setting; blacklist has priority over whitelist.
 - **2FA**: If you have Two-Factor Authentication enabled, you'll be prompted for your password on first login.
+
+---
+
+### Telegram Counter Widget
+
+Displays unread message count from your Telegram account. Uses the same Telegram MTProto API as the Telegram widget. Can be used alongside the Telegram notification widget - both share the same client connection.
+
+**Important**: This widget has independent filter settings from the Telegram notification widget. Each widget can count different chat types.
+
+#### Prerequisites
+
+Same as Telegram Widget - see above.
+
+#### Authentication Properties (at widget root level)
+
+| Property              | Type    | Default                              | Description                                                |
+|-----------------------|---------|--------------------------------------|------------------------------------------------------------|
+| `auth.api_id`         | integer | required                             | Telegram API ID from my.telegram.org                       |
+| `auth.api_hash`       | string  | required                             | Telegram API Hash from my.telegram.org                     |
+| `auth.phone_number`   | string  | required                             | Phone number in international format (e.g., "+1234567890") |
+| `auth.session_path`   | string  | "telegram/{api_id}_{phone}.session"  | Path to session file for persistent login                  |
+
+#### Filter Configuration (independent from telegram widget)
+
+Same structure as Telegram Widget filters - can be configured independently.
+
+#### Display Settings (at widget root level)
+
+| Property                  | Type    | Default           | Description                                     |
+|---------------------------|---------|-------------------|-------------------------------------------------|
+| `mode`                    | string  | "badge"           | Display mode: "badge" or "text"                 |
+| `badge.blink`             | string  | "never"           | Blink mode: "never", "always", or "progressive" |
+| `badge.colors.foreground` | integer | 255 (white)       | Icon foreground color (0-255, -1 = transparent) |
+| `badge.colors.background` | integer | 0 (black)         | Icon background color (0-255, -1 = transparent) |
+| `text.format`             | string  | "{unread} unread" | Format string for text mode (see tokens below)  |
+| `text.font`               | string  | null              | Font name or TTF path (null = bundled font)     |
+| `text.size`               | integer | 16                | Font size in pixels                             |
+| `text.align.h`            | string  | "center"          | Horizontal alignment: "left", "center", "right" |
+| `text.align.v`            | string  | "center"          | Vertical alignment: "top", "center", "bottom"   |
+
+#### Display Modes
+
+- **`badge`**: Shows the Telegram paper airplane icon (size auto-scales to widget dimensions)
+- **`text`**: Shows formatted text with tokens (see below)
+
+#### Text Format Tokens
+
+Available tokens for `text.format`:
+
+| Token              | Description                                      |
+|--------------------|--------------------------------------------------|
+| `{icon}`           | Telegram paper airplane icon (sized to font)     |
+| `{unread}`         | Total unread messages                            |
+| `{total}`          | Same as {unread}                                 |
+| `{mentions}`       | Unread @mentions                                 |
+| `{reactions}`      | Unread reactions                                 |
+| `{private}`        | Unread in private chats                          |
+| `{groups}`         | Unread in groups                                 |
+| `{channels}`       | Unread in channels                               |
+| `{muted}`          | Unread in muted chats                            |
+| `{private_muted}`  | Unread in muted private chats                    |
+| `{groups_muted}`   | Unread in muted groups                           |
+| `{channels_muted}` | Unread in muted channels                         |
+
+Examples:
+- `"{icon} {unread}"` -> icon followed by "5"
+- `"{unread} ({mentions}@)"` -> "5 (2@)"
+
+#### Blink Modes
+
+- **`never`**: No blinking
+- **`always`**: Constant 2Hz blink (toggles every 500ms)
+- **`progressive`**: Blink frequency increases with unread count:
+  - 1 message: 1 blink/second
+  - 5 messages: 5 blinks/second
+  - 10+ messages: 10 blinks/second
+
+#### Example Configuration (Badge Mode)
+
+```json
+{
+  "type": "telegram_counter",
+  "position": {"x": 100, "y": 0, "w": 28, "h": 40},
+  "auth": {
+    "api_id": 12345678,
+    "api_hash": "your_api_hash_here",
+    "phone_number": "+1234567890"
+  },
+  "mode": "badge",
+  "badge": {
+    "blink": "progressive",
+    "colors": {
+      "foreground": 255,
+      "background": -1
+    }
+  }
+}
+```
+
+#### Example Configuration (Text Mode)
+
+```json
+{
+  "type": "telegram_counter",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "auth": {
+    "api_id": 12345678,
+    "api_hash": "your_api_hash_here",
+    "phone_number": "+1234567890"
+  },
+  "mode": "text",
+  "text": {
+    "format": "{unread} new ({mentions} mentions)",
+    "font": null,
+    "size": 16,
+    "align": {"h": "center", "v": "center"}
+  }
+}
+```
+
+#### Using Both Widgets Together
+
+You can use `telegram` and `telegram_counter` widgets simultaneously. They share the same Telegram client connection based on `api_id` and `phone_number`, so authentication only happens once. Each widget has its own independent filter settings.
+
+```json
+{
+  "widgets": [
+    {
+      "type": "telegram",
+      "position": {"x": 0, "y": 0, "w": 100, "h": 40},
+      "auth": {
+        "api_id": 12345678,
+        "api_hash": "your_api_hash_here",
+        "phone_number": "+1234567890"
+      },
+      "filters": {
+        "private_chats": {"enabled": true}
+      }
+    },
+    {
+      "type": "telegram_counter",
+      "position": {"x": 100, "y": 0, "w": 28, "h": 40},
+      "style": {"background": -1},
+      "auth": {
+        "api_id": 12345678,
+        "api_hash": "your_api_hash_here",
+        "phone_number": "+1234567890"
+      },
+      "filters": {
+        "private_chats": {"enabled": true},
+        "groups": {"enabled": true},
+        "channels": {"enabled": true}
+      },
+      "mode": "badge",
+      "badge": {"blink": "progressive"}
+    }
+  ]
+}
+```
+
+---
 
 ## Examples
 

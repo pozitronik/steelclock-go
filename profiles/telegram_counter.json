@@ -11,31 +11,61 @@
   "widgets": [
     {
       "type": "telegram_counter",
+      "enabled": true,
       "position": {
         "x": 0,
         "y": 0,
         "w": 128,
-        "h": 40
+        "h": 40,
+        "z": 0
       },
       "style": {
         "border": -1,
-        "background": 0
+        "background": 0,
+        "padding": 0
       },
       "update_interval": 1.0,
-      "telegram": {
-        "auth": {
-          "api_id": 12345678,
-          "api_hash": "your_api_hash_here",
-          "phone_number": "+1234567890"
+      "auth": {
+        "api_id": 12345678,
+        "api_hash": "your_api_hash_here",
+        "phone_number": "+1234567890",
+        "session_path": ""
+      },
+      "filters": {
+        "private_chats": {
+          "enabled": true,
+          "whitelist": [],
+          "blacklist": [],
+          "pinned_messages": true
         },
-        "counter": {
-          "format": "text",
-          "show_zero": false,
-          "blink": "nonzero",
-          "text": {
-            "font": "3x5",
-            "size": 1
-          }
+        "groups": {
+          "enabled": false,
+          "whitelist": [],
+          "blacklist": [],
+          "pinned_messages": true
+        },
+        "channels": {
+          "enabled": false,
+          "whitelist": [],
+          "blacklist": [],
+          "pinned_messages": false
+        }
+      },
+      "mode": "badge",
+      "badge": {
+        "blink": "never",
+        "colors": {
+          "foreground": 255,
+          "background": 0
+        }
+      },
+      "text": {
+        "format": "{unread} unread",
+        "font": null,
+        "size": 16,
+        "align": {
+          "h": "center",
+          "v": "center"
         }
       }
     }

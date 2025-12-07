@@ -33,20 +33,23 @@ func getRegistry() *clientRegistry {
 }
 
 // clientKey generates a unique key for a client configuration
-func clientKey(cfg *config.TelegramConfig) string {
-	if cfg == nil || cfg.Auth == nil {
+func clientKey(auth *config.TelegramAuthConfig) string {
+	if auth == nil {
 		return ""
 	}
-	return fmt.Sprintf("%d:%s", cfg.Auth.APIID, cfg.Auth.PhoneNumber)
+	return fmt.Sprintf("%d:%s", auth.APIID, auth.PhoneNumber)
 }
 
 // GetOrCreateClient returns an existing client or creates a new one for the given config.
 // The client is reference-counted; call ReleaseClient when done.
-func GetOrCreateClient(cfg *config.TelegramConfig) (*Client, error) {
+func GetOrCreateClient(cfg *ClientConfig) (*Client, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("invalid telegram configuration: nil config")
+	}
 	reg := getRegistry()
-	key := clientKey(cfg)
+	key := clientKey(cfg.Auth)
 	if key == "" {
-		return nil, fmt.Errorf("invalid telegram configuration")
+		return nil, fmt.Errorf("invalid telegram configuration: missing auth")
 	}
 
 	reg.mu.Lock()
@@ -72,9 +75,9 @@ func GetOrCreateClient(cfg *config.TelegramConfig) (*Client, error) {
 
 // ReleaseClient decrements the reference count for a client.
 // When the count reaches zero, the client is disconnected and removed.
-func ReleaseClient(cfg *config.TelegramConfig) {
+func ReleaseClient(auth *config.TelegramAuthConfig) {
 	reg := getRegistry()
-	key := clientKey(cfg)
+	key := clientKey(auth)
 	if key == "" {
 		return
 	}
@@ -95,18 +98,4 @@ func ReleaseClient(cfg *config.TelegramConfig) {
 			reg.refs[key] = count
 		}
 	}
-}
-
-// GetClientRefCount returns the current reference count for a client (for testing/debugging)
-func GetClientRefCount(cfg *config.TelegramConfig) int {
-	reg := getRegistry()
-	key := clientKey(cfg)
-	if key == "" {
-		return 0
-	}
-
-	reg.mu.RLock()
-	defer reg.mu.RUnlock()
-
-	return reg.refs[key]
 }

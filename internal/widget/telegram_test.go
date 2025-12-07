@@ -13,22 +13,11 @@ func TestNewTelegramWidget(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "missing telegram config",
-			cfg: config.WidgetConfig{
-				Type:     "telegram",
-				Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-				Telegram: nil,
-			},
-			wantErr: true,
-		},
-		{
 			name: "missing auth config",
 			cfg: config.WidgetConfig{
 				Type:     "telegram",
 				Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-				Telegram: &config.TelegramConfig{
-					Auth: nil,
-				},
+				Auth:     nil,
 			},
 			wantErr: true,
 		},
@@ -37,12 +26,10 @@ func TestNewTelegramWidget(t *testing.T) {
 			cfg: config.WidgetConfig{
 				Type:     "telegram",
 				Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-				Telegram: &config.TelegramConfig{
-					Auth: &config.TelegramAuthConfig{
-						APIID:       12345,
-						APIHash:     "testhash",
-						PhoneNumber: "+1234567890",
-					},
+				Auth: &config.TelegramAuthConfig{
+					APIID:       12345,
+					APIHash:     "testhash",
+					PhoneNumber: "+1234567890",
 				},
 			},
 			wantErr: false,
@@ -52,24 +39,20 @@ func TestNewTelegramWidget(t *testing.T) {
 			cfg: config.WidgetConfig{
 				Type:     "telegram",
 				Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-				Telegram: &config.TelegramConfig{
-					Auth: &config.TelegramAuthConfig{
-						APIID:       12345,
-						APIHash:     "testhash",
-						PhoneNumber: "+1234567890",
+				Auth: &config.TelegramAuthConfig{
+					APIID:       12345,
+					APIHash:     "testhash",
+					PhoneNumber: "+1234567890",
+				},
+				Appearance: &config.TelegramAppearanceConfig{
+					Header: &config.TelegramElementConfig{
+						Blink: true,
 					},
-					PrivateChats: &config.TelegramChatConfig{
-						Appearance: &config.TelegramAppearanceConfig{
-							Header: &config.TelegramElementConfig{
-								Blink: true,
-							},
-							Separator: &config.SeparatorConfig{
-								Color:     200,
-								Thickness: 2,
-							},
-							Timeout: 10,
-						},
+					Separator: &config.SeparatorConfig{
+						Color:     200,
+						Thickness: 2,
 					},
+					Timeout: 10,
 				},
 			},
 			wantErr: false,
@@ -94,12 +77,10 @@ func TestTelegramWidget_Render(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "telegram",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-		Telegram: &config.TelegramConfig{
-			Auth: &config.TelegramAuthConfig{
-				APIID:       12345,
-				APIHash:     "testhash",
-				PhoneNumber: "+1234567890",
-			},
+		Auth: &config.TelegramAuthConfig{
+			APIID:       12345,
+			APIHash:     "testhash",
+			PhoneNumber: "+1234567890",
 		},
 	}
 
@@ -123,12 +104,10 @@ func TestTelegramWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "telegram",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-		Telegram: &config.TelegramConfig{
-			Auth: &config.TelegramAuthConfig{
-				APIID:       12345,
-				APIHash:     "testhash",
-				PhoneNumber: "+1234567890",
-			},
+		Auth: &config.TelegramAuthConfig{
+			APIID:       12345,
+			APIHash:     "testhash",
+			PhoneNumber: "+1234567890",
 		},
 	}
 
@@ -243,16 +222,12 @@ func TestTelegramWidget_AppearanceSettings(t *testing.T) {
 			cfg := config.WidgetConfig{
 				Type:     "telegram",
 				Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-				Telegram: &config.TelegramConfig{
-					Auth: &config.TelegramAuthConfig{
-						APIID:       12345,
-						APIHash:     "testhash",
-						PhoneNumber: "+1234567890",
-					},
-					PrivateChats: &config.TelegramChatConfig{
-						Appearance: appearance,
-					},
+				Auth: &config.TelegramAuthConfig{
+					APIID:       12345,
+					APIHash:     "testhash",
+					PhoneNumber: "+1234567890",
 				},
+				Appearance: appearance,
 			}
 
 			w, err := NewTelegramWidget(cfg)
@@ -260,20 +235,20 @@ func TestTelegramWidget_AppearanceSettings(t *testing.T) {
 				t.Fatalf("NewTelegramWidget() error = %v", err)
 			}
 
-			if w.privateAppearance.Header.Enabled != tt.wantHeaderEnabled {
-				t.Errorf("Header.Enabled = %v, want %v", w.privateAppearance.Header.Enabled, tt.wantHeaderEnabled)
+			if w.appearance.Header.Enabled != tt.wantHeaderEnabled {
+				t.Errorf("Header.Enabled = %v, want %v", w.appearance.Header.Enabled, tt.wantHeaderEnabled)
 			}
-			if w.privateAppearance.Message.Enabled != tt.wantMsgEnabled {
-				t.Errorf("Message.Enabled = %v, want %v", w.privateAppearance.Message.Enabled, tt.wantMsgEnabled)
+			if w.appearance.Message.Enabled != tt.wantMsgEnabled {
+				t.Errorf("Message.Enabled = %v, want %v", w.appearance.Message.Enabled, tt.wantMsgEnabled)
 			}
-			if w.privateAppearance.Header.Blink != tt.wantBlink {
-				t.Errorf("Header.Blink = %v, want %v", w.privateAppearance.Header.Blink, tt.wantBlink)
+			if w.appearance.Header.Blink != tt.wantBlink {
+				t.Errorf("Header.Blink = %v, want %v", w.appearance.Header.Blink, tt.wantBlink)
 			}
-			if w.privateAppearance.Separator.Color != tt.wantSepColor {
-				t.Errorf("Separator.Color = %v, want %v", w.privateAppearance.Separator.Color, tt.wantSepColor)
+			if w.appearance.Separator.Color != tt.wantSepColor {
+				t.Errorf("Separator.Color = %v, want %v", w.appearance.Separator.Color, tt.wantSepColor)
 			}
-			if w.privateAppearance.Timeout != tt.wantTimeout {
-				t.Errorf("Timeout = %v, want %v", w.privateAppearance.Timeout, tt.wantTimeout)
+			if w.appearance.Timeout != tt.wantTimeout {
+				t.Errorf("Timeout = %v, want %v", w.appearance.Timeout, tt.wantTimeout)
 			}
 		})
 	}
@@ -283,12 +258,10 @@ func TestTelegramWidget_Stop(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "telegram",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-		Telegram: &config.TelegramConfig{
-			Auth: &config.TelegramAuthConfig{
-				APIID:       12345,
-				APIHash:     "testhash",
-				PhoneNumber: "+1234567890",
-			},
+		Auth: &config.TelegramAuthConfig{
+			APIID:       12345,
+			APIHash:     "testhash",
+			PhoneNumber: "+1234567890",
 		},
 	}
 
@@ -302,36 +275,16 @@ func TestTelegramWidget_Stop(t *testing.T) {
 }
 
 func TestTelegramWidget_GetAppearance(t *testing.T) {
-	trueVal := true
-	falseVal := false
-
 	cfg := config.WidgetConfig{
 		Type:     "telegram",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
-		Telegram: &config.TelegramConfig{
-			Auth: &config.TelegramAuthConfig{
-				APIID:       12345,
-				APIHash:     "testhash",
-				PhoneNumber: "+1234567890",
-			},
-			PrivateChats: &config.TelegramChatConfig{
-				Enabled: &trueVal,
-				Appearance: &config.TelegramAppearanceConfig{
-					Timeout: 10,
-				},
-			},
-			Groups: &config.TelegramChatConfig{
-				Enabled: &falseVal,
-				Appearance: &config.TelegramAppearanceConfig{
-					Timeout: 20,
-				},
-			},
-			Channels: &config.TelegramChatConfig{
-				Enabled: &falseVal,
-				Appearance: &config.TelegramAppearanceConfig{
-					Timeout: 30,
-				},
-			},
+		Auth: &config.TelegramAuthConfig{
+			APIID:       12345,
+			APIHash:     "testhash",
+			PhoneNumber: "+1234567890",
+		},
+		Appearance: &config.TelegramAppearanceConfig{
+			Timeout: 10,
 		},
 	}
 
@@ -340,14 +293,8 @@ func TestTelegramWidget_GetAppearance(t *testing.T) {
 		t.Fatalf("NewTelegramWidget() error = %v", err)
 	}
 
-	// Test that different chat types get different appearances
-	if w.privateAppearance.Timeout != 10 {
-		t.Errorf("privateAppearance.Timeout = %d, want 10", w.privateAppearance.Timeout)
-	}
-	if w.groupAppearance.Timeout != 20 {
-		t.Errorf("groupAppearance.Timeout = %d, want 20", w.groupAppearance.Timeout)
-	}
-	if w.channelAppearance.Timeout != 30 {
-		t.Errorf("channelAppearance.Timeout = %d, want 30", w.channelAppearance.Timeout)
+	// Test that appearance is set correctly
+	if w.appearance.Timeout != 10 {
+		t.Errorf("appearance.Timeout = %d, want 10", w.appearance.Timeout)
 	}
 }

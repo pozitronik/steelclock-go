@@ -162,8 +162,17 @@ type WidgetConfig struct {
 	// Star Wars intro crawl widget
 	StarWarsIntro *StarWarsIntroConfig `json:"starwars_intro,omitempty"` // Star Wars intro crawl settings
 
-	// Telegram widget
-	Telegram *TelegramConfig `json:"telegram,omitempty"` // Telegram notifications settings
+	// Telegram widgets (shared auth config)
+	Auth *TelegramAuthConfig `json:"auth,omitempty"` // Telegram API authentication (shared by telegram and telegram_counter)
+
+	// Telegram widget filters (for both telegram and telegram_counter)
+	Filters *TelegramFiltersConfig `json:"filters,omitempty"` // Message filters (private_chats, groups, channels)
+
+	// Telegram notification widget appearance
+	Appearance *TelegramAppearanceConfig `json:"appearance,omitempty"` // Notification appearance settings
+
+	// Telegram counter widget specific
+	Badge *TelegramBadgeConfig `json:"badge,omitempty"` // Badge mode settings (for telegram_counter)
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -812,36 +821,6 @@ type TransitionConfig struct {
 	OutSpeed float64 `json:"out_speed,omitempty"`
 }
 
-// TelegramConfig contains settings for the Telegram notifications widget
-type TelegramConfig struct {
-	// Auth: Telegram API authentication settings (required)
-	Auth *TelegramAuthConfig `json:"auth,omitempty"`
-	// SessionPath: path to session file (default: telegram/{api_id}_{phone}.session)
-	SessionPath string `json:"session_path,omitempty"`
-	// PollInterval: seconds between update checks (default: 1.0)
-	PollInterval float64 `json:"poll_interval,omitempty"`
-	// PrivateChats: private message settings
-	PrivateChats *TelegramChatConfig `json:"private_chats,omitempty"`
-	// Groups: group chat settings
-	Groups *TelegramChatConfig `json:"groups,omitempty"`
-	// Channels: channel settings
-	Channels *TelegramChatConfig `json:"channels,omitempty"`
-	// Counter: counter display settings (for telegram_counter widget)
-	Counter *TelegramCounterConfig `json:"counter,omitempty"`
-}
-
-// TelegramCounterConfig contains settings for the unread counter widget
-type TelegramCounterConfig struct {
-	// Format: display format - "count" (just number), "badge" (number in parentheses), "text" ("N unread")
-	Format string `json:"format,omitempty"`
-	// ShowZero: whether to show when unread count is 0 (default: false)
-	ShowZero *bool `json:"show_zero,omitempty"`
-	// Blink: when to blink - "never", "always", "nonzero" (default: "never")
-	Blink string `json:"blink,omitempty"`
-	// Text: text rendering settings (font, size)
-	Text *TextConfig `json:"text,omitempty"`
-}
-
 // TelegramAuthConfig contains Telegram API authentication credentials
 type TelegramAuthConfig struct {
 	// APIID: Telegram API ID from my.telegram.org (required)
@@ -850,20 +829,47 @@ type TelegramAuthConfig struct {
 	APIHash string `json:"api_hash"`
 	// PhoneNumber: phone number in international format, e.g., "+1234567890" (required)
 	PhoneNumber string `json:"phone_number"`
+	// SessionPath: path to session file (default: telegram/{api_id}_{phone}.session)
+	SessionPath string `json:"session_path,omitempty"`
 }
 
-// TelegramChatConfig contains settings for a chat type (private/group/channel)
-type TelegramChatConfig struct {
-	// Enabled: enable notifications from this chat type (default: true for private, false for groups/channels)
+// TelegramFiltersConfig contains filter settings for all chat types
+type TelegramFiltersConfig struct {
+	// PrivateChats: private message filter settings
+	PrivateChats *TelegramChatFilterConfig `json:"private_chats,omitempty"`
+	// Groups: group chat filter settings
+	Groups *TelegramChatFilterConfig `json:"groups,omitempty"`
+	// Channels: channel filter settings
+	Channels *TelegramChatFilterConfig `json:"channels,omitempty"`
+}
+
+// TelegramChatFilterConfig contains filter settings for a chat type
+type TelegramChatFilterConfig struct {
+	// Enabled: enable messages from this chat type (default: true for private, false for groups/channels)
 	Enabled *bool `json:"enabled,omitempty"`
-	// Whitelist: always show notifications from these IDs, even if this chat type is disabled
+	// Whitelist: always include these chat IDs, even if this chat type is disabled
 	Whitelist []string `json:"whitelist,omitempty"`
-	// Blacklist: never show notifications from these IDs, even if this chat type is enabled
+	// Blacklist: never include these chat IDs, even if this chat type is enabled
 	Blacklist []string `json:"blacklist,omitempty"`
-	// ShowPinnedMessages: show notifications for pinned messages (default: true for private/groups, false for channels)
-	ShowPinnedMessages *bool `json:"show_pinned_messages,omitempty"`
-	// Appearance: notification appearance settings
-	Appearance *TelegramAppearanceConfig `json:"appearance,omitempty"`
+	// PinnedMessages: include pinned message notifications (default: true)
+	PinnedMessages *bool `json:"pinned_messages,omitempty"`
+}
+
+// TelegramBadgeConfig contains settings for badge display mode
+type TelegramBadgeConfig struct {
+	// Blink: blink mode - "never", "always", "progressive" (default: "never")
+	// "progressive" increases blink frequency based on unread count (1/sec at 1 msg, 10/sec at 10+ msgs)
+	Blink string `json:"blink,omitempty"`
+	// Colors: custom colors for the badge icon
+	Colors *TelegramBadgeColorsConfig `json:"colors,omitempty"`
+}
+
+// TelegramBadgeColorsConfig contains color settings for badge icon
+type TelegramBadgeColorsConfig struct {
+	// Foreground: color for icon shape (0-255, or -1 for transparent)
+	Foreground int `json:"foreground"`
+	// Background: color for icon background (0-255, or -1 for transparent)
+	Background int `json:"background"`
 }
 
 // TelegramAppearanceConfig contains appearance settings for notifications

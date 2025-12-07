@@ -50,15 +50,13 @@ type TelegramWidget struct {
 	mu sync.RWMutex
 
 	// Telegram client (shared via registry)
-	client    *tgclient.Client
-	clientCfg *config.TelegramConfig // stored for releasing client
-	ctx       context.Context
-	cancel    context.CancelFunc
+	client  *tgclient.Client
+	authCfg *config.TelegramAuthConfig // stored for releasing client
+	ctx     context.Context
+	cancel  context.CancelFunc
 
-	// Appearance per chat type
-	privateAppearance ChatAppearance
-	groupAppearance   ChatAppearance
-	channelAppearance ChatAppearance
+	// Appearance (single appearance for all chat types now)
+	appearance ChatAppearance
 
 	// State
 	messages           []tgclient.MessageInfo
@@ -100,30 +98,26 @@ func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
 	base := NewBaseWidget(cfg)
 	pos := base.GetPosition()
 
-	if cfg.Telegram == nil {
-		return nil, fmt.Errorf("telegram configuration is required")
+	if cfg.Auth == nil {
+		return nil, fmt.Errorf("telegram auth configuration is required")
+	}
+
+	// Create client config for registry
+	clientCfg := &tgclient.ClientConfig{
+		Auth:    cfg.Auth,
+		Filters: cfg.Filters,
 	}
 
 	// Get or create shared Telegram client via registry
-	client, err := tgclient.GetOrCreateClient(cfg.Telegram)
+	client, err := tgclient.GetOrCreateClient(clientCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get telegram client: %w", err)
 	}
 
-	// Parse appearance for each chat type
-	privateAppearance, err := parseAppearance(cfg.Telegram.PrivateChats, true)
+	// Parse appearance from config
+	appearance, err := parseAppearance(cfg.Appearance)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse private chat appearance: %w", err)
-	}
-
-	groupAppearance, err := parseAppearance(cfg.Telegram.Groups, false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse group appearance: %w", err)
-	}
-
-	channelAppearance, err := parseAppearance(cfg.Telegram.Channels, false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse channel appearance: %w", err)
+		return nil, fmt.Errorf("failed to parse appearance: %w", err)
 	}
 
 	// Get internal font for status messages
@@ -135,10 +129,8 @@ func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
 	w := &TelegramWidget{
 		BaseWidget:        base,
 		client:            client,
-		clientCfg:         cfg.Telegram,
-		privateAppearance: privateAppearance,
-		groupAppearance:   groupAppearance,
-		channelAppearance: channelAppearance,
+		authCfg:           cfg.Auth,
+		appearance:        appearance,
 		messages:          make([]tgclient.MessageInfo, 0),
 		reconnectInterval: 30 * time.Second,
 		width:             pos.W,
@@ -183,7 +175,7 @@ func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
 }
 
 // parseAppearance converts config to processed appearance settings
-func parseAppearance(chatCfg *config.TelegramChatConfig, isPrivate bool) (ChatAppearance, error) {
+func parseAppearance(appCfg *config.TelegramAppearanceConfig) (ChatAppearance, error) {
 	appearance := ChatAppearance{
 		Header: ElementAppearance{
 			Enabled:         true,
@@ -226,7 +218,7 @@ func parseAppearance(chatCfg *config.TelegramChatConfig, isPrivate bool) (ChatAp
 		},
 	}
 
-	if chatCfg == nil || chatCfg.Appearance == nil {
+	if appCfg == nil {
 		// Load default fonts
 		var err error
 		appearance.Header.FontFace, err = bitmap.LoadFont("", appearance.Header.FontSize)
@@ -240,7 +232,7 @@ func parseAppearance(chatCfg *config.TelegramChatConfig, isPrivate bool) (ChatAp
 		return appearance, nil
 	}
 
-	app := chatCfg.Appearance
+	app := appCfg
 
 	// Parse header appearance
 	if app.Header != nil {
@@ -372,18 +364,9 @@ func parseAppearance(chatCfg *config.TelegramChatConfig, isPrivate bool) (ChatAp
 	return appearance, nil
 }
 
-// getAppearance returns the appropriate appearance settings for a chat type
-func (w *TelegramWidget) getAppearance(chatType tgclient.ChatType) *ChatAppearance {
-	switch chatType {
-	case tgclient.ChatTypePrivate:
-		return &w.privateAppearance
-	case tgclient.ChatTypeGroup:
-		return &w.groupAppearance
-	case tgclient.ChatTypeChannel:
-		return &w.channelAppearance
-	default:
-		return &w.privateAppearance
-	}
+// getAppearance returns the appearance settings (now single appearance for all chat types)
+func (w *TelegramWidget) getAppearance(_ tgclient.ChatType) *ChatAppearance {
+	return &w.appearance
 }
 
 // Update handles widget state updates
@@ -1254,14 +1237,14 @@ func (w *TelegramWidget) applyTransition(dst, oldFrame, newFrame *image.Gray, pr
 		}
 
 	case "clock_wipe":
-		import_math_needed := 3.14159265358979323846
+		pi := 3.14159265358979323846
 		centerX, centerY := float64(width)/2, float64(height)/2
 		for y := 0; y < height; y++ {
 			for x := 0; x < width; x++ {
 				dx := float64(x) - centerX
 				dy := float64(y) - centerY
-				angle := atan2(dy, dx) + import_math_needed
-				normalizedAngle := angle / (2 * import_math_needed)
+				angle := atan2(dy, dx) + pi
+				normalizedAngle := angle / (2 * pi)
 				if normalizedAngle <= progress {
 					dst.SetGray(x, y, newFrame.GrayAt(x, y))
 				} else {
@@ -1396,8 +1379,8 @@ func (w *TelegramWidget) Stop() {
 		w.cancel()
 	}
 	// Release client via registry (will disconnect when ref count reaches 0)
-	if w.clientCfg != nil {
-		tgclient.ReleaseClient(w.clientCfg)
-		w.clientCfg = nil
+	if w.authCfg != nil {
+		tgclient.ReleaseClient(w.authCfg)
+		w.authCfg = nil
 	}
 }

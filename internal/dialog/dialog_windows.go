@@ -26,19 +26,19 @@ var (
 	procGetWindowTextLengthW = user32.NewProc("GetWindowTextLengthW")
 	procPostQuitMessage      = user32.NewProc("PostQuitMessage")
 	procRegisterClassExW     = user32.NewProc("RegisterClassExW")
-	procSendMessageW         = user32.NewProc("SendMessageW")
-	procSetFocus             = user32.NewProc("SetFocus")
-	procSetWindowTextW       = user32.NewProc("SetWindowTextW")
-	procShowWindow           = user32.NewProc("ShowWindow")
-	procTranslateMessage     = user32.NewProc("TranslateMessage")
-	procUpdateWindow         = user32.NewProc("UpdateWindow")
-	procGetModuleHandleW     = kernel32.NewProc("GetModuleHandleW")
-	procMessageBoxW          = user32.NewProc("MessageBoxW")
-	procGetSystemMetrics     = user32.NewProc("GetSystemMetrics")
-	procSetWindowPos         = user32.NewProc("SetWindowPos")
-	procSetForegroundWindow  = user32.NewProc("SetForegroundWindow")
+
+	procSetFocus = user32.NewProc("SetFocus")
+
+	procShowWindow       = user32.NewProc("ShowWindow")
+	procTranslateMessage = user32.NewProc("TranslateMessage")
+	procUpdateWindow     = user32.NewProc("UpdateWindow")
+	procGetModuleHandleW = kernel32.NewProc("GetModuleHandleW")
+	procGetSystemMetrics = user32.NewProc("GetSystemMetrics")
+
+	procSetForegroundWindow = user32.NewProc("SetForegroundWindow")
 )
 
+//goland:noinspection GoUnusedConst,GoSnakeCaseUsage
 const (
 	WS_OVERLAPPED       = 0x00000000
 	WS_CAPTION          = 0x00C00000
@@ -183,7 +183,7 @@ func showInputBoxOnThread(title, prompt string, masked bool) (string, bool) {
 		LpszClassName: className,
 	}
 
-	procRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc)))
+	_, _, _ = procRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc)))
 
 	// Window dimensions
 	width := int32(350)
@@ -209,18 +209,18 @@ func showInputBoxOnThread(title, prompt string, masked bool) (string, bool) {
 		return "", false
 	}
 
-	procShowWindow.Call(hwnd, SW_SHOW)
-	procUpdateWindow.Call(hwnd)
+	_, _, _ = procShowWindow.Call(hwnd, SW_SHOW)
+	_, _, _ = procUpdateWindow.Call(hwnd)
 
 	// Bring to foreground
-	procSetForegroundWindow.Call(hwnd)
+	_, _, _ = procSetForegroundWindow.Call(hwnd)
 
 	// Focus on edit control
 	dialogMu.Lock()
 	hwndEdit := state.hwndEdit
 	dialogMu.Unlock()
 	if hwndEdit != 0 {
-		procSetFocus.Call(uintptr(hwndEdit))
+		_, _, _ = procSetFocus.Call(uintptr(hwndEdit))
 	}
 
 	// Message loop
@@ -233,8 +233,8 @@ func showInputBoxOnThread(title, prompt string, masked bool) (string, bool) {
 		if ret == 0 || int32(ret) == -1 {
 			break
 		}
-		procTranslateMessage.Call(uintptr(unsafe.Pointer(&msg)))
-		procDispatchMessageW.Call(uintptr(unsafe.Pointer(&msg)))
+		_, _, _ = procTranslateMessage.Call(uintptr(unsafe.Pointer(&msg)))
+		_, _, _ = procDispatchMessageW.Call(uintptr(unsafe.Pointer(&msg)))
 	}
 
 	dialogMu.Lock()
@@ -251,7 +251,7 @@ func inputBoxWndProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) ui
 		hInstance, _, _ := procGetModuleHandleW.Call(0)
 
 		// Create label
-		procCreateWindowExW.Call(
+		_, _, _ = procCreateWindowExW.Call(
 			0,
 			uintptr(unsafe.Pointer(utf16Ptr("STATIC"))),
 			uintptr(unsafe.Pointer(utf16Ptr(currentDialog.prompt))),
@@ -277,7 +277,7 @@ func inputBoxWndProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) ui
 		currentDialog.hwndEdit = syscall.Handle(hwndEdit)
 
 		// Create OK button
-		procCreateWindowExW.Call(
+		_, _, _ = procCreateWindowExW.Call(
 			0,
 			uintptr(unsafe.Pointer(utf16Ptr("BUTTON"))),
 			uintptr(unsafe.Pointer(utf16Ptr("OK"))),
@@ -287,7 +287,7 @@ func inputBoxWndProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) ui
 		)
 
 		// Create Cancel button
-		procCreateWindowExW.Call(
+		_, _, _ = procCreateWindowExW.Call(
 			0,
 			uintptr(unsafe.Pointer(utf16Ptr("BUTTON"))),
 			uintptr(unsafe.Pointer(utf16Ptr("Cancel"))),
@@ -305,20 +305,20 @@ func inputBoxWndProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) ui
 			// Get text from edit control
 			currentDialog.result = getWindowText(currentDialog.hwndEdit)
 			currentDialog.ok = true
-			procDestroyWindow.Call(uintptr(hwnd))
+			_, _, _ = procDestroyWindow.Call(uintptr(hwnd))
 		case ID_CANCEL:
 			currentDialog.ok = false
-			procDestroyWindow.Call(uintptr(hwnd))
+			_, _, _ = procDestroyWindow.Call(uintptr(hwnd))
 		}
 		return 0
 
 	case WM_CLOSE:
 		currentDialog.ok = false
-		procDestroyWindow.Call(uintptr(hwnd))
+		_, _, _ = procDestroyWindow.Call(uintptr(hwnd))
 		return 0
 
 	case WM_DESTROY:
-		procPostQuitMessage.Call(0)
+		_, _, _ = procPostQuitMessage.Call(0)
 		return 0
 	}
 
@@ -333,7 +333,7 @@ func getWindowText(hwnd syscall.Handle) string {
 	}
 
 	buf := make([]uint16, length+1)
-	procGetWindowTextW.Call(uintptr(hwnd), uintptr(unsafe.Pointer(&buf[0])), length+1)
+	_, _, _ = procGetWindowTextW.Call(uintptr(hwnd), uintptr(unsafe.Pointer(&buf[0])), length+1)
 
 	return strings.TrimRight(string(utf16.Decode(buf)), "\x00")
 }
@@ -341,24 +341,4 @@ func getWindowText(hwnd syscall.Handle) string {
 func utf16Ptr(s string) *uint16 {
 	p, _ := syscall.UTF16PtrFromString(s)
 	return p
-}
-
-// ShowMessage displays a simple message box
-func ShowMessage(title, message string, isError bool) {
-	titlePtr, _ := syscall.UTF16PtrFromString(title)
-	messagePtr, _ := syscall.UTF16PtrFromString(message)
-
-	flags := uintptr(MB_OK | MB_TOPMOST)
-	if isError {
-		flags |= MB_ICONERROR
-	} else {
-		flags |= MB_ICONINFO
-	}
-
-	procMessageBoxW.Call(
-		0,
-		uintptr(unsafe.Pointer(messagePtr)),
-		uintptr(unsafe.Pointer(titlePtr)),
-		flags,
-	)
 }
