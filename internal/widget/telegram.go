@@ -73,9 +73,8 @@ type TelegramWidget struct {
 	messageScrollOffset float64
 	lastUpdateTime      time.Time
 
-	// Blink state
-	blinkState bool
-	lastBlink  time.Time
+	// Blink animator
+	blink *shared.BlinkAnimator
 
 	// Transition state
 	transitionActive    bool
@@ -134,7 +133,7 @@ func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
 		height:            pos.H,
 		statusRenderer:    statusRenderer,
 		lastUpdateTime:    time.Now(),
-		lastBlink:         time.Now(),
+		blink:             shared.NewBlinkAnimator(shared.BlinkAlways, 500*time.Millisecond),
 	}
 
 	// Set message callback
@@ -373,11 +372,8 @@ func (w *TelegramWidget) Update() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	// Update blink state (toggle every 500ms)
-	if now.Sub(w.lastBlink) >= 500*time.Millisecond {
-		w.blinkState = !w.blinkState
-		w.lastBlink = now
-	}
+	// Update blink state (pass message count for potential progressive blinking)
+	w.blink.Update(len(w.messages))
 
 	// Handle connection
 	if !w.client.IsConnected() && !w.connecting {
@@ -625,7 +621,7 @@ func (w *TelegramWidget) renderMessage(img *image.Gray, msg tgclient.MessageInfo
 		headerText := w.formatHeader(msg)
 		if headerText != "" {
 			// Apply blink effect
-			if appearance.Header.Blink && !w.blinkState {
+			if appearance.Header.Blink && !w.blink.ShouldRender() {
 				// Skip rendering when blinking off
 			} else {
 				w.renderScrollingText(img, headerText, appearance.Header, w.headerScrollOffset, 0, 0, w.width, headerHeight)
@@ -658,7 +654,7 @@ func (w *TelegramWidget) renderMessage(img *image.Gray, msg tgclient.MessageInfo
 		}
 
 		// Apply blink effect
-		if appearance.Message.Blink && !w.blinkState {
+		if appearance.Message.Blink && !w.blink.ShouldRender() {
 			// Skip rendering when blinking off
 		} else {
 			w.renderMultiLineText(img, messageText, appearance.Message, w.messageScrollOffset, 0, messageY, w.width, msgHeight)
