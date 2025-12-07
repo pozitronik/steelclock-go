@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"math"
 
+	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
@@ -502,6 +503,174 @@ func DrawDualVerticalBar(img *image.Gray, x, y, w, h int, leftPercent, rightPerc
 	if rightColor >= 0 {
 		DrawVerticalBar(img, x+halfW, y, w-halfW, h, rightPercent, uint8(rightColor), drawBorder)
 	}
+}
+
+// DrawFilledRectangle draws a filled rectangle with bounds checking
+func DrawFilledRectangle(img *image.Gray, x, y, width, height int, fillColor uint8) {
+	if img == nil || width <= 0 || height <= 0 {
+		return
+	}
+
+	bounds := img.Bounds()
+	c := color.Gray{Y: fillColor}
+
+	for py := y; py < y+height; py++ {
+		if py < bounds.Min.Y || py >= bounds.Max.Y {
+			continue
+		}
+		for px := x; px < x+width; px++ {
+			if px >= bounds.Min.X && px < bounds.Max.X {
+				img.SetGray(px, py, c)
+			}
+		}
+	}
+}
+
+// DrawHorizontalLine draws a horizontal line from x1 to x2 at y
+func DrawHorizontalLine(img *image.Gray, x1, x2, y int, lineColor uint8) {
+	if img == nil {
+		return
+	}
+
+	bounds := img.Bounds()
+	if y < bounds.Min.Y || y >= bounds.Max.Y {
+		return
+	}
+
+	// Ensure x1 <= x2
+	if x1 > x2 {
+		x1, x2 = x2, x1
+	}
+
+	c := color.Gray{Y: lineColor}
+	for x := x1; x <= x2; x++ {
+		if x >= bounds.Min.X && x < bounds.Max.X {
+			img.SetGray(x, y, c)
+		}
+	}
+}
+
+// DrawVerticalLine draws a vertical line from y1 to y2 at x
+func DrawVerticalLine(img *image.Gray, x, y1, y2 int, lineColor uint8) {
+	if img == nil {
+		return
+	}
+
+	bounds := img.Bounds()
+	if x < bounds.Min.X || x >= bounds.Max.X {
+		return
+	}
+
+	// Ensure y1 <= y2
+	if y1 > y2 {
+		y1, y2 = y2, y1
+	}
+
+	c := color.Gray{Y: lineColor}
+	for y := y1; y <= y2; y++ {
+		if y >= bounds.Min.Y && y < bounds.Max.Y {
+			img.SetGray(x, y, c)
+		}
+	}
+}
+
+// CopyGrayRegion copies src image to dst at the specified offset with bounds checking
+func CopyGrayRegion(dst, src *image.Gray, dstX, dstY int) {
+	if dst == nil || src == nil {
+		return
+	}
+
+	srcBounds := src.Bounds()
+	dstBounds := dst.Bounds()
+
+	for y := 0; y < srcBounds.Dy(); y++ {
+		for x := 0; x < srcBounds.Dx(); x++ {
+			dx := dstX + x
+			dy := dstY + y
+			if dx >= dstBounds.Min.X && dx < dstBounds.Max.X && dy >= dstBounds.Min.Y && dy < dstBounds.Max.Y {
+				dst.SetGray(dx, dy, src.GrayAt(x+srcBounds.Min.X, y+srcBounds.Min.Y))
+			}
+		}
+	}
+}
+
+// DrawCrossPattern draws a diagonal X pattern (typically used for mute indicators)
+// thickness specifies how many pixels thick each diagonal line should be
+func DrawCrossPattern(img *image.Gray, x, y, width, height, thickness int, patternColor uint8) {
+	if img == nil || width <= 0 || height <= 0 {
+		return
+	}
+
+	bounds := img.Bounds()
+	c := color.Gray{Y: patternColor}
+
+	// Draw thicker diagonal stripes
+	for i := 0; i < width && i < height; i++ {
+		for t := -thickness; t <= thickness; t++ {
+			// Diagonal \
+			py := y + i + t
+			px := x + i
+			if py >= bounds.Min.Y && py < bounds.Max.Y && px >= bounds.Min.X && px < bounds.Max.X {
+				img.SetGray(px, py, c)
+			}
+			// Diagonal /
+			py = y + height - i - 1 + t
+			if py >= bounds.Min.Y && py < bounds.Max.Y && px >= bounds.Min.X && px < bounds.Max.X {
+				img.SetGray(px, py, c)
+			}
+		}
+	}
+}
+
+// DrawGlyphWithBorder draws a glyph with a 1px border for visibility on any background
+// The border is drawn in all 8 directions (including diagonals) before drawing the glyph itself
+func DrawGlyphWithBorder(img *image.Gray, glyph *glyphs.Glyph, x, y int, borderColor, fillColor uint8) {
+	if glyph == nil {
+		return
+	}
+
+	border := color.Gray{Y: borderColor}
+	fill := color.Gray{Y: fillColor}
+
+	// Draw border (1px offset in all directions including diagonals)
+	glyphs.DrawGlyph(img, glyph, x-1, y, border)
+	glyphs.DrawGlyph(img, glyph, x+1, y, border)
+	glyphs.DrawGlyph(img, glyph, x, y-1, border)
+	glyphs.DrawGlyph(img, glyph, x, y+1, border)
+	glyphs.DrawGlyph(img, glyph, x-1, y-1, border)
+	glyphs.DrawGlyph(img, glyph, x+1, y-1, border)
+	glyphs.DrawGlyph(img, glyph, x-1, y+1, border)
+	glyphs.DrawGlyph(img, glyph, x+1, y+1, border)
+
+	// Draw glyph on top
+	glyphs.DrawGlyph(img, glyph, x, y, fill)
+}
+
+// DrawGaugePeakHoldMark draws a small mark on a gauge arc at the given percentage position
+// centerX, centerY: center of the gauge arc
+// radius: radius of the gauge arc
+// percentage: 0.0 to 1.0 representing position on the semicircular arc (0=left, 1=right)
+// markLen: length of the mark extending outward from the arc
+func DrawGaugePeakHoldMark(img *image.Gray, centerX, centerY, radius int, percentage float64, markLen int, markColor uint8) {
+	if img == nil || radius <= 0 {
+		return
+	}
+
+	// Calculate angle for peak hold position (180 to 0 degrees)
+	angle := 180.0 - (percentage * 180.0)
+	rad := angle * math.Pi / 180.0
+
+	c := color.Gray{Y: markColor}
+
+	// Outer point (extended beyond arc)
+	x1 := centerX + int(float64(radius+markLen)*math.Cos(rad))
+	y1 := centerY - int(float64(radius+markLen)*math.Sin(rad))
+
+	// Inner point (on the arc)
+	x2 := centerX + int(float64(radius)*math.Cos(rad))
+	y2 := centerY - int(float64(radius)*math.Sin(rad))
+
+	DrawLine(img, x1, y1, x2, y2, c)
 }
 
 // DrawDualGraph draws two overlaid graphs on the same area

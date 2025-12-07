@@ -744,9 +744,7 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 
 	// Draw separator between channels (if enabled)
 	if w.stereoDivider >= 0 {
-		for x := 0; x < pos.W; x++ {
-			img.SetGray(x, halfHeight, color.Gray{Y: uint8(w.stereoDivider)})
-		}
+		bitmap.DrawHorizontalLine(img, 0, pos.W-1, halfHeight, uint8(w.stereoDivider))
 	}
 }
 
@@ -786,9 +784,7 @@ func (w *VolumeMeterWidget) renderTextStereo(img *image.Gray, channelPeaks []flo
 	if w.stereoDivider >= 0 {
 		pos := w.GetPosition()
 		halfWidth := pos.W / 2
-		for y := 0; y < pos.H; y++ {
-			img.SetGray(halfWidth, y, color.Gray{Y: uint8(w.stereoDivider)})
-		}
+		bitmap.DrawVerticalLine(img, halfWidth, 0, pos.H-1, uint8(w.stereoDivider))
 	}
 }
 
@@ -861,9 +857,7 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 
 	// Draw separator between channels (if enabled)
 	if w.stereoDivider >= 0 {
-		for y := 0; y < pos.H; y++ {
-			img.SetGray(halfWidth, y, color.Gray{Y: uint8(w.stereoDivider)})
-		}
+		bitmap.DrawVerticalLine(img, halfWidth, 0, pos.H-1, uint8(w.stereoDivider))
 	}
 }
 
@@ -946,9 +940,7 @@ func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []fl
 
 	// Draw separator between channels (if enabled)
 	if w.stereoDivider >= 0 {
-		for y := 0; y < pos.H; y++ {
-			img.SetGray(halfWidth, y, color.Gray{Y: uint8(w.stereoDivider)})
-		}
+		bitmap.DrawVerticalLine(img, halfWidth, 0, pos.H-1, uint8(w.stereoDivider))
 	}
 }
 
@@ -963,27 +955,7 @@ func (w *VolumeMeterWidget) drawGaugePeakHoldMark(img *image.Gray, pos config.Po
 		radius = pos.W/2 - 3
 	}
 
-	if radius <= 0 {
-		return
-	}
-
-	// Calculate angle for peak hold position (180° to 0°)
-	angle := 180.0 - (peakHold * 180.0)
-	rad := angle * math.Pi / 180.0
-
-	// Draw a small mark extending outward from the gauge arc
-	markColor := color.Gray{Y: w.peakColor}
-	tickLen := 5
-
-	// Outer point (extended beyond arc)
-	x1 := centerX + int(float64(radius+tickLen)*math.Cos(rad))
-	y1 := centerY - int(float64(radius+tickLen)*math.Sin(rad))
-
-	// Inner point (on the arc)
-	x2 := centerX + int(float64(radius)*math.Cos(rad))
-	y2 := centerY - int(float64(radius)*math.Sin(rad))
-
-	bitmap.DrawLine(img, x1, y1, x2, y2, markColor)
+	bitmap.DrawGaugePeakHoldMark(img, centerX, centerY, radius, peakHold, 5, w.peakColor)
 }
 
 // Update is called periodically but just returns immediately

@@ -607,7 +607,7 @@ func (w *TelegramWidget) renderMessage(img *image.Gray, msg tgclient.MessageInfo
 				// Render header (coordinates relative to sub-image: 0,0)
 				w.renderScrollingText(headerImg, headerText, appearance.Header, w.headerScroller.GetOffset(), 0, 0, w.width, headerHeight)
 				// Copy to main image at (0, 0)
-				copyGrayRegion(img, headerImg, 0, 0)
+				bitmap.CopyGrayRegion(img, headerImg, 0, 0)
 			}
 		}
 	}
@@ -655,23 +655,7 @@ func (w *TelegramWidget) renderMessage(img *image.Gray, msg tgclient.MessageInfo
 			// Render message (coordinates relative to sub-image: 0,0)
 			w.renderMultiLineText(msgImg, messageText, appearance.Message, w.messageScroller.GetOffset(), 0, 0, w.width, msgHeight)
 			// Copy to main image at (0, messageY)
-			copyGrayRegion(img, msgImg, 0, messageY)
-		}
-	}
-}
-
-// copyGrayRegion copies src image to dst at the specified offset
-func copyGrayRegion(dst, src *image.Gray, dstX, dstY int) {
-	srcBounds := src.Bounds()
-	dstBounds := dst.Bounds()
-
-	for y := 0; y < srcBounds.Dy(); y++ {
-		for x := 0; x < srcBounds.Dx(); x++ {
-			dx := dstX + x
-			dy := dstY + y
-			if dx >= dstBounds.Min.X && dx < dstBounds.Max.X && dy >= dstBounds.Min.Y && dy < dstBounds.Max.Y {
-				dst.SetGray(dx, dy, src.GrayAt(x+srcBounds.Min.X, y+srcBounds.Min.Y))
-			}
+			bitmap.CopyGrayRegion(img, msgImg, 0, messageY)
 		}
 	}
 }

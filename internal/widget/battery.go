@@ -3,7 +3,6 @@ package widget
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"regexp"
 	"strings"
 	"sync"
@@ -430,36 +429,7 @@ func (w *BatteryWidget) drawStatusIcon(img *image.Gray, x, y int, status Battery
 		return
 	}
 
-	black := color.Gray{Y: 0}
-	white := color.Gray{Y: 255}
-
-	// Draw black border (1px offset in all directions)
-	glyphs.DrawGlyph(img, icon, x-1, y, black)
-	glyphs.DrawGlyph(img, icon, x+1, y, black)
-	glyphs.DrawGlyph(img, icon, x, y-1, black)
-	glyphs.DrawGlyph(img, icon, x, y+1, black)
-	// Diagonal borders for better visibility
-	glyphs.DrawGlyph(img, icon, x-1, y-1, black)
-	glyphs.DrawGlyph(img, icon, x+1, y-1, black)
-	glyphs.DrawGlyph(img, icon, x-1, y+1, black)
-	glyphs.DrawGlyph(img, icon, x+1, y+1, black)
-	// Draw white icon on top
-	glyphs.DrawGlyph(img, icon, x, y, white)
-}
-
-// drawFilledRect draws a filled rectangle
-func (w *BatteryWidget) drawFilledRect(img *image.Gray, x, y, width, height int, c color.Gray) {
-	bounds := img.Bounds()
-	for py := y; py < y+height; py++ {
-		if py < bounds.Min.Y || py >= bounds.Max.Y {
-			continue
-		}
-		for px := x; px < x+width; px++ {
-			if px >= bounds.Min.X && px < bounds.Max.X {
-				img.SetGray(px, py, c)
-			}
-		}
-	}
+	bitmap.DrawGlyphWithBorder(img, icon, x, y, 0, 255)
 }
 
 // formatMinutes formats a duration in minutes to a human-readable string
@@ -611,16 +581,16 @@ func (w *BatteryWidget) renderBar(img *image.Gray, status BatteryStatus) {
 	if w.orientation == "vertical" || w.barDirection == "up" || w.barDirection == "down" {
 		fillH := int(float64(barH) * fillAmount)
 		if w.barDirection == "down" {
-			w.drawFilledRect(img, barX, barY, barW, fillH, color.Gray{Y: fillColor})
+			bitmap.DrawFilledRectangle(img, barX, barY, barW, fillH, fillColor)
 		} else {
-			w.drawFilledRect(img, barX, barY+barH-fillH, barW, fillH, color.Gray{Y: fillColor})
+			bitmap.DrawFilledRectangle(img, barX, barY+barH-fillH, barW, fillH, fillColor)
 		}
 	} else {
 		fillW := int(float64(barW) * fillAmount)
 		if w.barDirection == "right" {
-			w.drawFilledRect(img, barX+barW-fillW, barY, fillW, barH, color.Gray{Y: fillColor})
+			bitmap.DrawFilledRectangle(img, barX+barW-fillW, barY, fillW, barH, fillColor)
 		} else {
-			w.drawFilledRect(img, barX, barY, fillW, barH, color.Gray{Y: fillColor})
+			bitmap.DrawFilledRectangle(img, barX, barY, fillW, barH, fillColor)
 		}
 	}
 
@@ -723,7 +693,7 @@ func (w *BatteryWidget) renderBatteryHorizontal(img *image.Gray, status BatteryS
 	}
 	nubX := batteryX + batteryW
 	nubY := batteryY + (batteryH-nubH)/2
-	w.drawFilledRect(img, nubX, nubY, nubW, nubH, color.Gray{Y: w.colorBorder})
+	bitmap.DrawFilledRectangle(img, nubX, nubY, nubW, nubH, w.colorBorder)
 
 	// Calculate fill dimensions (inside the battery body)
 	fillMargin := 2
@@ -735,7 +705,7 @@ func (w *BatteryWidget) renderBatteryHorizontal(img *image.Gray, status BatteryS
 
 	fillColor := w.getColorForLevel(status.Percentage)
 	if fillW > 0 {
-		w.drawFilledRect(img, fillX, fillY, fillW, fillH, color.Gray{Y: fillColor})
+		bitmap.DrawFilledRectangle(img, fillX, fillY, fillW, fillH, fillColor)
 	}
 
 	// Draw status icon in top-left corner
@@ -769,7 +739,7 @@ func (w *BatteryWidget) renderBatteryVertical(img *image.Gray, status BatterySta
 	}
 	nubX := batteryX + (batteryW-nubW)/2
 	nubY := w.padding
-	w.drawFilledRect(img, nubX, nubY, nubW, nubH, color.Gray{Y: w.colorBorder})
+	bitmap.DrawFilledRectangle(img, nubX, nubY, nubW, nubH, w.colorBorder)
 
 	// Calculate fill dimensions
 	fillMargin := 2
@@ -781,7 +751,7 @@ func (w *BatteryWidget) renderBatteryVertical(img *image.Gray, status BatterySta
 
 	fillColor := w.getColorForLevel(status.Percentage)
 	if fillH > 0 {
-		w.drawFilledRect(img, fillX, fillY, fillW, fillH, color.Gray{Y: fillColor})
+		bitmap.DrawFilledRectangle(img, fillX, fillY, fillW, fillH, fillColor)
 	}
 
 	// Draw status icon in top-left corner (inside battery body)
