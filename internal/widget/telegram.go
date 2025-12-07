@@ -402,13 +402,37 @@ func (w *TelegramWidget) Update() error {
 				defer cancel()
 
 				err := w.client.Connect(ctx)
-
-				w.mu.Lock()
-				w.connecting = false
 				if err != nil {
+					w.mu.Lock()
+					w.connecting = false
 					w.connectionError = err
+					w.mu.Unlock()
+					return
 				}
-				w.mu.Unlock()
+
+				// Wait for full connection (including authentication)
+				// Connect() returns when TCP is established, but IsConnected()
+				// requires both connected AND authenticated
+				ticker := time.NewTicker(100 * time.Millisecond)
+				defer ticker.Stop()
+
+				for {
+					select {
+					case <-ctx.Done():
+						w.mu.Lock()
+						w.connecting = false
+						w.connectionError = ctx.Err()
+						w.mu.Unlock()
+						return
+					case <-ticker.C:
+						if w.client.IsConnected() {
+							w.mu.Lock()
+							w.connecting = false
+							w.mu.Unlock()
+							return
+						}
+					}
+				}
 			}()
 		}
 	}

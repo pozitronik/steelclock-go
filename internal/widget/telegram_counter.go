@@ -186,13 +186,37 @@ func (w *TelegramCounterWidget) Update() error {
 				defer cancel()
 
 				err := w.client.Connect(ctx)
-
-				w.mu.Lock()
-				w.connecting = false
 				if err != nil {
+					w.mu.Lock()
+					w.connecting = false
 					w.connectionError = err
+					w.mu.Unlock()
+					return
 				}
-				w.mu.Unlock()
+
+				// Wait for full connection (including authentication)
+				// Connect() returns when TCP is established, but IsConnected()
+				// requires both connected AND authenticated
+				ticker := time.NewTicker(100 * time.Millisecond)
+				defer ticker.Stop()
+
+				for {
+					select {
+					case <-ctx.Done():
+						w.mu.Lock()
+						w.connecting = false
+						w.connectionError = ctx.Err()
+						w.mu.Unlock()
+						return
+					case <-ticker.C:
+						if w.client.IsConnected() {
+							w.mu.Lock()
+							w.connecting = false
+							w.mu.Unlock()
+							return
+						}
+					}
+				}
 			}()
 		}
 	}
@@ -232,7 +256,13 @@ func (w *TelegramCounterWidget) Render() (image.Image, error) {
 	} else if w.connectionError != nil {
 		w.drawStatusText(img, "ERR")
 	} else if !w.client.IsConnected() {
-		w.drawStatusText(img, "---")
+		// Show "..." on initial state (before first connection attempt)
+		// to avoid brief "---" flash
+		if w.lastConnectionTry.IsZero() {
+			w.drawStatusText(img, "...")
+		} else {
+			w.drawStatusText(img, "---")
+		}
 	} else if w.unreadCount > 0 {
 		// Only display when there are unread messages
 		// Check if we should skip rendering due to blink
