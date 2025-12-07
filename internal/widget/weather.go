@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"math"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -19,6 +18,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
@@ -147,13 +147,8 @@ type WeatherWidget struct {
 	currentFormat int // Index into formatCycle
 	lastCycleTime time.Time
 	// Transition state
-	transitionActive    bool
-	transitionProgress  float64
-	transitionStartTime time.Time
-	oldFrame            *image.Gray
-	pendingFormat       int    // Format index to transition to
-	activeTransition    string // Current transition being used (for random)
-	pixelOrder          []int  // Pre-shuffled pixel indices for dissolve_pixel
+	transition    *shared.TransitionManager
+	pendingFormat int // Format index to transition to
 	// Scroll state
 	scrollOffset float64
 	lastUpdate   time.Time
@@ -292,6 +287,7 @@ func NewWeatherWidget(cfg config.WidgetConfig) (*WeatherWidget, error) {
 		}
 	}
 
+	pos := base.GetPosition()
 	w := &WeatherWidget{
 		BaseWidget:      base,
 		provider:        provider,
@@ -318,6 +314,7 @@ func NewWeatherWidget(cfg config.WidgetConfig) (*WeatherWidget, error) {
 		fontFace:        fontFace,
 		lastCycleTime:   time.Now(),
 		lastUpdate:      time.Now(),
+		transition:      shared.NewTransitionManager(pos.W, pos.H),
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -471,25 +468,27 @@ func (w *WeatherWidget) Render() (image.Image, error) {
 	w.lastUpdate = now
 
 	// Handle transition progress
-	if w.transitionActive {
-		transitionElapsed := now.Sub(w.transitionStartTime).Seconds()
-		w.transitionProgress = transitionElapsed / w.transitionSpeed
-		if w.transitionProgress >= 1.0 {
+	if w.transition.IsActive() {
+		if !w.transition.Update() {
 			// Transition complete
-			w.transitionProgress = 1.0
-			w.transitionActive = false
 			w.currentFormat = w.pendingFormat
 			w.tokens = w.parseFormat(w.formatCycle[w.currentFormat])
-			w.oldFrame = nil
 			w.scrollOffset = 0
 		}
 	}
 
 	// Handle format cycling (start new transition when it's time)
-	if len(w.formatCycle) > 1 && w.cycleInterval > 0 && !w.transitionActive {
+	if len(w.formatCycle) > 1 && w.cycleInterval > 0 && !w.transition.IsActive() {
 		cycleElapsed := now.Sub(w.lastCycleTime).Seconds()
 		if cycleElapsed >= float64(w.cycleInterval) {
-			w.startTransition(now)
+			// Capture current frame
+			oldFrame := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
+			w.renderTokens(oldFrame, w.tokens, w.weather, w.forecast, w.airQuality, w.uvIndex, w.scrollOffset)
+
+			// Set up transition
+			w.pendingFormat = (w.currentFormat + 1) % len(w.formatCycle)
+			w.transition.Start(shared.TransitionType(w.transitionType), w.transitionSpeed, oldFrame)
+			w.lastCycleTime = now
 		}
 	}
 	w.mu.Unlock()
@@ -502,12 +501,8 @@ func (w *WeatherWidget) Render() (image.Image, error) {
 	lastError := w.lastError
 	tokens := w.tokens
 	scrollOffset := w.scrollOffset
-	transitionActive := w.transitionActive
-	transitionProgress := w.transitionProgress
-	oldFrame := w.oldFrame
-	activeTransition := w.activeTransition
+	transitionActive := w.transition.IsActive()
 	pendingFormat := w.pendingFormat
-	pixelOrder := w.pixelOrder
 	w.mu.RUnlock()
 
 	// Handle error state
@@ -523,14 +518,14 @@ func (w *WeatherWidget) Render() (image.Image, error) {
 	}
 
 	// If transition is active, render both frames and composite
-	if transitionActive && oldFrame != nil {
+	if transitionActive && w.transition.OldFrame() != nil {
 		// Render new frame
 		newFrame := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 		newTokens := w.parseFormat(w.formatCycle[pendingFormat])
 		w.renderTokens(newFrame, newTokens, weather, forecast, aqi, uv, 0) // Reset scroll for new format
 
 		// Apply transition
-		w.applyTransition(img, oldFrame, newFrame, transitionProgress, activeTransition, pixelOrder)
+		w.transition.Apply(img, newFrame)
 	} else {
 		// Normal rendering
 		w.renderTokens(img, tokens, weather, forecast, aqi, uv, scrollOffset)
@@ -543,339 +538,6 @@ func (w *WeatherWidget) Render() (image.Image, error) {
 	}
 
 	return img, nil
-}
-
-// startTransition initiates a transition to the next format
-func (w *WeatherWidget) startTransition(now time.Time) {
-	pos := w.GetPosition()
-
-	// Capture current frame
-	w.oldFrame = bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
-	w.renderTokens(w.oldFrame, w.tokens, w.weather, w.forecast, w.airQuality, w.uvIndex, w.scrollOffset)
-
-	// Set up transition
-	w.pendingFormat = (w.currentFormat + 1) % len(w.formatCycle)
-	w.transitionActive = true
-	w.transitionProgress = 0.0
-	w.transitionStartTime = now
-	w.lastCycleTime = now
-
-	// Select actual transition (handle "random")
-	w.activeTransition = w.selectTransition()
-
-	// Pre-generate pixel order for dissolve_pixel
-	if w.activeTransition == "dissolve_pixel" {
-		w.pixelOrder = w.generatePixelOrder(pos.W, pos.H)
-	}
-}
-
-// selectTransition returns the actual transition type (handles "random")
-func (w *WeatherWidget) selectTransition() string {
-	if w.transitionType != "random" {
-		return w.transitionType
-	}
-
-	// List of all transitions except "none" and "random"
-	transitions := []string{
-		"push_left", "push_right", "push_up", "push_down",
-		"slide_left", "slide_right", "slide_up", "slide_down",
-		"dissolve_fade", "dissolve_pixel", "dissolve_dither",
-		"box_in", "box_out", "clock_wipe",
-	}
-	return transitions[rand.Intn(len(transitions))]
-}
-
-// generatePixelOrder creates a shuffled list of pixel indices for dissolve_pixel
-func (w *WeatherWidget) generatePixelOrder(width, height int) []int {
-	total := width * height
-	order := make([]int, total)
-	for i := 0; i < total; i++ {
-		order[i] = i
-	}
-	// Fisher-Yates shuffle
-	for i := total - 1; i > 0; i-- {
-		j := rand.Intn(i + 1)
-		order[i], order[j] = order[j], order[i]
-	}
-	return order
-}
-
-// applyTransition composites old and new frames based on transition type and progress
-func (w *WeatherWidget) applyTransition(dst, oldFrame, newFrame *image.Gray, progress float64, transitionType string, pixelOrder []int) {
-	bounds := dst.Bounds()
-	width := bounds.Dx()
-	height := bounds.Dy()
-
-	switch transitionType {
-	case "none":
-		// Instant switch at 50%
-		if progress < 0.5 {
-			copyGrayImage(dst, oldFrame)
-		} else {
-			copyGrayImage(dst, newFrame)
-		}
-
-	case "push_left":
-		w.applyPushTransition(dst, oldFrame, newFrame, progress, -1, 0)
-	case "push_right":
-		w.applyPushTransition(dst, oldFrame, newFrame, progress, 1, 0)
-	case "push_up":
-		w.applyPushTransition(dst, oldFrame, newFrame, progress, 0, -1)
-	case "push_down":
-		w.applyPushTransition(dst, oldFrame, newFrame, progress, 0, 1)
-
-	case "slide_left":
-		w.applySlideTransition(dst, oldFrame, newFrame, progress, -1, 0)
-	case "slide_right":
-		w.applySlideTransition(dst, oldFrame, newFrame, progress, 1, 0)
-	case "slide_up":
-		w.applySlideTransition(dst, oldFrame, newFrame, progress, 0, -1)
-	case "slide_down":
-		w.applySlideTransition(dst, oldFrame, newFrame, progress, 0, 1)
-
-	case "dissolve_fade":
-		w.applyDissolveFade(dst, oldFrame, newFrame, progress)
-
-	case "dissolve_pixel":
-		w.applyDissolvePixel(dst, oldFrame, newFrame, progress, pixelOrder)
-
-	case "dissolve_dither":
-		w.applyDissolveDither(dst, oldFrame, newFrame, progress)
-
-	case "box_in":
-		w.applyBoxTransition(dst, oldFrame, newFrame, progress, true)
-	case "box_out":
-		w.applyBoxTransition(dst, oldFrame, newFrame, progress, false)
-
-	case "clock_wipe":
-		w.applyClockWipe(dst, oldFrame, newFrame, progress, width, height)
-
-	default:
-		// Unknown transition, just copy new frame
-		copyGrayImage(dst, newFrame)
-	}
-}
-
-// copyGrayImage copies src to dst
-func copyGrayImage(dst, src *image.Gray) {
-	copy(dst.Pix, src.Pix)
-}
-
-// applyPushTransition pushes old frame out while new frame comes in
-func (w *WeatherWidget) applyPushTransition(dst, oldFrame, newFrame *image.Gray, progress float64, dirX, dirY int) {
-	bounds := dst.Bounds()
-	width := bounds.Dx()
-	height := bounds.Dy()
-
-	// Calculate offset based on progress
-	offsetX := int(float64(width) * progress * float64(dirX))
-	offsetY := int(float64(height) * progress * float64(dirY))
-
-	// Draw old frame (being pushed out)
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			srcX := x - offsetX
-			srcY := y - offsetY
-			if srcX >= 0 && srcX < width && srcY >= 0 && srcY < height {
-				dst.SetGray(x+bounds.Min.X, y+bounds.Min.Y, oldFrame.GrayAt(srcX+bounds.Min.X, srcY+bounds.Min.Y))
-			}
-		}
-	}
-
-	// Draw new frame (coming in)
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			// New frame enters from opposite side
-			srcX := x - offsetX + width*dirX
-			srcY := y - offsetY + height*dirY
-			dstX := x + bounds.Min.X
-			dstY := y + bounds.Min.Y
-			if srcX >= 0 && srcX < width && srcY >= 0 && srcY < height {
-				dst.SetGray(dstX, dstY, newFrame.GrayAt(srcX+bounds.Min.X, srcY+bounds.Min.Y))
-			}
-		}
-	}
-}
-
-// applySlideTransition slides new frame over old frame
-func (w *WeatherWidget) applySlideTransition(dst, oldFrame, newFrame *image.Gray, progress float64, dirX, dirY int) {
-	bounds := dst.Bounds()
-	width := bounds.Dx()
-	height := bounds.Dy()
-
-	// First, copy old frame
-	copyGrayImage(dst, oldFrame)
-
-	// Calculate new frame position (slides in from edge)
-	var startX, startY int
-	if dirX < 0 {
-		startX = width - int(float64(width)*progress)
-	} else if dirX > 0 {
-		startX = int(float64(width)*progress) - width
-	}
-	if dirY < 0 {
-		startY = height - int(float64(height)*progress)
-	} else if dirY > 0 {
-		startY = int(float64(height)*progress) - height
-	}
-
-	// Draw new frame on top
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			srcX := x - startX
-			srcY := y - startY
-			if srcX >= 0 && srcX < width && srcY >= 0 && srcY < height {
-				dstX := x + bounds.Min.X
-				dstY := y + bounds.Min.Y
-				dst.SetGray(dstX, dstY, newFrame.GrayAt(srcX+bounds.Min.X, srcY+bounds.Min.Y))
-			}
-		}
-	}
-}
-
-// applyDissolveFade crossfades between old and new frames
-func (w *WeatherWidget) applyDissolveFade(dst, oldFrame, newFrame *image.Gray, progress float64) {
-	bounds := dst.Bounds()
-	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			oldVal := float64(oldFrame.GrayAt(x, y).Y)
-			newVal := float64(newFrame.GrayAt(x, y).Y)
-			blended := uint8(oldVal*(1-progress) + newVal*progress)
-			dst.SetGray(x, y, color.Gray{Y: blended})
-		}
-	}
-}
-
-// applyDissolvePixel randomly switches pixels from old to new
-func (w *WeatherWidget) applyDissolvePixel(dst, oldFrame, newFrame *image.Gray, progress float64, pixelOrder []int) {
-	bounds := dst.Bounds()
-	width := bounds.Dx()
-	total := len(pixelOrder)
-	threshold := int(float64(total) * progress)
-
-	// Copy old frame first
-	copyGrayImage(dst, oldFrame)
-
-	// Replace pixels up to threshold with new frame
-	for i := 0; i < threshold && i < total; i++ {
-		idx := pixelOrder[i]
-		x := idx % width
-		y := idx / width
-		dst.SetGray(x+bounds.Min.X, y+bounds.Min.Y, newFrame.GrayAt(x+bounds.Min.X, y+bounds.Min.Y))
-	}
-}
-
-// applyDissolveDither uses ordered dithering pattern for transition
-func (w *WeatherWidget) applyDissolveDither(dst, oldFrame, newFrame *image.Gray, progress float64) {
-	bounds := dst.Bounds()
-
-	// 8x8 Bayer dithering matrix (values 0-63)
-	bayer8x8 := [8][8]float64{
-		{0, 32, 8, 40, 2, 34, 10, 42},
-		{48, 16, 56, 24, 50, 18, 58, 26},
-		{12, 44, 4, 36, 14, 46, 6, 38},
-		{60, 28, 52, 20, 62, 30, 54, 22},
-		{3, 35, 11, 43, 1, 33, 9, 41},
-		{51, 19, 59, 27, 49, 17, 57, 25},
-		{15, 47, 7, 39, 13, 45, 5, 37},
-		{63, 31, 55, 23, 61, 29, 53, 21},
-	}
-
-	threshold := progress * 64.0
-
-	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			ditherVal := bayer8x8[y%8][x%8]
-			if ditherVal < threshold {
-				dst.SetGray(x, y, newFrame.GrayAt(x, y))
-			} else {
-				dst.SetGray(x, y, oldFrame.GrayAt(x, y))
-			}
-		}
-	}
-}
-
-// applyBoxTransition reveals new frame through expanding/contracting box
-func (w *WeatherWidget) applyBoxTransition(dst, oldFrame, newFrame *image.Gray, progress float64, boxIn bool) {
-	bounds := dst.Bounds()
-	width := bounds.Dx()
-	height := bounds.Dy()
-	centerX := width / 2
-	centerY := height / 2
-
-	// Calculate box dimensions
-	var boxW, boxH int
-	if boxIn {
-		// Box shrinks from edges, revealing new content
-		boxW = int(float64(width) * (1 - progress) / 2)
-		boxH = int(float64(height) * (1 - progress) / 2)
-	} else {
-		// Box expands from center, revealing new content
-		boxW = int(float64(width) * progress / 2)
-		boxH = int(float64(height) * progress / 2)
-	}
-
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			dstX := x + bounds.Min.X
-			dstY := y + bounds.Min.Y
-
-			// Check if pixel is inside the box
-			inBox := x >= centerX-boxW && x < centerX+boxW && y >= centerY-boxH && y < centerY+boxH
-
-			if boxIn {
-				// Box shrinks: outside box = new, inside box = old
-				if inBox {
-					dst.SetGray(dstX, dstY, oldFrame.GrayAt(dstX, dstY))
-				} else {
-					dst.SetGray(dstX, dstY, newFrame.GrayAt(dstX, dstY))
-				}
-			} else {
-				// Box expands: inside box = new, outside box = old
-				if inBox {
-					dst.SetGray(dstX, dstY, newFrame.GrayAt(dstX, dstY))
-				} else {
-					dst.SetGray(dstX, dstY, oldFrame.GrayAt(dstX, dstY))
-				}
-			}
-		}
-	}
-}
-
-// applyClockWipe reveals new frame through clockwise radial sweep from 12 o'clock
-func (w *WeatherWidget) applyClockWipe(dst, oldFrame, newFrame *image.Gray, progress float64, width, height int) {
-	bounds := dst.Bounds()
-	centerX := float64(width) / 2
-	centerY := float64(height) / 2
-
-	// Sweep angle: 0 = 12 o'clock, progress 1.0 = full circle (360 degrees)
-	sweepAngle := progress * 2 * math.Pi
-
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			dstX := x + bounds.Min.X
-			dstY := y + bounds.Min.Y
-
-			// Calculate angle from center to this pixel
-			// atan2 returns angle from positive X axis, so adjust for 12 o'clock start
-			dx := float64(x) - centerX
-			dy := float64(y) - centerY
-
-			// Angle from 12 o'clock (top), clockwise
-			// atan2(dx, -dy) gives angle from top, positive clockwise
-			pixelAngle := math.Atan2(dx, -dy)
-			if pixelAngle < 0 {
-				pixelAngle += 2 * math.Pi
-			}
-
-			// If pixel angle is less than sweep angle, show new frame
-			if pixelAngle < sweepAngle {
-				dst.SetGray(dstX, dstY, newFrame.GrayAt(dstX, dstY))
-			} else {
-				dst.SetGray(dstX, dstY, oldFrame.GrayAt(dstX, dstY))
-			}
-		}
-	}
 }
 
 // renderTokens renders all tokens to the image
