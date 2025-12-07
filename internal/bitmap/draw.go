@@ -646,6 +646,44 @@ func DrawGlyphWithBorder(img *image.Gray, glyph *glyphs.Glyph, x, y int, borderC
 	glyphs.DrawGlyph(img, glyph, x, y, fill)
 }
 
+// DrawGlyphWithBackground draws a glyph with separate foreground and background colors
+// fgColor: color for glyph pixels (true values), use -1 for transparent (don't draw)
+// bgColor: color for non-glyph pixels (false values), use -1 for transparent (don't draw)
+// This is useful for icons that need a solid background or when both colors should be controllable
+func DrawGlyphWithBackground(img *image.Gray, glyph *glyphs.Glyph, x, y int, fgColor, bgColor int) {
+	if glyph == nil || img == nil {
+		return
+	}
+
+	bounds := img.Bounds()
+
+	for row := 0; row < glyph.Height && row < len(glyph.Data); row++ {
+		py := y + row
+		if py < bounds.Min.Y || py >= bounds.Max.Y {
+			continue
+		}
+
+		for col := 0; col < glyph.Width && col < len(glyph.Data[row]); col++ {
+			px := x + col
+			if px < bounds.Min.X || px >= bounds.Max.X {
+				continue
+			}
+
+			if glyph.Data[row][col] {
+				// Glyph pixel is set - draw foreground color if not transparent
+				if fgColor >= 0 {
+					img.SetGray(px, py, color.Gray{Y: uint8(fgColor)})
+				}
+			} else {
+				// Glyph pixel is not set - draw background color if not transparent
+				if bgColor >= 0 {
+					img.SetGray(px, py, color.Gray{Y: uint8(bgColor)})
+				}
+			}
+		}
+	}
+}
+
 // DrawGaugePeakHoldMark draws a small mark on a gauge arc at the given percentage position
 // centerX, centerY: center of the gauge arc
 // radius: radius of the gauge arc

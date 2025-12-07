@@ -3,7 +3,6 @@ package widget
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"strings"
 	"sync"
 	"time"
@@ -350,28 +349,9 @@ func (w *TelegramCounterWidget) drawTelegramIcon(img *image.Gray, x, y int) {
 	x += (iconSize - icon.Width) / 2
 	y += (iconSize - icon.Height) / 2
 
-	// Determine colors based on config
-	fgColor := color.Gray{Y: uint8(w.badgeForeground)}
-	bgColor := color.Gray{Y: uint8(w.badgeBackground)}
-
 	// Draw the icon: true pixels are foreground, false pixels are background
 	// -1 means transparent (don't draw)
-	for row := 0; row < icon.Height && row < len(icon.Data); row++ {
-		for col := 0; col < icon.Width && col < len(icon.Data[row]); col++ {
-			px, py := x+col, y+row
-			if px >= 0 && px < w.width && py >= 0 && py < w.height {
-				if icon.Data[row][col] {
-					if w.badgeForeground >= 0 {
-						img.Set(px, py, fgColor)
-					}
-				} else {
-					if w.badgeBackground >= 0 {
-						img.Set(px, py, bgColor)
-					}
-				}
-			}
-		}
-	}
+	bitmap.DrawGlyphWithBackground(img, icon, x, y, w.badgeForeground, w.badgeBackground)
 }
 
 // Stop cleans up resources
