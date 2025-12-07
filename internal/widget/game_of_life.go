@@ -2,7 +2,6 @@ package widget
 
 import (
 	"image"
-	"image/color"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -515,15 +514,7 @@ func (w *GameOfLifeWidget) Render() (image.Image, error) {
 			px := x * w.cellSize
 			py := y * w.cellSize
 
-			c := color.Gray{Y: brightness}
-
-			for dy := 0; dy < w.cellSize; dy++ {
-				for dx := 0; dx < w.cellSize; dx++ {
-					if px+dx < pos.W && py+dy < pos.H {
-						img.Set(px+dx, py+dy, c)
-					}
-				}
-			}
+			bitmap.DrawFilledRectangle(img, px, py, w.cellSize, w.cellSize, brightness)
 		}
 	}
 

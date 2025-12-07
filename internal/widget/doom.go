@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/AndreRenaud/gore"
+	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
@@ -396,21 +397,15 @@ func (w *DoomWidget) drawProgressBar(img *image.Gray, progress float64, width, h
 	barY := height/2 - barHeight/2
 
 	// Draw border
-	for x := barX; x < barX+barWidth; x++ {
-		img.SetGray(x, barY, color.Gray{Y: 255})
-		img.SetGray(x, barY+barHeight-1, color.Gray{Y: 255})
-	}
-	for y := barY; y < barY+barHeight; y++ {
-		img.SetGray(barX, y, color.Gray{Y: 255})
-		img.SetGray(barX+barWidth-1, y, color.Gray{Y: 255})
-	}
+	bitmap.DrawHorizontalLine(img, barX, barX+barWidth-1, barY, 255)
+	bitmap.DrawHorizontalLine(img, barX, barX+barWidth-1, barY+barHeight-1, 255)
+	bitmap.DrawVerticalLine(img, barX, barY, barY+barHeight-1, 255)
+	bitmap.DrawVerticalLine(img, barX+barWidth-1, barY, barY+barHeight-1, 255)
 
 	// Draw filled portion
 	fillWidth := int(float64(barWidth-2) * progress)
-	for y := barY + 1; y < barY+barHeight-1; y++ {
-		for x := barX + 1; x < barX+1+fillWidth; x++ {
-			img.SetGray(x, y, color.Gray{Y: 255})
-		}
+	if fillWidth > 0 {
+		bitmap.DrawFilledRectangle(img, barX+1, barY+1, fillWidth, barHeight-2, 255)
 	}
 
 	// Draw percentage text using 3×5 pixel font

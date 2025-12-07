@@ -694,7 +694,6 @@ func (w *StarWarsIntroWidget) drawChar(img *image.Gray, x, y int, ch rune, brigh
 		return
 	}
 
-	c := color.Gray{Y: brightness}
 	glyphHeight := glyph.Height
 	glyphWidth := glyph.Width
 
@@ -711,14 +710,7 @@ func (w *StarWarsIntroWidget) drawChar(img *image.Gray, x, y int, ch rune, brigh
 				py := y + int(float64(row)*scale)
 
 				// Fill a rectangle to avoid gaps when scaled up
-				for dy := 0; dy < pixelSize; dy++ {
-					for dx := 0; dx < pixelSize; dx++ {
-						fx, fy := px+dx, py+dy
-						if fx >= 0 && fx < w.width && fy >= 0 && fy < w.height {
-							img.Set(fx, fy, c)
-						}
-					}
-				}
+				bitmap.DrawFilledRectangle(img, px, py, pixelSize, pixelSize, brightness)
 			}
 		}
 	}
@@ -732,7 +724,6 @@ func (w *StarWarsIntroWidget) drawCharSlanted(img *image.Gray, x, y int, ch rune
 		return
 	}
 
-	c := color.Gray{Y: brightness}
 	glyphHeight := glyph.Height
 	glyphWidth := glyph.Width
 
@@ -766,14 +757,7 @@ func (w *StarWarsIntroWidget) drawCharSlanted(img *image.Gray, x, y int, ch rune
 				py := y + int(screenY)
 
 				// Fill rectangle to avoid gaps
-				for dy := 0; dy < pixelSize; dy++ {
-					for dx := 0; dx < pixelSize; dx++ {
-						fx, fy := px+dx, py+dy
-						if fx >= 0 && fx < w.width && fy >= 0 && fy < w.height {
-							img.Set(fx, fy, c)
-						}
-					}
-				}
+				bitmap.DrawFilledRectangle(img, px, py, pixelSize, pixelSize, brightness)
 			}
 		}
 	}
