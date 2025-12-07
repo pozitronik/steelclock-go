@@ -6,11 +6,11 @@ import (
 	"image/color"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"github.com/pozitronik/steelclock-go/internal/winamp"
 	"golang.org/x/image/font"
 )
@@ -30,12 +30,8 @@ type WinampWidget struct {
 	placeholderText string
 
 	// Scroll settings
-	scrollEnabled   bool
-	scrollDirection string  // "left", "right", "up", "down"
-	scrollSpeed     float64 // pixels per second
-	scrollMode      string  // "continuous", "bounce", "pause_ends"
-	scrollPauseMs   int     // pause duration at ends
-	scrollGap       int     // gap between text repetitions
+	scrollEnabled bool
+	scrollGap     int // gap between text repetitions (kept for rendering)
 
 	// Auto-show event flags
 	autoShowOnTrackChange bool
@@ -52,12 +48,9 @@ type WinampWidget struct {
 	previousStatus winamp.PlaybackStatus
 	previousPosMs  int // for seek detection
 	mu             sync.RWMutex
-	lastUpdateTime time.Time
 
-	// Scroll state
-	scrollOffset     float64
-	scrollDirection2 int // 1 or -1 for bounce mode
-	scrollPauseUntil time.Time
+	// Shared scroller
+	scroller *shared.TextScroller
 }
 
 // NewWinampWidget creates a new Winamp widget
@@ -116,22 +109,22 @@ func NewWinampWidget(cfg config.WidgetConfig) (*WinampWidget, error) {
 
 	// Extract scroll settings
 	scrollEnabled := false
-	scrollDirection := "left"
+	scrollDirection := shared.ScrollLeft
 	scrollSpeed := 30.0 // pixels per second
-	scrollMode := "continuous"
+	scrollMode := shared.ScrollContinuous
 	scrollPauseMs := 1000
 	scrollGap := 20
 
 	if cfg.Scroll != nil {
 		scrollEnabled = cfg.Scroll.Enabled
 		if cfg.Scroll.Direction != "" {
-			scrollDirection = cfg.Scroll.Direction
+			scrollDirection = shared.ScrollDirection(cfg.Scroll.Direction)
 		}
 		if cfg.Scroll.Speed > 0 {
 			scrollSpeed = cfg.Scroll.Speed
 		}
 		if cfg.Scroll.Mode != "" {
-			scrollMode = cfg.Scroll.Mode
+			scrollMode = shared.ScrollMode(cfg.Scroll.Mode)
 		}
 		if cfg.Scroll.PauseMs > 0 {
 			scrollPauseMs = cfg.Scroll.PauseMs
@@ -147,6 +140,15 @@ func NewWinampWidget(cfg config.WidgetConfig) (*WinampWidget, error) {
 		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
 
+	// Create scroller with configuration
+	scroller := shared.NewTextScroller(shared.ScrollerConfig{
+		Speed:     scrollSpeed,
+		Mode:      scrollMode,
+		Direction: scrollDirection,
+		Gap:       scrollGap,
+		PauseMs:   scrollPauseMs,
+	})
+
 	return &WinampWidget{
 		BaseWidget:            base,
 		format:                format,
@@ -158,10 +160,6 @@ func NewWinampWidget(cfg config.WidgetConfig) (*WinampWidget, error) {
 		placeholderMode:       placeholderMode,
 		placeholderText:       placeholderText,
 		scrollEnabled:         scrollEnabled,
-		scrollDirection:       scrollDirection,
-		scrollSpeed:           scrollSpeed,
-		scrollMode:            scrollMode,
-		scrollPauseMs:         scrollPauseMs,
 		scrollGap:             scrollGap,
 		autoShowOnTrackChange: autoShowOnTrackChange,
 		autoShowOnPlay:        autoShowOnPlay,
@@ -170,8 +168,7 @@ func NewWinampWidget(cfg config.WidgetConfig) (*WinampWidget, error) {
 		autoShowOnSeek:        autoShowOnSeek,
 		client:                winamp.NewClient(),
 		fontFace:              fontFace,
-		lastUpdateTime:        time.Now(),
-		scrollDirection2:      1,
+		scroller:              scroller,
 		previousStatus:        winamp.StatusStopped,
 		previousPosMs:         -1,
 	}, nil
@@ -179,16 +176,16 @@ func NewWinampWidget(cfg config.WidgetConfig) (*WinampWidget, error) {
 
 // Update fetches current track information from Winamp
 func (w *WinampWidget) Update() error {
-	now := time.Now()
-
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	// Update scroll position based on elapsed time
+	// Update scroll position if scrolling is enabled and we have text
 	if w.scrollEnabled && w.currentText != "" {
-		w.updateScrollPosition(now)
+		pos := w.GetPosition()
+		contentWidth := pos.W - w.padding*2
+		textWidth, _ := bitmap.SmartMeasureText(w.currentText, w.fontFace, w.fontName)
+		w.scroller.Update(textWidth, contentWidth)
 	}
-	w.lastUpdateTime = now
 
 	// Get track info from Winamp
 	info := w.client.GetTrackInfo()
@@ -257,9 +254,7 @@ func (w *WinampWidget) Update() error {
 	if info.Title != w.previousTitle {
 		if info.Title != "" && !statusChanged && info.Status != winamp.StatusStopped {
 			// Reset scroll position on track change
-			w.scrollOffset = 0
-			w.scrollDirection2 = 1
-			w.scrollPauseUntil = time.Time{}
+			w.scroller.Reset()
 			// Trigger auto-show if enabled
 			if w.autoShowOnTrackChange {
 				w.TriggerAutoHide()
@@ -270,107 +265,6 @@ func (w *WinampWidget) Update() error {
 	}
 
 	return nil
-}
-
-// updateScrollPosition calculates the new scroll offset based on elapsed time
-func (w *WinampWidget) updateScrollPosition(now time.Time) {
-	elapsed := now.Sub(w.lastUpdateTime).Seconds()
-
-	// Check if we're in a pause
-	if !w.scrollPauseUntil.IsZero() && now.Before(w.scrollPauseUntil) {
-		return
-	}
-	w.scrollPauseUntil = time.Time{}
-
-	// Calculate text width (using Smart* to handle both TTF and internal fonts)
-	textWidth, _ := bitmap.SmartMeasureText(w.currentText, w.fontFace, w.fontName)
-	pos := w.GetPosition()
-	contentWidth := pos.W - w.padding*2
-
-	// Only scroll if text is wider than content area
-	if textWidth <= contentWidth {
-		w.scrollOffset = 0
-		return
-	}
-
-	// Calculate movement
-	movement := w.scrollSpeed * elapsed
-
-	switch w.scrollMode {
-	case "continuous":
-		w.updateContinuousScroll(movement, textWidth)
-	case "bounce":
-		w.updateBounceScroll(movement, textWidth, contentWidth, now)
-	case "pause_ends":
-		w.updatePauseEndsScroll(movement, textWidth, contentWidth, now)
-	}
-}
-
-// updateContinuousScroll handles continuous/marquee scrolling
-func (w *WinampWidget) updateContinuousScroll(movement float64, textWidth int) {
-	totalWidth := float64(textWidth + w.scrollGap)
-
-	switch w.scrollDirection {
-	case "left":
-		w.scrollOffset += movement
-		if w.scrollOffset >= totalWidth {
-			w.scrollOffset -= totalWidth
-		}
-	case "right":
-		w.scrollOffset -= movement
-		if w.scrollOffset <= -totalWidth {
-			w.scrollOffset += totalWidth
-		}
-	case "up", "down":
-		// For vertical scrolling, use the same logic, but it applies to Y
-		if w.scrollDirection == "up" {
-			w.scrollOffset += movement
-		} else {
-			w.scrollOffset -= movement
-		}
-		// Reset when text has scrolled completely
-		textHeight := w.fontSize + w.scrollGap
-		if w.scrollOffset >= float64(textHeight) || w.scrollOffset <= float64(-textHeight) {
-			w.scrollOffset = 0
-		}
-	}
-}
-
-// updateBounceScroll handles bounce scrolling (reverse at edges)
-func (w *WinampWidget) updateBounceScroll(movement float64, textWidth, contentWidth int, now time.Time) {
-	maxOffset := float64(textWidth - contentWidth)
-
-	w.scrollOffset += movement * float64(w.scrollDirection2)
-
-	if w.scrollOffset >= maxOffset {
-		w.scrollOffset = maxOffset
-		w.scrollDirection2 = -1
-		w.scrollPauseUntil = now.Add(time.Duration(w.scrollPauseMs) * time.Millisecond)
-	} else if w.scrollOffset <= 0 {
-		w.scrollOffset = 0
-		w.scrollDirection2 = 1
-		w.scrollPauseUntil = now.Add(time.Duration(w.scrollPauseMs) * time.Millisecond)
-	}
-}
-
-// updatePauseEndsScroll handles scroll with pause at ends
-func (w *WinampWidget) updatePauseEndsScroll(movement float64, textWidth, contentWidth int, now time.Time) {
-	maxOffset := float64(textWidth - contentWidth)
-
-	switch w.scrollDirection {
-	case "left":
-		w.scrollOffset += movement
-		if w.scrollOffset >= maxOffset {
-			w.scrollOffset = 0
-			w.scrollPauseUntil = now.Add(time.Duration(w.scrollPauseMs) * time.Millisecond)
-		}
-	case "right":
-		w.scrollOffset -= movement
-		if w.scrollOffset <= -maxOffset {
-			w.scrollOffset = 0
-			w.scrollPauseUntil = now.Add(time.Duration(w.scrollPauseMs) * time.Millisecond)
-		}
-	}
 }
 
 // formatOutput replaces placeholders with actual values
@@ -448,7 +342,7 @@ func (w *WinampWidget) Render() (image.Image, error) {
 
 	w.mu.RLock()
 	currentText := w.currentText
-	scrollOffset := w.scrollOffset
+	scrollOffset := w.scroller.GetOffset()
 	w.mu.RUnlock()
 
 	// Check if Winamp is running and playing
@@ -506,17 +400,20 @@ func (w *WinampWidget) renderScrollingText(img *image.Gray, text string, offset 
 	// Calculate aligned position using bitmap helper
 	textX, textY := bitmap.SmartCalculateTextPosition(text, w.fontFace, w.fontName, contentX, contentY, contentW, contentH, w.horizAlign, w.vertAlign)
 
+	// Get scroller configuration
+	scrollCfg := w.scroller.GetConfig()
+
 	// Handle horizontal scrolling
-	if w.scrollDirection == "left" || w.scrollDirection == "right" {
+	if w.scroller.IsHorizontal() {
 		// Apply horizontal scroll offset
 		scrollX := textX - int(offset)
 
 		// For continuous mode, draw text twice for seamless loop
-		if w.scrollMode == "continuous" {
+		if scrollCfg.Mode == shared.ScrollContinuous {
 			bitmap.SmartDrawTextAtPosition(img, text, w.fontFace, w.fontName, scrollX, textY, contentX, contentY, contentW, contentH)
 
 			// Draw second instance for seamless loop
-			if w.scrollDirection == "left" {
+			if scrollCfg.Direction == shared.ScrollLeft {
 				textX2 := scrollX + textWidth + w.scrollGap
 				if textX2 < contentX+contentW {
 					bitmap.SmartDrawTextAtPosition(img, text, w.fontFace, w.fontName, textX2, textY, contentX, contentY, contentW, contentH)

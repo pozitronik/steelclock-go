@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 // TestNewWinampWidget tests basic widget creation
@@ -88,17 +89,18 @@ func TestNewWinampWidget_WithScrollConfig(t *testing.T) {
 	if !widget.scrollEnabled {
 		t.Error("widget.scrollEnabled = false, want true")
 	}
-	if widget.scrollDirection != "right" {
-		t.Errorf("widget.scrollDirection = %q, want right", widget.scrollDirection)
+	scrollCfg := widget.scroller.GetConfig()
+	if scrollCfg.Direction != shared.ScrollRight {
+		t.Errorf("scrollCfg.Direction = %q, want right", scrollCfg.Direction)
 	}
-	if widget.scrollSpeed != 50.0 {
-		t.Errorf("widget.scrollSpeed = %f, want 50.0", widget.scrollSpeed)
+	if scrollCfg.Speed != 50.0 {
+		t.Errorf("scrollCfg.Speed = %f, want 50.0", scrollCfg.Speed)
 	}
-	if widget.scrollMode != "bounce" {
-		t.Errorf("widget.scrollMode = %q, want bounce", widget.scrollMode)
+	if scrollCfg.Mode != shared.ScrollBounce {
+		t.Errorf("scrollCfg.Mode = %q, want bounce", scrollCfg.Mode)
 	}
-	if widget.scrollPauseMs != 2000 {
-		t.Errorf("widget.scrollPauseMs = %d, want 2000", widget.scrollPauseMs)
+	if scrollCfg.PauseMs != 2000 {
+		t.Errorf("scrollCfg.PauseMs = %d, want 2000", scrollCfg.PauseMs)
 	}
 	if widget.scrollGap != 30 {
 		t.Errorf("widget.scrollGap = %d, want 30", widget.scrollGap)
@@ -208,14 +210,15 @@ func TestWinampWidget_Defaults(t *testing.T) {
 	if widget.scrollEnabled {
 		t.Error("default scrollEnabled = true, want false")
 	}
-	if widget.scrollDirection != "left" {
-		t.Errorf("default scrollDirection = %q, want left", widget.scrollDirection)
+	defaultScrollCfg := widget.scroller.GetConfig()
+	if defaultScrollCfg.Direction != shared.ScrollLeft {
+		t.Errorf("default scrollDirection = %q, want left", defaultScrollCfg.Direction)
 	}
-	if widget.scrollSpeed != 30.0 {
-		t.Errorf("default scrollSpeed = %f, want 30.0", widget.scrollSpeed)
+	if defaultScrollCfg.Speed != 30.0 {
+		t.Errorf("default scrollSpeed = %f, want 30.0", defaultScrollCfg.Speed)
 	}
-	if widget.scrollMode != "continuous" {
-		t.Errorf("default scrollMode = %q, want continuous", widget.scrollMode)
+	if defaultScrollCfg.Mode != shared.ScrollContinuous {
+		t.Errorf("default scrollMode = %q, want continuous", defaultScrollCfg.Mode)
 	}
 	if !widget.autoShowOnTrackChange {
 		t.Error("default autoShowOnTrackChange = false, want true")

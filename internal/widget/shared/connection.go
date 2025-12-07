@@ -69,16 +69,43 @@ func (c *ConnectionManager) Update() bool {
 		defer cancel()
 
 		err := c.connectable.Connect(ctx)
-
-		c.mu.Lock()
-		c.connecting = false
 		if err != nil {
+			c.mu.Lock()
+			c.connecting = false
 			c.connectionError = err
 			if c.onError != nil {
 				c.onError(err)
 			}
+			c.mu.Unlock()
+			return
 		}
-		c.mu.Unlock()
+
+		// Wait for full connection (including authentication for some clients)
+		// Connect() may return when TCP is established, but IsConnected()
+		// may require additional steps (e.g., authentication)
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				c.mu.Lock()
+				c.connecting = false
+				c.connectionError = ctx.Err()
+				if c.onError != nil {
+					c.onError(ctx.Err())
+				}
+				c.mu.Unlock()
+				return
+			case <-ticker.C:
+				if c.connectable.IsConnected() {
+					c.mu.Lock()
+					c.connecting = false
+					c.mu.Unlock()
+					return
+				}
+			}
+		}
 	}()
 
 	return true
@@ -115,4 +142,12 @@ func (c *ConnectionManager) ResetConnectionTimer() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.lastConnectionTry = time.Time{}
+}
+
+// IsInitialState returns true if no connection attempt has been made yet
+// Use this to show "Connecting..." instead of "Disconnected" on startup
+func (c *ConnectionManager) IsInitialState() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.lastConnectionTry.IsZero()
 }

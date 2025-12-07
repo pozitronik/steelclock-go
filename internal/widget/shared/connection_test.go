@@ -102,8 +102,8 @@ func TestConnectionManager_Update_InitiatesConnection(t *testing.T) {
 		t.Error("IsConnecting() = false after Update(), want true")
 	}
 
-	// Wait for connection to complete
-	time.Sleep(100 * time.Millisecond)
+	// Wait for connection to complete (Connect() delay + IsConnected() polling interval)
+	time.Sleep(250 * time.Millisecond)
 
 	if cm.IsConnecting() {
 		t.Error("IsConnecting() = true after delay, want false")
@@ -118,12 +118,13 @@ func TestConnectionManager_Update_InitiatesConnection(t *testing.T) {
 
 func TestConnectionManager_Update_RespectsReconnectInterval(t *testing.T) {
 	mock := &mockConnectable{}
-	cm := NewConnectionManager(mock, 100*time.Millisecond, 30*time.Second)
+	cm := NewConnectionManager(mock, 200*time.Millisecond, 30*time.Second)
 
 	// First call should initiate connection
 	cm.Update()
-	time.Sleep(20 * time.Millisecond) // Let goroutine start
-	mock.setConnected(false)          // Simulate disconnect
+	// Wait for connection to complete (includes IsConnected() polling)
+	time.Sleep(150 * time.Millisecond)
+	mock.setConnected(false) // Simulate disconnect
 
 	// Immediate second call should not reconnect (interval not passed)
 	connecting := cm.Update()
@@ -132,7 +133,7 @@ func TestConnectionManager_Update_RespectsReconnectInterval(t *testing.T) {
 	}
 
 	// Wait for interval to pass
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	// Now should reconnect
 	connecting = cm.Update()
@@ -189,7 +190,8 @@ func TestConnectionManager_ResetConnectionTimer(t *testing.T) {
 
 	// First connection
 	cm.Update()
-	time.Sleep(20 * time.Millisecond)
+	// Wait for connection to complete (includes IsConnected() polling)
+	time.Sleep(150 * time.Millisecond)
 	mock.setConnected(false)
 
 	// Should not reconnect (interval is 1 hour)
@@ -239,7 +241,8 @@ func TestConnectionManager_ConcurrentAccess(t *testing.T) {
 	wg.Wait()
 
 	// Should have only initiated one connection despite concurrent calls
-	time.Sleep(50 * time.Millisecond)
+	// Wait for connection to complete (includes IsConnected() polling)
+	time.Sleep(200 * time.Millisecond)
 	if mock.getConnectCount() > 1 {
 		t.Errorf("Connect() called %d times, want 1", mock.getConnectCount())
 	}

@@ -1,7 +1,6 @@
 package widget
 
 import (
-	"context"
 	"fmt"
 	"image"
 	"image/color"
@@ -13,6 +12,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	tgclient "github.com/pozitronik/steelclock-go/internal/telegram"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
@@ -24,8 +24,6 @@ type TelegramCounterWidget struct {
 	// Telegram client (shared via registry)
 	client  *tgclient.Client
 	authCfg *config.TelegramAuthConfig
-	ctx     context.Context
-	cancel  context.CancelFunc
 
 	// Display settings
 	fontFace   font.Face
@@ -33,32 +31,25 @@ type TelegramCounterWidget struct {
 	fontSize   int
 	mode       string // "badge" or "text"
 	textFormat string // format string with tokens like {unread}, {mentions}, etc.
-	blinkMode  string // "never", "always", "progressive"
 
 	// Badge colors (for badge mode)
 	badgeForeground int // 0-255 grayscale, -1 for transparent
 	badgeBackground int // 0-255 grayscale, -1 for transparent
 
 	// State
-	unreadCount       int
-	unreadStats       tgclient.UnreadStats
-	connectionError   error
-	connecting        bool
-	lastConnectionTry time.Time
-	reconnectInterval time.Duration
-	lastFetch         time.Time
-	fetchInterval     time.Duration
+	unreadCount   int
+	unreadStats   tgclient.UnreadStats
+	lastFetch     time.Time
+	fetchInterval time.Duration
 
-	// Blink state
-	blinkState bool
-	lastBlink  time.Time
+	// Shared modules
+	connection     *shared.ConnectionManager
+	blink          *shared.BlinkAnimator
+	statusRenderer *shared.StatusRenderer
 
 	// Display dimensions
 	width  int
 	height int
-
-	// Fallback internal font
-	glyphSet *glyphs.GlyphSet
 }
 
 // NewTelegramCounterWidget creates a new Telegram unread count widget
@@ -88,13 +79,20 @@ func NewTelegramCounterWidget(cfg config.WidgetConfig) (*TelegramCounterWidget, 
 		mode = "badge" // default mode
 	}
 
-	blinkMode := "never"
+	blinkMode := shared.BlinkNever
 	badgeForeground := 255 // default: white
 	badgeBackground := 0   // default: black
 
 	if cfg.Badge != nil {
 		if cfg.Badge.Blink != "" {
-			blinkMode = cfg.Badge.Blink
+			switch cfg.Badge.Blink {
+			case "always":
+				blinkMode = shared.BlinkAlways
+			case "progressive":
+				blinkMode = shared.BlinkProgressive
+			default:
+				blinkMode = shared.BlinkNever
+			}
 		}
 		if cfg.Badge.Colors != nil {
 			badgeForeground = cfg.Badge.Colors.Foreground
@@ -124,37 +122,31 @@ func NewTelegramCounterWidget(cfg config.WidgetConfig) (*TelegramCounterWidget, 
 		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
 
-	// Get internal font for fallback
-	glyphSet := bitmap.GetInternalFontByName("5x7")
-	if glyphSet == nil {
-		glyphSet = glyphs.Font5x7
-	}
+	// Create connection manager
+	connManager := shared.NewConnectionManager(client, 30*time.Second, 60*time.Second)
 
 	w := &TelegramCounterWidget{
-		BaseWidget:        base,
-		client:            client,
-		authCfg:           cfg.Auth,
-		mode:              mode,
-		textFormat:        textFormat,
-		blinkMode:         blinkMode,
-		badgeForeground:   badgeForeground,
-		badgeBackground:   badgeBackground,
-		fontFace:          fontFace,
-		fontName:          fontName,
-		fontSize:          fontSize,
-		reconnectInterval: 30 * time.Second,
-		fetchInterval:     5 * time.Second, // Fetch unread count every 5 seconds
-		width:             pos.W,
-		height:            pos.H,
-		glyphSet:          glyphSet,
-		lastBlink:         time.Now(),
+		BaseWidget:      base,
+		client:          client,
+		authCfg:         cfg.Auth,
+		mode:            mode,
+		textFormat:      textFormat,
+		badgeForeground: badgeForeground,
+		badgeBackground: badgeBackground,
+		fontFace:        fontFace,
+		fontName:        fontName,
+		fontSize:        fontSize,
+		fetchInterval:   5 * time.Second, // Fetch unread count every 5 seconds
+		width:           pos.W,
+		height:          pos.H,
+		connection:      connManager,
+		blink:           shared.NewBlinkAnimator(blinkMode, 500*time.Millisecond),
+		statusRenderer:  shared.NewStatusRenderer("5x7"),
 	}
 
 	// Add error callback (using Add instead of Set for proper multi-widget support)
 	client.AddErrorCallback(func(err error) {
-		w.mu.Lock()
-		defer w.mu.Unlock()
-		w.connectionError = err
+		// Connection manager handles errors internally
 	})
 
 	return w, nil
@@ -167,62 +159,14 @@ func (w *TelegramCounterWidget) Update() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	// Update blink state based on mode
-	blinkInterval := w.getBlinkInterval()
-	if blinkInterval > 0 && now.Sub(w.lastBlink) >= blinkInterval {
-		w.blinkState = !w.blinkState
-		w.lastBlink = now
-	}
+	// Update blink state (pass unread count for progressive mode)
+	w.blink.UpdateWithTime(now, w.unreadCount)
 
-	// Handle connection
-	if !w.client.IsConnected() && !w.connecting {
-		if time.Since(w.lastConnectionTry) > w.reconnectInterval {
-			w.connecting = true
-			w.lastConnectionTry = time.Now()
-			w.connectionError = nil
-
-			go func() {
-				ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-				defer cancel()
-
-				err := w.client.Connect(ctx)
-				if err != nil {
-					w.mu.Lock()
-					w.connecting = false
-					w.connectionError = err
-					w.mu.Unlock()
-					return
-				}
-
-				// Wait for full connection (including authentication)
-				// Connect() returns when TCP is established, but IsConnected()
-				// requires both connected AND authenticated
-				ticker := time.NewTicker(100 * time.Millisecond)
-				defer ticker.Stop()
-
-				for {
-					select {
-					case <-ctx.Done():
-						w.mu.Lock()
-						w.connecting = false
-						w.connectionError = ctx.Err()
-						w.mu.Unlock()
-						return
-					case <-ticker.C:
-						if w.client.IsConnected() {
-							w.mu.Lock()
-							w.connecting = false
-							w.mu.Unlock()
-							return
-						}
-					}
-				}
-			}()
-		}
-	}
+	// Handle connection via shared manager
+	w.connection.Update()
 
 	// Fetch unread count periodically
-	if w.client.IsConnected() {
+	if w.connection.IsConnected() {
 		if time.Since(w.lastFetch) >= w.fetchInterval {
 			w.lastFetch = now
 			// Fetch in background to avoid blocking
@@ -251,22 +195,22 @@ func (w *TelegramCounterWidget) Render() (image.Image, error) {
 	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
 
 	// Draw based on state
-	if w.connecting {
-		w.drawStatusText(img, "...")
-	} else if w.connectionError != nil {
-		w.drawStatusText(img, "ERR")
-	} else if !w.client.IsConnected() {
+	if w.connection.IsConnecting() {
+		w.statusRenderer.DrawCentered(img, "...", 0, 0, w.width, w.height)
+	} else if w.connection.GetError() != nil {
+		w.statusRenderer.DrawCentered(img, "ERR", 0, 0, w.width, w.height)
+	} else if !w.connection.IsConnected() {
 		// Show "..." on initial state (before first connection attempt)
 		// to avoid brief "---" flash
-		if w.lastConnectionTry.IsZero() {
-			w.drawStatusText(img, "...")
+		if w.connection.IsInitialState() {
+			w.statusRenderer.DrawCentered(img, "...", 0, 0, w.width, w.height)
 		} else {
-			w.drawStatusText(img, "---")
+			w.statusRenderer.DrawCentered(img, "---", 0, 0, w.width, w.height)
 		}
 	} else if w.unreadCount > 0 {
 		// Only display when there are unread messages
 		// Check if we should skip rendering due to blink
-		if w.shouldSkipForBlink() {
+		if !w.blink.ShouldRender() {
 			// Skip rendering when blinking off
 		} else {
 			w.renderUnreadCount(img)
@@ -430,86 +374,11 @@ func (w *TelegramCounterWidget) drawTelegramIcon(img *image.Gray, x, y int) {
 	}
 }
 
-// getBlinkInterval returns the blink interval based on mode and unread count
-// Returns 0 if blinking is disabled
-func (w *TelegramCounterWidget) getBlinkInterval() time.Duration {
-	switch w.blinkMode {
-	case "always":
-		return 500 * time.Millisecond
-	case "progressive":
-		if w.unreadCount <= 0 {
-			return 0
-		}
-		// Scale from 1000ms (1 msg) to 100ms (10+ msgs)
-		// Formula: interval = 1000 - (count-1) * 100, clamped to [100, 1000]
-		intervalMs := 1000 - (w.unreadCount-1)*100
-		if intervalMs < 100 {
-			intervalMs = 100
-		}
-		if intervalMs > 1000 {
-			intervalMs = 1000
-		}
-		return time.Duration(intervalMs) * time.Millisecond
-	default: // "never"
-		return 0
-	}
-}
-
-// shouldSkipForBlink returns true if rendering should be skipped due to blink state
-func (w *TelegramCounterWidget) shouldSkipForBlink() bool {
-	if w.blinkMode == "never" {
-		return false
-	}
-	return !w.blinkState
-}
-
-// drawStatusText draws status text centered using internal font
-func (w *TelegramCounterWidget) drawStatusText(img *image.Gray, text string) {
-	c := color.Gray{Y: 255}
-
-	// Calculate total text width
-	totalWidth := 0
-	for _, ch := range text {
-		glyph := glyphs.GetGlyph(w.glyphSet, ch)
-		if glyph != nil {
-			totalWidth += glyph.Width + 1
-		}
-	}
-	if totalWidth > 0 {
-		totalWidth-- // Remove trailing space
-	}
-
-	// Center the text
-	x := (w.width - totalWidth) / 2
-	y := (w.height - 7) / 2 // 7 is height of 5x7 font
-
-	for _, ch := range text {
-		glyph := glyphs.GetGlyph(w.glyphSet, ch)
-		if glyph == nil {
-			continue
-		}
-		for row := 0; row < glyph.Height && row < len(glyph.Data); row++ {
-			for col := 0; col < glyph.Width && col < len(glyph.Data[row]); col++ {
-				if glyph.Data[row][col] {
-					px, py := x+col, y+row
-					if px >= 0 && px < w.width && py >= 0 && py < w.height {
-						img.Set(px, py, c)
-					}
-				}
-			}
-		}
-		x += glyph.Width + 1
-	}
-}
-
 // Stop cleans up resources
 func (w *TelegramCounterWidget) Stop() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if w.cancel != nil {
-		w.cancel()
-	}
 	// Release client via registry (will disconnect when ref count reaches 0)
 	if w.authCfg != nil {
 		tgclient.ReleaseClient(w.authCfg)
