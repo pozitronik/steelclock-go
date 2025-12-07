@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
-	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	tgclient "github.com/pozitronik/steelclock-go/internal/telegram"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
@@ -89,8 +89,8 @@ type TelegramWidget struct {
 	width  int
 	height int
 
-	// Fallback internal font for status messages
-	glyphSet *glyphs.GlyphSet
+	// Status text renderer for connection/error messages
+	statusRenderer *shared.StatusRenderer
 }
 
 // NewTelegramWidget creates a new Telegram notification widget
@@ -120,11 +120,8 @@ func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
 		return nil, fmt.Errorf("failed to parse appearance: %w", err)
 	}
 
-	// Get internal font for status messages
-	glyphSet := bitmap.GetInternalFontByName("5x7")
-	if glyphSet == nil {
-		glyphSet = glyphs.Font5x7
-	}
+	// Create status renderer for connection/error messages
+	statusRenderer := shared.NewStatusRenderer("5x7")
 
 	w := &TelegramWidget{
 		BaseWidget:        base,
@@ -135,7 +132,7 @@ func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
 		reconnectInterval: 30 * time.Second,
 		width:             pos.W,
 		height:            pos.H,
-		glyphSet:          glyphSet,
+		statusRenderer:    statusRenderer,
 		lastUpdateTime:    time.Now(),
 		lastBlink:         time.Now(),
 	}
@@ -585,51 +582,13 @@ func (w *TelegramWidget) renderError(img *image.Gray) {
 	w.drawStatusText(img, line1)
 	if line2 != "" {
 		// Draw second line below
-		c := color.Gray{Y: 255}
-		for i, ch := range line2 {
-			glyph := glyphs.GetGlyph(w.glyphSet, ch)
-			if glyph == nil {
-				continue
-			}
-			charX := 2 + i*6
-			charY := w.height/2 + 2
-			for row := 0; row < glyph.Height && row < len(glyph.Data); row++ {
-				for col := 0; col < glyph.Width && col < len(glyph.Data[row]); col++ {
-					if glyph.Data[row][col] {
-						px, py := charX+col, charY+row
-						if px >= 0 && px < w.width && py >= 0 && py < w.height {
-							img.Set(px, py, c)
-						}
-					}
-				}
-			}
-		}
+		w.statusRenderer.DrawAt(img, line2, 2, w.height/2+2)
 	}
 }
 
-// drawStatusText draws status text centered using internal font
+// drawStatusText draws status text using internal font
 func (w *TelegramWidget) drawStatusText(img *image.Gray, text string) {
-	c := color.Gray{Y: 255}
-	x := 2
-	y := w.height/2 - 3
-
-	for i, ch := range text {
-		glyph := glyphs.GetGlyph(w.glyphSet, ch)
-		if glyph == nil {
-			continue
-		}
-		charX := x + i*6
-		for row := 0; row < glyph.Height && row < len(glyph.Data); row++ {
-			for col := 0; col < glyph.Width && col < len(glyph.Data[row]); col++ {
-				if glyph.Data[row][col] {
-					px, py := charX+col, y+row
-					if px >= 0 && px < w.width && py >= 0 && py < w.height {
-						img.Set(px, py, c)
-					}
-				}
-			}
-		}
-	}
+	w.statusRenderer.DrawAt(img, text, 2, w.height/2-3)
 }
 
 // renderMessage renders a message with header, separator, and message text
@@ -1134,9 +1093,9 @@ func (w *TelegramWidget) applyTransition(dst, oldFrame, newFrame *image.Gray, pr
 	switch transitionType {
 	case "none":
 		if progress < 0.5 {
-			copyGrayImage(dst, oldFrame)
+			shared.CopyGrayImage(dst, oldFrame)
 		} else {
-			copyGrayImage(dst, newFrame)
+			shared.CopyGrayImage(dst, newFrame)
 		}
 
 	case "push_left":
@@ -1168,7 +1127,7 @@ func (w *TelegramWidget) applyTransition(dst, oldFrame, newFrame *image.Gray, pr
 		}
 
 	case "dissolve_pixel":
-		copyGrayImage(dst, oldFrame)
+		shared.CopyGrayImage(dst, oldFrame)
 		pixelsToShow := int(float64(len(pixelOrder)) * progress)
 		for i := 0; i < pixelsToShow && i < len(pixelOrder); i++ {
 			idx := pixelOrder[i]
@@ -1254,7 +1213,7 @@ func (w *TelegramWidget) applyTransition(dst, oldFrame, newFrame *image.Gray, pr
 		}
 
 	default:
-		copyGrayImage(dst, newFrame)
+		shared.CopyGrayImage(dst, newFrame)
 	}
 }
 
@@ -1325,7 +1284,7 @@ func (w *TelegramWidget) applySlideTransition(dst, oldFrame, newFrame *image.Gra
 	height := bounds.Dy()
 
 	// First, copy old frame
-	copyGrayImage(dst, oldFrame)
+	shared.CopyGrayImage(dst, oldFrame)
 
 	// Calculate how much of new frame to show
 	revealX := int(float64(width) * progress)
