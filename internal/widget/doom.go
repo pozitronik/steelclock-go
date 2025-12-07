@@ -43,6 +43,9 @@ type DoomWidget struct {
 	// Rendering
 	scale float64 // Downscale factor from DOOM resolution to display
 
+	// Pre-allocated render buffer to avoid GC pressure during frame processing
+	grayBuffer [][]uint8
+
 	// Render mode settings
 	renderMode      string  // "normal", "contrast", "posterize", "threshold", "dither", "gamma"
 	posterizeLevels int     // Number of gray levels for posterize mode
@@ -131,12 +134,21 @@ func NewDoomWidget(cfg config.WidgetConfig) (*DoomWidget, error) {
 		}
 	}
 
+	// Pre-allocate gray buffer to avoid allocations during frame processing
+	width := cfg.Position.W
+	height := cfg.Position.H
+	grayBuffer := make([][]uint8, height)
+	for y := 0; y < height; y++ {
+		grayBuffer[y] = make([]uint8, width)
+	}
+
 	w := &DoomWidget{
 		BaseWidget:      base,
 		wadFile:         wadName,
 		bundledWadURL:   bundledWadURL,
 		scale:           scale,
 		stopChan:        make(chan struct{}),
+		grayBuffer:      grayBuffer,
 		renderMode:      renderMode,
 		posterizeLevels: posterizeLevels,
 		thresholdValue:  thresholdValue,
@@ -261,11 +273,11 @@ func (w *DoomWidget) DrawFrame(img *image.RGBA) {
 	scaleY := float64(bounds.Dy()) / float64(pos.H)
 
 	// First pass: convert to grayscale and find min/max for contrast modes
-	grayValues := make([][]uint8, pos.H)
+	// Use pre-allocated buffer to avoid GC pressure
+	grayValues := w.grayBuffer
 	var minGray, maxGray uint8 = 255, 0
 
 	for y := 0; y < pos.H; y++ {
-		grayValues[y] = make([]uint8, pos.W)
 		for x := 0; x < pos.W; x++ {
 			// Sample from source image
 			srcX := int(float64(x) * scaleX)
