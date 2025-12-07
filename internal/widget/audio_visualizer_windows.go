@@ -795,17 +795,21 @@ func (w *AudioVisualizerWidget) renderSpectrum(img *image.Gray) {
 
 		// Draw bar
 		if w.barStyle == "bars" {
-			for py := y; py < height; py++ {
-				for px := x; px < x+barWidth-gap && px < width; px++ {
-					img.SetGray(px, py, color.Gray{Y: w.fillColor})
-				}
+			barW := barWidth - gap
+			if x+barW > width {
+				barW = width - x
+			}
+			if barW > 0 && barHeight > 0 {
+				bitmap.DrawFilledRectangle(img, x, y, barW, barHeight, w.fillColor)
 			}
 		} else {
 			// Line style - draw top pixel of each bar
-			for px := x; px < x+barWidth && px < width; px++ {
-				if y >= 0 && y < height {
-					img.SetGray(px, y, color.Gray{Y: w.fillColor})
+			if y >= 0 && y < height {
+				endX := x + barWidth - 1
+				if endX >= width {
+					endX = width - 1
 				}
+				bitmap.DrawHorizontalLine(img, x, endX, y, w.fillColor)
 			}
 		}
 
@@ -820,9 +824,11 @@ func (w *AudioVisualizerWidget) renderSpectrum(img *image.Gray) {
 			}
 			peakY := height - int(peakMagnitude*float64(height))
 			if peakY >= 0 && peakY < height {
-				for px := x; px < x+barWidth-gap && px < width; px++ {
-					img.SetGray(px, peakY, color.Gray{Y: w.fillColor})
+				endX := x + barWidth - gap - 1
+				if endX >= width {
+					endX = width - 1
 				}
+				bitmap.DrawHorizontalLine(img, x, endX, peakY, w.fillColor)
 			}
 		}
 	}
@@ -905,17 +911,19 @@ func (w *AudioVisualizerWidget) drawWaveform(img *image.Gray, samples []float32,
 			bitmap.DrawLine(img, x1, y1, x2, y2, color.Gray{Y: fillColor})
 		} else if w.waveformStyle == "filled" {
 			// Draw vertical line from center to sample
-			if y1 < centerY {
-				for y := y1; y <= centerY && y < yEnd; y++ {
-					if x1 >= 0 && x1 < width {
-						img.SetGray(x1, y, color.Gray{Y: fillColor})
+			if x1 >= 0 && x1 < width {
+				if y1 < centerY {
+					endY := centerY
+					if endY >= yEnd {
+						endY = yEnd - 1
 					}
-				}
-			} else {
-				for y := centerY; y <= y1 && y < yEnd; y++ {
-					if x1 >= 0 && x1 < width {
-						img.SetGray(x1, y, color.Gray{Y: fillColor})
+					bitmap.DrawVerticalLine(img, x1, y1, endY, fillColor)
+				} else {
+					endY := y1
+					if endY >= yEnd {
+						endY = yEnd - 1
 					}
+					bitmap.DrawVerticalLine(img, x1, centerY, endY, fillColor)
 				}
 			}
 		}
