@@ -14,6 +14,12 @@ import (
 	"golang.org/x/image/font"
 )
 
+// Error display constants
+const (
+	// maxErrorLineLength is the maximum characters per line when displaying error messages
+	maxErrorLineLength = 22
+)
+
 // ElementAppearance holds processed appearance settings for header or message
 type ElementAppearance struct {
 	Enabled    bool
@@ -535,15 +541,14 @@ func (w *TelegramWidget) renderError(img *image.Gray) {
 		return
 	}
 	errMsg := connErr.Error()
-	maxLen := 22
 	line1 := errMsg
 	line2 := ""
-	if len(errMsg) > maxLen {
-		line1 = errMsg[:maxLen]
-		if len(errMsg) > maxLen*2 {
-			line2 = errMsg[maxLen : maxLen*2]
+	if len(errMsg) > maxErrorLineLength {
+		line1 = errMsg[:maxErrorLineLength]
+		if len(errMsg) > maxErrorLineLength*2 {
+			line2 = errMsg[maxErrorLineLength : maxErrorLineLength*2]
 		} else {
-			line2 = errMsg[maxLen:]
+			line2 = errMsg[maxErrorLineLength:]
 		}
 	}
 	w.drawStatusText(img, line1)

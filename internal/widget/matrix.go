@@ -3,6 +3,7 @@ package widget
 import (
 	"image"
 	"image/color"
+	"math"
 	"math/rand"
 	"sync"
 	"time"
@@ -10,6 +11,16 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
+)
+
+// Spawn delay constants for matrix column respawn timing
+const (
+	// minSpawnDelay is the minimum frames before a column respawns
+	minSpawnDelay = 10
+	// spawnDelayRange is the random range added to minSpawnDelay
+	spawnDelayRange = 40
+	// densityDelayRange is additional delay range when density check fails
+	densityDelayRange = 60
 )
 
 // MatrixColumn represents a single falling column of characters
@@ -259,10 +270,10 @@ func (w *MatrixWidget) Update() error {
 		// Check if column has fallen off the screen
 		if int(col.y)-col.length*w.charHeight > pos.H {
 			col.active = false
-			col.spawnDelay = w.rng.Intn(40) + 10
+			col.spawnDelay = w.rng.Intn(spawnDelayRange) + minSpawnDelay
 			// Decide if this column should respawn based on density
 			if w.rng.Float64() > w.density {
-				col.spawnDelay += w.rng.Intn(60)
+				col.spawnDelay += w.rng.Intn(densityDelayRange)
 			}
 		}
 	}
