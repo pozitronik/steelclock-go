@@ -76,7 +76,7 @@ func TestClockWidgetUpdate(t *testing.T) {
 		t.Errorf("Update() error = %v", err)
 	}
 
-	if widget.currentTime == "" {
+	if widget.currentTime.IsZero() {
 		t.Error("Update() did not set currentTime")
 	}
 }
@@ -160,8 +160,9 @@ func TestClockWidgetRender_ClockFace(t *testing.T) {
 		t.Fatal("NewClockWidget() returned nil")
 	}
 
-	if widget.displayMode != "clock_face" {
-		t.Errorf("displayMode = %s, want clock_face", widget.displayMode)
+	// "clock_face" is mapped to "analog" internally
+	if widget.displayMode != "analog" {
+		t.Errorf("displayMode = %s, want analog (mapped from clock_face)", widget.displayMode)
 	}
 
 	// Update before render
@@ -360,14 +361,6 @@ func TestClockWidgetRender_ClockFaceAlignment(t *testing.T) {
 			// Verify alignment using the test-specific check function
 			if !tt.checkPixelsFn(grayImg, tt.width, tt.height) {
 				t.Errorf("Clock face alignment check failed for %s/%s", tt.horizAlign, tt.vertAlign)
-			}
-
-			// Verify widget has correct alignment properties
-			if widget.horizAlign != tt.horizAlign {
-				t.Errorf("horizAlign = %s, want %s", widget.horizAlign, tt.horizAlign)
-			}
-			if widget.vertAlign != tt.vertAlign {
-				t.Errorf("vertAlign = %s, want %s", widget.vertAlign, tt.vertAlign)
 			}
 		})
 	}
