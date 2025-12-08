@@ -49,9 +49,9 @@ func (c *Client) BindScreenEvent(_, _ string) error {
 	return nil
 }
 
-// SendScreenData converts the bitmap data and sends it to the display
-// bitmapData is an array of 640 integers (0-255), each representing a byte of packed pixels
-func (c *Client) SendScreenData(_ string, bitmapData []int) error {
+// SendScreenData sends the bitmap data directly to the display
+// bitmapData is an array of 640 bytes, each representing packed pixels
+func (c *Client) SendScreenData(_ string, bitmapData []byte) error {
 	if !c.driver.IsConnected() {
 		// Log disconnection only once to avoid spam
 		if !c.disconnectLogged {
@@ -61,13 +61,7 @@ func (c *Client) SendScreenData(_ string, bitmapData []int) error {
 		return fmt.Errorf("device not connected")
 	}
 
-	// Convert []int to []byte
-	byteData := make([]byte, len(bitmapData))
-	for i, v := range bitmapData {
-		byteData[i] = byte(v)
-	}
-
-	if err := c.driver.SendFrame(byteData); err != nil {
+	if err := c.driver.SendFrame(bitmapData); err != nil {
 		// Log disconnection only once to avoid spam
 		if !c.disconnectLogged {
 			log.Printf("Direct driver: device disconnected: %v", err)
@@ -121,7 +115,7 @@ func (c *Client) SupportsMultipleEvents() bool {
 
 // SendScreenDataMultiRes sends screen data for the resolution matching the driver's configured dimensions.
 // Other resolutions in the map are ignored.
-func (c *Client) SendScreenDataMultiRes(_ string, resolutionData map[string][]int) error {
+func (c *Client) SendScreenDataMultiRes(_ string, resolutionData map[string][]byte) error {
 	// Find our resolution in the map
 	key := fmt.Sprintf("image-data-%dx%d", c.width, c.height)
 	if data, ok := resolutionData[key]; ok {
@@ -132,7 +126,7 @@ func (c *Client) SendScreenDataMultiRes(_ string, resolutionData map[string][]in
 
 // SendMultipleScreenData sends the last frame from the batch.
 // USB HID doesn't benefit from batching (no HTTP overhead), so only the most recent frame is sent.
-func (c *Client) SendMultipleScreenData(_ string, frames [][]int) error {
+func (c *Client) SendMultipleScreenData(_ string, frames [][]byte) error {
 	if len(frames) > 0 {
 		return c.SendScreenData("", frames[len(frames)-1])
 	}

@@ -102,7 +102,7 @@ func TestClient_SendScreenData_DisconnectedDevice(t *testing.T) {
 		height: 40,
 	}
 
-	err := client.SendScreenData("event", make([]int, 640))
+	err := client.SendScreenData("event", make([]byte, 640))
 	if err == nil {
 		t.Error("SendScreenData() should return error when device is disconnected")
 	}
@@ -117,8 +117,8 @@ func TestClient_SendScreenDataMultiRes_WrongResolution(t *testing.T) {
 	}
 
 	// Only provide data for a different resolution
-	resolutionData := map[string][]int{
-		"image-data-256x64": make([]int, 2048),
+	resolutionData := map[string][]byte{
+		"image-data-256x64": make([]byte, 2048),
 	}
 
 	err := client.SendScreenDataMultiRes("event", resolutionData)
@@ -135,7 +135,7 @@ func TestClient_SendMultipleScreenData_EmptyFrames(t *testing.T) {
 		height: 40,
 	}
 
-	err := client.SendMultipleScreenData("event", [][]int{})
+	err := client.SendMultipleScreenData("event", [][]byte{})
 	if err != nil {
 		t.Errorf("SendMultipleScreenData() with empty frames returned error: %v", err)
 	}
@@ -235,13 +235,13 @@ func TestClient_DisconnectLogFlag(t *testing.T) {
 	}
 
 	// First call should set disconnectLogged
-	_ = client.SendScreenData("event", make([]int, 640))
+	_ = client.SendScreenData("event", make([]byte, 640))
 	if !client.disconnectLogged {
 		t.Error("SendScreenData() should set disconnectLogged on disconnect")
 	}
 
 	// Second call should still work (not panic)
-	_ = client.SendScreenData("event", make([]int, 640))
+	_ = client.SendScreenData("event", make([]byte, 640))
 }
 
 func TestClient_WidthHeight(t *testing.T) {
@@ -270,8 +270,8 @@ func TestClient_SendScreenDataMultiRes_KeyFormat(t *testing.T) {
 
 	// Test that the key format is "image-data-WxH"
 	// Even though this will fail (not connected), it validates key lookup
-	resolutionData := map[string][]int{
-		"image-data-128x40": make([]int, 640),
+	resolutionData := map[string][]byte{
+		"image-data-128x40": make([]byte, 640),
 	}
 
 	// Will fail because device not connected, but won't fail due to key not found
@@ -297,9 +297,9 @@ func TestClient_SendMultipleScreenData_WithFrames(t *testing.T) {
 		height: 40,
 	}
 
-	frames := [][]int{
-		make([]int, 640),
-		make([]int, 640),
+	frames := [][]byte{
+		make([]byte, 640),
+		make([]byte, 640),
 	}
 
 	// Will fail because not connected, but should not panic
@@ -330,7 +330,7 @@ func TestClient_SendScreenData_DataLength(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			data := make([]int, tc.size)
+			data := make([]byte, tc.size)
 			// Should not panic even with wrong sizes
 			err := client.SendScreenData("event", data)
 			if err == nil {

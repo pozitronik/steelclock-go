@@ -13,12 +13,12 @@ import (
 type API interface {
 	RegisterGame(developer string, deinitializeTimerMs int) error
 	BindScreenEvent(eventName, deviceType string) error
-	SendScreenData(eventName string, bitmapData []int) error
-	SendScreenDataMultiRes(eventName string, resolutionData map[string][]int) error
+	SendScreenData(eventName string, bitmapData []byte) error
+	SendScreenDataMultiRes(eventName string, resolutionData map[string][]byte) error
 	SendHeartbeat() error
 	RemoveGame() error
 	SupportsMultipleEvents() bool
-	SendMultipleScreenData(eventName string, frames [][]int) error
+	SendMultipleScreenData(eventName string, frames [][]byte) error
 }
 
 // Client is a GameSense API client
@@ -103,8 +103,18 @@ func (c *Client) BindScreenEvent(eventName, deviceType string) error {
 	return nil
 }
 
+// bytesToInts converts []byte to []int for JSON serialization.
+// GameSense API requires an array of integers in JSON format.
+func bytesToInts(data []byte) []int {
+	result := make([]int, len(data))
+	for i, b := range data {
+		result[i] = int(b)
+	}
+	return result
+}
+
 // SendScreenData sends bitmap data to the display
-func (c *Client) SendScreenData(eventName string, bitmapData []int) error {
+func (c *Client) SendScreenData(eventName string, bitmapData []byte) error {
 	if len(bitmapData) != 640 {
 		return fmt.Errorf("invalid bitmap size: expected 640 bytes, got %d", len(bitmapData))
 	}
@@ -114,7 +124,7 @@ func (c *Client) SendScreenData(eventName string, bitmapData []int) error {
 		"event": eventName,
 		"data": map[string]interface{}{
 			"frame": map[string]interface{}{
-				"image-data-128x40": bitmapData,
+				"image-data-128x40": bytesToInts(bitmapData),
 			},
 		},
 	}
@@ -126,15 +136,15 @@ func (c *Client) SendScreenData(eventName string, bitmapData []int) error {
 
 // SendScreenDataMultiRes sends bitmap data for multiple resolutions in a single frame
 // resolutionData maps resolution keys (e.g., "image-data-128x40") to bitmap data
-func (c *Client) SendScreenDataMultiRes(eventName string, resolutionData map[string][]int) error {
+func (c *Client) SendScreenDataMultiRes(eventName string, resolutionData map[string][]byte) error {
 	if len(resolutionData) == 0 {
 		return fmt.Errorf("no resolution data provided")
 	}
 
-	// Build frame with all resolutions
+	// Build frame with all resolutions, converting to []int for JSON
 	frameData := make(map[string]interface{})
 	for key, bitmapData := range resolutionData {
-		frameData[key] = bitmapData
+		frameData[key] = bytesToInts(bitmapData)
 	}
 
 	payload := map[string]interface{}{
@@ -193,7 +203,7 @@ func (c *Client) SupportsMultipleEvents() bool {
 
 // SendMultipleScreenData sends multiple bitmap frames in a single request
 // This reduces HTTP overhead when supported by the GameSense API
-func (c *Client) SendMultipleScreenData(eventName string, bitmaps [][]int) error {
+func (c *Client) SendMultipleScreenData(eventName string, bitmaps [][]byte) error {
 	if len(bitmaps) == 0 {
 		return nil
 	}
@@ -205,14 +215,14 @@ func (c *Client) SendMultipleScreenData(eventName string, bitmaps [][]int) error
 		}
 	}
 
-	// Build events array
+	// Build events array, converting to []int for JSON
 	events := make([]map[string]interface{}, len(bitmaps))
 	for i, bitmap := range bitmaps {
 		events[i] = map[string]interface{}{
 			"event": eventName,
 			"data": map[string]interface{}{
 				"frame": map[string]interface{}{
-					"image-data-128x40": bitmap,
+					"image-data-128x40": bytesToInts(bitmap),
 				},
 			},
 		}

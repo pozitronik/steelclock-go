@@ -661,7 +661,7 @@ func TestStyle_MultipleStyledWidgets(t *testing.T) {
 	}
 
 	// Check each quadrant
-	blank := make([]int, 640)
+	blank := make([]byte, 640)
 	quadrants := []struct {
 		name string
 		x, y int

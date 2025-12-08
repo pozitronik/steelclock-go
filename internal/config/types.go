@@ -43,6 +43,7 @@ type Config struct {
 	DeinitializeTimerMs  int                 `json:"deinitialize_timer_ms,omitempty"`
 	EventBatchingEnabled bool                `json:"event_batching_enabled,omitempty"`
 	EventBatchSize       int                 `json:"event_batch_size,omitempty"`
+	FrameDedupEnabled    *bool               `json:"frame_dedup_enabled,omitempty"` // Skip sending unchanged frames (default: true)
 	SupportedResolutions []ResolutionConfig  `json:"supported_resolutions,omitempty"`
 	BundledFontURL       *string             `json:"bundled_font_url,omitempty"`
 	Backend              string              `json:"backend,omitempty"`

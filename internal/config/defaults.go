@@ -141,6 +141,11 @@ func applyDisplayDefaults(cfg *Config) {
 	if cfg.EventBatchingEnabled && cfg.EventBatchSize == 0 {
 		cfg.EventBatchSize = DefaultEventBatchSize
 	}
+
+	// Frame deduplication is enabled by default
+	if cfg.FrameDedupEnabled == nil {
+		cfg.FrameDedupEnabled = BoolPtr(true)
+	}
 }
 
 // applyWidgetDefaults sets default values for a widget

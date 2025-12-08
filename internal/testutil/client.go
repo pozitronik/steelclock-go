@@ -12,7 +12,7 @@ import (
 
 // Frame represents a captured frame with metadata
 type Frame struct {
-	Data      []int     // Bitmap data (640 bytes for 128x40)
+	Data      []byte    // Bitmap data (640 bytes for 128x40)
 	EventName string    // Event name used when sending
 	Timestamp time.Time // When the frame was received
 	Index     int       // Sequential frame number
@@ -153,7 +153,7 @@ func (c *TestClient) BindScreenEvent(eventName, deviceType string) error {
 }
 
 // SendScreenData implements gamesense.API
-func (c *TestClient) SendScreenData(eventName string, bitmapData []int) error {
+func (c *TestClient) SendScreenData(eventName string, bitmapData []byte) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -177,7 +177,7 @@ func (c *TestClient) SendScreenData(eventName string, bitmapData []int) error {
 }
 
 // SendScreenDataMultiRes implements gamesense.API
-func (c *TestClient) SendScreenDataMultiRes(eventName string, resolutionData map[string][]int) error {
+func (c *TestClient) SendScreenDataMultiRes(eventName string, resolutionData map[string][]byte) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -244,7 +244,7 @@ func (c *TestClient) SupportsMultipleEvents() bool {
 }
 
 // SendMultipleScreenData implements gamesense.API
-func (c *TestClient) SendMultipleScreenData(eventName string, frames [][]int) error {
+func (c *TestClient) SendMultipleScreenData(eventName string, frames [][]byte) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -272,13 +272,13 @@ func (c *TestClient) SendMultipleScreenData(eventName string, frames [][]int) er
 }
 
 // captureFrame stores a frame in history (must be called with lock held)
-func (c *TestClient) captureFrame(eventName string, data []int) {
+func (c *TestClient) captureFrame(eventName string, data []byte) {
 	now := time.Now()
 	c.lastSendTime = now
 	c.frameCount++
 
 	frame := Frame{
-		Data:      make([]int, len(data)),
+		Data:      make([]byte, len(data)),
 		EventName: eventName,
 		Timestamp: now,
 		Index:     c.frameCount,
@@ -443,7 +443,7 @@ func (c *TestClient) LastFrame() *Frame {
 	}
 
 	frame := *c.lastFrame
-	frame.Data = make([]int, len(c.lastFrame.Data))
+	frame.Data = make([]byte, len(c.lastFrame.Data))
 	copy(frame.Data, c.lastFrame.Data)
 	return &frame
 }
@@ -456,7 +456,7 @@ func (c *TestClient) Frame(index int) *Frame {
 	for _, f := range c.frames {
 		if f.Index == index {
 			frame := f
-			frame.Data = make([]int, len(f.Data))
+			frame.Data = make([]byte, len(f.Data))
 			copy(frame.Data, f.Data)
 			return &frame
 		}

@@ -140,9 +140,9 @@ func TestSendScreenData(t *testing.T) {
 	}
 
 	// Create valid 640-byte bitmap
-	bitmapData := make([]int, 640)
+	bitmapData := make([]byte, 640)
 	for i := range bitmapData {
-		bitmapData[i] = i % 256
+		bitmapData[i] = byte(i % 256)
 	}
 
 	err := client.SendScreenData("TEST_EVENT", bitmapData)
@@ -167,7 +167,7 @@ func TestSendScreenDataInvalidSize(t *testing.T) {
 	}
 
 	// Create invalid bitmap (wrong size)
-	bitmapData := make([]int, 100)
+	bitmapData := make([]byte, 100)
 
 	err := client.SendScreenData("TEST_EVENT", bitmapData)
 	if err == nil {
@@ -381,7 +381,7 @@ func TestSendScreenData_EdgeCases(t *testing.T) {
 				httpClient:      &http.Client{},
 			}
 
-			bitmapData := make([]int, tc.bitmapSize)
+			bitmapData := make([]byte, tc.bitmapSize)
 			err := client.SendScreenData("TEST_EVENT", bitmapData)
 
 			if tc.expectError && err == nil {
@@ -540,9 +540,9 @@ func TestPost_LargePayload(t *testing.T) {
 	}
 
 	// Send full-size valid bitmap data (640 bytes for 128x40 screen)
-	largeBitmap := make([]int, 640)
+	largeBitmap := make([]byte, 640)
 	for i := range largeBitmap {
-		largeBitmap[i] = i % 256
+		largeBitmap[i] = byte(i % 256)
 	}
 
 	err := client.SendScreenData("EVENT", largeBitmap)
@@ -655,9 +655,9 @@ func TestSendScreenDataMultiRes(t *testing.T) {
 		httpClient: &http.Client{},
 	}
 
-	resolutionData := map[string][]int{
-		"image-data-128x40": make([]int, 640),
-		"image-data-128x36": make([]int, 576),
+	resolutionData := map[string][]byte{
+		"image-data-128x40": make([]byte, 640),
+		"image-data-128x36": make([]byte, 576),
 	}
 
 	err := client.SendScreenDataMultiRes("TEST_EVENT", resolutionData)
@@ -691,7 +691,7 @@ func TestSendScreenDataMultiRes_Empty(t *testing.T) {
 		httpClient: &http.Client{},
 	}
 
-	err := client.SendScreenDataMultiRes("TEST_EVENT", map[string][]int{})
+	err := client.SendScreenDataMultiRes("TEST_EVENT", map[string][]byte{})
 	if err == nil {
 		t.Error("SendScreenDataMultiRes() with empty data should return error")
 	}
@@ -714,10 +714,10 @@ func TestSendMultipleScreenData(t *testing.T) {
 		httpClient: &http.Client{},
 	}
 
-	frames := [][]int{
-		make([]int, 640),
-		make([]int, 640),
-		make([]int, 640),
+	frames := [][]byte{
+		make([]byte, 640),
+		make([]byte, 640),
+		make([]byte, 640),
 	}
 
 	err := client.SendMultipleScreenData("TEST_EVENT", frames)
@@ -744,7 +744,7 @@ func TestSendMultipleScreenData_Empty(t *testing.T) {
 	}
 
 	// Empty frames should return nil (no-op)
-	err := client.SendMultipleScreenData("TEST_EVENT", [][]int{})
+	err := client.SendMultipleScreenData("TEST_EVENT", [][]byte{})
 	if err != nil {
 		t.Errorf("SendMultipleScreenData() with empty frames should not error, got: %v", err)
 	}
@@ -757,9 +757,9 @@ func TestSendMultipleScreenData_InvalidSize(t *testing.T) {
 		httpClient: &http.Client{},
 	}
 
-	frames := [][]int{
-		make([]int, 640),
-		make([]int, 100), // Invalid size
+	frames := [][]byte{
+		make([]byte, 640),
+		make([]byte, 100), // Invalid size
 	}
 
 	err := client.SendMultipleScreenData("TEST_EVENT", frames)

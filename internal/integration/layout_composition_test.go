@@ -60,7 +60,7 @@ func TestLayout_AbsolutePositioning(t *testing.T) {
 			}
 
 			// Verify content is within expected region
-			regionDiff := testutil.CompareRegion(frame.Data, make([]int, 640), tt.x, tt.y, tt.w, tt.h)
+			regionDiff := testutil.CompareRegion(frame.Data, make([]byte, 640), tt.x, tt.y, tt.w, tt.h)
 			if regionDiff.DifferentPixels == 0 {
 				t.Errorf("Expected content at position (%d,%d) size %dx%d", tt.x, tt.y, tt.w, tt.h)
 			}
@@ -123,7 +123,7 @@ func TestLayout_CornerPositions(t *testing.T) {
 	}
 
 	for _, corner := range corners {
-		blank := make([]int, 640)
+		blank := make([]byte, 640)
 		diff := testutil.CompareRegion(frame.Data, blank, corner.x, corner.y, 16, 8)
 		if diff.DifferentPixels == 0 {
 			t.Errorf("%s corner should have content", corner.name)
@@ -358,7 +358,7 @@ func TestLayout_OpaqueBackground(t *testing.T) {
 	}
 
 	// With opaque foreground, center region should be mostly foreground content
-	centerRegion := testutil.CompareRegion(frame.Data, make([]int, 640), 32, 10, 64, 20)
+	centerRegion := testutil.CompareRegion(frame.Data, make([]byte, 640), 32, 10, 64, 20)
 	t.Logf("Opaque overlay center region: %d pixels", centerRegion.DifferentPixels)
 }
 
@@ -503,7 +503,7 @@ func TestLayout_2x2Grid(t *testing.T) {
 	}
 
 	// Check each quadrant has content
-	blank := make([]int, 640)
+	blank := make([]byte, 640)
 	quadrants := []struct {
 		name string
 		x, y int
@@ -555,7 +555,7 @@ func TestLayout_HorizontalStrip(t *testing.T) {
 	}
 
 	// Verify each strip has content
-	blank := make([]int, 640)
+	blank := make([]byte, 640)
 	for i := 0; i < numWidgets; i++ {
 		diff := testutil.CompareRegion(frame.Data, blank, i*widthPerWidget, 0, widthPerWidget, 40)
 		t.Logf("Strip %d: %d pixels", i, diff.DifferentPixels)
@@ -768,7 +768,7 @@ func TestLayout_NegativePosition(t *testing.T) {
 	}
 
 	// Should show partial content in top-left
-	topLeftPixels := testutil.CompareRegion(frame.Data, make([]int, 640), 0, 0, 30, 20)
+	topLeftPixels := testutil.CompareRegion(frame.Data, make([]byte, 640), 0, 0, 30, 20)
 	t.Logf("Negative position - top-left region: %d pixels", topLeftPixels.DifferentPixels)
 }
 

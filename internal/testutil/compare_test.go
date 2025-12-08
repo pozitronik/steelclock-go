@@ -6,7 +6,7 @@ import (
 )
 
 func TestCompareFrames_Identical(t *testing.T) {
-	frame := make([]int, 640)
+	frame := make([]byte, 640)
 	frame[0] = 0xFF
 	frame[100] = 0xAA
 
@@ -21,8 +21,8 @@ func TestCompareFrames_Identical(t *testing.T) {
 }
 
 func TestCompareFrames_Different(t *testing.T) {
-	frame1 := make([]int, 640)
-	frame2 := make([]int, 640)
+	frame1 := make([]byte, 640)
+	frame2 := make([]byte, 640)
 
 	frame1[0] = 0xFF // 8 bits set
 	frame2[0] = 0x00 // 0 bits set
@@ -38,8 +38,8 @@ func TestCompareFrames_Different(t *testing.T) {
 }
 
 func TestCompareFrames_SizeMismatch(t *testing.T) {
-	frame1 := make([]int, 640)
-	frame2 := make([]int, 320)
+	frame1 := make([]byte, 640)
+	frame2 := make([]byte, 320)
 
 	diff := CompareFrames(frame1, frame2)
 
@@ -49,8 +49,8 @@ func TestCompareFrames_SizeMismatch(t *testing.T) {
 }
 
 func TestCompareFramesWithTolerance(t *testing.T) {
-	frame1 := make([]int, 640)
-	frame2 := make([]int, 640)
+	frame1 := make([]byte, 640)
+	frame2 := make([]byte, 640)
 
 	frame1[0] = 0xFF // 8 pixels different
 	frame2[0] = 0x00
@@ -67,8 +67,8 @@ func TestCompareFramesWithTolerance(t *testing.T) {
 }
 
 func TestCompareFramesWithRatio(t *testing.T) {
-	frame1 := make([]int, 640)
-	frame2 := make([]int, 640)
+	frame1 := make([]byte, 640)
+	frame2 := make([]byte, 640)
 
 	// Set all pixels in first frame
 	for i := range frame1 {
@@ -89,8 +89,8 @@ func TestCompareFramesWithRatio(t *testing.T) {
 }
 
 func TestCompareRegion(t *testing.T) {
-	frame1 := make([]int, 640)
-	frame2 := make([]int, 640)
+	frame1 := make([]byte, 640)
+	frame2 := make([]byte, 640)
 
 	// Set a pixel at position (0,0) in frame1
 	// Byte 0, bit 7 (MSB)
@@ -114,7 +114,7 @@ func TestCompareRegion(t *testing.T) {
 }
 
 func TestCountSetPixels(t *testing.T) {
-	frame := make([]int, 640)
+	frame := make([]byte, 640)
 	frame[0] = 0xFF // 8 pixels
 	frame[1] = 0x0F // 4 pixels
 
@@ -125,8 +125,8 @@ func TestCountSetPixels(t *testing.T) {
 }
 
 func TestIsBlankFrame(t *testing.T) {
-	blankFrame := make([]int, 640)
-	nonBlankFrame := make([]int, 640)
+	blankFrame := make([]byte, 640)
+	nonBlankFrame := make([]byte, 640)
 	nonBlankFrame[100] = 1
 
 	if !IsBlankFrame(blankFrame) {
@@ -138,11 +138,11 @@ func TestIsBlankFrame(t *testing.T) {
 }
 
 func TestIsFullFrame(t *testing.T) {
-	fullFrame := make([]int, 640)
+	fullFrame := make([]byte, 640)
 	for i := range fullFrame {
 		fullFrame[i] = 255
 	}
-	nonFullFrame := make([]int, 640)
+	nonFullFrame := make([]byte, 640)
 	for i := range nonFullFrame {
 		nonFullFrame[i] = 255
 	}
@@ -157,7 +157,7 @@ func TestIsFullFrame(t *testing.T) {
 }
 
 func TestGetPixel(t *testing.T) {
-	frame := make([]int, 640)
+	frame := make([]byte, 640)
 	// Set pixel at (0,0) - byte 0, bit 7
 	frame[0] = 0x80
 	// Set pixel at (7,0) - byte 0, bit 0
@@ -188,7 +188,7 @@ func TestGetPixel(t *testing.T) {
 }
 
 func TestGetRow(t *testing.T) {
-	frame := make([]int, 640)
+	frame := make([]byte, 640)
 	// Set first byte of row 0 to all 1s
 	frame[0] = 0xFF
 	// Set first byte of row 1 to 0xAA (10101010)
@@ -220,7 +220,7 @@ func TestGetRow(t *testing.T) {
 }
 
 func TestFrameToASCII(t *testing.T) {
-	frame := make([]int, 640)
+	frame := make([]byte, 640)
 	// Set first 4 pixels of first row
 	frame[0] = 0xF0 // 11110000
 
@@ -236,8 +236,8 @@ func TestFrameToASCII(t *testing.T) {
 }
 
 func TestFrameDiffToASCII(t *testing.T) {
-	frame1 := make([]int, 640)
-	frame2 := make([]int, 640)
+	frame1 := make([]byte, 640)
+	frame2 := make([]byte, 640)
 	frame1[0] = 0xF0 // Expected only
 	frame2[1] = 0x0F // Actual only
 
@@ -249,7 +249,7 @@ func TestFrameDiffToASCII(t *testing.T) {
 }
 
 func TestSaveFrameAsPNG(t *testing.T) {
-	frame := make([]int, 640)
+	frame := make([]byte, 640)
 	frame[0] = 0xFF // Some visible pixels
 
 	tmpFile := os.TempDir() + "/test_frame.png"
@@ -269,8 +269,8 @@ func TestSaveFrameAsPNG(t *testing.T) {
 }
 
 func TestSaveDiffAsPNG(t *testing.T) {
-	frame1 := make([]int, 640)
-	frame2 := make([]int, 640)
+	frame1 := make([]byte, 640)
+	frame2 := make([]byte, 640)
 	frame1[0] = 0xF0
 	frame2[1] = 0x0F
 
@@ -290,8 +290,8 @@ func TestSaveDiffAsPNG(t *testing.T) {
 }
 
 func TestFrameDiff_DifferenceRatio(t *testing.T) {
-	frame1 := make([]int, 640)
-	frame2 := make([]int, 640)
+	frame1 := make([]byte, 640)
+	frame2 := make([]byte, 640)
 
 	// All pixels in byte 0 different (8 pixels out of 5120 total)
 	frame1[0] = 0xFF

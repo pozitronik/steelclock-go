@@ -15,8 +15,10 @@ import (
 
 // createTestConfig creates a minimal config for testing
 func createTestConfig() *config.Config {
+	dedupDisabled := false
 	return &config.Config{
-		RefreshRateMs: 50,
+		RefreshRateMs:     50,
+		FrameDedupEnabled: &dedupDisabled, // Disable dedup for tests that count frames
 		Display: config.DisplayConfig{
 			Width:      128,
 			Height:     40,
@@ -296,7 +298,7 @@ func TestMultipleWidgets_Composition(t *testing.T) {
 	}
 
 	// Check both halves have content
-	blank := make([]int, 640)
+	blank := make([]byte, 640)
 
 	leftDiff := testutil.CompareRegion(frame.Data, blank, 0, 0, 64, 40)
 	rightDiff := testutil.CompareRegion(frame.Data, blank, 64, 0, 64, 40)

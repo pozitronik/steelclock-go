@@ -1,6 +1,7 @@
 package compositor
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -44,12 +45,16 @@ type Compositor struct {
 	batchingEnabled bool
 	batchSize       int
 	batchSupported  bool
-	frameBuffer     [][]int
+	frameBuffer     [][]byte
 	bufferMu        sync.Mutex
 	resolutions     []Resolution // All resolutions to render (main + supported)
 
 	// Pre-allocated buffers for ImageToBytes to reduce allocations in render loop
-	bitmapBuffers map[string][]int
+	bitmapBuffers map[string][]byte
+
+	// Frame deduplication - skip sending unchanged frames
+	dedupEnabled bool
+	lastFrames   map[string][]byte // key: "image-data-WxH", value: last sent bitmap
 
 	// Backend failure handling
 	OnBackendFailure     func()     // Callback when backend fails (called once per failure)
@@ -71,12 +76,15 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 	}
 
 	// Pre-allocate bitmap buffers for each resolution
-	bitmapBuffers := make(map[string][]int)
+	bitmapBuffers := make(map[string][]byte)
 	for _, res := range resolutions {
 		bufferSize := (res.Width*res.Height + 7) / 8
 		key := fmt.Sprintf("image-data-%dx%d", res.Width, res.Height)
-		bitmapBuffers[key] = make([]int, bufferSize)
+		bitmapBuffers[key] = make([]byte, bufferSize)
 	}
+
+	// Frame deduplication: enabled by default, can be disabled via config
+	dedupEnabled := cfg.FrameDedupEnabled == nil || *cfg.FrameDedupEnabled
 
 	comp := &Compositor{
 		client:          client,
@@ -87,14 +95,20 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 		stopChan:        make(chan struct{}),
 		batchingEnabled: cfg.EventBatchingEnabled,
 		batchSize:       cfg.EventBatchSize,
-		frameBuffer:     make([][]int, 0, cfg.EventBatchSize),
+		frameBuffer:     make([][]byte, 0, cfg.EventBatchSize),
 		resolutions:     resolutions,
 		bitmapBuffers:   bitmapBuffers,
+		dedupEnabled:    dedupEnabled,
+		lastFrames:      make(map[string][]byte),
 	}
 
 	log.Printf("Rendering for %d resolution(s):", len(resolutions))
 	for _, res := range resolutions {
 		log.Printf("  - %dx%d", res.Width, res.Height)
+	}
+
+	if comp.dedupEnabled {
+		log.Println("Frame deduplication enabled")
 	}
 
 	// Check if batching is supported by API (only if enabled in config)
@@ -227,7 +241,7 @@ func (c *Compositor) renderFrame() error {
 	}
 
 	// Render at all resolutions using pre-allocated buffers
-	resolutionData := make(map[string][]int)
+	resolutionData := make(map[string][]byte)
 	for _, res := range c.resolutions {
 		key := fmt.Sprintf("image-data-%dx%d", res.Width, res.Height)
 		buffer := c.bitmapBuffers[key]
@@ -236,6 +250,27 @@ func (c *Compositor) renderFrame() error {
 			return fmt.Errorf("image conversion failed for %dx%d: %w", res.Width, res.Height, err)
 		}
 		resolutionData[key] = bitmapData
+	}
+
+	// Frame deduplication: skip send if all resolutions are unchanged
+	// Note: dedup is disabled when batching is enabled (batching buffers frames intentionally)
+	shouldUpdateLastFrames := false
+	if c.dedupEnabled && !c.batchingEnabled {
+		frameChanged := false
+		for key, data := range resolutionData {
+			if !bytes.Equal(c.lastFrames[key], data) {
+				frameChanged = true
+				break
+			}
+		}
+
+		if !frameChanged {
+			// All frames unchanged, skip send
+			return nil
+		}
+
+		// Mark that we need to update lastFrames after successful send
+		shouldUpdateLastFrames = true
 	}
 
 	// If batching is enabled, buffer the frame (only main resolution for now)
@@ -258,6 +293,16 @@ func (c *Compositor) renderFrame() error {
 		return fmt.Errorf("send failed: %w", err)
 	}
 
+	// Update lastFrames only after successful send
+	if shouldUpdateLastFrames {
+		for key, data := range resolutionData {
+			if c.lastFrames[key] == nil {
+				c.lastFrames[key] = make([]byte, len(data))
+			}
+			copy(c.lastFrames[key], data)
+		}
+	}
+
 	return nil
 }
 
@@ -270,7 +315,7 @@ func (c *Compositor) flushBatch() error {
 	}
 
 	// Copy buffer to send
-	framesToSend := make([][]int, len(c.frameBuffer))
+	framesToSend := make([][]byte, len(c.frameBuffer))
 	copy(framesToSend, c.frameBuffer)
 	c.frameBuffer = c.frameBuffer[:0] // Clear buffer
 	c.bufferMu.Unlock()

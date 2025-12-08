@@ -13,7 +13,7 @@ func TestCalculateTimingStats_NotEnoughFrames(t *testing.T) {
 		t.Errorf("Expected 0 frames, got %d", stats.FrameCount)
 	}
 
-	_ = client.SendScreenData("EVENT", make([]int, 640))
+	_ = client.SendScreenData("EVENT", make([]byte, 640))
 	stats = client.CalculateTimingStats()
 	if stats.FrameCount != 1 {
 		t.Errorf("Expected 1 frame, got %d", stats.FrameCount)
@@ -28,7 +28,7 @@ func TestCalculateTimingStats_MultipleFrames(t *testing.T) {
 
 	// Send 5 frames with ~10ms intervals
 	for i := 0; i < 5; i++ {
-		_ = client.SendScreenData("EVENT", make([]int, 640))
+		_ = client.SendScreenData("EVENT", make([]byte, 640))
 		time.Sleep(10 * time.Millisecond)
 	}
 
@@ -57,7 +57,7 @@ func TestVerifyFrameRate(t *testing.T) {
 
 	// Send frames at roughly 100ms intervals
 	for i := 0; i < 5; i++ {
-		_ = client.SendScreenData("EVENT", make([]int, 640))
+		_ = client.SendScreenData("EVENT", make([]byte, 640))
 		if i < 4 {
 			time.Sleep(100 * time.Millisecond)
 		}
@@ -96,7 +96,7 @@ func TestVerifyMinimumFrames(t *testing.T) {
 
 	// Add some frames
 	for i := 0; i < 5; i++ {
-		_ = client.SendScreenData("EVENT", make([]int, 640))
+		_ = client.SendScreenData("EVENT", make([]byte, 640))
 	}
 
 	err = client.VerifyMinimumFrames(5)
@@ -119,7 +119,7 @@ func TestVerifyFrameCountInRange(t *testing.T) {
 	client := NewTestClient()
 
 	for i := 0; i < 5; i++ {
-		_ = client.SendScreenData("EVENT", make([]int, 640))
+		_ = client.SendScreenData("EVENT", make([]byte, 640))
 	}
 
 	err := client.VerifyFrameCountInRange(3, 10)
@@ -150,7 +150,7 @@ func TestWaitForFrames(t *testing.T) {
 	go func() {
 		for i := 0; i < 5; i++ {
 			time.Sleep(10 * time.Millisecond)
-			_ = client.SendScreenData("EVENT", make([]int, 640))
+			_ = client.SendScreenData("EVENT", make([]byte, 640))
 		}
 	}()
 
@@ -176,8 +176,8 @@ func TestWaitForFrameMatching(t *testing.T) {
 	go func() {
 		for i := 0; i < 10; i++ {
 			time.Sleep(10 * time.Millisecond)
-			frame := make([]int, 640)
-			frame[0] = i
+			frame := make([]byte, 640)
+			frame[0] = byte(i)
 			_ = client.SendScreenData("EVENT", frame)
 		}
 	}()
@@ -205,7 +205,7 @@ func TestWaitForFrameMatching_Timeout(t *testing.T) {
 	go func() {
 		for i := 0; i < 5; i++ {
 			time.Sleep(10 * time.Millisecond)
-			_ = client.SendScreenData("EVENT", make([]int, 640))
+			_ = client.SendScreenData("EVENT", make([]byte, 640))
 		}
 	}()
 
@@ -228,9 +228,9 @@ func TestWaitForNonBlankFrame(t *testing.T) {
 	// Send blank frame, then non-blank
 	go func() {
 		time.Sleep(10 * time.Millisecond)
-		_ = client.SendScreenData("EVENT", make([]int, 640)) // blank
+		_ = client.SendScreenData("EVENT", make([]byte, 640)) // blank
 		time.Sleep(10 * time.Millisecond)
-		frame := make([]int, 640)
+		frame := make([]byte, 640)
 		frame[0] = 0xFF // non-blank
 		_ = client.SendScreenData("EVENT", frame)
 	}()

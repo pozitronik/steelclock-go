@@ -20,11 +20,11 @@ func NewGrayscaleImage(width, height int, bgColor uint8) *image.Gray {
 	return img
 }
 
-// ImageToBytes converts an image to byte array for GameSense API.
+// ImageToBytes converts an image to byte array for display.
 // If buffer is provided and has sufficient capacity, it will be reused to reduce allocations.
 // If buffer is nil or too small, a new buffer will be allocated.
 // Format: Monochrome, MSB first, row-major order
-func ImageToBytes(img image.Image, width, height int, buffer []int) ([]int, error) {
+func ImageToBytes(img image.Image, width, height int, buffer []byte) ([]byte, error) {
 	expectedSize := (width*height + 7) / 8
 
 	// Handle edge case of zero-size image
@@ -32,21 +32,19 @@ func ImageToBytes(img image.Image, width, height int, buffer []int) ([]int, erro
 		if buffer != nil && len(buffer) == 0 {
 			return buffer, nil
 		}
-		return []int{}, nil
+		return []byte{}, nil
 	}
 
 	// Validate or allocate buffer
-	var bytes []int
+	var data []byte
 	if buffer == nil {
-		bytes = make([]int, expectedSize)
+		data = make([]byte, expectedSize)
 	} else if len(buffer) < expectedSize {
 		return nil, fmt.Errorf("buffer too small: got %d, need %d", len(buffer), expectedSize)
 	} else {
-		bytes = buffer[:expectedSize]
+		data = buffer[:expectedSize]
 		// Clear the buffer for reuse
-		for i := range bytes {
-			bytes[i] = 0
-		}
+		clear(data)
 	}
 
 	// Resize if needed
@@ -77,7 +75,7 @@ func ImageToBytes(img image.Image, width, height int, buffer []int) ([]int, erro
 
 			bitIndex++
 			if bitIndex == 8 {
-				bytes[byteIndex] = int(currentByte)
+				data[byteIndex] = currentByte
 				byteIndex++
 				currentByte = 0
 				bitIndex = 0
@@ -87,10 +85,10 @@ func ImageToBytes(img image.Image, width, height int, buffer []int) ([]int, erro
 
 	// Handle remaining bits
 	if bitIndex > 0 {
-		bytes[byteIndex] = int(currentByte)
+		data[byteIndex] = currentByte
 	}
 
-	return bytes, nil
+	return data, nil
 }
 
 // toGrayscale converts any image to grayscale

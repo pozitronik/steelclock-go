@@ -96,7 +96,7 @@ func TestTestClient_SendScreenData(t *testing.T) {
 	client := NewTestClient()
 
 	// Create test frame data
-	frameData := make([]int, 640)
+	frameData := make([]byte, 640)
 	frameData[0] = 0xFF // Set first byte
 
 	err := client.SendScreenData("EVENT", frameData)
@@ -131,10 +131,10 @@ func TestTestClient_SendErrorInjection(t *testing.T) {
 	client.SetSendError(expectedErr, 2)
 
 	// First two should fail
-	err1 := client.SendScreenData("EVENT", make([]int, 640))
-	err2 := client.SendScreenData("EVENT", make([]int, 640))
+	err1 := client.SendScreenData("EVENT", make([]byte, 640))
+	err2 := client.SendScreenData("EVENT", make([]byte, 640))
 	// Third should succeed
-	err3 := client.SendScreenData("EVENT", make([]int, 640))
+	err3 := client.SendScreenData("EVENT", make([]byte, 640))
 
 	if err1 != expectedErr {
 		t.Errorf("First send should fail with error")
@@ -157,8 +157,8 @@ func TestTestClient_FrameHistory(t *testing.T) {
 
 	// Send 5 frames
 	for i := 0; i < 5; i++ {
-		frameData := make([]int, 640)
-		frameData[0] = i
+		frameData := make([]byte, 640)
+		frameData[0] = byte(i)
 		_ = client.SendScreenData("EVENT", frameData)
 	}
 
@@ -181,12 +181,12 @@ func TestTestClient_FrameHistory(t *testing.T) {
 func TestTestClient_Pause(t *testing.T) {
 	client := NewTestClient()
 
-	_ = client.SendScreenData("EVENT", make([]int, 640))
+	_ = client.SendScreenData("EVENT", make([]byte, 640))
 	client.Pause()
-	_ = client.SendScreenData("EVENT", make([]int, 640))
-	_ = client.SendScreenData("EVENT", make([]int, 640))
+	_ = client.SendScreenData("EVENT", make([]byte, 640))
+	_ = client.SendScreenData("EVENT", make([]byte, 640))
 	client.Resume()
-	_ = client.SendScreenData("EVENT", make([]int, 640))
+	_ = client.SendScreenData("EVENT", make([]byte, 640))
 
 	// Only 2 frames should be captured (before pause and after resume)
 	if client.FrameCount() != 2 {
@@ -199,7 +199,7 @@ func TestTestClient_Reset(t *testing.T) {
 
 	_ = client.RegisterGame("Dev", 0)
 	_ = client.BindScreenEvent("EVENT", "device")
-	_ = client.SendScreenData("EVENT", make([]int, 640))
+	_ = client.SendScreenData("EVENT", make([]byte, 640))
 
 	client.Reset()
 
@@ -221,7 +221,7 @@ func TestTestClient_FrameChannel(t *testing.T) {
 	ch := make(chan Frame, 10)
 	client := NewTestClient(WithFrameChannel(ch))
 
-	frameData := make([]int, 640)
+	frameData := make([]byte, 640)
 	frameData[0] = 42
 	_ = client.SendScreenData("EVENT", frameData)
 
@@ -238,10 +238,10 @@ func TestTestClient_FrameChannel(t *testing.T) {
 func TestTestClient_SendMultipleScreenData(t *testing.T) {
 	client := NewTestClient()
 
-	frames := [][]int{
-		make([]int, 640),
-		make([]int, 640),
-		make([]int, 640),
+	frames := [][]byte{
+		make([]byte, 640),
+		make([]byte, 640),
+		make([]byte, 640),
 	}
 	frames[0][0] = 1
 	frames[1][0] = 2
@@ -258,7 +258,7 @@ func TestTestClient_SendMultipleScreenData(t *testing.T) {
 
 	capturedFrames := client.Frames()
 	for i, f := range capturedFrames {
-		if f.Data[0] != i+1 {
+		if f.Data[0] != byte(i+1) {
 			t.Errorf("Frame %d: expected data[0]=%d, got %d", i, i+1, f.Data[0])
 		}
 	}
@@ -267,9 +267,9 @@ func TestTestClient_SendMultipleScreenData(t *testing.T) {
 func TestTestClient_SendScreenDataMultiRes(t *testing.T) {
 	client := NewTestClient(WithDimensions(128, 40))
 
-	resData := map[string][]int{
-		"image-data-128x40": make([]int, 640),
-		"image-data-128x52": make([]int, 832),
+	resData := map[string][]byte{
+		"image-data-128x40": make([]byte, 640),
+		"image-data-128x52": make([]byte, 832),
 	}
 	resData["image-data-128x40"][0] = 99
 
@@ -333,7 +333,7 @@ func TestTestClient_ClearErrors(t *testing.T) {
 	if err := client.BindScreenEvent("EVENT", "device"); err != nil {
 		t.Error("BindScreenEvent should succeed after ClearErrors")
 	}
-	if err := client.SendScreenData("EVENT", make([]int, 640)); err != nil {
+	if err := client.SendScreenData("EVENT", make([]byte, 640)); err != nil {
 		t.Error("SendScreenData should succeed after ClearErrors")
 	}
 }
