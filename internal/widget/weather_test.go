@@ -903,3 +903,52 @@ func findSubstring(s, substr string) bool {
 	}
 	return false
 }
+
+func TestAbbreviateWeatherError(t *testing.T) {
+	tests := []struct {
+		name     string
+		errMsg   string
+		expected string
+	}{
+		// HTTP status codes
+		{"status 401", "status: 401", "HTTP 401"},
+		{"HTTP 401", "HTTP: 401 Unauthorized", "HTTP 401"},
+		{"status 500", "server returned status: 500", "HTTP 500"},
+		{"HTTP 403", "HTTP 403 Forbidden", "HTTP 403"},
+
+		// Common network errors
+		{"timeout", "connection timeout exceeded", "TIMEOUT"},
+		{"no such host", "dial tcp: no such host", "NO HOST"},
+		{"connection refused", "dial tcp: connection refused", "CONN ERR"},
+		{"network error", "network is unreachable", "NET ERR"},
+		{"dns error", "dns lookup failed", "DNS ERR"},
+		{"certificate error", "certificate verify failed", "CERT ERR"},
+
+		// HTTP-specific patterns
+		{"unauthorized", "unauthorized access", "HTTP 401"},
+		{"forbidden", "forbidden resource", "HTTP 403"},
+		{"not found", "resource not found", "HTTP 404"},
+		{"rate limit", "rate limit exceeded", "RATE LIM"},
+		{"server error", "internal server error", "HTTP 500"},
+		{"bad gateway", "bad gateway response", "HTTP 502"},
+		{"unavailable", "service unavailable", "HTTP 503"},
+
+		// Data errors
+		{"json error", "json: cannot unmarshal", "BAD DATA"},
+		{"unmarshal error", "unmarshal failed", "BAD DATA"},
+		{"eof error", "unexpected EOF", "NO RESP"},
+
+		// Fallback truncation
+		{"short message", "ERROR", "ERROR"},
+		{"long message", "This is a very long error message", "This is a ve"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := abbreviateWeatherError(tt.errMsg)
+			if result != tt.expected {
+				t.Errorf("abbreviateWeatherError(%q) = %q, want %q", tt.errMsg, result, tt.expected)
+			}
+		})
+	}
+}

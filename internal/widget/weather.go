@@ -335,7 +335,8 @@ func (w *WeatherWidget) Render() (image.Image, error) {
 
 	// Handle error state
 	if lastError != "" && weather == nil {
-		bitmap.SmartDrawAlignedText(img, "ERR", w.fontFace, w.fontName, "center", "center", w.padding)
+		errMsg := abbreviateWeatherError(lastError)
+		bitmap.SmartDrawAlignedText(img, errMsg, w.fontFace, w.fontName, "center", "center", w.padding)
 		return img, nil
 	}
 

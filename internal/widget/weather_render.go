@@ -277,17 +277,33 @@ func (w *WeatherWidget) renderIconTokenWithAlign(img *image.Gray, t *Token, x, y
 	var iconName string
 	switch t.Name {
 	case "icon":
-		iconName = getWeatherIconName(weather.Condition)
+		if weather != nil {
+			iconName = getWeatherIconName(weather.Condition)
+		} else {
+			iconName = "sun" // default fallback
+		}
 	case "aqi_icon":
 		iconName = getAQIIcon(aqi)
 	case "uv_icon":
 		iconName = getUVIcon(uv)
 	case "humidity_icon":
-		iconName = getHumidityIcon(weather.Humidity)
+		if weather != nil {
+			iconName = getHumidityIcon(weather.Humidity)
+		} else {
+			iconName = "humidity_low"
+		}
 	case "wind_icon":
-		iconName = getWindIcon(weather.WindSpeed, w.units)
+		if weather != nil {
+			iconName = getWindIcon(weather.WindSpeed, w.units)
+		} else {
+			iconName = "wind_calm"
+		}
 	case "wind_dir_icon":
-		iconName = getWindDirIcon(weather.WindDirection)
+		if weather != nil {
+			iconName = getWindDirIcon(weather.WindDirection)
+		} else {
+			iconName = "wind_n"
+		}
 	default:
 		// Handle day/hour icons
 		iconName = w.getForecastIconName(t, forecast)
@@ -380,8 +396,15 @@ func (w *WeatherWidget) renderForecastGraph(img *image.Gray, x, y, width, height
 	}
 
 	// Find min/max temperatures for scaling
-	minTemp := weather.Temperature
-	maxTemp := weather.Temperature
+	// Use first forecast point if weather is nil
+	var minTemp, maxTemp float64
+	if weather != nil {
+		minTemp = weather.Temperature
+		maxTemp = weather.Temperature
+	} else {
+		minTemp = forecast.Hourly[0].Temperature
+		maxTemp = forecast.Hourly[0].Temperature
+	}
 	for _, pt := range forecast.Hourly {
 		if pt.Temperature < minTemp {
 			minTemp = pt.Temperature
@@ -495,7 +518,12 @@ func (w *WeatherWidget) renderForecastScroll(img *image.Gray, x, y, width, heigh
 	}
 
 	// Build scrolling text
-	text := fmt.Sprintf("Now: %.0f%s %s", weather.Temperature, unit, weather.Description)
+	var text string
+	if weather != nil {
+		text = fmt.Sprintf("Now: %.0f%s %s", weather.Temperature, unit, weather.Description)
+	} else {
+		text = "No data"
+	}
 
 	if forecast != nil {
 		// Add hourly highlights

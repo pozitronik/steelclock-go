@@ -81,6 +81,11 @@ func getWeatherTokenType(name string) TokenType {
 // getWeatherTokenText returns the text value for a text token
 // units should be "metric" or "imperial"
 func getWeatherTokenText(t *Token, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData, units string) string {
+	// Guard against nil weather data
+	if weather == nil {
+		return "-"
+	}
+
 	unit := "C"
 	speedUnit := "m/s"
 	if units == "imperial" {
