@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 // TestNewDiskWidget tests successful disk widget creation
@@ -85,20 +86,20 @@ func TestNewDiskWidget_Defaults(t *testing.T) {
 	}
 
 	// Check defaults
-	if widget.displayMode != "text" {
-		t.Errorf("default displayMode = %s, want text", widget.displayMode)
+	if widget.DisplayMode != shared.DisplayModeText {
+		t.Errorf("default DisplayMode = %s, want text", widget.DisplayMode)
 	}
 
-	if widget.readColor != 255 {
-		t.Errorf("default readColor = %d, want 255", widget.readColor)
+	if widget.Renderer.Bar.PrimaryColor != 255 {
+		t.Errorf("default Bar.PrimaryColor = %d, want 255", widget.Renderer.Bar.PrimaryColor)
 	}
 
-	if widget.writeColor != 255 {
-		t.Errorf("default writeColor = %d, want 255", widget.writeColor)
+	if widget.Renderer.Bar.SecondaryColor != 255 {
+		t.Errorf("default Bar.SecondaryColor = %d, want 255", widget.Renderer.Bar.SecondaryColor)
 	}
 
-	if widget.maxSpeedBps != -1 {
-		t.Errorf("default maxSpeedBps = %f, want -1 (auto)", widget.maxSpeedBps)
+	if widget.MaxSpeedBps != -1 {
+		t.Errorf("default MaxSpeedBps = %f, want -1 (auto)", widget.MaxSpeedBps)
 	}
 }
 
@@ -132,9 +133,9 @@ func TestDiskWidget_Update(t *testing.T) {
 	}
 
 	// Verify stats were collected
-	widget.mu.RLock()
-	hasStats := widget.currentReadBps >= 0 && widget.currentWriteBps >= 0
-	widget.mu.RUnlock()
+	widget.Mu.RLock()
+	hasStats := widget.PrimaryValue >= 0 && widget.SecondaryValue >= 0
+	widget.Mu.RUnlock()
 
 	if !hasStats {
 		t.Error("Update() did not collect disk stats")

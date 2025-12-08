@@ -191,13 +191,13 @@ func TestMemoryWidget_GaugeDefaults(t *testing.T) {
 		t.Fatalf("NewMemoryWidget() error = %v", err)
 	}
 
-	// Verify defaults
-	if widget.gaugeColor != 200 {
-		t.Errorf("default gaugeColor = %d, want 200", widget.gaugeColor)
+	// Verify gauge defaults are applied by checking renderer config
+	if widget.renderer.Gauge.ArcColor != 200 {
+		t.Errorf("default Gauge.ArcColor = %d, want 200", widget.renderer.Gauge.ArcColor)
 	}
 
-	if widget.gaugeNeedleColor != 255 {
-		t.Errorf("default gaugeNeedleColor = %d, want 255", widget.gaugeNeedleColor)
+	if widget.renderer.Gauge.NeedleColor != 255 {
+		t.Errorf("default Gauge.NeedleColor = %d, want 255", widget.renderer.Gauge.NeedleColor)
 	}
 
 	err = widget.Update()

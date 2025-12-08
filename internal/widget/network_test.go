@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 // TestNewNetworkWidget tests successful network widget creation
@@ -63,20 +64,20 @@ func TestNewNetworkWidget_Defaults(t *testing.T) {
 	}
 
 	// Check defaults
-	if widget.displayMode != "text" {
-		t.Errorf("default displayMode = %s, want text", widget.displayMode)
+	if widget.DisplayMode != shared.DisplayModeText {
+		t.Errorf("default DisplayMode = %s, want text", widget.DisplayMode)
 	}
 
-	if widget.rxColor != 255 {
-		t.Errorf("default rxColor = %d, want 255", widget.rxColor)
+	if widget.Renderer.Bar.PrimaryColor != 255 {
+		t.Errorf("default Bar.PrimaryColor = %d, want 255", widget.Renderer.Bar.PrimaryColor)
 	}
 
-	if widget.txColor != 255 {
-		t.Errorf("default txColor = %d, want 255", widget.txColor)
+	if widget.Renderer.Bar.SecondaryColor != 255 {
+		t.Errorf("default Bar.SecondaryColor = %d, want 255", widget.Renderer.Bar.SecondaryColor)
 	}
 
-	if widget.maxSpeedBps != -1 {
-		t.Errorf("default maxSpeedBps = %f, want -1 (auto)", widget.maxSpeedBps)
+	if widget.MaxSpeedBps != -1 {
+		t.Errorf("default MaxSpeedBps = %f, want -1 (auto)", widget.MaxSpeedBps)
 	}
 }
 
@@ -110,9 +111,9 @@ func TestNetworkWidget_Update(t *testing.T) {
 	}
 
 	// Verify stats were collected (values may be 0 in test environment)
-	widget.mu.RLock()
-	hasStats := widget.currentRxBps >= 0 && widget.currentTxBps >= 0
-	widget.mu.RUnlock()
+	widget.Mu.RLock()
+	hasStats := widget.PrimaryValue >= 0 && widget.SecondaryValue >= 0
+	widget.Mu.RUnlock()
 
 	if !hasStats {
 		t.Error("Update() did not collect network stats")
@@ -371,13 +372,13 @@ func TestNetworkWidget_GaugeDefaults(t *testing.T) {
 		t.Fatalf("NewNetworkWidget() error = %v", err)
 	}
 
-	// Verify defaults
-	if widget.rxNeedleColor != 255 {
-		t.Errorf("default rxNeedleColor = %d, want 255", widget.rxNeedleColor)
+	// Verify defaults via renderer config
+	if widget.Renderer.Gauge.PrimaryNeedleColor != 255 {
+		t.Errorf("default Gauge.PrimaryNeedleColor = %d, want 255", widget.Renderer.Gauge.PrimaryNeedleColor)
 	}
 
-	if widget.txNeedleColor != 200 {
-		t.Errorf("default txNeedleColor = %d, want 200", widget.txNeedleColor)
+	if widget.Renderer.Gauge.SecondaryNeedleColor != 200 {
+		t.Errorf("default Gauge.SecondaryNeedleColor = %d, want 200", widget.Renderer.Gauge.SecondaryNeedleColor)
 	}
 
 	_ = widget.Update()

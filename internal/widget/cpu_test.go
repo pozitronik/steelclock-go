@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 // TestNewCPUWidget tests successful CPU widget creation
@@ -86,12 +87,8 @@ func TestNewCPUWidget_Defaults(t *testing.T) {
 	}
 
 	// Verify defaults
-	if widget.displayMode != "text" {
+	if widget.displayMode != shared.DisplayModeText {
 		t.Errorf("default displayMode = %s, want text", widget.displayMode)
-	}
-
-	if widget.fontSize != 10 {
-		t.Errorf("default fontSize = %d, want 10", widget.fontSize)
 	}
 
 	if widget.fillColor != 255 {
@@ -458,13 +455,13 @@ func TestCPUWidget_GaugeDefaults(t *testing.T) {
 		t.Fatalf("NewCPUWidget() error = %v", err)
 	}
 
-	// Verify defaults
-	if widget.gaugeColor != 200 {
-		t.Errorf("default gaugeColor = %d, want 200", widget.gaugeColor)
+	// Verify defaults via renderer config
+	if widget.renderer.Gauge.ArcColor != 200 {
+		t.Errorf("default Gauge.ArcColor = %d, want 200", widget.renderer.Gauge.ArcColor)
 	}
 
-	if widget.gaugeNeedleColor != 255 {
-		t.Errorf("default gaugeNeedleColor = %d, want 255", widget.gaugeNeedleColor)
+	if widget.renderer.Gauge.NeedleColor != 255 {
+		t.Errorf("default Gauge.NeedleColor = %d, want 255", widget.renderer.Gauge.NeedleColor)
 	}
 
 	err = widget.Update()

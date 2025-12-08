@@ -9,7 +9,6 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"github.com/shirou/gopsutil/v4/mem"
-	"golang.org/x/image/font"
 )
 
 func init() {
@@ -21,25 +20,12 @@ func init() {
 // MemoryWidget displays RAM usage
 type MemoryWidget struct {
 	*BaseWidget
-	displayMode      string
-	fontSize         int
-	fontName         string
-	horizAlign       string
-	vertAlign        string
-	padding          int
-	barDirection     string
-	barBorder        bool
-	fillColor        int // -1 = no fill, 0-255 = fill color
-	lineColor        int // 0-255 = line color
-	gaugeColor       uint8
-	gaugeNeedleColor uint8
-	gaugeShowTicks   bool
-	gaugeTicksColor  uint8
-	historyLen       int
-	currentUsage     float64
-	history          *shared.RingBuffer[float64] // Ring buffer for graph history - O(1) push with zero allocations
-	fontFace         font.Face
-	mu               sync.RWMutex // Protects currentUsage and history
+	displayMode  shared.DisplayMode
+	padding      int
+	renderer     *shared.MetricRenderer
+	currentUsage float64
+	history      *shared.RingBuffer[float64]
+	mu           sync.RWMutex
 }
 
 // NewMemoryWidget creates a new memory widget
@@ -48,7 +34,7 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 	helper := NewConfigHelper(cfg)
 
 	// Extract common settings using helper
-	displayMode := helper.GetDisplayMode("text")
+	displayMode := shared.DisplayMode(helper.GetDisplayMode("text"))
 	textSettings := helper.GetTextSettings()
 	padding := helper.GetPadding()
 	barSettings := helper.GetBarSettings()
@@ -56,30 +42,50 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 	gaugeSettings := helper.GetGaugeSettings()
 
 	// Load font for text mode
-	fontFace, err := helper.LoadFontForTextMode(displayMode)
+	fontFace, err := helper.LoadFontForTextMode(string(displayMode))
 	if err != nil {
 		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
 
+	// Determine bar color
+	barColor := uint8(255)
+	if graphSettings.FillColor >= 0 && graphSettings.FillColor <= 255 {
+		barColor = uint8(graphSettings.FillColor)
+	}
+
+	// Create metric renderer
+	renderer := shared.NewMetricRenderer(
+		shared.BarConfig{
+			Direction: barSettings.Direction,
+			Border:    barSettings.Border,
+			Color:     barColor,
+		},
+		shared.GraphConfig{
+			FillColor:  graphSettings.FillColor,
+			LineColor:  graphSettings.LineColor,
+			HistoryLen: graphSettings.HistoryLen,
+		},
+		shared.GaugeConfig{
+			ArcColor:    uint8(gaugeSettings.ArcColor),
+			NeedleColor: uint8(gaugeSettings.NeedleColor),
+			ShowTicks:   gaugeSettings.ShowTicks,
+			TicksColor:  uint8(gaugeSettings.TicksColor),
+		},
+		shared.TextConfig{
+			FontFace:   fontFace,
+			FontName:   textSettings.FontName,
+			HorizAlign: textSettings.HorizAlign,
+			VertAlign:  textSettings.VertAlign,
+			Padding:    padding,
+		},
+	)
+
 	return &MemoryWidget{
-		BaseWidget:       base,
-		displayMode:      displayMode,
-		fontSize:         textSettings.FontSize,
-		fontName:         textSettings.FontName,
-		horizAlign:       textSettings.HorizAlign,
-		vertAlign:        textSettings.VertAlign,
-		padding:          padding,
-		barDirection:     barSettings.Direction,
-		barBorder:        barSettings.Border,
-		fillColor:        graphSettings.FillColor,
-		lineColor:        graphSettings.LineColor,
-		gaugeColor:       uint8(gaugeSettings.ArcColor),
-		gaugeNeedleColor: uint8(gaugeSettings.NeedleColor),
-		gaugeShowTicks:   gaugeSettings.ShowTicks,
-		gaugeTicksColor:  uint8(gaugeSettings.TicksColor),
-		historyLen:       graphSettings.HistoryLen,
-		history:          shared.NewRingBuffer[float64](graphSettings.HistoryLen),
-		fontFace:         fontFace,
+		BaseWidget:  base,
+		displayMode: displayMode,
+		padding:     padding,
+		renderer:    renderer,
+		history:     shared.NewRingBuffer[float64](graphSettings.HistoryLen),
 	}, nil
 }
 
@@ -102,7 +108,7 @@ func (w *MemoryWidget) Update() error {
 	}
 
 	// Add to history for graph mode (ring buffer handles capacity automatically)
-	if w.displayMode == "graph" {
+	if w.displayMode == shared.DisplayModeGraph {
 		w.history.Push(w.currentUsage)
 	}
 	w.mu.Unlock()
@@ -131,37 +137,19 @@ func (w *MemoryWidget) Render() (image.Image, error) {
 
 	// Render based on display mode
 	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	switch w.displayMode {
-	case "text":
-		w.renderText(img)
-	case "bar":
-		barColor := uint8(255)
-		if w.fillColor >= 0 && w.fillColor <= 255 {
-			barColor = uint8(w.fillColor)
-		}
-		if w.barDirection == "vertical" {
-			bitmap.DrawVerticalBar(img, contentX, contentY, contentW, contentH, w.currentUsage, barColor, w.barBorder)
-		} else {
-			bitmap.DrawHorizontalBar(img, contentX, contentY, contentW, contentH, w.currentUsage, barColor, w.barBorder)
-		}
-	case "graph":
-		bitmap.DrawGraph(img, contentX, contentY, contentW, contentH, w.history.ToSlice(), w.historyLen, w.fillColor, w.lineColor)
-	case "gauge":
-		w.renderGauge(img, pos)
+	case shared.DisplayModeText:
+		text := fmt.Sprintf("%.0f", w.currentUsage)
+		w.renderer.RenderText(img, text)
+	case shared.DisplayModeBar:
+		w.renderer.RenderBar(img, contentX, contentY, contentW, contentH, w.currentUsage)
+	case shared.DisplayModeGraph:
+		w.renderer.RenderGraph(img, contentX, contentY, contentW, contentH, w.history.ToSlice())
+	case shared.DisplayModeGauge:
+		w.renderer.RenderGauge(img, 0, 0, pos.W, pos.H, w.currentUsage)
 	}
-	w.mu.RUnlock()
 
 	return img, nil
-}
-
-func (w *MemoryWidget) renderText(img *image.Gray) {
-	// Note: caller must hold read lock
-	text := fmt.Sprintf("%.0f", w.currentUsage)
-	bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
-}
-
-func (w *MemoryWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
-	// Note: caller must hold read lock
-	// Use shared gauge drawing function
-	bitmap.DrawGauge(img, 0, 0, pos.W, pos.H, w.currentUsage, w.gaugeColor, w.gaugeNeedleColor, w.gaugeShowTicks, w.gaugeTicksColor)
 }
