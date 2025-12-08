@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pozitronik/steelclock-go/internal/gamesense"
+	"github.com/pozitronik/steelclock-go/internal/display"
 )
 
 // Frame represents a captured frame with metadata
@@ -26,7 +26,7 @@ type CallRecord struct {
 	Error     error
 }
 
-// TestClient implements gamesense.API for testing purposes.
+// TestClient implements display.Backend for testing purposes.
 // It captures frames, tracks calls, and supports error injection.
 type TestClient struct {
 	mu sync.RWMutex
@@ -68,8 +68,8 @@ type TestClient struct {
 	paused                 bool // When true, SendScreenData does nothing
 }
 
-// Ensure TestClient implements gamesense.API
-var _ gamesense.API = (*TestClient)(nil)
+// Ensure TestClient implements display.Backend
+var _ display.Backend = (*TestClient)(nil)
 
 // TestClientOption is a functional option for configuring TestClient
 type TestClientOption func(*TestClient)
@@ -120,7 +120,7 @@ func NewTestClient(opts ...TestClientOption) *TestClient {
 	return c
 }
 
-// RegisterGame implements gamesense.API
+// RegisterGame implements display.Backend
 func (c *TestClient) RegisterGame(developer string, deinitializeTimerMs int) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -136,7 +136,7 @@ func (c *TestClient) RegisterGame(developer string, deinitializeTimerMs int) err
 	return nil
 }
 
-// BindScreenEvent implements gamesense.API
+// BindScreenEvent implements display.Backend
 func (c *TestClient) BindScreenEvent(eventName, deviceType string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -152,7 +152,7 @@ func (c *TestClient) BindScreenEvent(eventName, deviceType string) error {
 	return nil
 }
 
-// SendScreenData implements gamesense.API
+// SendScreenData implements display.Backend
 func (c *TestClient) SendScreenData(eventName string, bitmapData []byte) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -176,7 +176,7 @@ func (c *TestClient) SendScreenData(eventName string, bitmapData []byte) error {
 	return nil
 }
 
-// SendScreenDataMultiRes implements gamesense.API
+// SendScreenDataMultiRes implements display.Backend
 func (c *TestClient) SendScreenDataMultiRes(eventName string, resolutionData map[string][]byte) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -205,7 +205,7 @@ func (c *TestClient) SendScreenDataMultiRes(eventName string, resolutionData map
 	return nil
 }
 
-// SendHeartbeat implements gamesense.API
+// SendHeartbeat implements display.Backend
 func (c *TestClient) SendHeartbeat() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -219,7 +219,7 @@ func (c *TestClient) SendHeartbeat() error {
 	return nil
 }
 
-// RemoveGame implements gamesense.API
+// RemoveGame implements display.Backend
 func (c *TestClient) RemoveGame() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -234,7 +234,7 @@ func (c *TestClient) RemoveGame() error {
 	return nil
 }
 
-// SupportsMultipleEvents implements gamesense.API
+// SupportsMultipleEvents implements display.Backend
 func (c *TestClient) SupportsMultipleEvents() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -243,7 +243,7 @@ func (c *TestClient) SupportsMultipleEvents() bool {
 	return c.supportsMultipleEvents
 }
 
-// SendMultipleScreenData implements gamesense.API
+// SendMultipleScreenData implements display.Backend
 func (c *TestClient) SendMultipleScreenData(eventName string, frames [][]byte) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()

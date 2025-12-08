@@ -9,6 +9,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/compositor"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/display"
 	"github.com/pozitronik/steelclock-go/internal/gamesense"
 )
 
@@ -19,7 +20,7 @@ const ErrorDisplayRefreshRateMs = 500
 // It manages the compositor, backend client, and transitions between states.
 type LifecycleManager struct {
 	comp           *compositor.Compositor
-	client         gamesense.API
+	client         display.Backend
 	currentBackend string
 	lastGoodConfig *config.Config
 	isFirstStart   bool
@@ -328,7 +329,7 @@ func (m *LifecycleManager) handleBackendFailure(cfg *config.Config) {
 		m.comp = nil
 	}
 
-	var newClient gamesense.API
+	var newClient display.Backend
 	var newBackend string
 	var err error
 

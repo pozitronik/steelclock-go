@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/pozitronik/steelclock-go/internal/display"
 )
 
 // FrameSender handles frame transmission to the display.
@@ -60,8 +62,9 @@ type Client struct {
 	httpClient      *http.Client
 }
 
-// Ensure Client implements API
+// Ensure Client implements API and display.Backend
 var _ API = (*Client)(nil)
+var _ display.Backend = (*Client)(nil)
 
 // NewClient creates a new GameSense API client
 func NewClient(gameName, gameDisplayName string) (*Client, error) {

@@ -3,11 +3,11 @@ package driver
 import (
 	"testing"
 
-	"github.com/pozitronik/steelclock-go/internal/gamesense"
+	"github.com/pozitronik/steelclock-go/internal/display"
 )
 
-// Verify Client implements gamesense.API interface at compile time
-var _ gamesense.API = (*Client)(nil)
+// Verify Client implements display.Backend interface at compile time
+var _ display.Backend = (*Client)(nil)
 
 func TestNewClient_NoDevice(t *testing.T) {
 	// Without a device, NewClient should fail

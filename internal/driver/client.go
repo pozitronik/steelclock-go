@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/pozitronik/steelclock-go/internal/gamesense"
+	"github.com/pozitronik/steelclock-go/internal/display"
 )
 
-// Client wraps HIDDriver and implements gamesense.API interface
+// Client wraps HIDDriver and implements display.Backend interface
 // This allows the direct driver to be used interchangeably with the GameSense client
 type Client struct {
 	driver           *HIDDriver
@@ -16,8 +16,8 @@ type Client struct {
 	disconnectLogged bool // prevents log spam on disconnect
 }
 
-// Ensure Client implements gamesense.API
-var _ gamesense.API = (*Client)(nil)
+// Ensure Client implements display.Backend
+var _ display.Backend = (*Client)(nil)
 
 // NewClient creates a new direct driver client
 func NewClient(cfg Config) (*Client, error) {

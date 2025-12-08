@@ -6,12 +6,13 @@ import (
 	"strconv"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/display"
 	"github.com/pozitronik/steelclock-go/internal/driver"
 	"github.com/pozitronik/steelclock-go/internal/gamesense"
 )
 
 // CreateBackendClient creates the appropriate client based on backend configuration
-func CreateBackendClient(cfg *config.Config) (gamesense.API, error) {
+func CreateBackendClient(cfg *config.Config) (display.Backend, error) {
 	switch cfg.Backend {
 	case "gamesense":
 		return CreateGameSenseClient(cfg)
@@ -35,7 +36,7 @@ func CreateBackendClient(cfg *config.Config) (gamesense.API, error) {
 }
 
 // CreateGameSenseClient creates a GameSense API client
-func CreateGameSenseClient(cfg *config.Config) (gamesense.API, error) {
+func CreateGameSenseClient(cfg *config.Config) (display.Backend, error) {
 	client, err := gamesense.NewClient(cfg.GameName, cfg.GameDisplayName)
 	if err != nil {
 		log.Printf("ERROR: Failed to create GameSense client: %v", err)
@@ -54,7 +55,7 @@ func CreateGameSenseClient(cfg *config.Config) (gamesense.API, error) {
 }
 
 // CreateDirectClient creates a direct USB HID driver client
-func CreateDirectClient(cfg *config.Config) (gamesense.API, error) {
+func CreateDirectClient(cfg *config.Config) (display.Backend, error) {
 	var vid, pid uint16
 	if cfg.DirectDriver != nil {
 		if cfg.DirectDriver.VID != "" {

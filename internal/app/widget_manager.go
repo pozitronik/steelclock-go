@@ -5,7 +5,7 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/compositor"
 	"github.com/pozitronik/steelclock-go/internal/config"
-	"github.com/pozitronik/steelclock-go/internal/gamesense"
+	"github.com/pozitronik/steelclock-go/internal/display"
 	"github.com/pozitronik/steelclock-go/internal/layout"
 	"github.com/pozitronik/steelclock-go/internal/widget"
 )
@@ -28,7 +28,7 @@ type CompositorSetup struct {
 
 // CreateFromConfig creates widgets and compositor from configuration.
 // Returns NoWidgetsError if no widgets are enabled in the config.
-func (m *WidgetManager) CreateFromConfig(client gamesense.API, cfg *config.Config) (*CompositorSetup, error) {
+func (m *WidgetManager) CreateFromConfig(client display.Client, cfg *config.Config) (*CompositorSetup, error) {
 	widgets, err := widget.CreateWidgets(cfg.Widgets)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create widgets: %w", err)
@@ -42,7 +42,7 @@ func (m *WidgetManager) CreateFromConfig(client gamesense.API, cfg *config.Confi
 }
 
 // CreateErrorDisplay creates a compositor setup for displaying an error message.
-func (m *WidgetManager) CreateErrorDisplay(client gamesense.API, message string, width, height int) *CompositorSetup {
+func (m *WidgetManager) CreateErrorDisplay(client display.Client, message string, width, height int) *CompositorSetup {
 	errorWidget := widget.NewErrorWidget(width, height, message)
 	widgets := []widget.Widget{errorWidget}
 
@@ -64,7 +64,7 @@ func (m *WidgetManager) CreateErrorDisplay(client gamesense.API, message string,
 }
 
 // createSetup creates the compositor setup with the given components.
-func (m *WidgetManager) createSetup(client gamesense.API, widgets []widget.Widget, displayCfg config.DisplayConfig, cfg *config.Config) *CompositorSetup {
+func (m *WidgetManager) createSetup(client display.Client, widgets []widget.Widget, displayCfg config.DisplayConfig, cfg *config.Config) *CompositorSetup {
 	layoutMgr := layout.NewManager(displayCfg, widgets)
 	comp := compositor.NewCompositor(client, layoutMgr, widgets, cfg)
 

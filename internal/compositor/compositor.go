@@ -10,7 +10,7 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
-	"github.com/pozitronik/steelclock-go/internal/gamesense"
+	"github.com/pozitronik/steelclock-go/internal/display"
 	"github.com/pozitronik/steelclock-go/internal/layout"
 	"github.com/pozitronik/steelclock-go/internal/widget"
 )
@@ -34,7 +34,7 @@ type Resolution struct {
 
 // Compositor manages the rendering loop and API updates
 type Compositor struct {
-	client        gamesense.DisplayClient
+	client        display.Client
 	layoutManager *layout.Manager
 	refreshRate   time.Duration
 	eventName     string
@@ -62,7 +62,7 @@ type Compositor struct {
 }
 
 // NewCompositor creates a new compositor
-func NewCompositor(client gamesense.DisplayClient, layoutMgr *layout.Manager, widgets []widget.Widget, cfg *config.Config) *Compositor {
+func NewCompositor(client display.Client, layoutMgr *layout.Manager, widgets []widget.Widget, cfg *config.Config) *Compositor {
 	refreshRate := time.Duration(cfg.RefreshRateMs) * time.Millisecond
 
 	// Build list of resolutions (main display + supported resolutions)
