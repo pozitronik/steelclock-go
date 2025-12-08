@@ -42,12 +42,8 @@ type Compositor struct {
 	stopChan      chan struct{}
 	wg            sync.WaitGroup
 
-	// Batching
-	batchingEnabled bool
-	batchSize       int
-	batchSupported  bool
-	frameBuffer     [][]byte
-	bufferMu        sync.Mutex
+	// Frame batching
+	batcher *FrameBatcher
 
 	// Multi-resolution support
 	resolutions []Resolution // All resolutions to render (main + supported)
@@ -89,19 +85,24 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 	dedupEnabled := cfg.FrameDedupEnabled == nil || *cfg.FrameDedupEnabled
 	deduplicator := NewFrameDeduplicator(dedupEnabled)
 
+	// Frame batching: check if enabled and supported
+	batchingEnabled := cfg.EventBatchingEnabled && client.SupportsMultipleEvents()
+	if cfg.EventBatchingEnabled && !client.SupportsMultipleEvents() {
+		log.Println("Event batching disabled: not supported by client")
+	}
+	batcher := NewFrameBatcher(batchingEnabled, cfg.EventBatchSize, client, DefaultEventName)
+
 	comp := &Compositor{
-		client:          client,
-		layoutManager:   layoutMgr,
-		refreshRate:     refreshRate,
-		eventName:       DefaultEventName,
-		scheduler:       NewWidgetScheduler(widgets),
-		stopChan:        make(chan struct{}),
-		batchingEnabled: cfg.EventBatchingEnabled,
-		batchSize:       cfg.EventBatchSize,
-		frameBuffer:     make([][]byte, 0, cfg.EventBatchSize),
-		resolutions:     resolutions,
-		bitmapBuffers:   bitmapBuffers,
-		deduplicator:    deduplicator,
+		client:        client,
+		layoutManager: layoutMgr,
+		refreshRate:   refreshRate,
+		eventName:     DefaultEventName,
+		scheduler:     NewWidgetScheduler(widgets),
+		stopChan:      make(chan struct{}),
+		batcher:       batcher,
+		resolutions:   resolutions,
+		bitmapBuffers: bitmapBuffers,
+		deduplicator:  deduplicator,
 	}
 
 	log.Printf("Rendering for %d resolution(s):", len(resolutions))
@@ -113,15 +114,8 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 		log.Println("Frame deduplication enabled")
 	}
 
-	// Check if batching is supported by API (only if enabled in config)
-	if comp.batchingEnabled {
-		comp.batchSupported = client.SupportsMultipleEvents()
-		if !comp.batchSupported {
-			log.Println("Event batching disabled: not supported by client")
-			comp.batchingEnabled = false
-		} else {
-			log.Printf("Event batching enabled with batch size: %d", comp.batchSize)
-		}
+	if comp.batcher.IsEnabled() {
+		log.Printf("Event batching enabled with batch size: %d", cfg.EventBatchSize)
 	}
 
 	return comp
@@ -158,10 +152,8 @@ func (c *Compositor) Stop() {
 	c.wg.Wait()
 
 	// Flush any remaining buffered frames
-	if c.batchingEnabled {
-		if err := c.flushBatch(); err != nil {
-			log.Printf("Error flushing batch on stop: %v", err)
-		}
+	if err := c.batcher.Flush(); err != nil {
+		log.Printf("Error flushing batch on stop: %v", err)
 	}
 
 	log.Println("Compositor stopped")
@@ -234,30 +226,26 @@ func (c *Compositor) renderFrame() error {
 	// Frame deduplication: skip send if all resolutions are unchanged
 	// Note: dedup is disabled when batching is enabled (batching buffers frames intentionally)
 	shouldUpdateDedup := false
-	if !c.batchingEnabled && !c.deduplicator.HasChanged(resolutionData) {
+	if !c.batcher.IsEnabled() && !c.deduplicator.HasChanged(resolutionData) {
 		// All frames unchanged, skip send
 		return nil
-	} else if !c.batchingEnabled {
+	} else if !c.batcher.IsEnabled() {
 		// Mark that we need to update deduplicator after successful send
 		shouldUpdateDedup = true
 	}
 
 	// If batching is enabled, buffer the frame (only main resolution for now)
-	if c.batchingEnabled {
-		mainKey := fmt.Sprintf("image-data-%dx%d", c.resolutions[0].Width, c.resolutions[0].Height)
-		c.bufferMu.Lock()
-		c.frameBuffer = append(c.frameBuffer, resolutionData[mainKey])
-		shouldFlush := len(c.frameBuffer) >= c.batchSize
-		c.bufferMu.Unlock()
-
-		// Flush if buffer is full
-		if shouldFlush {
-			return c.flushBatch()
-		}
+	mainKey := fmt.Sprintf("image-data-%dx%d", c.resolutions[0].Width, c.resolutions[0].Height)
+	shouldSendDirectly, err := c.batcher.Add(resolutionData[mainKey])
+	if err != nil {
+		return err
+	}
+	if !shouldSendDirectly {
+		// Frame was buffered or batch was flushed
 		return nil
 	}
 
-	// Send immediately if batching disabled
+	// Send immediately (batching disabled)
 	if err := c.client.SendScreenDataMultiRes(c.eventName, resolutionData); err != nil {
 		return fmt.Errorf("send failed: %w", err)
 	}
@@ -265,28 +253,6 @@ func (c *Compositor) renderFrame() error {
 	// Update deduplicator only after successful send
 	if shouldUpdateDedup {
 		c.deduplicator.Update(resolutionData)
-	}
-
-	return nil
-}
-
-// flushBatch sends all buffered frames in a single request
-func (c *Compositor) flushBatch() error {
-	c.bufferMu.Lock()
-	if len(c.frameBuffer) == 0 {
-		c.bufferMu.Unlock()
-		return nil
-	}
-
-	// Copy buffer to send
-	framesToSend := make([][]byte, len(c.frameBuffer))
-	copy(framesToSend, c.frameBuffer)
-	c.frameBuffer = c.frameBuffer[:0] // Clear buffer
-	c.bufferMu.Unlock()
-
-	// Send batch
-	if err := c.client.SendMultipleScreenData(c.eventName, framesToSend); err != nil {
-		return fmt.Errorf("batch send failed: %w", err)
 	}
 
 	return nil
