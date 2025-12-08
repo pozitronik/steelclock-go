@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
@@ -292,11 +291,9 @@ func (w *MatrixWidget) Render() (image.Image, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	pos := w.GetPosition()
-	style := w.GetStyle()
-
-	// Create image with background
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
+	// Create canvas with background
+	img := w.CreateCanvas()
+	_, height := w.Dimensions()
 
 	// Draw each active column
 	for _, col := range w.columns {
@@ -309,7 +306,7 @@ func (w *MatrixWidget) Render() (image.Image, error) {
 			charY := int(col.y) - i*w.charHeight
 
 			// Skip if off the screen
-			if charY < -w.charHeight || charY >= pos.H {
+			if charY < -w.charHeight || charY >= height {
 				continue
 			}
 
@@ -329,9 +326,7 @@ func (w *MatrixWidget) Render() (image.Image, error) {
 	}
 
 	// Draw border if enabled
-	if style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(style.Border))
-	}
+	w.ApplyBorder(img)
 
 	return img, nil
 }

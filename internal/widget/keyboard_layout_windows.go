@@ -185,14 +185,9 @@ func (w *KeyboardLayoutWidget) Update() error {
 
 // Render creates an image of the keyboard layout widget
 func (w *KeyboardLayoutWidget) Render() (image.Image, error) {
-	pos := w.GetPosition()
-	style := w.GetStyle()
-
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
-
-	if style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(style.Border))
-	}
+	// Create canvas with background and border
+	img := w.CreateCanvas()
+	w.ApplyBorder(img)
 
 	// Draw layout text (thread-safe read)
 	w.mu.RLock()

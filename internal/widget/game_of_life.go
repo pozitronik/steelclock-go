@@ -502,11 +502,8 @@ func (w *GameOfLifeWidget) Render() (image.Image, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	pos := w.GetPosition()
-	style := w.GetStyle()
-
-	// Create image with background
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
+	// Create canvas with background
+	img := w.CreateCanvas()
 
 	// Draw cells
 	for y := 0; y < w.gridHeight; y++ {
@@ -525,9 +522,7 @@ func (w *GameOfLifeWidget) Render() (image.Image, error) {
 	}
 
 	// Draw border if enabled
-	if style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(style.Border))
-	}
+	w.ApplyBorder(img)
 
 	return img, nil
 }

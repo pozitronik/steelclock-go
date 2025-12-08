@@ -5,7 +5,6 @@ import (
 	"image"
 	"sync"
 
-	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
@@ -15,6 +14,8 @@ type WidgetBase interface {
 	GetPosition() config.PositionConfig
 	GetStyle() config.StyleConfig
 	GetRenderBackgroundColor() uint8
+	CreateCanvas() *image.Gray
+	ApplyBorder(img *image.Gray)
 }
 
 // DualIOTextConfig holds text formatting configuration for dual I/O widgets
@@ -118,15 +119,12 @@ func (w *BaseDualIOWidget) IsGraphMode() bool {
 // Render creates an image of the dual I/O widget
 func (w *BaseDualIOWidget) Render() (image.Image, error) {
 	pos := w.Base.GetPosition()
-	style := w.Base.GetStyle()
 
-	// Create image with background
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.Base.GetRenderBackgroundColor())
+	// Create canvas with background using base widget helper
+	img := w.Base.CreateCanvas()
 
-	// Draw border if enabled
-	if style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(style.Border))
-	}
+	// Draw border if enabled using base widget helper
+	w.Base.ApplyBorder(img)
 
 	// Calculate content area
 	contentX := w.Padding

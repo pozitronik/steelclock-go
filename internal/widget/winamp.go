@@ -335,16 +335,9 @@ func (w *WinampWidget) Render() (image.Image, error) {
 		return nil, nil
 	}
 
-	pos := w.GetPosition()
-	style := w.GetStyle()
-
-	// Create image with background
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
-
-	// Draw border if enabled
-	if style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(style.Border))
-	}
+	// Create canvas with background and border
+	img := w.CreateCanvas()
+	w.ApplyBorder(img)
 
 	w.mu.RLock()
 	currentText := w.currentText

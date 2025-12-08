@@ -188,22 +188,13 @@ func (w *CPUWidget) Update() error {
 
 // Render creates an image of the CPU widget
 func (w *CPUWidget) Render() (image.Image, error) {
+	// Create canvas with background and border
+	img := w.CreateCanvas()
+	w.ApplyBorder(img)
+
+	// Get content area and position
+	content := w.GetContentArea()
 	pos := w.GetPosition()
-	style := w.GetStyle()
-
-	// Create image with background
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
-
-	// Draw border if enabled (border >= 0 means enabled with that color)
-	if style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(style.Border))
-	}
-
-	// Calculate content area
-	contentX := w.padding
-	contentY := w.padding
-	contentW := pos.W - w.padding*2
-	contentH := pos.H - w.padding*2
 
 	w.mu.RLock()
 	defer w.mu.RUnlock()
@@ -218,9 +209,9 @@ func (w *CPUWidget) Render() (image.Image, error) {
 		case shared.DisplayModeText:
 			w.renderTextGrid(img, w.currentUsagePerCore)
 		case shared.DisplayModeBar:
-			w.renderBarGrid(img, contentX, contentY, contentW, contentH)
+			w.renderBarGrid(img, content.X, content.Y, content.Width, content.Height)
 		case shared.DisplayModeGraph:
-			w.renderGraphGrid(img, contentX, contentY, contentW, contentH)
+			w.renderGraphGrid(img, content.X, content.Y, content.Width, content.Height)
 		case shared.DisplayModeGauge:
 			w.renderGaugeGrid(img, pos)
 		}
@@ -233,9 +224,9 @@ func (w *CPUWidget) Render() (image.Image, error) {
 		text := fmt.Sprintf("%.0f", w.currentUsageSingle)
 		w.renderer.RenderText(img, text)
 	case shared.DisplayModeBar:
-		w.renderer.RenderBar(img, contentX, contentY, contentW, contentH, w.currentUsageSingle)
+		w.renderer.RenderBar(img, content.X, content.Y, content.Width, content.Height, w.currentUsageSingle)
 	case shared.DisplayModeGraph:
-		w.renderer.RenderGraph(img, contentX, contentY, contentW, contentH, w.historySingle.ToSlice())
+		w.renderer.RenderGraph(img, content.X, content.Y, content.Width, content.Height, w.historySingle.ToSlice())
 	case shared.DisplayModeGauge:
 		w.renderer.RenderGauge(img, 0, 0, pos.W, pos.H, w.currentUsageSingle)
 	}

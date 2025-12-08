@@ -510,16 +510,9 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 		}
 	}
 
-	pos := w.GetPosition()
-	style := w.GetStyle()
-
-	// Create base image with background color
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
-
-	// Draw border if enabled (border >= 0 means enabled with that color)
-	if style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(style.Border))
-	}
+	// Create canvas with background and border
+	img := w.CreateCanvas()
+	w.ApplyBorder(img)
 
 	// Check if we should render in stereo mode
 	if w.stereoMode && len(channelPeaks) >= 2 {

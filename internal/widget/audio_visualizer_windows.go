@@ -748,10 +748,8 @@ func (w *AudioVisualizerWidget) Render() (image.Image, error) {
 		return w.errorWidget.Render()
 	}
 
-	pos := w.GetPosition()
-	style := w.GetStyle()
-
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
+	// Create canvas with background
+	img := w.CreateCanvas()
 
 	if w.displayMode == "spectrum" {
 		w.renderSpectrum(img)
@@ -759,9 +757,7 @@ func (w *AudioVisualizerWidget) Render() (image.Image, error) {
 		w.renderOscilloscope(img)
 	}
 
-	if style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(style.Border))
-	}
+	w.ApplyBorder(img)
 
 	return img, nil
 }

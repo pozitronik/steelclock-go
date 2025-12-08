@@ -162,14 +162,9 @@ func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
 
 // Render creates an image of the keyboard widget
 func (w *KeyboardWidget) Render() (image.Image, error) {
-	pos := w.GetPosition()
-	style := w.GetStyle()
-
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
-
-	if style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(style.Border))
-	}
+	// Create canvas with background and border
+	img := w.CreateCanvas()
+	w.ApplyBorder(img)
 
 	// Copy state under lock to avoid race conditions
 	w.mu.RLock()

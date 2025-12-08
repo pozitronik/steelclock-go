@@ -5,7 +5,6 @@ import (
 	"image/color"
 	"time"
 
-	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
@@ -79,15 +78,15 @@ func (w *ErrorWidget) Update() error {
 
 // Render draws the error display with warning triangles
 func (w *ErrorWidget) Render() (image.Image, error) {
-	pos := w.GetPosition()
-
-	// Create image with background
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
+	// Create canvas (no border for error widget)
+	img := w.CreateCanvas()
 
 	// Only draw if flash state is on
 	if !w.flashState {
 		return img, nil
 	}
+
+	width, height := w.Dimensions()
 
 	c := color.Gray{Y: 255} // White foreground for error display
 
@@ -109,13 +108,13 @@ func (w *ErrorWidget) Render() (image.Image, error) {
 	}
 
 	for _, opt := range options {
-		if w.tryRenderLayout(img, pos.W, pos.H, opt.iconSet, opt.font, opt.margin, c) {
+		if w.tryRenderLayout(img, width, height, opt.iconSet, opt.font, opt.margin, c) {
 			return img, nil
 		}
 	}
 
 	// Ultimate fallback: just draw a centered warning icon (smallest available)
-	w.renderIconOnly(img, pos.W, pos.H, c)
+	w.renderIconOnly(img, width, height, c)
 
 	return img, nil
 }

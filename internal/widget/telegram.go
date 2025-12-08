@@ -499,11 +499,8 @@ func (w *TelegramWidget) Render() (image.Image, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	pos := w.GetPosition()
-	style := w.GetStyle()
-
-	// Create image with background
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
+	// Create canvas with background
+	img := w.CreateCanvas()
 
 	// Draw based on state
 	if w.connection.IsConnecting() {
@@ -533,9 +530,7 @@ func (w *TelegramWidget) Render() (image.Image, error) {
 	}
 
 	// Draw border if enabled
-	if style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(style.Border))
-	}
+	w.ApplyBorder(img)
 
 	return img, nil
 }

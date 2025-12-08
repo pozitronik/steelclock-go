@@ -371,7 +371,7 @@ func (w *DoomWidget) Render() (image.Image, error) {
 	defer w.mu.RUnlock()
 
 	pos := w.GetPosition()
-	img := image.NewGray(image.Rect(0, 0, pos.W, pos.H))
+	img := w.CreateCanvas()
 
 	// Show error if any
 	if w.downloadError != nil {

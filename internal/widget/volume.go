@@ -283,22 +283,18 @@ func (w *VolumeWidget) Render() (image.Image, error) {
 		return w.errorWidget.Render()
 	}
 
-	pos := w.GetPosition()
-	style := w.GetStyle()
-
 	// Check if widget should be hidden (auto-hide mode)
 	if w.ShouldHide() {
 		// Return nil to hide widget and show content below
 		return nil, nil
 	}
 
-	// Create base image
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
+	// Create canvas with background and border
+	img := w.CreateCanvas()
+	w.ApplyBorder(img)
 
-	// Draw border if enabled (border >= 0 means enabled with that color)
-	if style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(style.Border))
-	}
+	pos := w.GetPosition()
+	style := w.GetStyle()
 
 	// Render based on display mode
 	switch w.displayMode {

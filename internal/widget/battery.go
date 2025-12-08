@@ -315,14 +315,9 @@ func (w *BatteryWidget) Update() error {
 
 // Render renders the battery widget
 func (w *BatteryWidget) Render() (image.Image, error) {
-	pos := w.GetPosition()
-	style := w.GetStyle()
-
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
-
-	if style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(style.Border))
-	}
+	// Create canvas with background and border
+	img := w.CreateCanvas()
+	w.ApplyBorder(img)
 
 	w.mu.RLock()
 	status := w.currentStatus

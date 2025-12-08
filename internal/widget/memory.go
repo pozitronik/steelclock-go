@@ -5,7 +5,6 @@ import (
 	"image"
 	"sync"
 
-	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"github.com/shirou/gopsutil/v4/mem"
@@ -118,22 +117,13 @@ func (w *MemoryWidget) Update() error {
 
 // Render creates an image of the memory widget
 func (w *MemoryWidget) Render() (image.Image, error) {
+	// Create canvas with background and border
+	img := w.CreateCanvas()
+	w.ApplyBorder(img)
+
+	// Get content area (adjusted for padding)
+	content := w.GetContentArea()
 	pos := w.GetPosition()
-	style := w.GetStyle()
-
-	// Create image with background
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
-
-	// Draw border if enabled (border >= 0 means enabled with that color)
-	if style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(style.Border))
-	}
-
-	// Calculate content area
-	contentX := w.padding
-	contentY := w.padding
-	contentW := pos.W - w.padding*2
-	contentH := pos.H - w.padding*2
 
 	// Render based on display mode
 	w.mu.RLock()
@@ -144,9 +134,9 @@ func (w *MemoryWidget) Render() (image.Image, error) {
 		text := fmt.Sprintf("%.0f", w.currentUsage)
 		w.renderer.RenderText(img, text)
 	case shared.DisplayModeBar:
-		w.renderer.RenderBar(img, contentX, contentY, contentW, contentH, w.currentUsage)
+		w.renderer.RenderBar(img, content.X, content.Y, content.Width, content.Height, w.currentUsage)
 	case shared.DisplayModeGraph:
-		w.renderer.RenderGraph(img, contentX, contentY, contentW, contentH, w.history.ToSlice())
+		w.renderer.RenderGraph(img, content.X, content.Y, content.Width, content.Height, w.history.ToSlice())
 	case shared.DisplayModeGauge:
 		w.renderer.RenderGauge(img, 0, 0, pos.W, pos.H, w.currentUsage)
 	}

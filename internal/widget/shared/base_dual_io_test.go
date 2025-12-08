@@ -1,9 +1,11 @@
 package shared
 
 import (
+	"image"
 	"sync"
 	"testing"
 
+	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
@@ -24,6 +26,16 @@ func (m *mockWidgetBase) GetStyle() config.StyleConfig {
 
 func (m *mockWidgetBase) GetRenderBackgroundColor() uint8 {
 	return m.backgroundColor
+}
+
+func (m *mockWidgetBase) CreateCanvas() *image.Gray {
+	return bitmap.NewGrayscaleImage(m.position.W, m.position.H, m.backgroundColor)
+}
+
+func (m *mockWidgetBase) ApplyBorder(img *image.Gray) {
+	if m.style.Border >= 0 {
+		bitmap.DrawBorder(img, uint8(m.style.Border))
+	}
 }
 
 func newMockWidgetBase(w, h int) *mockWidgetBase {

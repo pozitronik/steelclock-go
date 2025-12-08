@@ -287,7 +287,7 @@ func (w *WeatherWidget) Update() error {
 // Render creates the weather widget image
 func (w *WeatherWidget) Render() (image.Image, error) {
 	pos := w.GetPosition()
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
+	img := w.CreateCanvas()
 
 	// Update scroll offset for animation
 	now := time.Now()
@@ -362,10 +362,7 @@ func (w *WeatherWidget) Render() (image.Image, error) {
 	}
 
 	// Draw border if enabled (always on top)
-	style := w.GetStyle()
-	if style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(style.Border))
-	}
+	w.ApplyBorder(img)
 
 	return img, nil
 }

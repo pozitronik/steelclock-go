@@ -256,19 +256,13 @@ func (w *ClockWidget) Render() (image.Image, error) {
 		w.mu.RUnlock()
 	}
 
-	pos := w.GetPosition()
-	style := w.GetStyle()
-
-	// Create image with background
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
-
-	// Draw border if enabled (border >= 0 means enabled with that color)
-	if style.Border >= 0 {
-		bitmap.DrawBorder(img, uint8(style.Border))
-	}
+	// Create canvas with background and border
+	img := w.CreateCanvas()
+	w.ApplyBorder(img)
 
 	// Delegate rendering to the appropriate renderer
-	if err := w.renderer.Render(img, currentTime, 0, 0, pos.W, pos.H); err != nil {
+	width, height := w.Dimensions()
+	if err := w.renderer.Render(img, currentTime, 0, 0, width, height); err != nil {
 		return nil, fmt.Errorf("failed to render clock: %w", err)
 	}
 
