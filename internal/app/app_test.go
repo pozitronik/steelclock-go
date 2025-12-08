@@ -36,25 +36,14 @@ func TestNewApp(t *testing.T) {
 				t.Errorf("configPath = %q, want %q", app.configPath, tt.configPath)
 			}
 
-			if app.retryCancel == nil {
-				t.Error("retryCancel channel not initialized")
+			// Verify lifecycle manager is initialized
+			if app.lifecycle == nil {
+				t.Error("lifecycle manager not initialized")
 			}
 
-			// Verify other fields are nil/zero initially
-			if app.comp != nil {
-				t.Error("comp should be nil initially")
-			}
-			if app.client != nil {
-				t.Error("client should be nil initially")
-			}
+			// Verify trayMgr is nil initially (created in Run())
 			if app.trayMgr != nil {
 				t.Error("trayMgr should be nil initially")
-			}
-			if app.lastGoodConfig != nil {
-				t.Error("lastGoodConfig should be nil initially")
-			}
-			if app.currentBackend != "" {
-				t.Errorf("currentBackend should be empty, got %q", app.currentBackend)
 			}
 		})
 	}
@@ -146,7 +135,6 @@ func TestAppStopWithNilComponents(t *testing.T) {
 
 	// Should not panic
 	app.Stop()
-	app.stopAndWait()
 }
 
 func TestAppMutexProtection(t *testing.T) {
