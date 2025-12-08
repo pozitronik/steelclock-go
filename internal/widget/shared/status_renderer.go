@@ -66,7 +66,7 @@ func (r *StatusRenderer) DrawAt(img *image.Gray, text string, x, y int) {
 }
 
 // DrawLeftAligned draws text left-aligned in the given bounds
-func (r *StatusRenderer) DrawLeftAligned(img *image.Gray, text string, x, y, width, height int) {
+func (r *StatusRenderer) DrawLeftAligned(img *image.Gray, text string, x, y, _, height int) {
 	_, textHeight := r.MeasureText(text)
 
 	// Left-aligned horizontally, centered vertically
