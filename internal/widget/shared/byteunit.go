@@ -20,7 +20,7 @@ const (
 	UnitFamilyBits
 )
 
-// Predefined byte-based units (decimal)
+// ByteUnitsDecimal Predefined byte-based units (decimal)
 var ByteUnitsDecimal = map[string]ByteUnit{
 	"B/s":  {Name: "B/s", Divisor: 1, IsBits: false, IsBinary: false},
 	"KB/s": {Name: "KB/s", Divisor: 1000, IsBits: false, IsBinary: false},
@@ -28,7 +28,7 @@ var ByteUnitsDecimal = map[string]ByteUnit{
 	"GB/s": {Name: "GB/s", Divisor: 1000000000, IsBits: false, IsBinary: false},
 }
 
-// Predefined byte-based units (binary)
+// ByteUnitsBinary Predefined byte-based units (binary)
 var ByteUnitsBinary = map[string]ByteUnit{
 	"B/s":   {Name: "B/s", Divisor: 1, IsBits: false, IsBinary: false},
 	"KiB/s": {Name: "KiB/s", Divisor: 1024, IsBits: false, IsBinary: true},
@@ -36,7 +36,7 @@ var ByteUnitsBinary = map[string]ByteUnit{
 	"GiB/s": {Name: "GiB/s", Divisor: 1073741824, IsBits: false, IsBinary: true},
 }
 
-// Predefined bit-based units (for network)
+// BitUnits Predefined bit-based units (for network)
 var BitUnits = map[string]ByteUnit{
 	"bps":  {Name: "bps", Divisor: 1.0 / 8, IsBits: true, IsBinary: false},
 	"Kbps": {Name: "Kbps", Divisor: 1000.0 / 8, IsBits: true, IsBinary: false},
