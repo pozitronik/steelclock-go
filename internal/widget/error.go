@@ -46,6 +46,27 @@ func NewErrorWidget(displayWidth, displayHeight int, message string) *ErrorWidge
 	}
 }
 
+// NewErrorWidgetWithConfig creates an error widget using an existing widget config.
+// This is useful for creating error proxies that inherit the original widget's position.
+func NewErrorWidgetWithConfig(cfg config.WidgetConfig, message string) *ErrorWidget {
+	// Override some config values for error display
+	cfg.Type = "error"
+	cfg.ID = cfg.ID + "_error"
+	if cfg.Style == nil {
+		cfg.Style = &config.StyleConfig{}
+	}
+	cfg.Style.Background = 0
+	cfg.Style.Border = -1
+
+	return &ErrorWidget{
+		BaseWidget:  NewBaseWidget(cfg),
+		message:     message,
+		flashState:  true,
+		lastFlash:   time.Now(),
+		flashPeriod: 500 * time.Millisecond,
+	}
+}
+
 // Update toggles flash state
 func (w *ErrorWidget) Update() error {
 	now := time.Now()

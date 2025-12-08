@@ -53,10 +53,10 @@ func CreateWidget(cfg config.WidgetConfig) (Widget, error) {
 	return factory(cfg)
 }
 
-// CreateWidgets creates all enabled widgets from configuration
-// If a widget fails to initialize (e.g., volume widget on system without sound),
-// it logs a warning and skips that widget, continuing with the remaining widgets.
-// Only returns error if NO widgets could be created.
+// CreateWidgets creates all enabled widgets from configuration.
+// If a widget fails to initialize (e.g., invalid configuration), an ErrorWidget
+// is created in its place to display the error on screen.
+// This allows users to see which widgets have configuration problems.
 func CreateWidgets(cfgs []config.WidgetConfig) ([]Widget, error) {
 	var widgets []Widget
 	var failures []string
@@ -71,30 +71,65 @@ func CreateWidgets(cfgs []config.WidgetConfig) ([]Widget, error) {
 
 		w, err := CreateWidget(cfg)
 		if err != nil {
-			// Log warning and skip widget instead of failing completely
+			// Log warning and create error proxy widget
 			log.Printf("WARNING: Failed to create widget '%s' (type: %s): %v", cfg.ID, cfg.Type, err)
-			log.Printf("         Skipping widget '%s' - application will continue with remaining widgets", cfg.ID)
+
+			// Create an ErrorWidget proxy to display the error on screen
+			errorMsg := abbreviateError(err.Error())
+			errorWidget := NewErrorWidgetWithConfig(cfg, errorMsg)
+			widgets = append(widgets, errorWidget)
+
 			failures = append(failures, fmt.Sprintf("%s (%s): %v", cfg.ID, cfg.Type, err))
-			continue // Skip this widget but continue with others
+			continue
 		}
 
 		widgets = append(widgets, w)
 	}
 
-	// Only fail if there were enabled widgets but ALL failed to initialize
+	// Only fail if there were enabled widgets but ALL failed to initialize,
+	// and we couldn't even create error proxies (shouldn't happen)
 	if len(widgets) == 0 && enabledCount > 0 {
 		return nil, fmt.Errorf("no widgets could be created - all %d enabled widget(s) failed to initialize", enabledCount)
 	}
 
 	// Log summary if some widgets failed
 	if len(failures) > 0 {
-		log.Printf("Application started with %d/%d widgets (%d skipped due to initialization errors)",
-			len(widgets), enabledCount, len(failures))
-		log.Printf("Skipped widgets:")
+		log.Printf("Application started with %d widgets (%d showing errors)",
+			len(widgets), len(failures))
+		log.Printf("Failed widgets:")
 		for _, failure := range failures {
 			log.Printf("  - %s", failure)
 		}
 	}
 
 	return widgets, nil
+}
+
+// abbreviateError shortens error messages for display on small screens.
+// It extracts the key part of the error message.
+func abbreviateError(errMsg string) string {
+	// Map of common error patterns to short display messages
+	abbreviations := map[string]string{
+		"api_key is required":  "NO API KEY",
+		"lat/lon coordinates":  "NO COORDS",
+		"location is required": "NO LOCATION",
+		"unknown widget type":  "BAD TYPE",
+		"failed to load font":  "FONT ERROR",
+		"failed to parse":      "PARSE ERROR",
+		"timeout":              "TIMEOUT",
+		"connection refused":   "NO CONNECT",
+		"permission denied":    "NO ACCESS",
+	}
+
+	for pattern, abbrev := range abbreviations {
+		if strings.Contains(strings.ToLower(errMsg), strings.ToLower(pattern)) {
+			return abbrev
+		}
+	}
+
+	// Fallback: truncate to fit small screens (max ~12 chars for readability)
+	if len(errMsg) > 12 {
+		return "ERROR"
+	}
+	return strings.ToUpper(errMsg)
 }

@@ -167,18 +167,29 @@ func TestCreateWidgets_PartialFailure(t *testing.T) {
 
 	widgets, err := CreateWidgets(configs)
 
-	// Should succeed with partial widgets (skip the failed one)
+	// Should succeed (no error returned)
 	if err != nil {
 		t.Errorf("CreateWidgets() should not error when some widgets succeed, got: %v", err)
 	}
 
-	// Should create 2 widgets (clock and cpu), skipping the invalid one
-	if len(widgets) != 2 {
-		t.Errorf("CreateWidgets() returned %d widgets, want 2 (skipping 1 failed widget)", len(widgets))
+	// Should create 3 widgets (clock, cpu, and error proxy for the failed one)
+	if len(widgets) != 3 {
+		t.Errorf("CreateWidgets() returned %d widgets, want 3 (2 good + 1 error proxy)", len(widgets))
+	}
+
+	// Verify we have an error widget for the failed one
+	errorCount := 0
+	for _, w := range widgets {
+		if _, ok := w.(*ErrorWidget); ok {
+			errorCount++
+		}
+	}
+	if errorCount != 1 {
+		t.Errorf("CreateWidgets() should have created 1 error widget, got %d", errorCount)
 	}
 }
 
-// TestCreateWidgets_AllFailed tests error when ALL widgets fail to initialize
+// TestCreateWidgets_AllFailed tests that error proxies are created when ALL widgets fail
 func TestCreateWidgets_AllFailed(t *testing.T) {
 	configs := []config.WidgetConfig{
 		{
@@ -201,14 +212,21 @@ func TestCreateWidgets_AllFailed(t *testing.T) {
 
 	widgets, err := CreateWidgets(configs)
 
-	// Should error when ALL widgets fail
-	if err == nil {
-		t.Error("CreateWidgets() should return error when all widgets fail")
+	// Should NOT error - error proxies are created instead
+	if err != nil {
+		t.Errorf("CreateWidgets() should not error when error proxies can be created, got: %v", err)
 	}
 
-	// Should return nil widgets list on complete failure
-	if widgets != nil {
-		t.Errorf("CreateWidgets() should return nil widgets list when all fail, got %d widgets", len(widgets))
+	// Should return 2 error widgets (one for each failed widget)
+	if len(widgets) != 2 {
+		t.Errorf("CreateWidgets() should return 2 error widgets, got %d", len(widgets))
+	}
+
+	// All widgets should be error widgets
+	for i, w := range widgets {
+		if _, ok := w.(*ErrorWidget); !ok {
+			t.Errorf("Widget %d should be ErrorWidget, got %T", i, w)
+		}
 	}
 }
 
