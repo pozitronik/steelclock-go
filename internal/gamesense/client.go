@@ -9,16 +9,47 @@ import (
 	"time"
 )
 
-// API defines the interface for GameSense API operations
-type API interface {
-	RegisterGame(developer string, deinitializeTimerMs int) error
-	BindScreenEvent(eventName, deviceType string) error
+// FrameSender handles frame transmission to the display.
+// Used by components that only need to send frames.
+type FrameSender interface {
 	SendScreenData(eventName string, bitmapData []byte) error
 	SendScreenDataMultiRes(eventName string, resolutionData map[string][]byte) error
-	SendHeartbeat() error
-	RemoveGame() error
-	SupportsMultipleEvents() bool
 	SendMultipleScreenData(eventName string, frames [][]byte) error
+}
+
+// HeartbeatSender handles keep-alive messages to the backend.
+type HeartbeatSender interface {
+	SendHeartbeat() error
+}
+
+// BatchCapability provides information about batching support.
+type BatchCapability interface {
+	SupportsMultipleEvents() bool
+}
+
+// GameRegistrar handles game/application registration lifecycle.
+// Used by components managing backend registration.
+type GameRegistrar interface {
+	RegisterGame(developer string, deinitializeTimerMs int) error
+	BindScreenEvent(eventName, deviceType string) error
+	RemoveGame() error
+}
+
+// DisplayClient combines frame sending and heartbeat capabilities.
+// Used by components that render and maintain connection (e.g., Compositor).
+type DisplayClient interface {
+	FrameSender
+	HeartbeatSender
+	BatchCapability
+}
+
+// API defines the full interface for GameSense API operations.
+// Combines all segregated interfaces for complete functionality.
+type API interface {
+	FrameSender
+	HeartbeatSender
+	BatchCapability
+	GameRegistrar
 }
 
 // Client is a GameSense API client

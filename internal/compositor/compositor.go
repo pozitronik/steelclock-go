@@ -34,7 +34,7 @@ type Resolution struct {
 
 // Compositor manages the rendering loop and API updates
 type Compositor struct {
-	client        gamesense.API
+	client        gamesense.DisplayClient
 	layoutManager *layout.Manager
 	refreshRate   time.Duration
 	eventName     string
@@ -62,7 +62,7 @@ type Compositor struct {
 }
 
 // NewCompositor creates a new compositor
-func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []widget.Widget, cfg *config.Config) *Compositor {
+func NewCompositor(client gamesense.DisplayClient, layoutMgr *layout.Manager, widgets []widget.Widget, cfg *config.Config) *Compositor {
 	refreshRate := time.Duration(cfg.RefreshRateMs) * time.Millisecond
 
 	// Build list of resolutions (main display + supported resolutions)
