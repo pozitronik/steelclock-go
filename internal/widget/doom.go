@@ -15,6 +15,12 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
+func init() {
+	Register("doom", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewDoomWidget(cfg)
+	})
+}
+
 // Package-level state to track if DOOM has been run in this process.
 // The gore library uses global state and cannot be safely restarted.
 var (

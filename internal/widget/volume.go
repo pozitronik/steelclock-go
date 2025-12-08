@@ -13,6 +13,12 @@ import (
 	"golang.org/x/image/font"
 )
 
+func init() {
+	Register("volume", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewVolumeWidget(cfg)
+	})
+}
+
 // volumeReader interface abstracts platform-specific volume reading
 type volumeReader interface {
 	GetVolume() (volume float64, muted bool, err error)

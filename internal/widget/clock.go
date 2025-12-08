@@ -14,6 +14,12 @@ import (
 	"golang.org/x/image/font"
 )
 
+func init() {
+	Register("clock", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewClockWidget(cfg)
+	})
+}
+
 // ClockWidget displays current time
 type ClockWidget struct {
 	*BaseWidget

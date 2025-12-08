@@ -8,6 +8,12 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
+func init() {
+	Register("keyboard_layout", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewKeyboardLayoutWidget(cfg)
+	})
+}
+
 // KeyboardLayoutWidget stub for Linux - displays error via ErrorWidget
 type KeyboardLayoutWidget struct {
 	*BaseWidget

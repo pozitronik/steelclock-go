@@ -15,6 +15,12 @@ import (
 	"golang.org/x/image/font"
 )
 
+func init() {
+	Register("battery", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewBatteryWidget(cfg)
+	})
+}
+
 // BatteryStatus represents the current battery state
 type BatteryStatus struct {
 	Percentage    int  // 0-100

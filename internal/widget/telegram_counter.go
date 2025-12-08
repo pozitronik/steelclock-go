@@ -15,6 +15,12 @@ import (
 	"golang.org/x/image/font"
 )
 
+func init() {
+	Register("telegram_counter", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewTelegramCounterWidget(cfg)
+	})
+}
+
 // TelegramCounterWidget displays unread message count
 type TelegramCounterWidget struct {
 	*BaseWidget

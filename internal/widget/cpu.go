@@ -14,6 +14,12 @@ import (
 	"golang.org/x/image/font"
 )
 
+func init() {
+	Register("cpu", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewCPUWidget(cfg)
+	})
+}
+
 // CPUWidget displays CPU usage
 type CPUWidget struct {
 	*BaseWidget

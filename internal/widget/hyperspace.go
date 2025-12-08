@@ -12,6 +12,12 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
+func init() {
+	Register("hyperspace", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewHyperspaceWidget(cfg)
+	})
+}
+
 // HyperspacePhase represents the current phase of the hyperspace effect
 type HyperspacePhase int
 

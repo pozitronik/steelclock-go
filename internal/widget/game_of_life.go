@@ -12,6 +12,12 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
+func init() {
+	Register("game_of_life", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewGameOfLifeWidget(cfg)
+	})
+}
+
 // GameOfLifeWidget implements Conway's Game of Life cellular automaton
 type GameOfLifeWidget struct {
 	*BaseWidget

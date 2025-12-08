@@ -3,9 +3,41 @@ package widget
 import (
 	"fmt"
 	"log"
+	"sort"
+	"strings"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
+
+// Factory is a function that creates a widget from configuration
+type Factory func(cfg config.WidgetConfig) (Widget, error)
+
+// registry holds all registered widget factories
+var registry = make(map[string]Factory)
+
+// Register registers a widget factory for the given type name.
+// This should be called from init() functions in widget implementation files.
+func Register(typeName string, factory Factory) {
+	if _, exists := registry[typeName]; exists {
+		log.Printf("WARNING: Widget type '%s' is being re-registered", typeName)
+	}
+	registry[typeName] = factory
+}
+
+// RegisteredTypes returns a sorted list of all registered widget type names
+func RegisteredTypes() []string {
+	types := make([]string, 0, len(registry))
+	for typeName := range registry {
+		types = append(types, typeName)
+	}
+	sort.Strings(types)
+	return types
+}
+
+// RegisteredTypesList returns a comma-separated string of registered widget types
+func RegisteredTypesList() string {
+	return strings.Join(RegisteredTypes(), ", ")
+}
 
 // CreateWidget creates a widget from configuration
 func CreateWidget(cfg config.WidgetConfig) (Widget, error) {
@@ -13,50 +45,12 @@ func CreateWidget(cfg config.WidgetConfig) (Widget, error) {
 		return nil, fmt.Errorf("widget %s is disabled", cfg.ID)
 	}
 
-	switch cfg.Type {
-	case "clock":
-		return NewClockWidget(cfg)
-	case "cpu":
-		return NewCPUWidget(cfg)
-	case "memory":
-		return NewMemoryWidget(cfg)
-	case "network":
-		return NewNetworkWidget(cfg)
-	case "disk":
-		return NewDiskWidget(cfg)
-	case "keyboard":
-		return NewKeyboardWidget(cfg)
-	case "keyboard_layout":
-		return NewKeyboardLayoutWidget(cfg)
-	case "volume":
-		return NewVolumeWidget(cfg)
-	case "volume_meter":
-		return NewVolumeMeterWidget(cfg)
-	case "audio_visualizer":
-		return NewAudioVisualizerWidget(cfg)
-	case "doom":
-		return NewDoomWidget(cfg)
-	case "winamp":
-		return NewWinampWidget(cfg)
-	case "matrix":
-		return NewMatrixWidget(cfg)
-	case "weather":
-		return NewWeatherWidget(cfg)
-	case "battery":
-		return NewBatteryWidget(cfg)
-	case "game_of_life":
-		return NewGameOfLifeWidget(cfg)
-	case "hyperspace":
-		return NewHyperspaceWidget(cfg)
-	case "starwars_intro":
-		return NewStarWarsIntroWidget(cfg)
-	case "telegram":
-		return NewTelegramWidget(cfg)
-	case "telegram_counter":
-		return NewTelegramCounterWidget(cfg)
-	default:
-		return nil, fmt.Errorf("unknown widget type: %s (valid: %s)", cfg.Type, config.GetValidWidgetTypesList())
+	factory, ok := registry[cfg.Type]
+	if !ok {
+		return nil, fmt.Errorf("unknown widget type: %s (valid: %s)", cfg.Type, RegisteredTypesList())
 	}
+
+	return factory(cfg)
 }
 
 // CreateWidgets creates all enabled widgets from configuration

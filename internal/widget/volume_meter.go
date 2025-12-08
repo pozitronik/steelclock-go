@@ -14,6 +14,12 @@ import (
 	"golang.org/x/image/font"
 )
 
+func init() {
+	Register("volume_meter", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewVolumeMeterWidget(cfg)
+	})
+}
+
 // MeterData holds current meter readings
 type MeterData struct {
 	Peak         float64   // Overall peak value (0.0-1.0)

@@ -21,6 +21,12 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
+func init() {
+	Register("audio_visualizer", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewAudioVisualizerWidget(cfg)
+	})
+}
+
 // frequencyCompensationCurve defines frequency-dependent gain to balance spectrum display
 // Each entry: max frequency (Hz) and gain multiplier
 var frequencyCompensationCurve = []struct {

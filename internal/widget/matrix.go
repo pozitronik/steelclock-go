@@ -13,6 +13,12 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
+func init() {
+	Register("matrix", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewMatrixWidget(cfg)
+	})
+}
+
 // Spawn delay constants for matrix column respawn timing
 const (
 	// minSpawnDelay is the minimum frames before a column respawns

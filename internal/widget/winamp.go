@@ -15,6 +15,12 @@ import (
 	"golang.org/x/image/font"
 )
 
+func init() {
+	Register("winamp", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewWinampWidget(cfg)
+	})
+}
+
 // WinampWidget displays information from Winamp media player
 type WinampWidget struct {
 	*BaseWidget

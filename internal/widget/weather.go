@@ -22,6 +22,12 @@ import (
 	"golang.org/x/image/font"
 )
 
+func init() {
+	Register("weather", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewWeatherWidget(cfg)
+	})
+}
+
 // Weather condition codes for icon mapping
 const (
 	WeatherClear        = "clear"

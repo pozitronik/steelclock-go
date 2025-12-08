@@ -13,6 +13,12 @@ import (
 	"golang.org/x/image/font"
 )
 
+func init() {
+	Register("disk", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewDiskWidget(cfg)
+	})
+}
+
 // DiskWidget displays disk I/O
 type DiskWidget struct {
 	*BaseWidget

@@ -13,6 +13,12 @@ import (
 	"golang.org/x/image/font"
 )
 
+func init() {
+	Register("network", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewNetworkWidget(cfg)
+	})
+}
+
 // NetworkWidget displays network I/O
 type NetworkWidget struct {
 	*BaseWidget

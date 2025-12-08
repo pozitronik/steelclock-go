@@ -14,6 +14,12 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
+func init() {
+	Register("starwars_intro", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewStarWarsIntroWidget(cfg)
+	})
+}
+
 // Animation phases
 const (
 	PhasePreIntroFadeIn = iota

@@ -15,6 +15,12 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
+func init() {
+	Register("keyboard", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewKeyboardWidget(cfg)
+	})
+}
+
 // KeyboardWidget displays lock key status
 type KeyboardWidget struct {
 	*BaseWidget

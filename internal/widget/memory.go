@@ -12,6 +12,12 @@ import (
 	"golang.org/x/image/font"
 )
 
+func init() {
+	Register("memory", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewMemoryWidget(cfg)
+	})
+}
+
 // MemoryWidget displays RAM usage
 type MemoryWidget struct {
 	*BaseWidget

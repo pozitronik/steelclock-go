@@ -13,6 +13,12 @@ import (
 	"golang.org/x/image/font"
 )
 
+func init() {
+	Register("keyboard_layout", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewKeyboardLayoutWidget(cfg)
+	})
+}
+
 var (
 	getKeyboardLayout        = user32.NewProc("GetKeyboardLayout")
 	getForegroundWindow      = user32.NewProc("GetForegroundWindow")

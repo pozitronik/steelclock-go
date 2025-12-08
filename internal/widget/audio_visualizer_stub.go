@@ -9,6 +9,12 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
+func init() {
+	Register("audio_visualizer", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewAudioVisualizerWidget(cfg)
+	})
+}
+
 // AudioCaptureWCA stub for unsupported platforms
 type AudioCaptureWCA struct{}
 

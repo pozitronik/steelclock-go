@@ -14,6 +14,12 @@ import (
 	"golang.org/x/image/font"
 )
 
+func init() {
+	Register("telegram", func(cfg config.WidgetConfig) (Widget, error) {
+		return NewTelegramWidget(cfg)
+	})
+}
+
 // Error display constants
 const (
 	// maxErrorLineLength is the maximum characters per line when displaying error messages
