@@ -1,7 +1,6 @@
 package compositor
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -53,8 +52,7 @@ type Compositor struct {
 	bitmapBuffers map[string][]byte
 
 	// Frame deduplication - skip sending unchanged frames
-	dedupEnabled bool
-	lastFrames   map[string][]byte // key: "image-data-WxH", value: last sent bitmap
+	deduplicator *FrameDeduplicator
 
 	// Backend failure handling
 	OnBackendFailure     func()     // Callback when backend fails (called once per failure)
@@ -85,6 +83,7 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 
 	// Frame deduplication: enabled by default, can be disabled via config
 	dedupEnabled := cfg.FrameDedupEnabled == nil || *cfg.FrameDedupEnabled
+	deduplicator := NewFrameDeduplicator(dedupEnabled)
 
 	comp := &Compositor{
 		client:          client,
@@ -98,8 +97,7 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 		frameBuffer:     make([][]byte, 0, cfg.EventBatchSize),
 		resolutions:     resolutions,
 		bitmapBuffers:   bitmapBuffers,
-		dedupEnabled:    dedupEnabled,
-		lastFrames:      make(map[string][]byte),
+		deduplicator:    deduplicator,
 	}
 
 	log.Printf("Rendering for %d resolution(s):", len(resolutions))
@@ -107,7 +105,7 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 		log.Printf("  - %dx%d", res.Width, res.Height)
 	}
 
-	if comp.dedupEnabled {
+	if comp.deduplicator.IsEnabled() {
 		log.Println("Frame deduplication enabled")
 	}
 
@@ -254,23 +252,13 @@ func (c *Compositor) renderFrame() error {
 
 	// Frame deduplication: skip send if all resolutions are unchanged
 	// Note: dedup is disabled when batching is enabled (batching buffers frames intentionally)
-	shouldUpdateLastFrames := false
-	if c.dedupEnabled && !c.batchingEnabled {
-		frameChanged := false
-		for key, data := range resolutionData {
-			if !bytes.Equal(c.lastFrames[key], data) {
-				frameChanged = true
-				break
-			}
-		}
-
-		if !frameChanged {
-			// All frames unchanged, skip send
-			return nil
-		}
-
-		// Mark that we need to update lastFrames after successful send
-		shouldUpdateLastFrames = true
+	shouldUpdateDedup := false
+	if !c.batchingEnabled && !c.deduplicator.HasChanged(resolutionData) {
+		// All frames unchanged, skip send
+		return nil
+	} else if !c.batchingEnabled {
+		// Mark that we need to update deduplicator after successful send
+		shouldUpdateDedup = true
 	}
 
 	// If batching is enabled, buffer the frame (only main resolution for now)
@@ -293,14 +281,9 @@ func (c *Compositor) renderFrame() error {
 		return fmt.Errorf("send failed: %w", err)
 	}
 
-	// Update lastFrames only after successful send
-	if shouldUpdateLastFrames {
-		for key, data := range resolutionData {
-			if c.lastFrames[key] == nil {
-				c.lastFrames[key] = make([]byte, len(data))
-			}
-			copy(c.lastFrames[key], data)
-		}
+	// Update deduplicator only after successful send
+	if shouldUpdateDedup {
+		c.deduplicator.Update(resolutionData)
 	}
 
 	return nil

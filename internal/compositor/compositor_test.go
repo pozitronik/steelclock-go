@@ -933,7 +933,7 @@ func TestCompositor_FrameDeduplicationDefault(t *testing.T) {
 	comp := NewCompositor(client, layoutMgr, widgets, cfg)
 
 	// Verify dedup is enabled by default
-	if !comp.dedupEnabled {
+	if !comp.deduplicator.IsEnabled() {
 		t.Error("Frame deduplication should be enabled by default")
 	}
 
