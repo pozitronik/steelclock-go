@@ -32,8 +32,8 @@ func TestNewApp(t *testing.T) {
 				t.Fatal("NewApp returned nil")
 			}
 
-			if app.configPath != tt.configPath {
-				t.Errorf("configPath = %q, want %q", app.configPath, tt.configPath)
+			if app.configMgr.GetConfigPath() != tt.configPath {
+				t.Errorf("configMgr.GetConfigPath() = %q, want %q", app.configMgr.GetConfigPath(), tt.configPath)
 			}
 
 			// Verify lifecycle manager is initialized

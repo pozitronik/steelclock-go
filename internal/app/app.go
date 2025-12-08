@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -42,25 +40,24 @@ func (e *NoWidgetsError) Error() string {
 // App encapsulates all application state and lifecycle management.
 // It acts as the main orchestrator, delegating to specialized managers.
 type App struct {
-	lifecycle  *LifecycleManager
-	trayMgr    *tray.Manager
-	configPath string
-	profileMgr *config.ProfileManager
+	lifecycle *LifecycleManager
+	configMgr *ConfigManager
+	trayMgr   *tray.Manager
 }
 
 // NewApp creates a new application instance (legacy single-config mode)
 func NewApp(configPath string) *App {
 	return &App{
-		lifecycle:  NewLifecycleManager(),
-		configPath: configPath,
+		lifecycle: NewLifecycleManager(),
+		configMgr: NewConfigManager(configPath),
 	}
 }
 
 // NewAppWithProfiles creates a new application instance with profile support
 func NewAppWithProfiles(profileMgr *config.ProfileManager) *App {
 	return &App{
-		lifecycle:  NewLifecycleManager(),
-		profileMgr: profileMgr,
+		lifecycle: NewLifecycleManager(),
+		configMgr: NewConfigManagerWithProfiles(profileMgr),
 	}
 }
 
@@ -69,17 +66,14 @@ func (a *App) Run() {
 	log.Println("========================================")
 	log.Println("SteelClock starting...")
 
+	// Log configuration info
+	a.configMgr.LogStartupInfo()
+
 	// Create tray manager based on mode
-	if a.profileMgr != nil {
-		activeProfile := a.profileMgr.GetActiveProfile()
-		if activeProfile != nil {
-			log.Printf("Active profile: %s (%s)", activeProfile.Name, activeProfile.Path)
-		}
-		log.Printf("Available profiles: %d", len(a.profileMgr.GetProfiles()))
-		a.trayMgr = tray.NewManagerWithProfiles(a.profileMgr, a.ReloadConfig, a.SwitchProfile, a.Stop)
+	if a.configMgr.HasProfiles() {
+		a.trayMgr = tray.NewManagerWithProfiles(a.configMgr.GetProfileManager(), a.ReloadConfig, a.SwitchProfile, a.Stop)
 	} else {
-		log.Printf("Config: %s", a.configPath)
-		a.trayMgr = tray.NewManager(a.configPath, a.ReloadConfig, a.Stop)
+		a.trayMgr = tray.NewManager(a.configMgr.GetConfigPath(), a.ReloadConfig, a.Stop)
 	}
 
 	log.Println("========================================")
@@ -103,7 +97,7 @@ func (a *App) Run() {
 
 // Start initializes and starts all components
 func (a *App) Start() error {
-	cfg, err := a.loadConfig()
+	cfg, err := a.configMgr.Load()
 	if err != nil {
 		log.Printf("ERROR: Failed to load config: %v", err)
 		return a.handleStartupError(err, nil)
@@ -126,26 +120,22 @@ func (a *App) ReloadConfig() error {
 	log.Println("========================================")
 	log.Println("Reloading configuration...")
 
-	configPath := a.getConfigPath()
-	if configPath == "" {
-		return fmt.Errorf("no active profile")
+	newCfg, fileInfo, err := a.configMgr.Reload()
+	if fileInfo != nil {
+		log.Printf("Config file: %s", fileInfo.Path)
+		log.Printf("Absolute path: %s", fileInfo.AbsolutePath)
+		log.Printf("Config file last modified: %s", fileInfo.ModTime)
 	}
 
-	log.Printf("Config file: %s", configPath)
-
-	absPath, _ := filepath.Abs(configPath)
-	log.Printf("Absolute path: %s", absPath)
-
-	fileInfo, err := os.Stat(configPath)
 	if err != nil {
-		log.Printf("ERROR: Cannot access config file: %v", err)
-		log.Println("Keeping current configuration running")
-		return fmt.Errorf("cannot access config file: %w", err)
-	}
-	log.Printf("Config file last modified: %s", fileInfo.ModTime().Format("2006-01-02 15:04:05"))
+		if fileInfo == nil {
+			// Could not access file at all
+			log.Printf("ERROR: Cannot access config file: %v", err)
+			log.Println("Keeping current configuration running")
+			return err
+		}
 
-	newCfg, err := config.Load(configPath)
-	if err != nil {
+		// File accessible but config invalid
 		log.Printf("ERROR: Config validation failed: %v", err)
 		log.Println("Stopping current instance and showing error...")
 
@@ -179,23 +169,17 @@ func (a *App) ReloadConfig() error {
 
 // SwitchProfile switches to a different configuration profile
 func (a *App) SwitchProfile(path string) error {
-	if a.profileMgr == nil {
+	if !a.configMgr.HasProfiles() {
 		return fmt.Errorf("profile manager not available")
 	}
 
 	log.Println("========================================")
 	log.Printf("Switching to profile: %s", path)
 
-	// Update active profile in profile manager
-	if err := a.profileMgr.SetActiveProfile(path); err != nil {
-		log.Printf("ERROR: Failed to set active profile: %v", err)
-		return err
-	}
-
-	// Load new config
-	newCfg, err := a.profileMgr.GetActiveConfig()
+	// Load new config via ConfigManager
+	newCfg, err := a.configMgr.SwitchProfile(path)
 	if err != nil {
-		log.Printf("ERROR: Failed to load profile config: %v", err)
+		log.Printf("ERROR: Failed to switch profile: %v", err)
 		log.Println("Stopping current instance and showing error...")
 		a.lifecycle.Stop()
 		return a.handleStartupError(err, nil)
@@ -204,10 +188,9 @@ func (a *App) SwitchProfile(path string) error {
 	log.Printf("Loaded config: %s (%s) with %d widgets", newCfg.GameName, newCfg.GameDisplayName, len(newCfg.Widgets))
 
 	// Get profile name for transition banner
-	activeProfile := a.profileMgr.GetActiveProfile()
-	profileName := "Unknown"
-	if activeProfile != nil {
-		profileName = activeProfile.Name
+	profileName := a.configMgr.GetActiveProfileName()
+	if profileName == "" {
+		profileName = "Unknown"
 	}
 
 	// Stop compositor first to free the display
@@ -231,27 +214,6 @@ func (a *App) SwitchProfile(path string) error {
 	log.Printf("Profile switched successfully to: %s", profileName)
 	log.Println("========================================")
 	return nil
-}
-
-// loadConfig loads configuration from the appropriate source
-func (a *App) loadConfig() (*config.Config, error) {
-	if a.profileMgr != nil {
-		return a.profileMgr.GetActiveConfig()
-	}
-	return config.Load(a.configPath)
-}
-
-// getConfigPath returns the path to the current config file
-func (a *App) getConfigPath() string {
-	if a.profileMgr != nil {
-		activeProfile := a.profileMgr.GetActiveProfile()
-		if activeProfile != nil {
-			log.Printf("Active profile: %s", activeProfile.Name)
-			return activeProfile.Path
-		}
-		return ""
-	}
-	return a.configPath
 }
 
 // handleStartupFailure logs and notifies user about startup errors
