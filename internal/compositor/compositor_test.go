@@ -149,8 +149,8 @@ func TestNewCompositor(t *testing.T) {
 		t.Errorf("eventName = %s, want STEELCLOCK_DISPLAY", comp.eventName)
 	}
 
-	if len(comp.widgets) != 1 {
-		t.Errorf("len(widgets) = %d, want 1", len(comp.widgets))
+	if comp.scheduler.WidgetCount() != 1 {
+		t.Errorf("scheduler.WidgetCount() = %d, want 1", comp.scheduler.WidgetCount())
 	}
 }
 

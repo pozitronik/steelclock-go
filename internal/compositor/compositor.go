@@ -34,19 +34,23 @@ type Resolution struct {
 
 // Compositor manages the rendering loop and API updates
 type Compositor struct {
-	client          gamesense.API
-	layoutManager   *layout.Manager
-	refreshRate     time.Duration
-	eventName       string
-	widgets         []widget.Widget
-	stopChan        chan struct{}
-	wg              sync.WaitGroup
+	client        gamesense.API
+	layoutManager *layout.Manager
+	refreshRate   time.Duration
+	eventName     string
+	scheduler     *WidgetScheduler
+	stopChan      chan struct{}
+	wg            sync.WaitGroup
+
+	// Batching
 	batchingEnabled bool
 	batchSize       int
 	batchSupported  bool
 	frameBuffer     [][]byte
 	bufferMu        sync.Mutex
-	resolutions     []Resolution // All resolutions to render (main + supported)
+
+	// Multi-resolution support
+	resolutions []Resolution // All resolutions to render (main + supported)
 
 	// Pre-allocated buffers for ImageToBytes to reduce allocations in render loop
 	bitmapBuffers map[string][]byte
@@ -90,7 +94,7 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 		layoutManager:   layoutMgr,
 		refreshRate:     refreshRate,
 		eventName:       DefaultEventName,
-		widgets:         widgets,
+		scheduler:       NewWidgetScheduler(widgets),
 		stopChan:        make(chan struct{}),
 		batchingEnabled: cfg.EventBatchingEnabled,
 		batchSize:       cfg.EventBatchSize,
@@ -127,11 +131,8 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 func (c *Compositor) Start() error {
 	log.Println("Compositor starting...")
 
-	// Start widget update threads
-	for _, w := range c.widgets {
-		c.wg.Add(1)
-		go c.widgetUpdateLoop(w)
-	}
+	// Start widget update scheduler
+	c.scheduler.Start()
 
 	// Start rendering loop
 	c.wg.Add(1)
@@ -148,6 +149,11 @@ func (c *Compositor) Start() error {
 // Stop stops the compositor
 func (c *Compositor) Stop() {
 	log.Println("Compositor stopping...")
+
+	// Stop widget scheduler
+	c.scheduler.Stop()
+
+	// Stop render and heartbeat loops
 	close(c.stopChan)
 	c.wg.Wait()
 
@@ -182,31 +188,6 @@ func logPanic(context string) {
 			log.Printf("Failed to write to panic.log: %v", err)
 		}
 		log.Print(panicMsg)
-	}
-}
-
-// widgetUpdateLoop periodically updates a widget
-func (c *Compositor) widgetUpdateLoop(w widget.Widget) {
-	defer c.wg.Done()
-	defer logPanic(fmt.Sprintf("widgetUpdateLoop for %s", w.Name()))
-
-	ticker := time.NewTicker(w.GetUpdateInterval())
-	defer ticker.Stop()
-
-	// Initial update
-	if err := w.Update(); err != nil {
-		log.Printf("Widget %s update error: %v", w.Name(), err)
-	}
-
-	for {
-		select {
-		case <-c.stopChan:
-			return
-		case <-ticker.C:
-			if err := w.Update(); err != nil {
-				log.Printf("Widget %s update error: %v", w.Name(), err)
-			}
-		}
 	}
 }
 
