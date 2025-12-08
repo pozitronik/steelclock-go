@@ -383,27 +383,7 @@ func TestGetWeatherDescription(t *testing.T) {
 }
 
 func TestWeatherWidget_GetIconName(t *testing.T) {
-	cfg := config.WidgetConfig{
-		Type:    "weather",
-		ID:      "test_weather",
-		Enabled: config.BoolPtr(true),
-		Position: config.PositionConfig{
-			X: 0, Y: 0, W: 128, H: 40,
-		},
-		Weather: &config.WeatherConfig{
-			Provider: "open-meteo",
-			Location: &config.WeatherLocationConfig{
-				Lat: 51.5074,
-				Lon: -0.1278,
-			},
-		},
-	}
-
-	widget, err := NewWeatherWidget(cfg)
-	if err != nil {
-		t.Fatalf("NewWeatherWidget() error = %v", err)
-	}
-
+	// getWeatherIconName is now a standalone function
 	tests := []struct {
 		condition string
 		expected  string
@@ -421,7 +401,7 @@ func TestWeatherWidget_GetIconName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.condition, func(t *testing.T) {
-			result := widget.getIconName(tt.condition)
+			result := getWeatherIconName(tt.condition)
 			if result != tt.expected {
 				t.Errorf("getIconName(%s) = %s, want %s", tt.condition, result, tt.expected)
 			}
@@ -811,27 +791,6 @@ func TestWeatherWidget_MultilineFormat(t *testing.T) {
 }
 
 func TestParseFormat(t *testing.T) {
-	cfg := config.WidgetConfig{
-		Type:    "weather",
-		ID:      "test_weather",
-		Enabled: config.BoolPtr(true),
-		Position: config.PositionConfig{
-			X: 0, Y: 0, W: 128, H: 40,
-		},
-		Weather: &config.WeatherConfig{
-			Provider: "open-meteo",
-			Location: &config.WeatherLocationConfig{
-				Lat: 51.5074,
-				Lon: -0.1278,
-			},
-		},
-	}
-
-	widget, err := NewWeatherWidget(cfg)
-	if err != nil {
-		t.Fatalf("NewWeatherWidget() error = %v", err)
-	}
-
 	tests := []struct {
 		format       string
 		expectTokens int
@@ -847,9 +806,9 @@ func TestParseFormat(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.format, func(t *testing.T) {
-			tokens := widget.parseFormat(tt.format)
+			tokens := parseWeatherFormat(tt.format)
 			if len(tokens) != tt.expectTokens {
-				t.Errorf("parseFormat(%q) returned %d tokens, want %d", tt.format, len(tokens), tt.expectTokens)
+				t.Errorf("parseWeatherFormat(%q) returned %d tokens, want %d", tt.format, len(tokens), tt.expectTokens)
 			}
 		})
 	}
