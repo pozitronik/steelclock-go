@@ -299,6 +299,121 @@ func TestTransitionManager_Apply(t *testing.T) {
 	}
 }
 
+func TestTransitionManager_IsActiveLive(t *testing.T) {
+	tm := NewTransitionManager(10, 10)
+	oldFrame := createTestFrame(10, 10, 100)
+
+	// Before starting, should return false
+	if tm.IsActiveLive() {
+		t.Error("IsActiveLive() = true before Start, want false")
+	}
+
+	// After starting with long duration, should return true
+	tm.Start(TransitionDissolveFade, 10.0, oldFrame) // 10 second duration
+	if !tm.IsActiveLive() {
+		t.Error("IsActiveLive() = false after Start with long duration, want true")
+	}
+
+	// After duration elapsed, should return false
+	tm.Reset()
+	tm.Start(TransitionDissolveFade, 0.01, oldFrame) // 10ms duration
+	time.Sleep(50 * time.Millisecond)                // Wait for it to expire
+	if tm.IsActiveLive() {
+		t.Error("IsActiveLive() = true after duration elapsed, want false")
+	}
+
+	// When not active, should return false
+	tm.Cancel()
+	if tm.IsActiveLive() {
+		t.Error("IsActiveLive() = true after Cancel, want false")
+	}
+}
+
+func TestTransitionManager_LiveProgress(t *testing.T) {
+	tm := NewTransitionManager(10, 10)
+	oldFrame := createTestFrame(10, 10, 100)
+
+	// Before starting, should return 0.0
+	if tm.LiveProgress() != 0.0 {
+		t.Errorf("LiveProgress() = %f before Start, want 0.0", tm.LiveProgress())
+	}
+
+	// Just after starting, should be close to 0
+	tm.Start(TransitionDissolveFade, 1.0, oldFrame)
+	progress := tm.LiveProgress()
+	if progress < 0.0 || progress > 0.1 {
+		t.Errorf("LiveProgress() = %f just after Start, expected near 0.0", progress)
+	}
+
+	// After some time, should have increased
+	time.Sleep(100 * time.Millisecond)
+	progress = tm.LiveProgress()
+	if progress < 0.05 || progress > 0.3 {
+		t.Errorf("LiveProgress() = %f after 100ms with 1s duration, expected ~0.1", progress)
+	}
+
+	// After full duration, should be capped at 1.0
+	tm.Reset()
+	tm.Start(TransitionDissolveFade, 0.01, oldFrame) // 10ms duration
+	time.Sleep(50 * time.Millisecond)
+	progress = tm.LiveProgress()
+	if progress != 1.0 {
+		t.Errorf("LiveProgress() = %f after duration exceeded, want 1.0", progress)
+	}
+
+	// When not active, should return 0.0
+	tm.Cancel()
+	if tm.LiveProgress() != 0.0 {
+		t.Errorf("LiveProgress() = %f after Cancel, want 0.0", tm.LiveProgress())
+	}
+}
+
+func TestTransitionManager_ApplyLive(t *testing.T) {
+	tm := NewTransitionManager(10, 10)
+	oldFrame := createTestFrame(10, 10, 0)
+	newFrame := createTestFrame(10, 10, 200)
+	dst := createTestFrame(10, 10, 128)
+
+	// Without starting, should copy new frame
+	tm.ApplyLive(dst, newFrame)
+	if dst.GrayAt(5, 5).Y != 200 {
+		t.Errorf("ApplyLive without oldFrame: pixel = %d, want 200", dst.GrayAt(5, 5).Y)
+	}
+
+	// Start a transition
+	tm.Start(TransitionDissolveFade, 1.0, oldFrame)
+
+	// Just after starting, should be mostly old frame
+	tm.ApplyLive(dst, newFrame)
+	pixel := dst.GrayAt(5, 5).Y
+	if pixel > 50 {
+		t.Errorf("ApplyLive just after start: pixel = %d, expected closer to 0", pixel)
+	}
+
+	// Wait a bit and apply again
+	time.Sleep(200 * time.Millisecond)
+	tm.ApplyLive(dst, newFrame)
+	pixel = dst.GrayAt(5, 5).Y
+	// Should be somewhere between old and new (0 to 200)
+	if pixel < 10 || pixel > 80 {
+		t.Errorf("ApplyLive after 200ms: pixel = %d, expected blend ~20-60", pixel)
+	}
+}
+
+func TestTransitionManager_Apply_NoOldFrame(t *testing.T) {
+	tm := NewTransitionManager(10, 10)
+	newFrame := createTestFrame(10, 10, 200)
+	dst := createTestFrame(10, 10, 0)
+
+	// Apply without starting a transition (no oldFrame)
+	tm.Apply(dst, newFrame)
+
+	// Should just copy newFrame to dst
+	if dst.GrayAt(5, 5).Y != 200 {
+		t.Errorf("Apply without oldFrame: pixel = %d, want 200", dst.GrayAt(5, 5).Y)
+	}
+}
+
 // createTestFrame creates a grayscale image filled with the given value
 func createTestFrame(w, h int, value uint8) *image.Gray {
 	img := image.NewGray(image.Rect(0, 0, w, h))

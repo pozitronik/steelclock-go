@@ -366,6 +366,221 @@ func TestClockWidgetRender_ClockFaceAlignment(t *testing.T) {
 	}
 }
 
+func TestClockWidget_BinaryMode(t *testing.T) {
+	tests := []struct {
+		name         string
+		binaryConfig *config.BinaryClockConfig
+	}{
+		{
+			name:         "default binary config",
+			binaryConfig: nil,
+		},
+		{
+			name: "custom binary format bcd",
+			binaryConfig: &config.BinaryClockConfig{
+				Format: "bcd",
+				Style:  "dots",
+				Layout: "horizontal",
+			},
+		},
+		{
+			name: "custom binary format true",
+			binaryConfig: &config.BinaryClockConfig{
+				Format:     "true",
+				Style:      "bars",
+				Layout:     "vertical",
+				ShowLabels: true,
+				ShowHint:   true,
+				DotSize:    4,
+				DotSpacing: 2,
+				DotStyle:   "square",
+				OnColor:    intPtr(255),
+				OffColor:   intPtr(50),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := config.WidgetConfig{
+				Type:    "clock",
+				ID:      "test_binary_clock",
+				Enabled: config.BoolPtr(true),
+				Position: config.PositionConfig{
+					X: 0, Y: 0, W: 128, H: 40,
+				},
+				Style: &config.StyleConfig{
+					Background: 0,
+					Border:     -1,
+				},
+				Mode:   "binary",
+				Binary: tt.binaryConfig,
+			}
+
+			widget, err := NewClockWidget(cfg)
+			if err != nil {
+				t.Fatalf("NewClockWidget() error = %v", err)
+			}
+
+			if widget.displayMode != "binary" {
+				t.Errorf("displayMode = %s, want binary", widget.displayMode)
+			}
+
+			// Render should succeed
+			img, err := widget.Render()
+			if err != nil {
+				t.Fatalf("Render() error = %v", err)
+			}
+
+			if img == nil {
+				t.Fatal("Render() returned nil image")
+			}
+
+			bounds := img.Bounds()
+			if bounds.Dx() != 128 || bounds.Dy() != 40 {
+				t.Errorf("image size = %dx%d, want 128x40", bounds.Dx(), bounds.Dy())
+			}
+		})
+	}
+}
+
+func TestClockWidget_SegmentMode(t *testing.T) {
+	tests := []struct {
+		name          string
+		segmentConfig *config.SegmentClockConfig
+	}{
+		{
+			name:          "default segment config",
+			segmentConfig: nil,
+		},
+		{
+			name: "custom segment format",
+			segmentConfig: &config.SegmentClockConfig{
+				Format: "15:04",
+			},
+		},
+		{
+			name: "full custom segment config",
+			segmentConfig: &config.SegmentClockConfig{
+				Format:           "15:04:05",
+				DigitHeight:      20,
+				SegmentThickness: 3,
+				SegmentStyle:     "rounded",
+				DigitSpacing:     2,
+				ColonStyle:       "dots",
+				ColonBlink:       config.BoolPtr(true),
+				OnColor:          intPtr(255),
+				OffColor:         intPtr(30),
+				Flip: &config.FlipEffectConfig{
+					Style: "slide",
+					Speed: 100,
+				},
+			},
+		},
+		{
+			name: "segment with no flip config",
+			segmentConfig: &config.SegmentClockConfig{
+				Format:       "15:04",
+				DigitHeight:  16,
+				DigitSpacing: 1,
+				ColonBlink:   config.BoolPtr(false),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := config.WidgetConfig{
+				Type:    "clock",
+				ID:      "test_segment_clock",
+				Enabled: config.BoolPtr(true),
+				Position: config.PositionConfig{
+					X: 0, Y: 0, W: 128, H: 40,
+				},
+				Style: &config.StyleConfig{
+					Background: 0,
+					Border:     -1,
+				},
+				Mode:    "segment",
+				Segment: tt.segmentConfig,
+			}
+
+			widget, err := NewClockWidget(cfg)
+			if err != nil {
+				t.Fatalf("NewClockWidget() error = %v", err)
+			}
+
+			if widget.displayMode != "segment" {
+				t.Errorf("displayMode = %s, want segment", widget.displayMode)
+			}
+
+			// Render should succeed
+			img, err := widget.Render()
+			if err != nil {
+				t.Fatalf("Render() error = %v", err)
+			}
+
+			if img == nil {
+				t.Fatal("Render() returned nil image")
+			}
+
+			bounds := img.Bounds()
+			if bounds.Dx() != 128 || bounds.Dy() != 40 {
+				t.Errorf("image size = %dx%d, want 128x40", bounds.Dx(), bounds.Dy())
+			}
+		})
+	}
+}
+
+func TestClockWidget_NeedsUpdate(t *testing.T) {
+	// Text mode clock should return false for NeedsUpdate
+	cfg := config.WidgetConfig{
+		Type:    "clock",
+		ID:      "test_clock_needs_update",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Mode: "text",
+		Text: &config.TextConfig{
+			Format: "15:04:05",
+			Size:   12,
+		},
+	}
+
+	widget, err := NewClockWidget(cfg)
+	if err != nil {
+		t.Fatalf("NewClockWidget() error = %v", err)
+	}
+
+	// NeedsUpdate should return a boolean without error
+	needsUpdate := widget.NeedsUpdate()
+	// Text renderer typically returns false
+	t.Logf("Text mode NeedsUpdate() = %v", needsUpdate)
+
+	// Test with segment mode (has animations)
+	segmentCfg := config.WidgetConfig{
+		Type:    "clock",
+		ID:      "test_segment_needs_update",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Mode: "segment",
+		Segment: &config.SegmentClockConfig{
+			ColonBlink: config.BoolPtr(true),
+		},
+	}
+
+	segmentWidget, err := NewClockWidget(segmentCfg)
+	if err != nil {
+		t.Fatalf("NewClockWidget(segment) error = %v", err)
+	}
+
+	segmentNeedsUpdate := segmentWidget.NeedsUpdate()
+	t.Logf("Segment mode NeedsUpdate() = %v", segmentNeedsUpdate)
+}
+
 // TestClockWidget_ConcurrentAccess tests that concurrent calls to Update() and Render()
 // do not cause data races on the currentTime string field.
 // This test should be run with -race flag to detect concurrent access violations.

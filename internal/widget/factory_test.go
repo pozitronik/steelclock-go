@@ -507,3 +507,161 @@ func TestCreateWidget_ErrorMessage(t *testing.T) {
 		}
 	})
 }
+
+// TestRegister_Reregister tests that re-registering a widget type logs a warning
+func TestRegister_Reregister(t *testing.T) {
+	// Create a test factory
+	testFactory := func(cfg config.WidgetConfig) (Widget, error) {
+		return nil, nil
+	}
+
+	// Register a unique test type
+	uniqueType := "test_reregister_type_12345"
+	Register(uniqueType, testFactory)
+
+	// Re-register the same type - should log a warning (we just verify it doesn't panic)
+	Register(uniqueType, testFactory)
+
+	// Verify it's still in the registry
+	types := RegisteredTypes()
+	found := false
+	for _, t := range types {
+		if t == uniqueType {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Re-registered type should still be in registry")
+	}
+}
+
+// TestAbbreviateError tests error message abbreviation for small screens
+func TestAbbreviateError(t *testing.T) {
+	tests := []struct {
+		name     string
+		errMsg   string
+		expected string
+	}{
+		{
+			name:     "api_key pattern",
+			errMsg:   "api_key is required for this widget",
+			expected: "NO API KEY",
+		},
+		{
+			name:     "lat/lon pattern",
+			errMsg:   "lat/lon coordinates must be provided",
+			expected: "NO COORDS",
+		},
+		{
+			name:     "location pattern",
+			errMsg:   "location is required",
+			expected: "NO LOCATION",
+		},
+		{
+			name:     "unknown widget type pattern",
+			errMsg:   "unknown widget type: foobar",
+			expected: "BAD TYPE",
+		},
+		{
+			name:     "font error pattern",
+			errMsg:   "failed to load font from path",
+			expected: "FONT ERROR",
+		},
+		{
+			name:     "parse error pattern",
+			errMsg:   "failed to parse configuration",
+			expected: "PARSE ERROR",
+		},
+		{
+			name:     "timeout pattern",
+			errMsg:   "timeout waiting for response",
+			expected: "TIMEOUT",
+		},
+		{
+			name:     "connection refused pattern",
+			errMsg:   "connection refused by server",
+			expected: "NO CONNECT",
+		},
+		{
+			name:     "permission denied pattern",
+			errMsg:   "permission denied accessing file",
+			expected: "NO ACCESS",
+		},
+		{
+			name:     "long unknown error - truncated to ERROR",
+			errMsg:   "this is a very long error message that does not match any pattern",
+			expected: "ERROR",
+		},
+		{
+			name:     "short unknown error - uppercase",
+			errMsg:   "oops",
+			expected: "OOPS",
+		},
+		{
+			name:     "exactly 12 chars - uppercase",
+			errMsg:   "twelve chars",
+			expected: "TWELVE CHARS",
+		},
+		{
+			name:     "13 chars - truncated to ERROR",
+			errMsg:   "thirteen char",
+			expected: "ERROR",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := abbreviateError(tt.errMsg)
+			if result != tt.expected {
+				t.Errorf("abbreviateError(%q) = %q, want %q", tt.errMsg, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestRegisteredTypes tests the RegisteredTypes function
+func TestRegisteredTypes(t *testing.T) {
+	types := RegisteredTypes()
+
+	// Should return a sorted list
+	sorted := make([]string, len(types))
+	copy(sorted, types)
+	// Sort to verify
+	for i := 0; i < len(sorted)-1; i++ {
+		if sorted[i] > sorted[i+1] {
+			t.Error("RegisteredTypes should return sorted list")
+			break
+		}
+	}
+
+	// Should contain known types
+	knownTypes := []string{"clock", "cpu", "memory", "matrix"}
+	for _, known := range knownTypes {
+		found := false
+		for _, t := range types {
+			if t == known {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("RegisteredTypes should contain '%s'", known)
+		}
+	}
+}
+
+// TestRegisteredTypesList tests the RegisteredTypesList function
+func TestRegisteredTypesList(t *testing.T) {
+	list := RegisteredTypesList()
+
+	// Should be comma-separated
+	if !strings.Contains(list, ", ") {
+		t.Error("RegisteredTypesList should be comma-separated")
+	}
+
+	// Should contain known types
+	if !strings.Contains(list, "clock") {
+		t.Error("RegisteredTypesList should contain 'clock'")
+	}
+}

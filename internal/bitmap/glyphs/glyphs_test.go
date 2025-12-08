@@ -616,3 +616,37 @@ func TestDrawGlyph_Clipping(t *testing.T) {
 	DrawGlyph(img, glyph, 0, 10, color.Gray{Y: 255})
 	DrawGlyph(img, glyph, 8, 8, color.Gray{Y: 255}) // Partial overlap
 }
+
+func TestGetTelegramIcon(t *testing.T) {
+	tests := []struct {
+		name         string
+		size         int
+		expectedSize int // expected glyph size
+	}{
+		{"size 32+", 32, 32},
+		{"size 40", 40, 32},
+		{"size 24+", 24, 24},
+		{"size 30", 30, 24},
+		{"size 16+", 16, 16},
+		{"size 20", 20, 16},
+		{"size 12+", 12, 12},
+		{"size 14", 14, 12},
+		{"size 9+", 9, 8},
+		{"size 10", 10, 8},
+		{"size small", 8, 7}, // dot (7x7)
+		{"size tiny", 4, 7},  // dot (7x7)
+		{"size 0", 0, 7},     // dot (7x7)
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			glyphSet := GetTelegramIcon(tc.size)
+			if glyphSet == nil {
+				t.Fatal("GetTelegramIcon returned nil")
+			}
+			if glyphSet.GlyphWidth != tc.expectedSize {
+				t.Errorf("GetTelegramIcon(%d) returned glyph width %d, want %d", tc.size, glyphSet.GlyphWidth, tc.expectedSize)
+			}
+		})
+	}
+}

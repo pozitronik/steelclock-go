@@ -829,3 +829,103 @@ func TestRegisterGame_WithoutDeinitializeTimer(t *testing.T) {
 		t.Error("RegisterGame() with timer = 0 should not include deinitialize_timer_length_ms")
 	}
 }
+
+// TestFindCorePropsPath_WithPROGRAMDATA tests the PROGRAMDATA env var path
+func TestFindCorePropsPath_WithPROGRAMDATA(t *testing.T) {
+	// Create temp directory structure
+	tmpDir := t.TempDir()
+	ssDir := filepath.Join(tmpDir, "SteelSeries", "SteelSeries Engine 3")
+	if err := os.MkdirAll(ssDir, 0755); err != nil {
+		t.Fatalf("Failed to create directory: %v", err)
+	}
+
+	corePropsPath := filepath.Join(ssDir, "coreProps.json")
+	if err := os.WriteFile(corePropsPath, []byte(`{"address": "localhost:12345"}`), 0644); err != nil {
+		t.Fatalf("Failed to write coreProps.json: %v", err)
+	}
+
+	// Save and restore PROGRAMDATA
+	oldProgramData := os.Getenv("PROGRAMDATA")
+	defer func() { os.Setenv("PROGRAMDATA", oldProgramData) }()
+
+	os.Setenv("PROGRAMDATA", tmpDir)
+
+	path, err := findCorePropsPath()
+	if err != nil {
+		t.Errorf("findCorePropsPath() error = %v", err)
+	}
+	if path != corePropsPath {
+		t.Errorf("findCorePropsPath() = %s, want %s", path, corePropsPath)
+	}
+}
+
+// TestFindCorePropsPath_NoPROGRAMDATA tests when PROGRAMDATA is empty
+func TestFindCorePropsPath_NoPROGRAMDATA(t *testing.T) {
+	// Save and restore PROGRAMDATA
+	oldProgramData := os.Getenv("PROGRAMDATA")
+	defer func() { os.Setenv("PROGRAMDATA", oldProgramData) }()
+
+	// Save and restore defaultFallbackPath
+	oldFallbackPath := defaultFallbackPath
+	defer func() { defaultFallbackPath = oldFallbackPath }()
+
+	os.Setenv("PROGRAMDATA", "")
+	defaultFallbackPath = "/nonexistent/fallback/path/coreProps.json"
+
+	// Should fail since neither PROGRAMDATA nor fallback path exist
+	_, err := findCorePropsPath()
+	if err == nil {
+		t.Error("findCorePropsPath() should error when no valid path found")
+	}
+}
+
+// TestFindCorePropsPath_PROGRAMDATANotFound tests when PROGRAMDATA exists but file doesn't
+func TestFindCorePropsPath_PROGRAMDATANotFound(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Save and restore PROGRAMDATA
+	oldProgramData := os.Getenv("PROGRAMDATA")
+	defer func() { os.Setenv("PROGRAMDATA", oldProgramData) }()
+
+	// Save and restore defaultFallbackPath
+	oldFallbackPath := defaultFallbackPath
+	defer func() { defaultFallbackPath = oldFallbackPath }()
+
+	os.Setenv("PROGRAMDATA", tmpDir)
+	defaultFallbackPath = "/nonexistent/fallback/path/coreProps.json"
+
+	// Directory exists but no coreProps.json
+	_, err := findCorePropsPath()
+	if err == nil {
+		t.Error("findCorePropsPath() should error when file not found")
+	}
+}
+
+// TestSupportsMultipleEvents_RequestCreationError tests error when creating request fails
+// This is difficult to trigger naturally, but we can test with invalid URL
+func TestSupportsMultipleEvents_InvalidURL(t *testing.T) {
+	client := &Client{
+		baseURL:    "://invalid-url", // Invalid URL scheme
+		gameName:   "TEST_GAME",
+		httpClient: &http.Client{},
+	}
+
+	// Should return false on request creation error
+	if client.SupportsMultipleEvents() {
+		t.Error("SupportsMultipleEvents() should return false on invalid URL")
+	}
+}
+
+// TestPost_InvalidURL tests post with invalid URL
+func TestPost_InvalidURL(t *testing.T) {
+	client := &Client{
+		baseURL:    "://invalid-url",
+		gameName:   "TEST_GAME",
+		httpClient: &http.Client{},
+	}
+
+	err := client.RegisterGame("Developer", 0)
+	if err == nil {
+		t.Error("RegisterGame() with invalid URL should return error")
+	}
+}

@@ -1007,3 +1007,253 @@ func TestCalculateTextPosition_InvalidAlignment(t *testing.T) {
 		t.Errorf("Invalid alignment returned negative position: x=%d, y=%d", x, y)
 	}
 }
+
+func TestSmartDrawAlignedText_InternalFont(t *testing.T) {
+	img := NewGrayscaleImage(50, 20, 0)
+	SmartDrawAlignedText(img, "Hi", nil, FontNamePixel5x7, "center", "center", 2)
+
+	// Check that some pixels are lit
+	hasLitPixel := false
+	for y := 0; y < 20; y++ {
+		for x := 0; x < 50; x++ {
+			if img.GrayAt(x, y).Y > 0 {
+				hasLitPixel = true
+				break
+			}
+		}
+		if hasLitPixel {
+			break
+		}
+	}
+
+	if !hasLitPixel {
+		t.Error("SmartDrawAlignedText with internal font produced no visible pixels")
+	}
+}
+
+func TestSmartDrawAlignedText_TTFFont(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	img := NewGrayscaleImage(50, 20, 0)
+	SmartDrawAlignedText(img, "Hi", face, "", "center", "center", 2)
+
+	// Check that some pixels are lit
+	hasLitPixel := false
+	for y := 0; y < 20; y++ {
+		for x := 0; x < 50; x++ {
+			if img.GrayAt(x, y).Y > 0 {
+				hasLitPixel = true
+				break
+			}
+		}
+		if hasLitPixel {
+			break
+		}
+	}
+
+	if !hasLitPixel {
+		t.Error("SmartDrawAlignedText with TTF font produced no visible pixels")
+	}
+}
+
+func TestSmartDrawAlignedText_NoFont(t *testing.T) {
+	img := NewGrayscaleImage(50, 20, 0)
+	// Should not panic with nil font and non-internal font name
+	SmartDrawAlignedText(img, "Hi", nil, "unknown_font", "center", "center", 2)
+}
+
+func TestSmartDrawTextInRect_InternalFont(t *testing.T) {
+	img := NewGrayscaleImage(100, 50, 0)
+	SmartDrawTextInRect(img, "Test", nil, FontNamePixel5x7, 10, 10, 80, 30, "center", "center", 2)
+
+	// Check that some pixels are lit within the rectangle
+	hasLitPixel := false
+	for y := 10; y < 40; y++ {
+		for x := 10; x < 90; x++ {
+			if img.GrayAt(x, y).Y > 0 {
+				hasLitPixel = true
+				break
+			}
+		}
+		if hasLitPixel {
+			break
+		}
+	}
+
+	if !hasLitPixel {
+		t.Error("SmartDrawTextInRect with internal font produced no visible pixels")
+	}
+}
+
+func TestSmartDrawTextInRect_TTFFont(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	img := NewGrayscaleImage(100, 50, 0)
+	SmartDrawTextInRect(img, "Test", face, "", 10, 10, 80, 30, "center", "center", 2)
+
+	// Check that some pixels are lit
+	hasLitPixel := false
+	for y := 0; y < 50; y++ {
+		for x := 0; x < 100; x++ {
+			if img.GrayAt(x, y).Y > 0 {
+				hasLitPixel = true
+				break
+			}
+		}
+		if hasLitPixel {
+			break
+		}
+	}
+
+	if !hasLitPixel {
+		t.Error("SmartDrawTextInRect with TTF font produced no visible pixels")
+	}
+}
+
+func TestSmartDrawTextInRect_NoFont(t *testing.T) {
+	img := NewGrayscaleImage(100, 50, 0)
+	// Should not panic with nil font and non-internal font name
+	SmartDrawTextInRect(img, "Test", nil, "unknown", 10, 10, 80, 30, "center", "center", 2)
+}
+
+func TestSmartMeasureText_InternalFont(t *testing.T) {
+	w, h := SmartMeasureText("Hello", nil, FontNamePixel5x7)
+	if w <= 0 {
+		t.Errorf("SmartMeasureText width = %d, want > 0", w)
+	}
+	if h <= 0 {
+		t.Errorf("SmartMeasureText height = %d, want > 0", h)
+	}
+}
+
+func TestSmartMeasureText_TTFFont(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	w, h := SmartMeasureText("Hello", face, "")
+	if w <= 0 {
+		t.Errorf("SmartMeasureText width = %d, want > 0", w)
+	}
+	if h <= 0 {
+		t.Errorf("SmartMeasureText height = %d, want > 0", h)
+	}
+}
+
+func TestSmartMeasureText_NoFont(t *testing.T) {
+	w, h := SmartMeasureText("Hello", nil, "unknown")
+	if w != 0 || h != 0 {
+		t.Errorf("SmartMeasureText with no font = (%d, %d), want (0, 0)", w, h)
+	}
+}
+
+func TestSmartCalculateTextPosition_InternalFont(t *testing.T) {
+	tests := []struct {
+		horiz, vert string
+	}{
+		{"left", "top"},
+		{"center", "center"},
+		{"right", "bottom"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.horiz+"_"+tc.vert, func(t *testing.T) {
+			x, y := SmartCalculateTextPosition("Hi", nil, FontNamePixel5x7, 10, 10, 100, 30, tc.horiz, tc.vert)
+			if x < 10 || y < 10 {
+				t.Errorf("Position (%d, %d) is outside content area", x, y)
+			}
+		})
+	}
+}
+
+func TestSmartCalculateTextPosition_TTFFont(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	x, y := SmartCalculateTextPosition("Hi", face, "", 10, 10, 100, 30, "center", "center")
+	if x < 10 {
+		t.Errorf("TTF position x = %d, expected >= 10", x)
+	}
+	// y can be anywhere in the content area for TTF (baseline-based)
+	_ = y
+}
+
+func TestSmartCalculateTextPosition_NoFont(t *testing.T) {
+	x, y := SmartCalculateTextPosition("Hi", nil, "unknown", 10, 20, 100, 30, "center", "center")
+	if x != 10 || y != 20 {
+		t.Errorf("Position = (%d, %d), want (10, 20) for no font", x, y)
+	}
+}
+
+func TestSmartDrawTextAtPosition_InternalFont(t *testing.T) {
+	img := NewGrayscaleImage(100, 50, 0)
+	SmartDrawTextAtPosition(img, "Hi", nil, FontNamePixel5x7, 10, 10, 0, 0, 100, 50)
+
+	// Check that some pixels are lit
+	hasLitPixel := false
+	for y := 0; y < 50; y++ {
+		for x := 0; x < 100; x++ {
+			if img.GrayAt(x, y).Y > 0 {
+				hasLitPixel = true
+				break
+			}
+		}
+		if hasLitPixel {
+			break
+		}
+	}
+
+	if !hasLitPixel {
+		t.Error("SmartDrawTextAtPosition with internal font produced no visible pixels")
+	}
+}
+
+func TestSmartDrawTextAtPosition_TTFFont(t *testing.T) {
+	face, err := LoadFont("", 12)
+	if err != nil {
+		t.Skipf("Skipping test, cannot load font: %v", err)
+	}
+
+	img := NewGrayscaleImage(100, 50, 0)
+	SmartDrawTextAtPosition(img, "Hi", face, "", 10, 30, 0, 0, 100, 50)
+
+	// Check that some pixels are lit
+	hasLitPixel := false
+	for y := 0; y < 50; y++ {
+		for x := 0; x < 100; x++ {
+			if img.GrayAt(x, y).Y > 0 {
+				hasLitPixel = true
+				break
+			}
+		}
+		if hasLitPixel {
+			break
+		}
+	}
+
+	if !hasLitPixel {
+		t.Error("SmartDrawTextAtPosition with TTF font produced no visible pixels")
+	}
+}
+
+func TestSmartDrawTextAtPosition_NoFont(t *testing.T) {
+	img := NewGrayscaleImage(100, 50, 0)
+	// Should not panic with nil font and non-internal font name
+	SmartDrawTextAtPosition(img, "Hi", nil, "unknown", 10, 10, 0, 0, 100, 50)
+}
+
+func TestSmartDrawTextAtPosition_NilGlyphSet(t *testing.T) {
+	img := NewGrayscaleImage(100, 50, 0)
+	// When internal font name is valid but GetInternalFontByName returns nil (edge case)
+	// This should not happen in practice, but test the nil check
+	SmartDrawTextAtPosition(img, "Hi", nil, "", 10, 10, 0, 0, 100, 50)
+}

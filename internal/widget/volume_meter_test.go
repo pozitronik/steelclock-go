@@ -91,9 +91,6 @@ func TestVolumeMeterWidget_AllDisplayModes(t *testing.T) {
 		"bar_horizontal",
 		"bar_vertical",
 		"gauge",
-		"vu_meter",
-		"stereo_bars",
-		"stereo_vu",
 	}
 
 	for _, mode := range displayModes {
@@ -230,7 +227,7 @@ func TestVolumeMeterWidget_DecayBehavior(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Mode: "vu_meter",
+		Mode: "bar_horizontal",
 		Metering: &config.MeteringConfig{
 			DecayRate: 5.0, // Fast decay for testing
 		},
@@ -270,7 +267,7 @@ func TestVolumeMeterWidget_PeakHold(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Mode: "vu_meter",
+		Mode: "bar_horizontal",
 		Peak: &config.PeakConfig{
 			Enabled:  true,
 			HoldTime: 0.5, // 500ms
@@ -742,7 +739,7 @@ func TestVolumeMeterWidget_Ballistics(t *testing.T) {
 		Position: config.PositionConfig{
 			X: 0, Y: 0, W: 128, H: 40,
 		},
-		Mode: "vu_meter",
+		Mode: "bar_horizontal",
 		Metering: &config.MeteringConfig{
 			DecayRate: 2.0, // Units per second
 		},

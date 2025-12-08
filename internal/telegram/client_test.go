@@ -3,6 +3,7 @@ package telegram
 import (
 	"testing"
 
+	"github.com/gotd/td/tg"
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
@@ -390,4 +391,228 @@ func TestChatType(t *testing.T) {
 	if ChatTypeChannel != 2 {
 		t.Errorf("ChatTypeChannel = %d, want 2", ChatTypeChannel)
 	}
+}
+
+func TestClientKey(t *testing.T) {
+	tests := []struct {
+		name string
+		auth *config.TelegramAuthConfig
+		want string
+	}{
+		{
+			name: "nil auth",
+			auth: nil,
+			want: "",
+		},
+		{
+			name: "valid auth",
+			auth: &config.TelegramAuthConfig{
+				APIID:       12345,
+				PhoneNumber: "+1234567890",
+			},
+			want: "12345:+1234567890",
+		},
+		{
+			name: "zero api_id",
+			auth: &config.TelegramAuthConfig{
+				APIID:       0,
+				PhoneNumber: "+1234567890",
+			},
+			want: "0:+1234567890",
+		},
+		{
+			name: "empty phone",
+			auth: &config.TelegramAuthConfig{
+				APIID:       12345,
+				PhoneNumber: "",
+			},
+			want: "12345:",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := clientKey(tt.auth)
+			if got != tt.want {
+				t.Errorf("clientKey() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetMediaType(t *testing.T) {
+	tests := []struct {
+		name  string
+		media tg.MessageMediaClass
+		want  string
+	}{
+		{
+			name:  "nil media",
+			media: nil,
+			want:  "",
+		},
+		{
+			name:  "photo",
+			media: &tg.MessageMediaPhoto{},
+			want:  "Photo",
+		},
+		{
+			name:  "geo",
+			media: &tg.MessageMediaGeo{},
+			want:  "Location",
+		},
+		{
+			name:  "contact",
+			media: &tg.MessageMediaContact{},
+			want:  "Contact",
+		},
+		{
+			name:  "venue",
+			media: &tg.MessageMediaVenue{},
+			want:  "Venue",
+		},
+		{
+			name:  "game",
+			media: &tg.MessageMediaGame{},
+			want:  "Game",
+		},
+		{
+			name:  "invoice",
+			media: &tg.MessageMediaInvoice{},
+			want:  "Invoice",
+		},
+		{
+			name:  "geo_live",
+			media: &tg.MessageMediaGeoLive{},
+			want:  "Live location",
+		},
+		{
+			name:  "poll",
+			media: &tg.MessageMediaPoll{},
+			want:  "Poll",
+		},
+		{
+			name:  "dice",
+			media: &tg.MessageMediaDice{},
+			want:  "Dice",
+		},
+		{
+			name:  "story",
+			media: &tg.MessageMediaStory{},
+			want:  "Story",
+		},
+		{
+			name:  "giveaway",
+			media: &tg.MessageMediaGiveaway{},
+			want:  "Giveaway",
+		},
+		{
+			name:  "giveaway_results",
+			media: &tg.MessageMediaGiveawayResults{},
+			want:  "Giveaway results",
+		},
+		{
+			name:  "paid_media",
+			media: &tg.MessageMediaPaidMedia{},
+			want:  "Paid media",
+		},
+		{
+			name:  "document_plain",
+			media: &tg.MessageMediaDocument{},
+			want:  "Document",
+		},
+		{
+			name: "document_with_sticker_attribute",
+			media: &tg.MessageMediaDocument{
+				Document: &tg.Document{
+					Attributes: []tg.DocumentAttributeClass{
+						&tg.DocumentAttributeSticker{},
+					},
+				},
+			},
+			want: "Sticker",
+		},
+		{
+			name: "document_with_video_attribute",
+			media: &tg.MessageMediaDocument{
+				Document: &tg.Document{
+					Attributes: []tg.DocumentAttributeClass{
+						&tg.DocumentAttributeVideo{},
+					},
+				},
+			},
+			want: "Video",
+		},
+		{
+			name: "document_with_audio_attribute",
+			media: &tg.MessageMediaDocument{
+				Document: &tg.Document{
+					Attributes: []tg.DocumentAttributeClass{
+						&tg.DocumentAttributeAudio{Voice: false},
+					},
+				},
+			},
+			want: "Audio",
+		},
+		{
+			name: "document_with_voice_attribute",
+			media: &tg.MessageMediaDocument{
+				Document: &tg.Document{
+					Attributes: []tg.DocumentAttributeClass{
+						&tg.DocumentAttributeAudio{Voice: true},
+					},
+				},
+			},
+			want: "Voice message",
+		},
+		{
+			name: "document_with_animated_attribute",
+			media: &tg.MessageMediaDocument{
+				Document: &tg.Document{
+					Attributes: []tg.DocumentAttributeClass{
+						&tg.DocumentAttributeAnimated{},
+					},
+				},
+			},
+			want: "GIF",
+		},
+		{
+			name:  "unsupported_media",
+			media: &tg.MessageMediaUnsupported{},
+			want:  "Media",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getMediaType(tt.media)
+			if got != tt.want {
+				t.Errorf("getMediaType() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetOrCreateClient_NilConfig(t *testing.T) {
+	_, err := GetOrCreateClient(nil)
+	if err == nil {
+		t.Error("GetOrCreateClient(nil) should return error")
+	}
+}
+
+func TestGetOrCreateClient_MissingAuth(t *testing.T) {
+	_, err := GetOrCreateClient(&ClientConfig{})
+	if err == nil {
+		t.Error("GetOrCreateClient with nil auth should return error")
+	}
+}
+
+func TestReleaseClient_NilAuth(t *testing.T) {
+	// Should not panic
+	ReleaseClient(nil)
+}
+
+func TestReleaseClient_EmptyKey(t *testing.T) {
+	// Should not panic with empty auth values
+	ReleaseClient(&config.TelegramAuthConfig{})
 }

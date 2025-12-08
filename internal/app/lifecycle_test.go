@@ -192,3 +192,178 @@ func TestStartErrorDisplayWithLastGoodConfig(t *testing.T) {
 	}
 	// Expected failure path - just verify no panic and correct error handling
 }
+
+func TestLifecycleManagerDoubleStop(t *testing.T) {
+	lm := NewLifecycleManager()
+
+	// Double stop should not panic
+	lm.Stop()
+	lm.Stop()
+}
+
+func TestLifecycleManagerDoubleShutdown(t *testing.T) {
+	lm := NewLifecycleManager()
+
+	// Double shutdown should not panic
+	lm.Shutdown()
+	lm.Shutdown()
+}
+
+func TestLifecycleManagerStopThenShutdown(t *testing.T) {
+	lm := NewLifecycleManager()
+
+	// Stop then shutdown should work
+	lm.Stop()
+	lm.Shutdown()
+}
+
+func TestLifecycleManagerConcurrentStopShutdown(t *testing.T) {
+	lm := NewLifecycleManager()
+
+	done := make(chan struct{})
+
+	// Run multiple concurrent operations
+	for i := 0; i < 5; i++ {
+		go func() {
+			lm.Stop()
+			done <- struct{}{}
+		}()
+		go func() {
+			lm.Shutdown()
+			done <- struct{}{}
+		}()
+		go func() {
+			_ = lm.GetLastGoodConfig()
+			done <- struct{}{}
+		}()
+		go func() {
+			_, _ = lm.GetDisplayDimensions()
+			done <- struct{}{}
+		}()
+	}
+
+	// Wait for all goroutines
+	for i := 0; i < 20; i++ {
+		<-done
+	}
+}
+
+func TestLifecycleManagerIsFirstStartFlag(t *testing.T) {
+	lm := NewLifecycleManager()
+
+	if !lm.isFirstStart {
+		t.Error("isFirstStart should be true initially")
+	}
+
+	// isFirstStart is set to false after Start() is called
+	// We can't test that without a real backend, but we verify initial state
+}
+
+func TestLifecycleManagerRetryCancel(t *testing.T) {
+	lm := NewLifecycleManager()
+
+	// Verify retryCancel is initialized
+	if lm.retryCancel == nil {
+		t.Error("retryCancel should be initialized")
+	}
+
+	// Shutdown should close the channel
+	lm.Shutdown()
+
+	// Channel should be closed now
+	select {
+	case <-lm.retryCancel:
+		// Channel closed - expected
+	default:
+		t.Error("retryCancel should be closed after Shutdown")
+	}
+}
+
+func TestLifecycleManagerShutdownClosesRetryCancelOnce(t *testing.T) {
+	lm := NewLifecycleManager()
+
+	// First shutdown closes the channel
+	lm.Shutdown()
+
+	// Second shutdown should not panic (channel already closed)
+	lm.Shutdown()
+}
+
+func TestLifecycleManagerWidgetManagerInitialized(t *testing.T) {
+	lm := NewLifecycleManager()
+
+	if lm.widgetMgr == nil {
+		t.Error("widgetMgr should be initialized")
+	}
+}
+
+func TestLifecycleManagerCurrentBackendEmpty(t *testing.T) {
+	lm := NewLifecycleManager()
+
+	if lm.currentBackend != "" {
+		t.Errorf("currentBackend should be empty initially, got %q", lm.currentBackend)
+	}
+}
+
+func TestLifecycleManagerClientNil(t *testing.T) {
+	lm := NewLifecycleManager()
+
+	if lm.client != nil {
+		t.Error("client should be nil initially")
+	}
+}
+
+func TestLifecycleManagerCompNil(t *testing.T) {
+	lm := NewLifecycleManager()
+
+	if lm.comp != nil {
+		t.Error("comp should be nil initially")
+	}
+}
+
+func TestGetDisplayDimensionsAfterShutdown(t *testing.T) {
+	lm := NewLifecycleManager()
+
+	// Set config
+	lm.mu.Lock()
+	lm.lastGoodConfig = &config.Config{
+		Display: config.DisplayConfig{
+			Width:  256,
+			Height: 64,
+		},
+	}
+	lm.mu.Unlock()
+
+	// Shutdown (which sets client to nil but keeps lastGoodConfig)
+	lm.Shutdown()
+
+	// GetDisplayDimensions should still work
+	w, h := lm.GetDisplayDimensions()
+	if w != 256 || h != 64 {
+		t.Errorf("dimensions after shutdown = %dx%d, want 256x64", w, h)
+	}
+}
+
+func TestShowTransitionBannerWithNilClient(t *testing.T) {
+	lm := NewLifecycleManager()
+
+	// Should not panic with nil client
+	lm.ShowTransitionBanner("TestProfile")
+}
+
+func TestShowTransitionBannerWithConfig(t *testing.T) {
+	lm := NewLifecycleManager()
+
+	// Set config for dimensions
+	lm.mu.Lock()
+	lm.lastGoodConfig = &config.Config{
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
+	}
+	lm.mu.Unlock()
+
+	// Should not panic, even without client
+	lm.ShowTransitionBanner("TestProfile")
+}

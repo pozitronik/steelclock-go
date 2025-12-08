@@ -101,8 +101,8 @@ func TestNewVolumeWidget_Defaults(t *testing.T) {
 		t.Fatalf("NewVolumeWidget() error = %v", err)
 	}
 
-	if widget.displayMode != "bar_horizontal" {
-		t.Errorf("default displayMode = %v, want bar_horizontal", widget.displayMode)
+	if widget.displayMode != "bar" {
+		t.Errorf("default displayMode = %v, want bar", widget.displayMode)
 	}
 
 	if widget.fillColor != 255 {
@@ -327,10 +327,10 @@ func TestVolumeWidget_AutoHide(t *testing.T) {
 			W: 128,
 			H: 40,
 		},
-		Mode: "bar_horizontal",
+		Mode: "bar",
 		AutoHide: &config.AutoHideConfig{
 			Enabled: true,
-			Timeout: 0.1, // 100ms for testing
+			Timeout: 0.5, // 500ms - long enough to check visibility before timeout
 		},
 	}
 
@@ -350,9 +350,10 @@ func TestVolumeWidget_AutoHide(t *testing.T) {
 	}
 
 	// Wait for background polling to detect volume (triggers volume change)
+	// Initial poll happens immediately in goroutine, but give it time to complete
 	time.Sleep(200 * time.Millisecond)
 
-	// After volume is detected, widget should be visible
+	// After volume is detected, widget should be visible (auto-hide timeout 500ms hasn't expired yet)
 	img, err = widget.Render()
 	if err != nil {
 		t.Errorf("Render() after volume change error = %v", err)
@@ -361,8 +362,8 @@ func TestVolumeWidget_AutoHide(t *testing.T) {
 		t.Error("Widget should be visible after volume change, but got nil")
 	}
 
-	// Wait for auto-hide timeout
-	time.Sleep(150 * time.Millisecond)
+	// Wait for auto-hide timeout (500ms total from trigger, we've used ~200ms, wait 400ms more)
+	time.Sleep(400 * time.Millisecond)
 
 	// Widget should be hidden again
 	img, err = widget.Render()
@@ -378,7 +379,8 @@ func TestVolumeWidget_AutoHide(t *testing.T) {
 func TestVolumeWidget_AllModes(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
-	modes := []string{"text", "bar_horizontal", "bar_vertical", "gauge"}
+	// Volume widget supports: text, bar, gauge (bar direction is controlled via separate config)
+	modes := []string{"text", "bar", "gauge"}
 
 	for _, mode := range modes {
 		t.Run(mode, func(t *testing.T) {

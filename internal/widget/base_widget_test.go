@@ -400,3 +400,65 @@ func TestBaseWidget_GetStyle(t *testing.T) {
 		t.Errorf("Style.Padding = %d, want 10", style.Padding)
 	}
 }
+
+func TestBaseWidget_GetAutoHideTimeout(t *testing.T) {
+	tests := []struct {
+		name        string
+		autoHide    *config.AutoHideConfig
+		wantTimeout time.Duration
+	}{
+		{
+			name:        "default timeout (no auto-hide config)",
+			autoHide:    nil,
+			wantTimeout: 2 * time.Second, // Default is 2 seconds
+		},
+		{
+			name: "1 second timeout",
+			autoHide: &config.AutoHideConfig{
+				Enabled: true,
+				Timeout: 1.0,
+			},
+			wantTimeout: 1 * time.Second,
+		},
+		{
+			name: "500ms timeout",
+			autoHide: &config.AutoHideConfig{
+				Enabled: true,
+				Timeout: 0.5,
+			},
+			wantTimeout: 500 * time.Millisecond,
+		},
+		{
+			name: "5 second timeout",
+			autoHide: &config.AutoHideConfig{
+				Enabled: true,
+				Timeout: 5.0,
+			},
+			wantTimeout: 5 * time.Second,
+		},
+		{
+			name: "zero timeout uses default",
+			autoHide: &config.AutoHideConfig{
+				Enabled: true,
+				Timeout: 0,
+			},
+			wantTimeout: 2 * time.Second, // Default when timeout is 0
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := config.WidgetConfig{
+				ID:       "test",
+				AutoHide: tt.autoHide,
+			}
+
+			base := NewBaseWidget(cfg)
+			timeout := base.GetAutoHideTimeout()
+
+			if timeout != tt.wantTimeout {
+				t.Errorf("GetAutoHideTimeout() = %v, want %v", timeout, tt.wantTimeout)
+			}
+		})
+	}
+}

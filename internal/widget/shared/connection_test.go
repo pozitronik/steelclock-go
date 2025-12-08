@@ -247,3 +247,31 @@ func TestConnectionManager_ConcurrentAccess(t *testing.T) {
 		t.Errorf("Connect() called %d times, want 1", mock.getConnectCount())
 	}
 }
+
+func TestConnectionManager_IsInitialState(t *testing.T) {
+	mock := &mockConnectable{
+		connectDelay: 50 * time.Millisecond,
+	}
+
+	cm := NewConnectionManager(mock, 100*time.Millisecond, 5*time.Second)
+
+	// Before any Update call, should be in initial state
+	if !cm.IsInitialState() {
+		t.Error("IsInitialState() = false initially, want true")
+	}
+
+	// After Update initiates connection, should no longer be initial state
+	cm.Update()
+	if cm.IsInitialState() {
+		t.Error("IsInitialState() = true after Update, want false")
+	}
+
+	// Wait for connection to complete
+	time.Sleep(100 * time.Millisecond)
+	cm.Update()
+
+	// Still should not be initial state even after connection completes
+	if cm.IsInitialState() {
+		t.Error("IsInitialState() = true after connection complete, want false")
+	}
+}
