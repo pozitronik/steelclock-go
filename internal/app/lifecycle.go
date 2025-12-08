@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -9,8 +10,6 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/compositor"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/gamesense"
-	"github.com/pozitronik/steelclock-go/internal/layout"
-	"github.com/pozitronik/steelclock-go/internal/widget"
 )
 
 // ErrorDisplayRefreshRateMs is the refresh rate for error display (flash interval)
@@ -25,6 +24,7 @@ type LifecycleManager struct {
 	lastGoodConfig *config.Config
 	isFirstStart   bool
 	retryCancel    chan struct{}
+	widgetMgr      *WidgetManager
 	mu             sync.Mutex
 }
 
@@ -33,6 +33,7 @@ func NewLifecycleManager() *LifecycleManager {
 	return &LifecycleManager{
 		isFirstStart: true,
 		retryCancel:  make(chan struct{}),
+		widgetMgr:    NewWidgetManager(),
 	}
 }
 
@@ -65,25 +66,22 @@ func (m *LifecycleManager) Start(cfg *config.Config) error {
 		m.isFirstStart = false
 	}
 
-	// Create widgets
-	widgets, err := widget.CreateWidgets(cfg.Widgets)
+	// Create widgets and compositor using WidgetManager
+	setup, err := m.widgetMgr.CreateFromConfig(m.client, cfg)
 	if err != nil {
-		return fmt.Errorf("failed to create widgets: %w", err)
+		var noWidgetsErr *NoWidgetsError
+		if errors.As(err, &noWidgetsErr) {
+			log.Println("WARNING: No widgets enabled in configuration")
+		}
+		return err
 	}
 
-	if len(widgets) == 0 {
-		log.Println("WARNING: No widgets enabled in configuration")
-		return &NoWidgetsError{}
-	}
-
-	log.Printf("Created %d widgets", len(widgets))
-	for i := range widgets {
+	log.Printf("Created %d widgets", len(setup.Widgets))
+	for i := range setup.Widgets {
 		log.Printf("  Widget %d: %s (type: %s)", i+1, cfg.Widgets[i].ID, cfg.Widgets[i].Type)
 	}
 
-	// Create layout and compositor
-	layoutMgr := layout.NewManager(cfg.Display, widgets)
-	m.comp = compositor.NewCompositor(m.client, layoutMgr, widgets, cfg)
+	m.comp = setup.Compositor
 
 	// Set up backend failover callback for "any" backend mode
 	if cfg.Backend == "any" {
@@ -215,25 +213,8 @@ func (m *LifecycleManager) StartErrorDisplay(message string, width, height int) 
 		return fmt.Errorf("failed to bind screen event: %w", err)
 	}
 
-	errorWidget := widget.NewErrorWidget(width, height, message)
-	widgets := []widget.Widget{errorWidget}
-
-	displayCfg := config.DisplayConfig{
-		Width:      width,
-		Height:     height,
-		Background: 0,
-	}
-
-	errorCfg := &config.Config{
-		GameName:        config.DefaultGameName,
-		GameDisplayName: config.DefaultGameDisplay,
-		RefreshRateMs:   ErrorDisplayRefreshRateMs,
-		Display:         displayCfg,
-		Widgets:         []config.WidgetConfig{},
-	}
-
-	layoutMgr := layout.NewManager(displayCfg, widgets)
-	m.comp = compositor.NewCompositor(errorClient, layoutMgr, widgets, errorCfg)
+	setup := m.widgetMgr.CreateErrorDisplay(errorClient, message, width, height)
+	m.comp = setup.Compositor
 
 	if err := m.comp.Start(); err != nil {
 		log.Printf("ERROR: Failed to start compositor for error display: %v", err)
@@ -371,15 +352,13 @@ func (m *LifecycleManager) handleBackendFailure(cfg *config.Config) {
 	m.currentBackend = newBackend
 	log.Printf("Successfully switched to %s backend", m.currentBackend)
 
-	widgets, err := widget.CreateWidgets(cfg.Widgets)
+	setup, err := m.widgetMgr.CreateFromConfig(m.client, cfg)
 	if err != nil {
 		log.Printf("ERROR: Failed to recreate widgets: %v", err)
 		return
 	}
 
-	layoutMgr := layout.NewManager(cfg.Display, widgets)
-	m.comp = compositor.NewCompositor(m.client, layoutMgr, widgets, cfg)
-
+	m.comp = setup.Compositor
 	m.comp.OnBackendFailure = func() {
 		m.handleBackendFailure(cfg)
 	}
