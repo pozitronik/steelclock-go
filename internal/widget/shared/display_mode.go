@@ -12,10 +12,10 @@ import (
 type DisplayMode string
 
 const (
-	DisplayModeText  DisplayMode = DisplayMode(config.ModeText)
-	DisplayModeBar   DisplayMode = DisplayMode(config.ModeBar)
-	DisplayModeGraph DisplayMode = DisplayMode(config.ModeGraph)
-	DisplayModeGauge DisplayMode = DisplayMode(config.ModeGauge)
+	DisplayModeText  = DisplayMode(config.ModeText)
+	DisplayModeBar   = DisplayMode(config.ModeBar)
+	DisplayModeGraph = DisplayMode(config.ModeGraph)
+	DisplayModeGauge = DisplayMode(config.ModeGauge)
 )
 
 // BarConfig holds configuration for bar rendering
