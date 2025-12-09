@@ -77,8 +77,8 @@ func CreateDefault() *Config {
 					Format: "%H:%M:%S",
 					Size:   DefaultFontSize,
 					Align: &AlignConfig{
-						H: "center",
-						V: "center",
+						H: AlignCenter,
+						V: AlignMiddle,
 					},
 				},
 				UpdateInterval: DefaultUpdateInterval,
@@ -141,6 +141,11 @@ func applyDisplayDefaults(cfg *Config) {
 	if cfg.EventBatchingEnabled && cfg.EventBatchSize == 0 {
 		cfg.EventBatchSize = DefaultEventBatchSize
 	}
+
+	// Frame deduplication is enabled by default
+	if cfg.FrameDedupEnabled == nil {
+		cfg.FrameDedupEnabled = BoolPtr(true)
+	}
 }
 
 // applyWidgetDefaults sets default values for a widget
@@ -172,14 +177,15 @@ func applyCommonWidgetDefaults(w *WidgetConfig) {
 	}
 
 	if w.Text.Align.H == "" {
-		w.Text.Align.H = "center"
+		w.Text.Align.H = AlignCenter
 	}
 
 	if w.Text.Align.V == "" {
-		w.Text.Align.V = "center"
+		w.Text.Align.V = AlignMiddle
 	}
 }
 
+// todo: plugins have to return defaults themselves
 // applyTypeSpecificDefaults sets default values specific to widget types
 func applyTypeSpecificDefaults(w *WidgetConfig) {
 	switch w.Type {
@@ -216,7 +222,7 @@ func applyClockDefaults(w *WidgetConfig) {
 // applyMetricWidgetDefaults sets default values for CPU and Memory widgets
 func applyMetricWidgetDefaults(w *WidgetConfig) {
 	if w.Mode == "" {
-		w.Mode = "text"
+		w.Mode = ModeText
 	}
 
 	if w.Colors == nil {
@@ -237,7 +243,7 @@ func applyMetricWidgetDefaults(w *WidgetConfig) {
 // applyNetworkDefaults sets default values for network widgets
 func applyNetworkDefaults(w *WidgetConfig) {
 	if w.Mode == "" {
-		w.Mode = "text"
+		w.Mode = ModeText
 	}
 
 	if w.Colors == nil {
@@ -265,7 +271,7 @@ func applyNetworkDefaults(w *WidgetConfig) {
 // applyDiskDefaults sets default values for disk widgets
 func applyDiskDefaults(w *WidgetConfig) {
 	if w.Mode == "" {
-		w.Mode = "text"
+		w.Mode = ModeText
 	}
 
 	if w.Colors == nil {
@@ -354,7 +360,7 @@ func applyVolumeDefaults(w *WidgetConfig) {
 	}
 
 	if w.Mode == "" {
-		w.Mode = "bar"
+		w.Mode = ModeBar
 	}
 
 	if w.Colors == nil {
@@ -368,7 +374,7 @@ func applyVolumeDefaults(w *WidgetConfig) {
 		w.Bar = &BarConfig{}
 	}
 	if w.Bar.Direction == "" {
-		w.Bar.Direction = "horizontal"
+		w.Bar.Direction = DirectionHorizontal
 	}
 }
 
@@ -379,14 +385,14 @@ func applyVolumeMeterDefaults(w *WidgetConfig) {
 	}
 
 	if w.Mode == "" {
-		w.Mode = "bar"
+		w.Mode = ModeBar
 	}
 
 	if w.Bar == nil {
 		w.Bar = &BarConfig{}
 	}
 	if w.Bar.Direction == "" {
-		w.Bar.Direction = "horizontal"
+		w.Bar.Direction = DirectionHorizontal
 	}
 
 	if w.Stereo == nil {

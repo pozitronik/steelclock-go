@@ -85,9 +85,12 @@ func TestFunctional_TestClientIntegration(t *testing.T) {
 	displayCfg := config.DisplayConfig{Width: 128, Height: 40, Background: 0}
 	layoutMgr := layout.NewManager(displayCfg, widgets)
 
+	// Disable frame deduplication for this test as we're testing frame capture, not deduplication
+	dedupDisabled := false
 	cfg := &config.Config{
-		RefreshRateMs: 50,
-		Display:       displayCfg,
+		RefreshRateMs:     50,
+		FrameDedupEnabled: &dedupDisabled,
+		Display:           displayCfg,
 	}
 
 	comp := NewCompositor(client, layoutMgr, widgets, cfg)
@@ -196,7 +199,7 @@ func TestFunctional_RegionComparison(t *testing.T) {
 	}
 
 	// Create expected blank frame for comparison
-	blank := make([]int, 640)
+	blank := make([]byte, 640)
 
 	// Left half should be fully set (solid white)
 	leftDiff := testutil.CompareRegion(frame.Data, blank, 0, 0, 64, 40)

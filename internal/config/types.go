@@ -43,6 +43,7 @@ type Config struct {
 	DeinitializeTimerMs  int                 `json:"deinitialize_timer_ms,omitempty"`
 	EventBatchingEnabled bool                `json:"event_batching_enabled,omitempty"`
 	EventBatchSize       int                 `json:"event_batch_size,omitempty"`
+	FrameDedupEnabled    *bool               `json:"frame_dedup_enabled,omitempty"` // Skip sending unchanged frames (default: true)
 	SupportedResolutions []ResolutionConfig  `json:"supported_resolutions,omitempty"`
 	BundledFontURL       *string             `json:"bundled_font_url,omitempty"`
 	Backend              string              `json:"backend,omitempty"`
@@ -152,6 +153,27 @@ type WidgetConfig struct {
 
 	// Weather widget
 	Weather *WeatherConfig `json:"weather,omitempty"` // Weather widget settings
+
+	// Game of Life widget
+	GameOfLife *GameOfLifeConfig `json:"game_of_life,omitempty"` // Game of Life settings
+
+	// Hyperspace widget
+	Hyperspace *HyperspaceConfig `json:"hyperspace,omitempty"` // Hyperspace effect settings
+
+	// Star Wars intro crawl widget
+	StarWarsIntro *StarWarsIntroConfig `json:"starwars_intro,omitempty"` // Star Wars intro crawl settings
+
+	// Telegram widgets (shared auth config)
+	Auth *TelegramAuthConfig `json:"auth,omitempty"` // Telegram API authentication (shared by telegram and telegram_counter)
+
+	// Telegram widget filters (for both telegram and telegram_counter)
+	Filters *TelegramFiltersConfig `json:"filters,omitempty"` // Message filters (private_chats, groups, channels)
+
+	// Telegram notification widget appearance
+	Appearance *TelegramAppearanceConfig `json:"appearance,omitempty"` // Notification appearance settings
+
+	// Telegram counter widget specific
+	Badge *TelegramBadgeConfig `json:"badge,omitempty"` // Badge mode settings (for telegram_counter)
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -190,8 +212,8 @@ type TextConfig struct {
 
 // AlignConfig represents text alignment
 type AlignConfig struct {
-	H string `json:"h,omitempty"` // "left", "center", "right"
-	V string `json:"v,omitempty"` // "top", "center", "bottom"
+	H HAlign `json:"h,omitempty"` // "left", "center", "right"
+	V VAlign `json:"v,omitempty"` // "top", "center", "bottom"
 }
 
 // ColorsConfig represents widget colors (keys vary by widget type)
@@ -469,11 +491,11 @@ type ScrollConfig struct {
 	// Enabled explicitly enables/disables scrolling
 	Enabled bool `json:"enabled,omitempty"`
 	// Direction: "left", "right", "up", "down"
-	Direction string `json:"direction,omitempty"`
+	Direction ScrollDirection `json:"direction,omitempty"`
 	// Speed in pixels per second
 	Speed float64 `json:"speed,omitempty"`
 	// Mode: "continuous" (loop), "bounce" (reverse at edges), "pause_ends" (pause at start/end)
-	Mode string `json:"mode,omitempty"`
+	Mode ScrollMode `json:"mode,omitempty"`
 	// PauseMs - pause duration in milliseconds at ends (for bounce/pause_ends modes)
 	PauseMs int `json:"pause_ms,omitempty"`
 	// Gap - pixels between end and start of text in continuous mode
@@ -640,4 +662,241 @@ type WeatherCycleConfig struct {
 	Transition string `json:"transition,omitempty"`
 	// Speed: transition duration in seconds (default: 0.5)
 	Speed float64 `json:"speed,omitempty"`
+}
+
+// GameOfLifeConfig represents Conway's Game of Life widget settings
+type GameOfLifeConfig struct {
+	// Rules: cellular automaton rules in "B3/S23" format (default: "B3/S23" - standard Conway)
+	// B = birth (neighbor counts that cause cell birth)
+	// S = survival (neighbor counts that allow cell survival)
+	// Examples: "B3/S23" (Conway), "B36/S23" (HighLife), "B1357/S1357" (Replicator)
+	Rules string `json:"rules,omitempty"`
+	// WrapEdges: wrap edges to form a torus topology (default: true)
+	WrapEdges *bool `json:"wrap_edges,omitempty"`
+	// InitialPattern: starting pattern (default: "random")
+	// Values: "random", "clear", "glider", "r_pentomino", "acorn", "diehard", "lwss", "pulsar", "glider_gun"
+	InitialPattern string `json:"initial_pattern,omitempty"`
+	// RandomDensity: probability of cell being alive in random pattern (0.0-1.0, default: 0.3)
+	RandomDensity float64 `json:"random_density,omitempty"`
+	// CellSize: pixels per cell (1-4, default: 1)
+	CellSize int `json:"cell_size,omitempty"`
+	// TrailEffect: enable fading trail when cells die (default: true)
+	TrailEffect *bool `json:"trail_effect,omitempty"`
+	// TrailDecay: brightness decay per frame for dead cells (1-255, default: 30)
+	TrailDecay int `json:"trail_decay,omitempty"`
+	// CellColor: brightness of alive cells (1-255, default: 255)
+	CellColor int `json:"cell_color,omitempty"`
+	// RestartTimeout: seconds to wait before restarting when simulation ends (default: 3.0)
+	// 0 = restart immediately, -1 = never restart (stay in final state)
+	RestartTimeout *float64 `json:"restart_timeout,omitempty"`
+	// RestartMode: how to restart (default: "reset")
+	// "reset" = restart with initial_pattern, "inject" = add cells to existing grid, "random" = always use random
+	RestartMode string `json:"restart_mode,omitempty"`
+}
+
+// HyperspaceConfig represents Star Wars hyperspace effect widget settings
+type HyperspaceConfig struct {
+	// StarCount: number of stars (default: 100)
+	StarCount int `json:"star_count,omitempty"`
+	// Speed: base star movement speed (default: 0.02)
+	Speed float64 `json:"speed,omitempty"`
+	// MaxSpeed: maximum speed during hyperspace jump (default: 0.5)
+	MaxSpeed float64 `json:"max_speed,omitempty"`
+	// TrailLength: trail length multiplier (default: 1.0)
+	TrailLength float64 `json:"trail_length,omitempty"`
+	// CenterX: focal point X coordinate (default: center of widget)
+	CenterX *int `json:"center_x,omitempty"`
+	// CenterY: focal point Y coordinate (default: center of widget)
+	CenterY *int `json:"center_y,omitempty"`
+	// StarColor: brightness of stars (1-255, default: 255)
+	StarColor int `json:"star_color,omitempty"`
+	// Mode: "continuous" (always hyperspeed) or "cycle" (idle -> jump -> hyperspace -> exit)
+	Mode string `json:"mode,omitempty"`
+	// IdleTime: seconds in idle/normal star mode before jump (cycle mode only, default: 5.0)
+	IdleTime float64 `json:"idle_time,omitempty"`
+	// TravelTime: seconds in hyperspace (cycle mode only, default: 3.0)
+	TravelTime float64 `json:"travel_time,omitempty"`
+	// Acceleration: speed change rate during jump/exit phases (default: 0.1)
+	Acceleration float64 `json:"acceleration,omitempty"`
+}
+
+// StarWarsIntroConfig contains settings for the Star Wars intro crawl widget
+type StarWarsIntroConfig struct {
+	// Pre-intro phase: "A long time ago in a galaxy far, far away...."
+	PreIntro *StarWarsPreIntroConfig `json:"pre_intro,omitempty"`
+
+	// Logo phase: "STAR WARS" shrinking toward center
+	Logo *StarWarsLogoConfig `json:"logo,omitempty"`
+
+	// Background stars (visible during logo and crawl phases)
+	Stars *StarWarsStarsConfig `json:"stars,omitempty"`
+
+	// Crawl phase settings
+	// Text: lines of text to display in the crawl
+	Text []string `json:"text,omitempty"`
+	// ScrollSpeed: how fast the text scrolls up (pixels per frame, default: 0.5)
+	ScrollSpeed float64 `json:"scroll_speed,omitempty"`
+	// Perspective: perspective strength (0.0 = none, 1.0 = strong, default: 0.7)
+	Perspective float64 `json:"perspective,omitempty"`
+	// Slant: text italic/slant angle in degrees (0.0 = upright, default: 15.0 to match perspective)
+	Slant float64 `json:"slant,omitempty"`
+	// FadeTop: where fade starts from top (0.0-1.0, default: 0.3)
+	FadeTop float64 `json:"fade_top,omitempty"`
+	// TextColor: brightness of text (1-255, default: 255)
+	TextColor int `json:"text_color,omitempty"`
+	// LineSpacing: pixels between lines (default: 8)
+	LineSpacing int `json:"line_spacing,omitempty"`
+
+	// General settings
+	// Loop: whether to loop the entire sequence (default: true)
+	Loop *bool `json:"loop,omitempty"`
+	// PauseAtEnd: seconds to pause at end before looping (default: 3.0)
+	PauseAtEnd float64 `json:"pause_at_end,omitempty"`
+}
+
+// StarWarsPreIntroConfig contains settings for the pre-intro text phase
+type StarWarsPreIntroConfig struct {
+	// Enabled: show the pre-intro phase (default: true)
+	Enabled *bool `json:"enabled,omitempty"`
+	// Text: the pre-intro message (default: "A long time ago in a galaxy far, far away....")
+	Text string `json:"text,omitempty"`
+	// Color: text brightness (1-255, default: 80 - bluish dim appearance)
+	Color int `json:"color,omitempty"`
+	// FadeIn: fade in duration in seconds (default: 2.0)
+	FadeIn float64 `json:"fade_in,omitempty"`
+	// Hold: hold duration in seconds after fade in (default: 2.0)
+	Hold float64 `json:"hold,omitempty"`
+	// FadeOut: fade out duration in seconds (default: 1.0)
+	FadeOut float64 `json:"fade_out,omitempty"`
+}
+
+// StarWarsLogoConfig contains settings for the logo shrinking phase
+type StarWarsLogoConfig struct {
+	// Enabled: show the logo phase (default: true)
+	Enabled *bool `json:"enabled,omitempty"`
+	// Text: logo text, use \n for line breaks (default: "STAR\nWARS")
+	Text string `json:"text,omitempty"`
+	// Color: logo brightness (1-255, default: 255)
+	Color int `json:"color,omitempty"`
+	// HoldBefore: seconds to hold at full size before shrinking (default: 0.5)
+	HoldBefore float64 `json:"hold_before,omitempty"`
+	// ShrinkDuration: seconds for the shrink animation (default: 4.0)
+	ShrinkDuration float64 `json:"shrink_duration,omitempty"`
+	// FinalScale: scale at which logo disappears (0.0-1.0, default: 0.1)
+	FinalScale float64 `json:"final_scale,omitempty"`
+	// LineSpacing: pixels between logo lines (default: 1)
+	LineSpacing int `json:"line_spacing,omitempty"`
+}
+
+// StarWarsStarsConfig contains settings for background stars
+type StarWarsStarsConfig struct {
+	// Enabled: show background stars (default: true)
+	Enabled *bool `json:"enabled,omitempty"`
+	// Count: number of stars (default: 50)
+	Count int `json:"count,omitempty"`
+	// Brightness: maximum star brightness (1-255, default: 200)
+	Brightness int `json:"brightness,omitempty"`
+}
+
+// SeparatorConfig represents a separator line between elements
+type SeparatorConfig struct {
+	// Color: separator color (-1 = disabled, 0-255 = grayscale, default: 128)
+	Color int `json:"color,omitempty"`
+	// Thickness: separator thickness in pixels (default: 1)
+	Thickness int `json:"thickness,omitempty"`
+}
+
+// TransitionConfig represents transition effect settings
+// Transition types: "none", "push_left", "push_right", "push_up", "push_down",
+// "slide_left", "slide_right", "slide_up", "slide_down",
+// "dissolve_fade", "dissolve_pixel", "dissolve_dither",
+// "box_in", "box_out", "clock_wipe", "random"
+type TransitionConfig struct {
+	// In: transition effect when showing (default: "none")
+	In string `json:"in,omitempty"`
+	// InSpeed: transition duration in seconds (default: 0.5)
+	InSpeed float64 `json:"in_speed,omitempty"`
+	// Out: transition effect when hiding (default: "none")
+	Out string `json:"out,omitempty"`
+	// OutSpeed: transition duration in seconds (default: 0.5)
+	OutSpeed float64 `json:"out_speed,omitempty"`
+}
+
+// TelegramAuthConfig contains Telegram API authentication credentials
+type TelegramAuthConfig struct {
+	// APIID: Telegram API ID from my.telegram.org (required)
+	APIID int `json:"api_id"`
+	// APIHash: Telegram API Hash from my.telegram.org (required)
+	APIHash string `json:"api_hash"`
+	// PhoneNumber: phone number in international format, e.g., "+1234567890" (required)
+	PhoneNumber string `json:"phone_number"`
+	// SessionPath: path to session file (default: telegram/{api_id}_{phone}.session)
+	SessionPath string `json:"session_path,omitempty"`
+}
+
+// TelegramFiltersConfig contains filter settings for all chat types
+type TelegramFiltersConfig struct {
+	// PrivateChats: private message filter settings
+	PrivateChats *TelegramChatFilterConfig `json:"private_chats,omitempty"`
+	// Groups: group chat filter settings
+	Groups *TelegramChatFilterConfig `json:"groups,omitempty"`
+	// Channels: channel filter settings
+	Channels *TelegramChatFilterConfig `json:"channels,omitempty"`
+}
+
+// TelegramChatFilterConfig contains filter settings for a chat type
+type TelegramChatFilterConfig struct {
+	// Enabled: enable messages from this chat type (default: true for private, false for groups/channels)
+	Enabled *bool `json:"enabled,omitempty"`
+	// Whitelist: always include these chat IDs, even if this chat type is disabled
+	Whitelist []string `json:"whitelist,omitempty"`
+	// Blacklist: never include these chat IDs, even if this chat type is enabled
+	Blacklist []string `json:"blacklist,omitempty"`
+	// PinnedMessages: include pinned message notifications (default: true)
+	PinnedMessages *bool `json:"pinned_messages,omitempty"`
+}
+
+// TelegramBadgeConfig contains settings for badge display mode
+type TelegramBadgeConfig struct {
+	// Blink: blink mode - "never", "always", "progressive" (default: "never")
+	// "progressive" increases blink frequency based on unread count (1/sec at 1 msg, 10/sec at 10+ msgs)
+	Blink BlinkMode `json:"blink,omitempty"`
+	// Colors: custom colors for the badge icon
+	Colors *TelegramBadgeColorsConfig `json:"colors,omitempty"`
+}
+
+// TelegramBadgeColorsConfig contains color settings for badge icon
+type TelegramBadgeColorsConfig struct {
+	// Foreground: color for icon shape (0-255, or -1 for transparent)
+	Foreground int `json:"foreground"`
+	// Background: color for icon background (0-255, or -1 for transparent)
+	Background int `json:"background"`
+}
+
+// TelegramAppearanceConfig contains appearance settings for notifications
+type TelegramAppearanceConfig struct {
+	// Header: header element settings (sender/chat name)
+	Header *TelegramElementConfig `json:"header,omitempty"`
+	// Message: message text element settings
+	Message *TelegramElementConfig `json:"message,omitempty"`
+	// Separator: separator line between header and message
+	Separator *SeparatorConfig `json:"separator,omitempty"`
+	// Timeout: seconds to show notification (0 = show until next message, default: 0)
+	Timeout int `json:"timeout,omitempty"`
+	// Transitions: transition effects for showing/hiding notifications
+	Transitions *TransitionConfig `json:"transitions,omitempty"`
+}
+
+// TelegramElementConfig contains settings for a notification element (header or message)
+type TelegramElementConfig struct {
+	// Enabled: show this element (default: true)
+	Enabled *bool `json:"enabled,omitempty"`
+	// Blink: make element blink (default: false)
+	Blink bool `json:"blink,omitempty"`
+	// Text: text rendering settings (font, size, alignment)
+	Text *TextConfig `json:"text,omitempty"`
+	// Scroll: text scrolling settings when text doesn't fit
+	Scroll *ScrollConfig `json:"scroll,omitempty"`
+	// WordBreak: how to break lines - "normal" (break on spaces) or "break-all" (break anywhere)
+	WordBreak string `json:"word_break,omitempty"`
 }

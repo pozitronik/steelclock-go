@@ -32,29 +32,18 @@ func TestNewApp(t *testing.T) {
 				t.Fatal("NewApp returned nil")
 			}
 
-			if app.configPath != tt.configPath {
-				t.Errorf("configPath = %q, want %q", app.configPath, tt.configPath)
+			if app.configMgr.GetConfigPath() != tt.configPath {
+				t.Errorf("configMgr.GetConfigPath() = %q, want %q", app.configMgr.GetConfigPath(), tt.configPath)
 			}
 
-			if app.retryCancel == nil {
-				t.Error("retryCancel channel not initialized")
+			// Verify lifecycle manager is initialized
+			if app.lifecycle == nil {
+				t.Error("lifecycle manager not initialized")
 			}
 
-			// Verify other fields are nil/zero initially
-			if app.comp != nil {
-				t.Error("comp should be nil initially")
-			}
-			if app.client != nil {
-				t.Error("client should be nil initially")
-			}
+			// Verify trayMgr is nil initially (created in Run())
 			if app.trayMgr != nil {
 				t.Error("trayMgr should be nil initially")
-			}
-			if app.lastGoodConfig != nil {
-				t.Error("lastGoodConfig should be nil initially")
-			}
-			if app.currentBackend != "" {
-				t.Errorf("currentBackend should be empty, got %q", app.currentBackend)
 			}
 		})
 	}
@@ -146,7 +135,6 @@ func TestAppStopWithNilComponents(t *testing.T) {
 
 	// Should not panic
 	app.Stop()
-	app.stopAndWait()
 }
 
 func TestAppMutexProtection(t *testing.T) {
@@ -164,5 +152,119 @@ func TestAppMutexProtection(t *testing.T) {
 	// Wait for all goroutines
 	for i := 0; i < 10; i++ {
 		<-done
+	}
+}
+
+func TestNewAppWithProfiles(t *testing.T) {
+	// NewAppWithProfiles requires a ProfileManager, but we can test nil handling
+	app := NewAppWithProfiles(nil)
+
+	if app == nil {
+		t.Fatal("NewAppWithProfiles returned nil")
+	}
+
+	if app.lifecycle == nil {
+		t.Error("lifecycle manager not initialized")
+	}
+
+	if app.configMgr == nil {
+		t.Error("configMgr not initialized")
+	}
+}
+
+func TestBackendUnavailableErrorChain(t *testing.T) {
+	// Test deep error chaining
+	inner1 := errors.New("network error")
+	inner2 := &BackendUnavailableError{Err: inner1}
+	outer := &BackendUnavailableError{Err: inner2}
+
+	// Should be able to unwrap through the chain
+	if !errors.Is(outer, inner1) {
+		t.Error("errors.Is should find inner1 through chain")
+	}
+
+	// errors.As should match at any level
+	var backendErr *BackendUnavailableError
+	if !errors.As(outer, &backendErr) {
+		t.Error("errors.As should match BackendUnavailableError")
+	}
+}
+
+func TestNoWidgetsErrorAsInterface(t *testing.T) {
+	// Test that NoWidgetsError implements the error interface
+	var err error = &NoWidgetsError{}
+
+	// Verify the error message is not empty
+	if err.Error() == "" {
+		t.Error("error message should not be empty")
+	}
+}
+
+func TestAppDoubleStop(t *testing.T) {
+	app := NewApp("config.json")
+
+	// Double stop should not panic
+	app.Stop()
+	app.Stop()
+}
+
+func TestAppStopBeforeStart(t *testing.T) {
+	app := NewApp("config.json")
+
+	// Stop before Start should work
+	app.Stop()
+}
+
+func TestBackendUnavailableErrorWithNilChain(t *testing.T) {
+	// Test behavior when wrapping nil
+	err := &BackendUnavailableError{Err: nil}
+
+	if err.Unwrap() != nil {
+		t.Error("Unwrap of nil should return nil")
+	}
+
+	// Error message should still be valid
+	msg := err.Error()
+	if msg == "" {
+		t.Error("Error message should not be empty even with nil inner error")
+	}
+}
+
+func TestMultipleNoWidgetsErrors(t *testing.T) {
+	// Multiple instances should have same message
+	err1 := &NoWidgetsError{}
+	err2 := &NoWidgetsError{}
+
+	if err1.Error() != err2.Error() {
+		t.Error("NoWidgetsError instances should have same message")
+	}
+}
+
+func TestAppConfigPathPreserved(t *testing.T) {
+	paths := []string{
+		"config.json",
+		"./config.json",
+		"/absolute/path/config.json",
+		"",
+		"../relative/config.json",
+	}
+
+	for _, path := range paths {
+		t.Run(path, func(t *testing.T) {
+			app := NewApp(path)
+			if app.configMgr.GetConfigPath() != path {
+				t.Errorf("config path = %q, want %q", app.configMgr.GetConfigPath(), path)
+			}
+		})
+	}
+}
+
+func TestAppLifecycleManagerAccess(t *testing.T) {
+	app := NewApp("config.json")
+
+	// Verify internal lifecycle manager works
+	w, h := app.lifecycle.GetDisplayDimensions()
+	if w != 128 || h != 40 {
+		t.Errorf("default dimensions = %dx%d, want 128x40", w, h)
 	}
 }

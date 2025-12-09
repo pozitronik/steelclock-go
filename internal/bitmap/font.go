@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/pozitronik/steelclock-go/internal/config"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/font/opentype"
@@ -216,4 +217,14 @@ func MeasureText(text string, face font.Face) (int, int) {
 	defer fontMutex.Unlock()
 
 	return measureTextUnsafe(text, face)
+}
+
+// LoadFontForTextMode loads font if display mode is "text".
+// Returns nil face (not error) if mode is not text.
+// This is a convenience function for widgets that only need fonts in text mode.
+func LoadFontForTextMode(mode, fontName string, fontSize int) (font.Face, error) {
+	if mode != config.ModeText {
+		return nil, nil
+	}
+	return LoadFont(fontName, fontSize)
 }

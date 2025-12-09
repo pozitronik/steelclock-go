@@ -188,13 +188,82 @@
         "silence_time": { "type": "number", "description": "Silence duration before hiding", "minimum": 0.1, "default": 2.0 }
       }
     },
+    "scrollConfig": {
+      "type": "object",
+      "description": "Text scrolling settings",
+      "properties": {
+        "enabled": { "type": "boolean", "description": "Enable text scrolling", "default": true },
+        "direction": { "type": "string", "enum": ["left", "right", "up", "down"], "description": "Scroll direction", "default": "left" },
+        "speed": { "type": "number", "description": "Scroll speed in pixels per second", "minimum": 1, "default": 30 },
+        "mode": { "type": "string", "enum": ["continuous", "bounce", "pause_ends"], "description": "Scroll mode", "default": "continuous" },
+        "gap": { "type": "integer", "description": "Gap in pixels between text repetitions (continuous mode)", "minimum": 0, "default": 20 }
+      }
+    },
+    "separatorConfig": {
+      "type": "object",
+      "description": "Separator line between elements",
+      "properties": {
+        "color": { "type": "integer", "description": "Separator color (-1=disabled, 0-255=grayscale)", "minimum": -1, "maximum": 255, "default": 128 },
+        "thickness": { "type": "integer", "description": "Separator thickness in pixels (0=disabled)", "minimum": 0, "default": 1 }
+      }
+    },
+    "transitionConfig": {
+      "type": "object",
+      "description": "Transition effects for showing/hiding",
+      "properties": {
+        "in": { "type": "string", "enum": ["none", "push_left", "push_right", "push_up", "push_down", "slide_left", "slide_right", "slide_up", "slide_down", "dissolve_fade", "dissolve_pixel", "dissolve_dither", "box_in", "box_out", "clock_wipe", "random"], "description": "Transition effect when showing", "default": "none" },
+        "in_speed": { "type": "number", "description": "Transition in duration in seconds", "minimum": 0.1, "maximum": 5.0, "default": 0.5 },
+        "out": { "type": "string", "enum": ["none", "push_left", "push_right", "push_up", "push_down", "slide_left", "slide_right", "slide_up", "slide_down", "dissolve_fade", "dissolve_pixel", "dissolve_dither", "box_in", "box_out", "clock_wipe", "random"], "description": "Transition effect when hiding", "default": "none" },
+        "out_speed": { "type": "number", "description": "Transition out duration in seconds", "minimum": 0.1, "maximum": 5.0, "default": 0.5 }
+      }
+    },
+    "telegramElementConfig": {
+      "type": "object",
+      "description": "Telegram notification element (header or message)",
+      "properties": {
+        "enabled": { "type": "boolean", "description": "Show this element", "default": true },
+        "blink": { "type": "boolean", "description": "Make element blink", "default": false },
+        "text": { "$ref": "#/definitions/textObject" },
+        "scroll": { "$ref": "#/definitions/scrollConfig" },
+        "word_break": { "type": "string", "enum": ["normal", "break-all"], "description": "How to break lines: normal (break on spaces) or break-all (break anywhere)", "default": "normal" }
+      }
+    },
+    "telegramAppearanceConfig": {
+      "type": "object",
+      "description": "Appearance settings for telegram notifications",
+      "properties": {
+        "header": { "$ref": "#/definitions/telegramElementConfig" },
+        "message": { "$ref": "#/definitions/telegramElementConfig" },
+        "separator": { "$ref": "#/definitions/separatorConfig" },
+        "timeout": { "type": "integer", "description": "Seconds to show notification (0 = until next message)", "minimum": 0, "default": 0 },
+        "transitions": { "$ref": "#/definitions/transitionConfig" }
+      }
+    },
+    "telegramChatFilterConfig": {
+      "type": "object",
+      "description": "Filter settings for a chat type (private/group/channel)",
+      "properties": {
+        "enabled": { "type": "boolean", "description": "Enable messages from this chat type (default: true for private, false for groups/channels)" },
+        "whitelist": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Always include these chat IDs, even if this chat type is disabled"
+        },
+        "blacklist": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Never include these chat IDs, even if this chat type is enabled"
+        },
+        "pinned_messages": { "type": "boolean", "description": "Include pinned message notifications (default: true)" }
+      }
+    },
     "widget": {
       "type": "object",
       "required": ["type", "position"],
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery"]
+          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life", "hyperspace", "starwars_intro", "telegram", "telegram_counter"]
         },
         "enabled": { "type": "boolean", "default": true },
         "position": { "$ref": "#/definitions/position" },
@@ -1302,6 +1371,494 @@
                     "default": "{percent}%"
                   },
                   "font": { "type": ["string", "null"], "description": "Font name or TTF path", "default": null },
+                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 16 },
+                  "align": {
+                    "type": "object",
+                    "properties": {
+                      "h": { "type": "string", "enum": ["left", "center", "right"], "default": "center" },
+                      "v": { "type": "string", "enum": ["top", "center", "bottom"], "default": "center" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "game_of_life" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "game_of_life": {
+                "type": "object",
+                "description": "Conway's Game of Life cellular automaton settings",
+                "properties": {
+                  "rules": {
+                    "type": "string",
+                    "description": "Cellular automaton rules in B/S notation. B = birth neighbor counts, S = survival neighbor counts. Examples: 'B3/S23' (Conway), 'B36/S23' (HighLife), 'B1357/S1357' (Replicator)",
+                    "default": "B3/S23"
+                  },
+                  "wrap_edges": {
+                    "type": "boolean",
+                    "description": "Wrap edges to form a torus topology (patterns wrap around)",
+                    "default": true
+                  },
+                  "initial_pattern": {
+                    "type": "string",
+                    "description": "Starting pattern for the simulation",
+                    "enum": ["random", "clear", "glider", "r_pentomino", "acorn", "diehard", "lwss", "pulsar", "glider_gun"],
+                    "default": "random"
+                  },
+                  "random_density": {
+                    "type": "number",
+                    "description": "Probability of cell being alive in random pattern (0.0-1.0)",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0.3
+                  },
+                  "cell_size": {
+                    "type": "integer",
+                    "description": "Pixels per cell (1-4). Larger = fewer cells but more visible",
+                    "minimum": 1,
+                    "maximum": 4,
+                    "default": 1
+                  },
+                  "trail_effect": {
+                    "type": "boolean",
+                    "description": "Enable fading trail when cells die (grayscale ghost effect)",
+                    "default": true
+                  },
+                  "trail_decay": {
+                    "type": "integer",
+                    "description": "Brightness decay per frame for dead cells (higher = faster fade)",
+                    "minimum": 1,
+                    "maximum": 255,
+                    "default": 30
+                  },
+                  "cell_color": {
+                    "type": "integer",
+                    "description": "Brightness of alive cells (1-255)",
+                    "minimum": 1,
+                    "maximum": 255,
+                    "default": 255
+                  },
+                  "restart_timeout": {
+                    "type": "number",
+                    "description": "Seconds to wait before restarting when simulation ends (all cells dead or pattern stable). 0 = restart immediately, -1 = never restart",
+                    "minimum": -1,
+                    "default": 3.0
+                  },
+                  "restart_mode": {
+                    "type": "string",
+                    "description": "How to restart: 'reset' = use initial_pattern, 'inject' = add random cells to existing grid (keeps survivors), 'random' = always use fresh random pattern",
+                    "enum": ["reset", "inject", "random"],
+                    "default": "reset"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "hyperspace" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "hyperspace": {
+                "type": "object",
+                "description": "Star Wars hyperspace/lightspeed effect settings",
+                "properties": {
+                  "star_count": {
+                    "type": "integer",
+                    "description": "Number of stars in the field",
+                    "minimum": 10,
+                    "maximum": 500,
+                    "default": 100
+                  },
+                  "speed": {
+                    "type": "number",
+                    "description": "Base star movement speed (idle/slow mode)",
+                    "minimum": 0.001,
+                    "maximum": 1.0,
+                    "default": 0.02
+                  },
+                  "max_speed": {
+                    "type": "number",
+                    "description": "Maximum star speed during hyperspace jump",
+                    "minimum": 0.01,
+                    "maximum": 2.0,
+                    "default": 0.5
+                  },
+                  "trail_length": {
+                    "type": "number",
+                    "description": "Star trail length multiplier (1.0 = normal)",
+                    "minimum": 0.1,
+                    "maximum": 5.0,
+                    "default": 1.0
+                  },
+                  "center_x": {
+                    "type": "integer",
+                    "description": "Focal point X coordinate (null = widget center)"
+                  },
+                  "center_y": {
+                    "type": "integer",
+                    "description": "Focal point Y coordinate (null = widget center)"
+                  },
+                  "star_color": {
+                    "type": "integer",
+                    "description": "Maximum star brightness (0-255)",
+                    "minimum": 1,
+                    "maximum": 255,
+                    "default": 255
+                  },
+                  "mode": {
+                    "type": "string",
+                    "description": "Animation mode: 'continuous' (always in hyperspace), 'cycle' (phases: idle -> jump -> travel -> exit)",
+                    "enum": ["continuous", "cycle"],
+                    "default": "continuous"
+                  },
+                  "idle_time": {
+                    "type": "number",
+                    "description": "Seconds in idle phase before jumping (cycle mode only)",
+                    "minimum": 0.5,
+                    "maximum": 60.0,
+                    "default": 5.0
+                  },
+                  "travel_time": {
+                    "type": "number",
+                    "description": "Seconds spent in hyperspace (cycle mode only)",
+                    "minimum": 0.5,
+                    "maximum": 60.0,
+                    "default": 3.0
+                  },
+                  "acceleration": {
+                    "type": "number",
+                    "description": "Speed change rate during jump/exit phases (cycle mode only)",
+                    "minimum": 0.01,
+                    "maximum": 1.0,
+                    "default": 0.1
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "starwars_intro" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "starwars_intro": {
+                "type": "object",
+                "description": "Star Wars opening crawl with pre-intro text, shrinking logo, and perspective text crawl",
+                "properties": {
+                  "pre_intro": {
+                    "type": "object",
+                    "description": "Pre-intro phase settings ('A long time ago in a galaxy far, far away....')",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Show the pre-intro phase",
+                        "default": true
+                      },
+                      "text": {
+                        "type": "string",
+                        "description": "The pre-intro message text (use \\n for line breaks)",
+                        "default": "A long time ago in a galaxy far, far away...."
+                      },
+                      "color": {
+                        "type": "integer",
+                        "description": "Text brightness (1-255, bluish dim appearance)",
+                        "minimum": 1,
+                        "maximum": 255,
+                        "default": 80
+                      },
+                      "fade_in": {
+                        "type": "number",
+                        "description": "Fade in duration in seconds",
+                        "minimum": 0.0,
+                        "maximum": 10.0,
+                        "default": 2.0
+                      },
+                      "hold": {
+                        "type": "number",
+                        "description": "Hold duration in seconds after fade in",
+                        "minimum": 0.0,
+                        "maximum": 30.0,
+                        "default": 2.0
+                      },
+                      "fade_out": {
+                        "type": "number",
+                        "description": "Fade out duration in seconds",
+                        "minimum": 0.0,
+                        "maximum": 10.0,
+                        "default": 1.0
+                      }
+                    }
+                  },
+                  "logo": {
+                    "type": "object",
+                    "description": "Logo phase settings (shrinking 'STAR WARS' logo)",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Show the logo phase",
+                        "default": true
+                      },
+                      "text": {
+                        "type": "string",
+                        "description": "Logo text (use \\n for line breaks)",
+                        "default": "STAR\\nWARS"
+                      },
+                      "color": {
+                        "type": "integer",
+                        "description": "Logo brightness (1-255)",
+                        "minimum": 1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "hold_before": {
+                        "type": "number",
+                        "description": "Seconds to hold at full size before shrinking",
+                        "minimum": 0.0,
+                        "maximum": 10.0,
+                        "default": 0.5
+                      },
+                      "shrink_duration": {
+                        "type": "number",
+                        "description": "Seconds for the shrink animation",
+                        "minimum": 0.5,
+                        "maximum": 30.0,
+                        "default": 4.0
+                      },
+                      "final_scale": {
+                        "type": "number",
+                        "description": "Scale at which logo disappears (0.0-1.0)",
+                        "minimum": 0.0,
+                        "maximum": 0.5,
+                        "default": 0.1
+                      },
+                      "line_spacing": {
+                        "type": "integer",
+                        "description": "Pixels between logo text lines",
+                        "minimum": 0,
+                        "maximum": 20,
+                        "default": 1
+                      }
+                    }
+                  },
+                  "stars": {
+                    "type": "object",
+                    "description": "Background starfield settings (visible during logo and crawl)",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Show background stars",
+                        "default": true
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of stars",
+                        "minimum": 10,
+                        "maximum": 200,
+                        "default": 50
+                      },
+                      "brightness": {
+                        "type": "integer",
+                        "description": "Maximum star brightness (1-255)",
+                        "minimum": 1,
+                        "maximum": 255,
+                        "default": 200
+                      }
+                    }
+                  },
+                  "text": {
+                    "type": "array",
+                    "description": "Lines of text to display in the crawl",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "scroll_speed": {
+                    "type": "number",
+                    "description": "Scroll speed in pixels per frame",
+                    "minimum": 0.1,
+                    "maximum": 5.0,
+                    "default": 0.5
+                  },
+                  "perspective": {
+                    "type": "number",
+                    "description": "Perspective strength (0.0 = no perspective, 1.0 = maximum narrowing toward top)",
+                    "minimum": 0.0,
+                    "maximum": 1.0,
+                    "default": 0.7
+                  },
+                  "slant": {
+                    "type": "number",
+                    "description": "Text radial slant angle in degrees (characters lean toward center)",
+                    "minimum": 0.0,
+                    "maximum": 90.0,
+                    "default": 60.0
+                  },
+                  "fade_top": {
+                    "type": "number",
+                    "description": "Fade start position from top (0.0 = fade from very top, 1.0 = no fade)",
+                    "minimum": 0.0,
+                    "maximum": 1.0,
+                    "default": 0.3
+                  },
+                  "text_color": {
+                    "type": "integer",
+                    "description": "Text brightness (1-255)",
+                    "minimum": 1,
+                    "maximum": 255,
+                    "default": 255
+                  },
+                  "line_spacing": {
+                    "type": "integer",
+                    "description": "Pixels between text lines",
+                    "minimum": 4,
+                    "maximum": 20,
+                    "default": 8
+                  },
+                  "loop": {
+                    "type": "boolean",
+                    "description": "Loop the entire sequence when complete",
+                    "default": true
+                  },
+                  "pause_at_end": {
+                    "type": "number",
+                    "description": "Seconds to pause after crawl completes before looping",
+                    "minimum": 0.0,
+                    "maximum": 30.0,
+                    "default": 3.0
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "telegram" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "auth": {
+                "type": "object",
+                "description": "Telegram API authentication (required)",
+                "required": ["api_id", "api_hash", "phone_number"],
+                "properties": {
+                  "api_id": {
+                    "type": "integer",
+                    "description": "Telegram API ID from my.telegram.org"
+                  },
+                  "api_hash": {
+                    "type": "string",
+                    "description": "Telegram API Hash from my.telegram.org"
+                  },
+                  "phone_number": {
+                    "type": "string",
+                    "description": "Phone number in international format (e.g., +1234567890)"
+                  },
+                  "session_path": {
+                    "type": "string",
+                    "description": "Path to session file (default: telegram/{api_id}_{phone}.session)"
+                  }
+                }
+              },
+              "filters": {
+                "type": "object",
+                "description": "Message filter settings by chat type",
+                "properties": {
+                  "private_chats": { "$ref": "#/definitions/telegramChatFilterConfig" },
+                  "groups": { "$ref": "#/definitions/telegramChatFilterConfig" },
+                  "channels": { "$ref": "#/definitions/telegramChatFilterConfig" }
+                }
+              },
+              "appearance": { "$ref": "#/definitions/telegramAppearanceConfig" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "telegram_counter" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "auth": {
+                "type": "object",
+                "description": "Telegram API authentication (required)",
+                "required": ["api_id", "api_hash", "phone_number"],
+                "properties": {
+                  "api_id": {
+                    "type": "integer",
+                    "description": "Telegram API ID from my.telegram.org"
+                  },
+                  "api_hash": {
+                    "type": "string",
+                    "description": "Telegram API Hash from my.telegram.org"
+                  },
+                  "phone_number": {
+                    "type": "string",
+                    "description": "Phone number in international format (e.g., +1234567890)"
+                  },
+                  "session_path": {
+                    "type": "string",
+                    "description": "Path to session file (default: telegram/{api_id}_{phone}.session)"
+                  }
+                }
+              },
+              "filters": {
+                "type": "object",
+                "description": "Message filter settings by chat type (independent from telegram widget)",
+                "properties": {
+                  "private_chats": { "$ref": "#/definitions/telegramChatFilterConfig" },
+                  "groups": { "$ref": "#/definitions/telegramChatFilterConfig" },
+                  "channels": { "$ref": "#/definitions/telegramChatFilterConfig" }
+                }
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["badge", "text"],
+                "description": "Display mode: badge (Telegram paper airplane icon) or text (formatted text with tokens)",
+                "default": "badge"
+              },
+              "badge": {
+                "type": "object",
+                "description": "Badge mode settings",
+                "properties": {
+                  "blink": {
+                    "type": "string",
+                    "enum": ["never", "always", "progressive"],
+                    "description": "Blink mode: never (no blinking), always (constant 2Hz blink), progressive (1-10Hz based on unread count)",
+                    "default": "never"
+                  },
+                  "colors": {
+                    "type": "object",
+                    "description": "Badge icon colors",
+                    "properties": {
+                      "foreground": {
+                        "type": "integer",
+                        "description": "Icon foreground color (0-255, or -1 for transparent)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "background": {
+                        "type": "integer",
+                        "description": "Icon background color (0-255, or -1 for transparent)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "text": {
+                "type": "object",
+                "description": "Text mode settings",
+                "properties": {
+                  "format": {
+                    "type": "string",
+                    "description": "Format string with tokens: {icon}, {unread}/{total}, {mentions}, {reactions}, {private}, {groups}, {channels}, {muted}, {private_muted}, {groups_muted}, {channels_muted}",
+                    "default": "{unread} unread"
+                  },
+                  "font": { "type": ["string", "null"], "description": "Font name or TTF path (null = bundled font)", "default": null },
                   "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 16 },
                   "align": {
                     "type": "object",

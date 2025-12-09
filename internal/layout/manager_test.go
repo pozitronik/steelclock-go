@@ -11,6 +11,7 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/clock"
 )
 
 func TestNewManager(t *testing.T) {
@@ -40,7 +41,7 @@ func TestNewManager(t *testing.T) {
 		},
 	}
 
-	clockWidget, err := widget.NewClockWidget(clockCfg)
+	clockWidget, err := clock.New(clockCfg)
 	if err != nil {
 		t.Fatalf("failed to create clock widget: %v", err)
 	}
@@ -81,7 +82,7 @@ func TestManagerComposite(t *testing.T) {
 		},
 	}
 
-	clockWidget, err := widget.NewClockWidget(clockCfg)
+	clockWidget, err := clock.New(clockCfg)
 	if err != nil {
 		t.Fatalf("failed to create clock widget: %v", err)
 	}
@@ -160,12 +161,12 @@ func TestManagerCompositeMultipleWidgets(t *testing.T) {
 		},
 	}
 
-	clock1, err := widget.NewClockWidget(clock1Cfg)
+	clock1, err := clock.New(clock1Cfg)
 	if err != nil {
 		t.Fatalf("failed to create clock1: %v", err)
 	}
 
-	clock2, err := widget.NewClockWidget(clock2Cfg)
+	clock2, err := clock.New(clock2Cfg)
 	if err != nil {
 		t.Fatalf("failed to create clock2: %v", err)
 	}

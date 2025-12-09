@@ -1,0 +1,660 @@
+package volume
+
+import (
+	"runtime"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/pozitronik/steelclock-go/internal/config"
+)
+
+// skipIfNoAudioDevice skips the test if no audio device is available
+// This is common in CI environments
+func skipIfNoAudioDevice(t *testing.T) {
+	t.Helper()
+
+	// Volume widget is Windows-only
+	if runtime.GOOS != "windows" {
+		t.Skip("Volume widget is Windows-only (requires Windows Core Audio API)")
+		return
+	}
+
+	// Try to create a volume reader to see if audio devices are available
+	reader, err := newVolumeReader()
+	if err != nil {
+		// Check if error is "Element not found" (no audio device)
+		if strings.Contains(err.Error(), "Element not found") {
+			t.Skip("No audio device available (common in CI environments)")
+		}
+		// For other errors, skip as well but with different message
+		t.Skipf("Cannot initialize audio: %v", err)
+	}
+
+	// Clean up the test reader
+	if reader != nil {
+		reader.Close()
+	}
+}
+
+// TestNew tests volume widget creation
+func TestNew(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	tests := []struct {
+		name        string
+		displayMode string
+	}{
+		{"Text mode", "text"},
+		{"Bar horizontal", "bar_horizontal"},
+		{"Bar vertical", "bar_vertical"},
+		{"Gauge mode", "gauge"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := config.WidgetConfig{
+				Type: "volume",
+				ID:   "test_volume",
+				Position: config.PositionConfig{
+					X: 0,
+					Y: 0,
+					W: 128,
+					H: 40,
+				},
+				Mode: tt.displayMode,
+			}
+
+			widget, err := New(cfg)
+			if err != nil {
+				t.Fatalf("New() error = %v", err)
+			}
+
+			if widget.Name() != "test_volume" {
+				t.Errorf("Name() = %v, want %v", widget.Name(), "test_volume")
+			}
+
+			if widget.displayMode != tt.displayMode {
+				t.Errorf("displayMode = %v, want %v", widget.displayMode, tt.displayMode)
+			}
+		})
+	}
+}
+
+// TestNew_Defaults tests default values
+func TestNew_Defaults(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	if widget.displayMode != "bar" {
+		t.Errorf("default displayMode = %v, want bar", widget.displayMode)
+	}
+
+	if widget.fillColor != 255 {
+		t.Errorf("default fillColor = %v, want 255", widget.fillColor)
+	}
+
+	if widget.GetAutoHideTimeout() != 2*time.Second {
+		t.Errorf("default autoHideTimeout = %v, want 2s", widget.GetAutoHideTimeout())
+	}
+
+	if widget.gaugeColor != 200 {
+		t.Errorf("default gaugeColor = %v, want 200", widget.gaugeColor)
+	}
+
+	if widget.gaugeNeedleColor != 255 {
+		t.Errorf("default gaugeNeedleColor = %v, want 255", widget.gaugeNeedleColor)
+	}
+}
+
+// TestWidget_Update tests volume updates
+func TestWidget_Update(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Mode: "bar_horizontal",
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	// Update volume
+	err = widget.Update()
+	if err != nil {
+		t.Errorf("Update() error = %v", err)
+	}
+
+	// Volume should be set (mock returns 75.0)
+	widget.mu.RLock()
+	volume := widget.volume
+	widget.mu.RUnlock()
+
+	if volume < 0 || volume > 100 {
+		t.Errorf("volume = %v, want 0-100", volume)
+	}
+}
+
+// TestWidget_RenderText tests text mode rendering
+func TestWidget_RenderText(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Mode: "text",
+		Text: &config.TextConfig{
+			Size: 10,
+		},
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	// Update first
+	_ = widget.Update()
+
+	// Render
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Error("Render() returned nil image")
+	}
+
+	if img.Bounds().Dx() != 128 || img.Bounds().Dy() != 40 {
+		t.Errorf("Image size = %v, want 128x40", img.Bounds())
+	}
+}
+
+// TestWidget_RenderBarHorizontal tests horizontal bar rendering
+func TestWidget_RenderBarHorizontal(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 20,
+		},
+		Mode: "bar_horizontal",
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
+		},
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	_ = widget.Update()
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Error("Render() returned nil image")
+	}
+}
+
+// TestWidget_RenderBarVertical tests vertical bar rendering
+func TestWidget_RenderBarVertical(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 20,
+			H: 128,
+		},
+		Mode: "bar_vertical",
+		Colors: &config.ColorsConfig{
+			Fill: config.IntPtr(255),
+		},
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	_ = widget.Update()
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Error("Render() returned nil image")
+	}
+}
+
+// TestWidget_RenderGauge tests gauge rendering
+func TestWidget_RenderGauge(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 64,
+			H: 40,
+		},
+		Mode: "gauge",
+		Colors: &config.ColorsConfig{
+			Arc:    config.IntPtr(200),
+			Needle: config.IntPtr(255),
+		},
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	_ = widget.Update()
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+
+	if img == nil {
+		t.Error("Render() returned nil image")
+	}
+}
+
+// TestWidget_AutoHide tests auto-hide functionality
+func TestWidget_AutoHide(t *testing.T) {
+	// Skip on non-Windows platforms - volume reading is Windows-only
+	if runtime.GOOS != "windows" {
+		t.Skip("Volume widget auto-hide test requires Windows (volume reading not supported on this platform)")
+	}
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Mode: "bar",
+		AutoHide: &config.AutoHideConfig{
+			Enabled: true,
+			Timeout: 0.5, // 500ms - long enough to check visibility before timeout
+		},
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	defer widget.Stop()
+
+	// Widget should start hidden (auto-hide lastTriggerTime = zero time)
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() initial error = %v", err)
+	}
+	if img != nil {
+		t.Error("Widget should start hidden with auto-hide enabled, but got image")
+	}
+
+	// Wait for background polling to detect volume (triggers volume change)
+	// Initial poll happens immediately in goroutine, but give it time to complete
+	time.Sleep(200 * time.Millisecond)
+
+	// After volume is detected, widget should be visible (auto-hide timeout 500ms hasn't expired yet)
+	img, err = widget.Render()
+	if err != nil {
+		t.Errorf("Render() after volume change error = %v", err)
+	}
+	if img == nil {
+		t.Error("Widget should be visible after volume change, but got nil")
+	}
+
+	// Wait for auto-hide timeout (500ms total from trigger, we've used ~200ms, wait 400ms more)
+	time.Sleep(400 * time.Millisecond)
+
+	// Widget should be hidden again
+	img, err = widget.Render()
+	if err != nil {
+		t.Errorf("Render() after timeout error = %v", err)
+	}
+	if img != nil {
+		t.Error("Widget should be hidden after timeout, but got image")
+	}
+}
+
+// TestWidget_AllModes tests all display modes
+func TestWidget_AllModes(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	// Volume widget supports: text, bar, gauge (bar direction is controlled via separate config)
+	modes := []string{"text", "bar", "gauge"}
+
+	for _, mode := range modes {
+		t.Run(mode, func(t *testing.T) {
+			cfg := config.WidgetConfig{
+				Type: "volume",
+				ID:   "test_volume",
+				Position: config.PositionConfig{
+					X: 0,
+					Y: 0,
+					W: 64,
+					H: 64,
+				},
+				Mode: mode,
+				Text: &config.TextConfig{
+					Size: 10,
+				},
+			}
+
+			widget, err := New(cfg)
+			if err != nil {
+				t.Fatalf("New() error = %v", err)
+			}
+
+			_ = widget.Update()
+
+			img, err := widget.Render()
+			if err != nil {
+				t.Errorf("Render() error = %v", err)
+			}
+			if img == nil {
+				t.Error("Render() returned nil image")
+			}
+		})
+	}
+}
+
+// TestWidget_SmallSize tests rendering with very small size
+func TestWidget_SmallSize(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 10,
+			H: 10,
+		},
+		Mode: "bar_horizontal",
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	_ = widget.Update()
+
+	// Should not crash with small size
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() with small size error = %v", err)
+	}
+	if img == nil {
+		t.Error("Render() with small size returned nil image")
+	}
+}
+
+// TestWidget_WithBorder tests rendering with border
+func TestWidget_WithBorder(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Style: &config.StyleConfig{
+			Border: 255,
+		},
+		Mode: "bar_horizontal",
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	_ = widget.Update()
+
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+	if img == nil {
+		t.Error("Render() returned nil image")
+	}
+}
+
+// TestWidget_ConcurrentAccess tests concurrent access safety
+func TestWidget_ConcurrentAccess(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Mode: "bar_horizontal",
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	// Run concurrent updates and renders
+	done := make(chan bool, 2)
+
+	go func() {
+		for i := 0; i < 10; i++ {
+			_ = widget.Update()
+		}
+		done <- true
+	}()
+
+	go func() {
+		for i := 0; i < 10; i++ {
+			_, _ = widget.Render()
+		}
+		done <- true
+	}()
+
+	<-done
+	<-done
+
+	// Should not crash or race
+}
+
+// TestWidget_Stop tests proper Stop() functionality
+func TestWidget_Stop(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume_stop",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Mode: "bar_horizontal",
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	// Let it run briefly to accumulate some metrics
+	time.Sleep(200 * time.Millisecond)
+
+	// Verify widget is functioning
+	widget.mu.RLock()
+	totalCallsBefore := widget.totalCalls
+	widget.mu.RUnlock()
+
+	if totalCallsBefore == 0 {
+		t.Error("Widget should have made some calls before Stop()")
+	}
+
+	// Stop the widget
+	widget.Stop()
+
+	// Verify cleanup
+	if widget.reader != nil {
+		t.Error("Reader should be cleaned up after Stop()")
+	}
+
+	// Give time for background goroutine to actually stop
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify no more calls are being made
+	widget.mu.RLock()
+	totalCallsAfter := widget.totalCalls
+	widget.mu.RUnlock()
+
+	if totalCallsAfter != totalCallsBefore {
+		t.Errorf("Calls should stop after Stop(), before=%d, after=%d", totalCallsBefore, totalCallsAfter)
+	}
+}
+
+// TestWidget_RenderMuted tests rendering with muted state
+func TestWidget_RenderMuted(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume_muted",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 64,
+			H: 40,
+		},
+		Mode: "bar_horizontal",
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	defer widget.Stop()
+
+	// Simulate muted state
+	widget.mu.Lock()
+	widget.isMuted = true
+	widget.volume = 50.0
+	widget.mu.Unlock()
+
+	// Render should include mute indicator
+	img, err := widget.Render()
+	if err != nil {
+		t.Errorf("Render() with muted state error = %v", err)
+	}
+
+	if img == nil {
+		t.Error("Render() with muted state returned nil image")
+	}
+
+	// Verify image was rendered (mute indicator should be drawn)
+	bounds := img.Bounds()
+	if bounds.Dx() != 64 || bounds.Dy() != 40 {
+		t.Errorf("Image size = %v, want 64x40", bounds)
+	}
+}
+
+// TestWidget_UpdateInterval tests GetUpdateInterval
+func TestWidget_UpdateInterval(t *testing.T) {
+	skipIfNoAudioDevice(t)
+
+	cfg := config.WidgetConfig{
+		Type: "volume",
+		ID:   "test_volume_interval",
+		Position: config.PositionConfig{
+			X: 0,
+			Y: 0,
+			W: 128,
+			H: 40,
+		},
+		Mode:           "bar_horizontal",
+		UpdateInterval: 0.5, // 500ms
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	defer widget.Stop()
+
+	interval := widget.GetUpdateInterval()
+	expected := 500 * time.Millisecond
+
+	if interval != expected {
+		t.Errorf("GetUpdateInterval() = %v, want %v", interval, expected)
+	}
+}

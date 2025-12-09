@@ -4,6 +4,8 @@ import (
 	"image"
 	"testing"
 	"time"
+
+	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
 func TestNewErrorWidget(t *testing.T) {
@@ -307,5 +309,99 @@ func TestErrorWidget_GetStyle(t *testing.T) {
 
 	if style.Background != 0 {
 		t.Errorf("GetStyle().Background = %d, want 0", style.Background)
+	}
+}
+
+// TestErrorWidget_TinySize tests with dimensions too small for any text layout
+// This should trigger the renderIconOnly fallback path
+func TestErrorWidget_TinySize(t *testing.T) {
+	// Test with dimensions that are too small for any text layout but can fit the smallest icon
+	sizes := []struct {
+		width  int
+		height int
+	}{
+		{20, 15}, // Very small but can fit 12x12 icon
+		{15, 15}, // Can fit 12x12 icon
+		{12, 12}, // Exactly 12x12 icon size
+		{8, 8},   // Too small for any icon
+	}
+
+	for _, size := range sizes {
+		t.Run("tiny", func(t *testing.T) {
+			widget := NewErrorWidget(size.width, size.height, "VERYLONGMESSAGETHATCANTFIT")
+			widget.flashState = true
+
+			img, err := widget.Render()
+			if err != nil {
+				t.Fatalf("Render() error = %v for tiny size %dx%d", err, size.width, size.height)
+			}
+
+			if img == nil {
+				t.Fatalf("Render() returned nil for tiny size %dx%d", size.width, size.height)
+			}
+
+			bounds := img.Bounds()
+			if bounds.Dx() != size.width || bounds.Dy() != size.height {
+				t.Errorf("image size = %dx%d, want %dx%d", bounds.Dx(), bounds.Dy(), size.width, size.height)
+			}
+		})
+	}
+}
+
+// TestErrorWidget_NewErrorWidgetWithConfig tests widget creation with config
+func TestErrorWidget_NewErrorWidgetWithConfig(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "clock",
+		ID:      "original_widget",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 10, Y: 20, W: 100, H: 50,
+		},
+	}
+
+	widget := NewErrorWidgetWithConfig(cfg, "CONFIG")
+
+	if widget == nil {
+		t.Fatal("NewErrorWidgetWithConfig() returned nil")
+	}
+
+	if widget.message != "CONFIG" {
+		t.Errorf("message = %s, want CONFIG", widget.message)
+	}
+
+	// ID should be original_widget_error
+	if widget.Name() != "original_widget_error" {
+		t.Errorf("Name() = %s, want original_widget_error", widget.Name())
+	}
+
+	// Should inherit position from original config
+	pos := widget.GetPosition()
+	if pos.X != 10 || pos.Y != 20 {
+		t.Errorf("Position = (%d, %d), want (10, 20)", pos.X, pos.Y)
+	}
+}
+
+// TestErrorWidget_NewErrorWidgetWithConfig_NilStyle tests creation with nil style
+func TestErrorWidget_NewErrorWidgetWithConfig_NilStyle(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "clock",
+		ID:      "no_style_widget",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Style: nil, // Nil style should be handled
+	}
+
+	widget := NewErrorWidgetWithConfig(cfg, "ERROR")
+
+	if widget == nil {
+		t.Fatal("NewErrorWidgetWithConfig() returned nil for nil style")
+	}
+
+	// Should create style with background=0 and border=-1
+	style := widget.GetStyle()
+	if style.Background != 0 {
+		t.Errorf("Style.Background = %d, want 0", style.Background)
 	}
 }

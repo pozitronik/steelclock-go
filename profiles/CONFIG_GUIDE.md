@@ -144,22 +144,24 @@ Widgets can reference default colors with `@name` syntax: `"fill": "@primary"`.
 
 SteelClock supports these widget types:
 
-| Type               | Description             | Modes                           |
-|--------------------|-------------------------|---------------------------------|
-| `clock`            | Time display            | text, analog, binary, segment   |
-| `cpu`              | CPU usage monitor       | text, bar, graph, gauge    |
-| `memory`           | RAM usage monitor       | text, bar, graph, gauge    |
-| `network`          | Network I/O monitor     | text, bar, graph, gauge    |
-| `disk`             | Disk I/O monitor        | text, bar, graph           |
-| `volume`           | System volume           | text, bar, gauge, triangle |
-| `volume_meter`     | Audio peak meter        | text, bar, gauge           |
-| `audio_visualizer` | Spectrum/oscilloscope   | spectrum, oscilloscope     |
-| `keyboard`         | Lock key indicators     | -                          |
-| `keyboard_layout`  | Current keyboard layout | -                          |
-| `doom`             | DOOM game               | -                          |
-| `winamp`           | Winamp media player     | -                          |
-| `matrix`           | Matrix digital rain     | -                          |
-| `weather`          | Current weather         | icon, text                 |
+| Type               | Description             | Modes                         |
+|--------------------|-------------------------|-------------------------------|
+| `clock`            | Time display            | text, analog, binary, segment |
+| `cpu`              | CPU usage monitor       | text, bar, graph, gauge       |
+| `memory`           | RAM usage monitor       | text, bar, graph, gauge       |
+| `network`          | Network I/O monitor     | text, bar, graph, gauge       |
+| `disk`             | Disk I/O monitor        | text, bar, graph              |
+| `volume`           | System volume           | text, bar, gauge, triangle    |
+| `volume_meter`     | Audio peak meter        | text, bar, gauge              |
+| `audio_visualizer` | Spectrum/oscilloscope   | spectrum, oscilloscope        |
+| `keyboard`         | Lock key indicators     | -                             |
+| `keyboard_layout`  | Current keyboard layout | -                             |
+| `doom`             | DOOM game               | -                             |
+| `winamp`           | Winamp media player     | -                             |
+| `matrix`           | Matrix digital rain     | -                             |
+| `weather`          | Current weather         | icon, text                    |
+| `game_of_life`     | Conway's Game of Life   | -                             |
+| `hyperspace`       | Star Wars lightspeed    | continuous, cycle             |
 
 ## Common Properties
 
@@ -383,18 +385,18 @@ Vertical layout:           Horizontal layout:
 }
 ```
 
-| Property      | Options              | Default      | Description                              |
-|---------------|----------------------|--------------|------------------------------------------|
-| `format`      | strftime             | `%H:%M:%S`   | Which components to show (%H, %M, %S)    |
-| `style`       | `bcd`, `true`        | `bcd`        | Binary representation style              |
-| `layout`      | `vertical`, `horizontal` | `vertical` | Bit layout orientation                 |
-| `dot_size`    | 1+                   | 4            | Dot diameter in pixels                   |
-| `dot_spacing` | 0+                   | 2            | Gap between dots in pixels               |
-| `dot_style`   | `circle`, `square`   | `circle`     | Dot shape                                |
-| `on_color`    | 0-255                | 255          | Color for "on" bits (1)                  |
-| `off_color`   | 0-255                | 40           | Color for "off" bits (0 = invisible)     |
-| `show_labels` | true/false           | false        | Show H/M/S labels                        |
-| `show_hint`   | true/false           | false        | Show decimal values alongside binary     |
+| Property      | Options                  | Default    | Description                           |
+|---------------|--------------------------|------------|---------------------------------------|
+| `format`      | strftime                 | `%H:%M:%S` | Which components to show (%H, %M, %S) |
+| `style`       | `bcd`, `true`            | `bcd`      | Binary representation style           |
+| `layout`      | `vertical`, `horizontal` | `vertical` | Bit layout orientation                |
+| `dot_size`    | 1+                       | 4          | Dot diameter in pixels                |
+| `dot_spacing` | 0+                       | 2          | Gap between dots in pixels            |
+| `dot_style`   | `circle`, `square`       | `circle`   | Dot shape                             |
+| `on_color`    | 0-255                    | 255        | Color for "on" bits (1)               |
+| `off_color`   | 0-255                    | 40         | Color for "off" bits (0 = invisible)  |
+| `show_labels` | true/false               | false      | Show H/M/S labels                     |
+| `show_hint`   | true/false               | false      | Show decimal values alongside binary  |
 
 #### Segment Mode
 
@@ -431,17 +433,17 @@ Displays time using a seven-segment display style, like digital alarm clocks.
 }
 ```
 
-| Property            | Options                         | Default     | Description                          |
-|---------------------|---------------------------------|-------------|--------------------------------------|
-| `format`            | see below                       | `%H:%M:%S`  | Time format with optional literals   |
-| `digit_height`      | 0+                              | 0           | Digit height (0 = auto-fit)          |
-| `segment_thickness` | 1+                              | 2           | Segment line thickness               |
-| `segment_style`     | `rectangle`, `hexagon`, `rounded` | `rectangle` | Segment shape style                |
-| `digit_spacing`     | 0+                              | 2           | Space between digits                 |
-| `colon_style`       | `dots`, `bar`, `none`           | `dots`      | Colon separator style                |
-| `colon_blink`       | true/false                      | true        | Blink colons each second             |
-| `on_color`          | 0-255                           | 255         | Active segment color                 |
-| `off_color`         | 0-255                           | 30          | Inactive segment color (0=invisible) |
+| Property            | Options                           | Default     | Description                          |
+|---------------------|-----------------------------------|-------------|--------------------------------------|
+| `format`            | see below                         | `%H:%M:%S`  | Time format with optional literals   |
+| `digit_height`      | 0+                                | 0           | Digit height (0 = auto-fit)          |
+| `segment_thickness` | 1+                                | 2           | Segment line thickness               |
+| `segment_style`     | `rectangle`, `hexagon`, `rounded` | `rectangle` | Segment shape style                  |
+| `digit_spacing`     | 0+                                | 2           | Space between digits                 |
+| `colon_style`       | `dots`, `bar`, `none`             | `dots`      | Colon separator style                |
+| `colon_blink`       | true/false                        | true        | Blink colons each second             |
+| `on_color`          | 0-255                             | 255         | Active segment color                 |
+| `off_color`         | 0-255                             | 30          | Inactive segment color (0=invisible) |
 
 **Segment Styles:**
 - `rectangle` - Simple rectangular bars (default)
@@ -465,10 +467,10 @@ Examples:
 
 **Flip Animation:**
 
-| Property | Options        | Default | Description                    |
-|----------|----------------|---------|--------------------------------|
-| `style`  | `none`, `fade` | `none`  | Animation style (none=disabled)|
-| `speed`  | 0.05-1.0       | 0.15    | Animation duration in seconds  |
+| Property | Options        | Default | Description                     |
+|----------|----------------|---------|---------------------------------|
+| `style`  | `none`, `fade` | `none`  | Animation style (none=disabled) |
+| `speed`  | 0.05-1.0       | 0.15    | Animation duration in seconds   |
 
 ### CPU Widget
 
@@ -792,24 +794,24 @@ Plays DOOM shareware demo on the OLED display. Auto-downloads doom1.wad if not f
 
 The `doom.render_mode` setting controls how color frames are converted to grayscale for the OLED display:
 
-| Mode | Description |
-|------|-------------|
-| `normal` | Standard luminance conversion (default) |
-| `contrast` | Auto-contrast stretching - maps actual min/max to full 0-255 range |
+| Mode        | Description                                                           |
+|-------------|-----------------------------------------------------------------------|
+| `normal`    | Standard luminance conversion (default)                               |
+| `contrast`  | Auto-contrast stretching - maps actual min/max to full 0-255 range    |
 | `posterize` | Reduces to N discrete gray levels - reduces noise while keeping depth |
-| `threshold` | Pure black/white conversion - maximum clarity but loses depth |
-| `dither` | Ordered dithering using Bayer matrix - retro dot-pattern look |
-| `gamma` | Gamma correction with contrast boost - brightens dark scenes |
+| `threshold` | Pure black/white conversion - maximum clarity but loses depth         |
+| `dither`    | Ordered dithering using Bayer matrix - retro dot-pattern look         |
+| `gamma`     | Gamma correction with contrast boost - brightens dark scenes          |
 
 #### Render Mode Settings
 
-| Setting | Mode | Description | Default |
-|---------|------|-------------|---------|
-| `posterize_levels` | posterize | Number of gray levels (2-16) | 4 |
-| `threshold_value` | threshold | Cutoff brightness (0-255) | 128 |
-| `gamma` | gamma | Gamma value (0.1-3.0, >1 brightens midtones) | 1.5 |
-| `contrast_boost` | gamma | Contrast multiplier (1.0-3.0) | 1.2 |
-| `dither_size` | dither | Bayer matrix size (2, 4, or 8) | 4 |
+| Setting            | Mode      | Description                                  | Default |
+|--------------------|-----------|----------------------------------------------|---------|
+| `posterize_levels` | posterize | Number of gray levels (2-16)                 | 4       |
+| `threshold_value`  | threshold | Cutoff brightness (0-255)                    | 128     |
+| `gamma`            | gamma     | Gamma value (0.1-3.0, >1 brightens midtones) | 1.5     |
+| `contrast_boost`   | gamma     | Contrast multiplier (1.0-3.0)                | 1.2     |
+| `dither_size`      | dither    | Bayer matrix size (2, 4, or 8)               | 4       |
 
 **Recommended settings:**
 - For best visibility: `"render_mode": "posterize"` with `"posterize_levels": 4`
@@ -883,14 +885,14 @@ Displays information from Winamp media player. Windows only (shows placeholder o
 
 #### Scroll Configuration
 
-| Property    | Description                                                              |
-|-------------|--------------------------------------------------------------------------|
-| `enabled`   | Enable text scrolling                                                    |
-| `direction` | Scroll direction: `left`, `right`, `up`, `down`                          |
-| `speed`     | Scroll speed in pixels per second (default: 30)                          |
-| `mode`      | `continuous` (loop), `bounce` (reverse at edges), `pause_ends` (pause)   |
-| `pause_ms`  | Pause duration at ends in ms (for bounce/pause_ends modes, default: 1000)|
-| `gap`       | Gap between text repetitions in pixels (for continuous mode, default: 20)|
+| Property    | Description                                                               |
+|-------------|---------------------------------------------------------------------------|
+| `enabled`   | Enable text scrolling                                                     |
+| `direction` | Scroll direction: `left`, `right`, `up`, `down`                           |
+| `speed`     | Scroll speed in pixels per second (default: 30)                           |
+| `mode`      | `continuous` (loop), `bounce` (reverse at edges), `pause_ends` (pause)    |
+| `pause_ms`  | Pause duration at ends in ms (for bounce/pause_ends modes, default: 1000) |
+| `gap`       | Gap between text repetitions in pixels (for continuous mode, default: 20) |
 
 #### Auto-Show Events
 
@@ -987,21 +989,21 @@ The weather widget uses format strings with tokens to define what to display. To
 
 **Basic tokens (text):**
 
-| Token          | Description                           | Example Output    |
-|----------------|---------------------------------------|-------------------|
-| `{temp}`       | Current temperature                   | `15C` or `59F`    |
-| `{feels}`      | Feels-like temperature                | `13C`             |
-| `{humidity}`   | Humidity percentage                   | `75%`             |
-| `{wind}`       | Wind speed                            | `12 km/h`         |
-| `{wind_dir}`   | Wind direction                        | `NE`              |
-| `{pressure}`   | Atmospheric pressure                  | `1013 hPa`        |
-| `{visibility}` | Visibility distance                   | `10 km`           |
-| `{condition}`  | Weather condition                     | `Cloudy`          |
-| `{description}`| Detailed description                  | `Partly cloudy`   |
-| `{aqi}`        | Air quality index value               | `42`              |
-| `{aqi_level}`  | AQI level text                        | `Good`            |
-| `{uv}`         | UV index value                        | `6.5`             |
-| `{uv_level}`   | UV level text                         | `High`            |
+| Token           | Description             | Example Output  |
+|-----------------|-------------------------|-----------------|
+| `{temp}`        | Current temperature     | `15C` or `59F`  |
+| `{feels}`       | Feels-like temperature  | `13C`           |
+| `{humidity}`    | Humidity percentage     | `75%`           |
+| `{wind}`        | Wind speed              | `12 km/h`       |
+| `{wind_dir}`    | Wind direction          | `NE`            |
+| `{pressure}`    | Atmospheric pressure    | `1013 hPa`      |
+| `{visibility}`  | Visibility distance     | `10 km`         |
+| `{condition}`   | Weather condition       | `Cloudy`        |
+| `{description}` | Detailed description    | `Partly cloudy` |
+| `{aqi}`         | Air quality index value | `42`            |
+| `{aqi_level}`   | AQI level text          | `Good`          |
+| `{uv}`          | UV index value          | `6.5`           |
+| `{uv_level}`    | UV level text           | `High`          |
 
 **Icon tokens:**
 
@@ -1016,11 +1018,11 @@ The weather widget uses format strings with tokens to define what to display. To
 
 **Large tokens (expand to fill available space):**
 
-| Token              | Description                                    |
-|--------------------|------------------------------------------------|
-| `{forecast:graph}` | Temperature trend line graph for next hours    |
-| `{forecast:icons}` | Multi-day forecast with icons and temperatures |
-| `{forecast:scroll}`| Scrolling text with current weather + forecast |
+| Token               | Description                                    |
+|---------------------|------------------------------------------------|
+| `{forecast:graph}`  | Temperature trend line graph for next hours    |
+| `{forecast:icons}`  | Multi-day forecast with icons and temperatures |
+| `{forecast:scroll}` | Scrolling text with current weather + forecast |
 
 #### Multi-line Layouts
 
@@ -1478,6 +1480,688 @@ For bar/graph/gauge modes, use the shared widget-level configurations:
 - Vertical: Battery with terminal on top, status icon at bottom-center
 - Status indicators (charging bolt, AC plug) have white fill with black border for visibility
 - All colors support 0 (black) values
+
+### Game of Life Widget
+
+Displays Conway's Game of Life cellular automaton - a classic zero-player game where patterns evolve based on simple rules. The 128x40 display provides 5,120 cells for emergent complexity.
+
+```json
+{
+  "type": "game_of_life",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.1,
+  "game_of_life": {
+    "rules": "B3/S23",
+    "wrap_edges": true,
+    "initial_pattern": "random",
+    "random_density": 0.35,
+    "cell_size": 1,
+    "trail_effect": true,
+    "trail_decay": 25,
+    "cell_color": 255
+  }
+}
+```
+
+#### Speed Control
+
+The simulation speed is controlled by `update_interval` (in seconds):
+- `0.05` - Very fast (20 generations/second)
+- `0.1` - Fast (10 generations/second, recommended)
+- `0.2` - Medium (5 generations/second)
+- `0.5` - Slow (2 generations/second)
+
+#### Configuration
+
+| Property          | Type    | Default    | Description                                                |
+|-------------------|---------|------------|------------------------------------------------------------|
+| `rules`           | string  | `"B3/S23"` | Birth/Survival rules in B/S notation                       |
+| `wrap_edges`      | boolean | `true`     | Wrap edges (torus topology)                                |
+| `initial_pattern` | string  | `"random"` | Starting pattern                                           |
+| `random_density`  | number  | `0.3`      | Cell density for random pattern (0.0-1.0)                  |
+| `cell_size`       | integer | `1`        | Pixels per cell (1-4)                                      |
+| `trail_effect`    | boolean | `true`     | Enable fading trail when cells die                         |
+| `trail_decay`     | integer | `30`       | Brightness decay per frame (1-255, higher = faster)        |
+| `cell_color`      | integer | `255`      | Alive cell brightness (1-255)                              |
+| `restart_timeout` | number  | `3.0`      | Seconds to wait before restart (0 = immediate, -1 = never) |
+| `restart_mode`    | string  | `"reset"`  | How to restart: "reset", "inject", or "random"             |
+
+#### Rules Format
+
+Rules use B/S notation: `B` followed by birth neighbor counts, `/S` followed by survival counts.
+
+| Rule           | Name               | Description                                    |
+|----------------|--------------------|------------------------------------------------|
+| `B3/S23`       | Conway             | Standard rules - balanced complexity (default) |
+| `B36/S23`      | HighLife           | Like Conway but with replicators               |
+| `B1357/S1357`  | Replicator         | Patterns replicate themselves                  |
+| `B2/S`         | Seeds              | Explosive growth                               |
+| `B3/S12345678` | Life without Death | Cells never die                                |
+
+#### Initial Patterns
+
+| Pattern       | Description                                                  |
+|---------------|--------------------------------------------------------------|
+| `random`      | Random cells based on `random_density`                       |
+| `clear`       | Empty grid                                                   |
+| `glider`      | Small pattern that moves diagonally                          |
+| `r_pentomino` | Methuselah - small pattern that evolves for 1103 generations |
+| `acorn`       | Another methuselah - evolves for 5206 generations            |
+| `diehard`     | Pattern that dies after 130 generations                      |
+| `lwss`        | Lightweight spaceship - moves horizontally                   |
+| `pulsar`      | Period-3 oscillator - stable and mesmerizing                 |
+| `glider_gun`  | Gosper glider gun - produces infinite stream of gliders      |
+
+#### Examples
+
+**Fast random simulation with trails:**
+```json
+{
+  "type": "game_of_life",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.05,
+  "game_of_life": {
+    "initial_pattern": "random",
+    "random_density": 0.4,
+    "trail_effect": true,
+    "trail_decay": 20
+  }
+}
+```
+
+**Glider gun (infinite gliders):**
+```json
+{
+  "type": "game_of_life",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.1,
+  "game_of_life": {
+    "initial_pattern": "glider_gun",
+    "wrap_edges": true
+  }
+}
+```
+
+**HighLife with larger cells:**
+```json
+{
+  "type": "game_of_life",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.15,
+  "game_of_life": {
+    "rules": "B36/S23",
+    "initial_pattern": "random",
+    "cell_size": 2,
+    "trail_effect": false
+  }
+}
+```
+
+#### Tips
+
+- Use `wrap_edges: true` for patterns that move (gliders, spaceships)
+- Lower `trail_decay` for longer ghost trails
+- `cell_size: 2` gives 64x20 grid - easier to see individual cells
+- `glider_gun` needs `wrap_edges: true` or gliders pile up at edges
+- `pulsar` is good for testing - stable, predictable oscillation
+- Simulation restarts when all cells die or pattern becomes stable
+- Set `restart_timeout: -1` to disable auto-restart (stays in final state)
+- Set `restart_timeout: 0` to restart immediately without pause
+- `restart_mode: "inject"` adds new cells to existing survivors - keeps the game evolving
+- `restart_mode: "random"` always uses fresh random pattern, ignoring initial_pattern
+
+### Hyperspace Widget
+
+Displays the Star Wars hyperspace/lightspeed jump effect with stars streaking toward or away from a vanishing point.
+
+```json
+{
+  "type": "hyperspace",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.033,
+  "hyperspace": {
+    "star_count": 100,
+    "speed": 0.02,
+    "max_speed": 0.5,
+    "trail_length": 1.0,
+    "star_color": 255,
+    "mode": "continuous"
+  }
+}
+```
+
+#### Animation Modes
+
+| Mode         | Description                                                       |
+|--------------|-------------------------------------------------------------------|
+| `continuous` | Always in hyperspace at max speed - constant light streaks        |
+| `cycle`      | Phases: idle (slow stars) -> jump -> hyperspace travel -> exit    |
+
+#### Configuration
+
+| Property       | Type    | Default        | Description                                     |
+|----------------|---------|----------------|-------------------------------------------------|
+| `star_count`   | integer | `100`          | Number of stars in the field (10-500)           |
+| `speed`        | number  | `0.02`         | Base speed for idle phase                       |
+| `max_speed`    | number  | `0.5`          | Maximum speed during hyperspace                 |
+| `trail_length` | number  | `1.0`          | Trail length multiplier (0.1-5.0)               |
+| `center_x`     | integer | widget center  | Focal point X coordinate                        |
+| `center_y`     | integer | widget center  | Focal point Y coordinate                        |
+| `star_color`   | integer | `255`          | Maximum star brightness (1-255)                 |
+| `mode`         | string  | `"continuous"` | Animation mode: "continuous" or "cycle"         |
+| `idle_time`    | number  | `5.0`          | Seconds in idle phase before jump (cycle mode)  |
+| `travel_time`  | number  | `3.0`          | Seconds in hyperspace (cycle mode)              |
+| `acceleration` | number  | `0.1`          | Speed change rate during jump/exit (cycle mode) |
+
+#### Cycle Mode Phases
+
+In `cycle` mode, the animation goes through four phases:
+
+1. **Idle** - Stars drift slowly toward viewer for `idle_time` seconds
+2. **Jump** - Stars accelerate from `speed` to `max_speed`
+3. **Hyperspace** - Full light-streak effect for `travel_time` seconds
+4. **Exit** - Stars decelerate back to `speed`, then returns to Idle
+
+#### Examples
+
+**Continuous hyperspace (always fast):**
+```json
+{
+  "type": "hyperspace",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.033,
+  "hyperspace": {
+    "mode": "continuous",
+    "star_count": 150,
+    "max_speed": 0.6,
+    "trail_length": 1.5
+  }
+}
+```
+
+**Cycle mode with jumps:**
+```json
+{
+  "type": "hyperspace",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.033,
+  "hyperspace": {
+    "mode": "cycle",
+    "star_count": 100,
+    "idle_time": 5.0,
+    "travel_time": 3.0,
+    "acceleration": 0.15
+  }
+}
+```
+
+**Off-center focal point:**
+```json
+{
+  "type": "hyperspace",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.033,
+  "hyperspace": {
+    "center_x": 32,
+    "center_y": 20
+  }
+}
+```
+
+**Dense starfield with long trails:**
+```json
+{
+  "type": "hyperspace",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.033,
+  "hyperspace": {
+    "star_count": 200,
+    "trail_length": 2.0,
+    "max_speed": 0.4
+  }
+}
+```
+
+#### Tips
+
+- Use `update_interval: 0.033` (30 FPS) for smooth animation
+- Higher `star_count` gives denser starfield but uses more CPU
+- `trail_length > 1.0` creates longer light streaks
+- `center_x`/`center_y` can create asymmetric "flying sideways" effect
+- In `cycle` mode, lower `acceleration` gives smoother transitions
+- Combine with transparent overlay to add hyperspace behind other widgets
+
+### Star Wars Intro Widget
+
+Displays the complete iconic Star Wars opening sequence with three phases:
+1. **Pre-intro**: "A long time ago in a galaxy far, far away...." fades in and out
+2. **Logo**: "STAR WARS" logo appears at full size and shrinks toward the vanishing point
+3. **Crawl**: Text scrolls upward with perspective, slanted letters matching the tilt angle
+
+Background stars are displayed during the logo and crawl phases.
+
+```json
+{
+  "type": "starwars_intro",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.05,
+  "starwars_intro": {
+    "pre_intro": {
+      "enabled": true,
+      "text": "A long time ago in a galaxy far, far away...."
+    },
+    "logo": {
+      "enabled": true,
+      "text": "STAR\nWARS"
+    },
+    "text": [
+      "Episode IV",
+      "A NEW HOPE",
+      "",
+      "It is a period of civil war."
+    ]
+  }
+}
+```
+
+#### Animation Phases
+
+| Phase     | Description                                              |
+|-----------|----------------------------------------------------------|
+| Pre-intro | Blue text fades in, holds, then fades out                |
+| Logo      | Logo displays at full size, then shrinks toward center   |
+| Crawl     | Perspective text scrolls upward with slanted letters     |
+| End pause | Optional pause before looping (if loop enabled)          |
+
+#### Pre-intro Configuration (`pre_intro`)
+
+| Option     | Type    | Default                                           | Description                                |
+|------------|---------|---------------------------------------------------|--------------------------------------------|
+| `enabled`  | boolean | `true`                                            | Show the pre-intro phase                   |
+| `text`     | string  | `"A long time ago in a galaxy far, far away...."` | The pre-intro message (use `\n` for lines) |
+| `color`    | integer | `80`                                              | Text brightness (dim blue look)            |
+| `fade_in`  | number  | `2.0`                                             | Fade in duration (seconds)                 |
+| `hold`     | number  | `2.0`                                             | Hold duration after fade in                |
+| `fade_out` | number  | `1.0`                                             | Fade out duration (seconds)                |
+
+#### Logo Configuration (`logo`)
+
+| Option            | Type    | Default        | Description                              |
+|-------------------|---------|----------------|------------------------------------------|
+| `enabled`         | boolean | `true`         | Show the logo phase                      |
+| `text`            | string  | `"STAR\nWARS"` | Logo text (use \n for line breaks)       |
+| `color`           | integer | `255`          | Logo brightness                          |
+| `hold_before`     | number  | `0.5`          | Seconds to hold at full size             |
+| `shrink_duration` | number  | `4.0`          | Seconds for shrink animation             |
+| `final_scale`     | number  | `0.1`          | Scale at which logo disappears (0.0-0.5) |
+
+#### Stars Configuration (`stars`)
+
+| Option       | Type    | Default | Description              |
+|--------------|---------|---------|--------------------------|
+| `enabled`    | boolean | `true`  | Show background stars    |
+| `count`      | integer | `50`    | Number of stars (10-200) |
+| `brightness` | integer | `200`   | Maximum star brightness  |
+
+#### Crawl Configuration
+
+| Option         | Type    | Default        | Description                                      |
+|----------------|---------|----------------|--------------------------------------------------|
+| `text`         | array   | (default text) | Array of strings for the crawl                   |
+| `scroll_speed` | number  | `0.5`          | Scroll speed in pixels per frame                 |
+| `perspective`  | number  | `0.7`          | Perspective strength (0.0 = none, 1.0 = maximum) |
+| `slant`        | number  | `30.0`         | Text italic/slant angle in degrees               |
+| `fade_top`     | number  | `0.3`          | Position where fade starts (0.0 = top)           |
+| `text_color`   | integer | `255`          | Text brightness (1-255)                          |
+| `line_spacing` | integer | `8`            | Pixels between text lines                        |
+| `loop`         | boolean | `true`         | Loop the entire sequence                         |
+| `pause_at_end` | number  | `3.0`          | Seconds to pause before looping                  |
+
+#### Examples
+
+**Full movie-accurate intro:**
+```json
+{
+  "type": "starwars_intro",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.05,
+  "starwars_intro": {
+    "pre_intro": {
+      "fade_in": 2.5,
+      "hold": 3.0,
+      "fade_out": 1.5
+    },
+    "logo": {
+      "shrink_duration": 5.0
+    },
+    "stars": {
+      "count": 80
+    },
+    "text": [
+      "Episode IV",
+      "A NEW HOPE",
+      "",
+      "It is a period of civil war.",
+      "Rebel spaceships, striking",
+      "from a hidden base, have won",
+      "their first victory against",
+      "the evil Galactic Empire."
+    ],
+    "slant": 20.0
+  }
+}
+```
+
+**Crawl only (skip intro and logo):**
+```json
+{
+  "type": "starwars_intro",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.05,
+  "starwars_intro": {
+    "pre_intro": {"enabled": false},
+    "logo": {"enabled": false},
+    "text": ["Custom message", "scrolling with", "perspective effect"]
+  }
+}
+```
+
+**Custom branding:**
+```json
+{
+  "type": "starwars_intro",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "update_interval": 0.05,
+  "starwars_intro": {
+    "pre_intro": {
+      "text": "In a workspace not so far away...."
+    },
+    "logo": {
+      "text": "STEEL\nCLOCK"
+    },
+    "text": [
+      "Version 1.0",
+      "",
+      "A powerful tool for",
+      "keyboard displays."
+    ]
+  }
+}
+```
+
+#### Tips
+
+- Use `update_interval: 0.05` (20 FPS) for smooth animation
+- The `slant` angle should roughly match `perspective` for natural appearance
+- Higher `perspective` values create stronger "receding into distance" effect
+- Empty strings in `text` array create blank lines for spacing
+- Keep text lines short to fit within the display width at perspective scale
+- Set `pre_intro.enabled: false` and `logo.enabled: false` to skip directly to crawl
+
+### Telegram Widget
+
+Displays notifications from your personal Telegram account. Uses the official Telegram MTProto API to receive real-time messages from private chats, groups, and channels.
+
+#### Prerequisites
+
+1. **Create Telegram App**: Go to [my.telegram.org](https://my.telegram.org) and create an application to get your `api_id` and `api_hash`.
+2. **First Run Authentication**: On first run, you'll be prompted to enter a verification code sent to your Telegram account.
+
+#### Authentication Properties (at widget root level)
+
+| Property              | Type    | Default                              | Description                                                |
+|-----------------------|---------|--------------------------------------|------------------------------------------------------------|
+| `auth.api_id`         | integer | required                             | Telegram API ID from my.telegram.org                       |
+| `auth.api_hash`       | string  | required                             | Telegram API Hash from my.telegram.org                     |
+| `auth.phone_number`   | string  | required                             | Phone number in international format (e.g., "+1234567890") |
+| `auth.session_path`   | string  | "telegram/{api_id}_{phone}.session"  | Path to session file for persistent login                  |
+
+#### Filter Configuration (at widget root level)
+
+| Property                                | Type    | Default | Description                                             |
+|-----------------------------------------|---------|---------|---------------------------------------------------------|
+| `filters.private_chats.enabled`         | boolean | true    | Include messages from private chats                     |
+| `filters.private_chats.whitelist`       | array   | []      | Always include these chat IDs, even if type is disabled |
+| `filters.private_chats.blacklist`       | array   | []      | Never include these chat IDs, even if type is enabled   |
+| `filters.private_chats.pinned_messages` | boolean | true    | Include pinned message notifications                    |
+| `filters.groups.enabled`                | boolean | false   | Include messages from groups                            |
+| `filters.groups.whitelist`              | array   | []      | Always include these group IDs                          |
+| `filters.groups.blacklist`              | array   | []      | Never include these group IDs                           |
+| `filters.groups.pinned_messages`        | boolean | true    | Include pinned message notifications                    |
+| `filters.channels.enabled`              | boolean | false   | Include messages from channels                          |
+| `filters.channels.whitelist`            | array   | []      | Always include these channel IDs                        |
+| `filters.channels.blacklist`            | array   | []      | Never include these channel IDs                         |
+| `filters.channels.pinned_messages`      | boolean | false   | Include pinned message notifications                    |
+
+#### Appearance Configuration (at widget root level)
+
+| Property                         | Type    | Default  | Description                                   |
+|----------------------------------|---------|----------|-----------------------------------------------|
+| `appearance.header.enabled`      | boolean | true     | Show header (sender/chat name)                |
+| `appearance.header.blink`        | boolean | false    | Make header blink                             |
+| `appearance.header.text`         | object  | -        | Text rendering settings (font, size, align)   |
+| `appearance.header.scroll`       | object  | -        | Scroll settings (enabled, direction, speed)   |
+| `appearance.message.enabled`     | boolean | true     | Show message content                          |
+| `appearance.message.blink`       | boolean | false    | Make message blink                            |
+| `appearance.message.text`        | object  | -        | Text rendering settings                       |
+| `appearance.message.scroll`      | object  | -        | Scroll settings                               |
+| `appearance.message.word_break`  | string  | "normal" | How to break lines: "normal" or "break-all"   |
+| `appearance.separator.color`     | integer | 128      | Separator line color (0-255)                  |
+| `appearance.separator.thickness` | integer | 1        | Separator line thickness (0 = disabled)       |
+| `appearance.timeout`             | integer | 0        | Seconds to show notification (0 = until next) |
+| `appearance.transitions.in`      | string  | "none"   | Transition effect when showing                |
+| `appearance.transitions.out`     | string  | "none"   | Transition effect when hiding                 |
+
+#### Example Configuration
+
+```json
+{
+  "type": "telegram",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "auth": {
+    "api_id": 12345678,
+    "api_hash": "your_api_hash_here",
+    "phone_number": "+1234567890"
+  },
+  "filters": {
+    "private_chats": {
+      "enabled": true,
+      "whitelist": [],
+      "blacklist": [],
+      "pinned_messages": true
+    },
+    "groups": {
+      "enabled": false,
+      "whitelist": ["123456789"],
+      "blacklist": []
+    },
+    "channels": {
+      "enabled": false
+    }
+  },
+  "appearance": {
+    "header": {
+      "enabled": true,
+      "text": {"font": "5x7", "size": 1}
+    },
+    "message": {
+      "enabled": true,
+      "scroll": {"enabled": true, "direction": "left", "speed": 30}
+    },
+    "timeout": 10,
+    "transitions": {"in": "random", "out": "random"}
+  }
+}
+```
+
+#### Tips
+
+- **Security**: The session file contains your Telegram login credentials. Keep it secure and don't share it.
+- **First Run**: Authentication happens on first run via console prompts. Ensure you can see the console output.
+- **Group/Channel IDs**: You can find chat IDs using Telegram bots like @userinfobot or by forwarding a message to @RawDataBot.
+- **Whitelist/Blacklist**: Whitelist has priority over enabled setting; blacklist has priority over whitelist.
+- **2FA**: If you have Two-Factor Authentication enabled, you'll be prompted for your password on first login.
+
+---
+
+### Telegram Counter Widget
+
+Displays unread message count from your Telegram account. Uses the same Telegram MTProto API as the Telegram widget. Can be used alongside the Telegram notification widget - both share the same client connection.
+
+**Important**: This widget has independent filter settings from the Telegram notification widget. Each widget can count different chat types.
+
+#### Prerequisites
+
+Same as Telegram Widget - see above.
+
+#### Authentication Properties (at widget root level)
+
+| Property              | Type    | Default                              | Description                                                |
+|-----------------------|---------|--------------------------------------|------------------------------------------------------------|
+| `auth.api_id`         | integer | required                             | Telegram API ID from my.telegram.org                       |
+| `auth.api_hash`       | string  | required                             | Telegram API Hash from my.telegram.org                     |
+| `auth.phone_number`   | string  | required                             | Phone number in international format (e.g., "+1234567890") |
+| `auth.session_path`   | string  | "telegram/{api_id}_{phone}.session"  | Path to session file for persistent login                  |
+
+#### Filter Configuration (independent from telegram widget)
+
+Same structure as Telegram Widget filters - can be configured independently.
+
+#### Display Settings (at widget root level)
+
+| Property                  | Type    | Default           | Description                                     |
+|---------------------------|---------|-------------------|-------------------------------------------------|
+| `mode`                    | string  | "badge"           | Display mode: "badge" or "text"                 |
+| `badge.blink`             | string  | "never"           | Blink mode: "never", "always", or "progressive" |
+| `badge.colors.foreground` | integer | 255 (white)       | Icon foreground color (0-255, -1 = transparent) |
+| `badge.colors.background` | integer | 0 (black)         | Icon background color (0-255, -1 = transparent) |
+| `text.format`             | string  | "{unread} unread" | Format string for text mode (see tokens below)  |
+| `text.font`               | string  | null              | Font name or TTF path (null = bundled font)     |
+| `text.size`               | integer | 16                | Font size in pixels                             |
+| `text.align.h`            | string  | "center"          | Horizontal alignment: "left", "center", "right" |
+| `text.align.v`            | string  | "center"          | Vertical alignment: "top", "center", "bottom"   |
+
+#### Display Modes
+
+- **`badge`**: Shows the Telegram paper airplane icon (size auto-scales to widget dimensions)
+- **`text`**: Shows formatted text with tokens (see below)
+
+#### Text Format Tokens
+
+Available tokens for `text.format`:
+
+| Token              | Description                                      |
+|--------------------|--------------------------------------------------|
+| `{icon}`           | Telegram paper airplane icon (sized to font)     |
+| `{unread}`         | Total unread messages                            |
+| `{total}`          | Same as {unread}                                 |
+| `{mentions}`       | Unread @mentions                                 |
+| `{reactions}`      | Unread reactions                                 |
+| `{private}`        | Unread in private chats                          |
+| `{groups}`         | Unread in groups                                 |
+| `{channels}`       | Unread in channels                               |
+| `{muted}`          | Unread in muted chats                            |
+| `{private_muted}`  | Unread in muted private chats                    |
+| `{groups_muted}`   | Unread in muted groups                           |
+| `{channels_muted}` | Unread in muted channels                         |
+
+Examples:
+- `"{icon} {unread}"` -> icon followed by "5"
+- `"{unread} ({mentions}@)"` -> "5 (2@)"
+
+#### Blink Modes
+
+- **`never`**: No blinking
+- **`always`**: Constant 2Hz blink (toggles every 500ms)
+- **`progressive`**: Blink frequency increases with unread count:
+  - 1 message: 1 blink/second
+  - 5 messages: 5 blinks/second
+  - 10+ messages: 10 blinks/second
+
+#### Example Configuration (Badge Mode)
+
+```json
+{
+  "type": "telegram_counter",
+  "position": {"x": 100, "y": 0, "w": 28, "h": 40},
+  "auth": {
+    "api_id": 12345678,
+    "api_hash": "your_api_hash_here",
+    "phone_number": "+1234567890"
+  },
+  "mode": "badge",
+  "badge": {
+    "blink": "progressive",
+    "colors": {
+      "foreground": 255,
+      "background": -1
+    }
+  }
+}
+```
+
+#### Example Configuration (Text Mode)
+
+```json
+{
+  "type": "telegram_counter",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "auth": {
+    "api_id": 12345678,
+    "api_hash": "your_api_hash_here",
+    "phone_number": "+1234567890"
+  },
+  "mode": "text",
+  "text": {
+    "format": "{unread} new ({mentions} mentions)",
+    "font": null,
+    "size": 16,
+    "align": {"h": "center", "v": "center"}
+  }
+}
+```
+
+#### Using Both Widgets Together
+
+You can use `telegram` and `telegram_counter` widgets simultaneously. They share the same Telegram client connection based on `api_id` and `phone_number`, so authentication only happens once. Each widget has its own independent filter settings.
+
+```json
+{
+  "widgets": [
+    {
+      "type": "telegram",
+      "position": {"x": 0, "y": 0, "w": 100, "h": 40},
+      "auth": {
+        "api_id": 12345678,
+        "api_hash": "your_api_hash_here",
+        "phone_number": "+1234567890"
+      },
+      "filters": {
+        "private_chats": {"enabled": true}
+      }
+    },
+    {
+      "type": "telegram_counter",
+      "position": {"x": 100, "y": 0, "w": 28, "h": 40},
+      "style": {"background": -1},
+      "auth": {
+        "api_id": 12345678,
+        "api_hash": "your_api_hash_here",
+        "phone_number": "+1234567890"
+      },
+      "filters": {
+        "private_chats": {"enabled": true},
+        "groups": {"enabled": true},
+        "channels": {"enabled": true}
+      },
+      "mode": "badge",
+      "badge": {"blink": "progressive"}
+    }
+  ]
+}
+```
+
+---
 
 ## Examples
 

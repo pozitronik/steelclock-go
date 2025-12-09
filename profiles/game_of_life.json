@@ -1,0 +1,30 @@
+{
+  "$schema": "schema/config.schema.json",
+  "config_name": "Game of Life",
+  "backend": "direct",
+  "refresh_rate_ms": 100,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "game_of_life",
+      "position": { "x": 0, "y": 0, "w": 128, "h": 40 },
+      "update_interval": 0.1,
+      "game_of_life": {
+        "rules": "B36/S23",
+        "wrap_edges": true,
+        "initial_pattern": "lwss",
+        "random_density": 0.35,
+        "cell_size": 1,
+        "trail_effect": true,
+        "trail_decay": 25,
+        "cell_color": 255,
+        "restart_timeout": 3.0,
+        "restart_mode": "random"
+      }
+    }
+  ]
+}

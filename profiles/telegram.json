@@ -1,0 +1,113 @@
+{
+  "$schema": "schema/config.schema.json",
+  "config_name": "Telegram Notifications",
+  "backend": "direct",
+  "refresh_rate_ms": 100,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "telegram",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40,
+        "z": 0
+      },
+      "style": {
+        "border": -1,
+        "background": 0,
+        "padding": 0
+      },
+      "update_interval": 1.0,
+      "auto_hide": {
+        "enabled": false,
+        "timeout": 5.0
+      },
+      "auth": {
+        "api_id": 12345678,
+        "api_hash": "your_api_hash_here",
+        "phone_number": "+1234567890",
+        "session_path": ""
+      },
+      "filters": {
+        "private_chats": {
+          "enabled": true,
+          "whitelist": [],
+          "blacklist": [],
+          "pinned_messages": true
+        },
+        "groups": {
+          "enabled": false,
+          "whitelist": [],
+          "blacklist": [],
+          "pinned_messages": true
+        },
+        "channels": {
+          "enabled": false,
+          "whitelist": [],
+          "blacklist": [],
+          "pinned_messages": false
+        }
+      },
+      "appearance": {
+        "header": {
+          "enabled": true,
+          "blink": false,
+          "text": {
+            "font": null,
+            "size": 16,
+            "align": {
+              "h": "left",
+              "v": "top"
+            }
+          },
+          "scroll": {
+            "enabled": true,
+            "direction": "left",
+            "speed": 30,
+            "mode": "continuous",
+            "gap": 20
+          },
+          "word_break": "normal"
+        },
+        "message": {
+          "enabled": true,
+          "blink": false,
+          "text": {
+            "font": null,
+            "size": 16,
+            "align": {
+              "h": "left",
+              "v": "top"
+            }
+          },
+          "scroll": {
+            "enabled": true,
+            "direction": "left",
+            "speed": 30,
+            "mode": "continuous",
+            "gap": 20
+          },
+          "word_break": "normal"
+        },
+        "separator": {
+          "color": 128,
+          "thickness": 1
+        },
+        "timeout": 0,
+        "transitions": {
+          "in": "none",
+          "in_speed": 0.5,
+          "out": "none",
+          "out_speed": 0.5
+        }
+      }
+    }
+  ]
+}

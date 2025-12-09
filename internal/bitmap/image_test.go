@@ -455,7 +455,7 @@ func TestImageToBytes_WithBuffer(t *testing.T) {
 
 			// Create pre-allocated buffer
 			bufferSize := (tt.width*tt.height + 7) / 8
-			buffer := make([]int, bufferSize)
+			buffer := make([]byte, bufferSize)
 
 			// Get result using pre-allocated buffer
 			result, err := ImageToBytes(img, tt.width, tt.height, buffer)
@@ -482,7 +482,7 @@ func TestImageToBytes_BufferTooSmall(t *testing.T) {
 	img := image.NewGray(image.Rect(0, 0, 128, 40))
 
 	// Create buffer that is too small
-	smallBuffer := make([]int, 100) // Needs 640
+	smallBuffer := make([]byte, 100) // Needs 640
 
 	_, err := ImageToBytes(img, 128, 40, smallBuffer)
 	if err == nil {
@@ -506,7 +506,7 @@ func TestImageToBytes_BufferReuse(t *testing.T) {
 
 	// Create single buffer
 	bufferSize := (8*8 + 7) / 8 // 8 bytes
-	buffer := make([]int, bufferSize)
+	buffer := make([]byte, bufferSize)
 
 	// First call
 	result1, err := ImageToBytes(img1, 8, 8, buffer)

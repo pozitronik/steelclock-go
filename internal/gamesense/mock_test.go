@@ -5,12 +5,12 @@ type MockGameSenseAPI struct {
 	// Function handlers for custom behavior
 	RegisterGameFunc           func(developer string, deinitializeTimerMs int) error
 	BindScreenEventFunc        func(eventName, deviceType string) error
-	SendScreenDataFunc         func(eventName string, bitmapData []int) error
-	SendScreenDataMultiResFunc func(eventName string, resolutionData map[string][]int) error
+	SendScreenDataFunc         func(eventName string, bitmapData []byte) error
+	SendScreenDataMultiResFunc func(eventName string, resolutionData map[string][]byte) error
 	SendHeartbeatFunc          func() error
 	RemoveGameFunc             func() error
 	SupportsMultipleEventsFunc func() bool
-	SendMultipleScreenDataFunc func(eventName string, frames [][]int) error
+	SendMultipleScreenDataFunc func(eventName string, frames [][]byte) error
 
 	// Call tracking
 	RegisterGameCalls           int
@@ -28,7 +28,7 @@ type MockGameSenseAPI struct {
 	LastBindEventName         string
 	LastBindDeviceType        string
 	LastSendDataEventName     string
-	LastSendDataBitmap        []int
+	LastSendDataBitmap        []byte
 }
 
 // RegisterGame implements GameSenseAPI
@@ -56,7 +56,7 @@ func (m *MockGameSenseAPI) BindScreenEvent(eventName, deviceType string) error {
 }
 
 // SendScreenData implements GameSenseAPI
-func (m *MockGameSenseAPI) SendScreenData(eventName string, bitmapData []int) error {
+func (m *MockGameSenseAPI) SendScreenData(eventName string, bitmapData []byte) error {
 	m.SendScreenDataCalls++
 	m.LastSendDataEventName = eventName
 	m.LastSendDataBitmap = bitmapData
@@ -98,7 +98,7 @@ func (m *MockGameSenseAPI) SupportsMultipleEvents() bool {
 }
 
 // SendScreenDataMultiRes implements API
-func (m *MockGameSenseAPI) SendScreenDataMultiRes(eventName string, resolutionData map[string][]int) error {
+func (m *MockGameSenseAPI) SendScreenDataMultiRes(eventName string, resolutionData map[string][]byte) error {
 	m.SendScreenDataMultiResCalls++
 
 	if m.SendScreenDataMultiResFunc != nil {
@@ -108,7 +108,7 @@ func (m *MockGameSenseAPI) SendScreenDataMultiRes(eventName string, resolutionDa
 }
 
 // SendMultipleScreenData implements API
-func (m *MockGameSenseAPI) SendMultipleScreenData(eventName string, frames [][]int) error {
+func (m *MockGameSenseAPI) SendMultipleScreenData(eventName string, frames [][]byte) error {
 	m.SendMultipleScreenDataCalls++
 
 	if m.SendMultipleScreenDataFunc != nil {

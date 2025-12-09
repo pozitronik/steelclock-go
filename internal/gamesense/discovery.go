@@ -12,6 +12,10 @@ import (
 // findCorePropsPathFunc is a variable for dependency injection in tests
 var findCorePropsPathFunc = findCorePropsPath
 
+// defaultFallbackPath is the hardcoded fallback path for coreProps.json
+// This is a variable to allow tests to override it
+var defaultFallbackPath = filepath.Join("C:", "ProgramData", "SteelSeries", "SteelSeries Engine 3", "coreProps.json")
+
 // DiscoverServer finds the SteelSeries GameSense server address
 func DiscoverServer() (string, error) {
 	corePropsPath, err := findCorePropsPathFunc()
@@ -60,10 +64,9 @@ func findCorePropsPath() (string, error) {
 		}
 	}
 
-	// Fallback: C:\ProgramData\...
-	defaultPath := filepath.Join("C:", "ProgramData", "SteelSeries", "SteelSeries Engine 3", "coreProps.json")
-	if _, err := os.Stat(defaultPath); err == nil {
-		return defaultPath, nil
+	// Fallback: C:\ProgramData\... (uses variable to allow test override)
+	if _, err := os.Stat(defaultFallbackPath); err == nil {
+		return defaultFallbackPath, nil
 	}
 
 	//goland:noinspection ALL

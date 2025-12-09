@@ -9,6 +9,13 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/clock"
+	"github.com/pozitronik/steelclock-go/internal/widget/cpu"
+	"github.com/pozitronik/steelclock-go/internal/widget/disk"
+	"github.com/pozitronik/steelclock-go/internal/widget/keyboard"
+	"github.com/pozitronik/steelclock-go/internal/widget/memory"
+	"github.com/pozitronik/steelclock-go/internal/widget/network"
+	"github.com/pozitronik/steelclock-go/internal/widget/volume"
 )
 
 // =============================================================================
@@ -41,7 +48,7 @@ func TestClockWidget_TextMode(t *testing.T) {
 				},
 			}
 
-			clockWidget, err := widget.NewClockWidget(widgetCfg)
+			clockWidget, err := clock.New(widgetCfg)
 			if err != nil {
 				t.Fatalf("Failed to create clock widget: %v", err)
 			}
@@ -99,7 +106,7 @@ func TestClockWidget_AnalogMode(t *testing.T) {
 				},
 			}
 
-			clockWidget, err := widget.NewClockWidget(widgetCfg)
+			clockWidget, err := clock.New(widgetCfg)
 			if err != nil {
 				t.Fatalf("Failed to create clock widget: %v", err)
 			}
@@ -162,7 +169,7 @@ func TestMemoryWidget_BarMode(t *testing.T) {
 				},
 			}
 
-			memWidget, err := widget.NewMemoryWidget(widgetCfg)
+			memWidget, err := memory.New(widgetCfg)
 			if err != nil {
 				t.Fatalf("Failed to create memory widget: %v", err)
 			}
@@ -222,7 +229,7 @@ func TestMemoryWidget_GraphMode(t *testing.T) {
 				},
 			}
 
-			memWidget, err := widget.NewMemoryWidget(widgetCfg)
+			memWidget, err := memory.New(widgetCfg)
 			if err != nil {
 				t.Fatalf("Failed to create memory widget: %v", err)
 			}
@@ -265,7 +272,7 @@ func TestMemoryWidget_TextMode(t *testing.T) {
 		},
 	}
 
-	memWidget, err := widget.NewMemoryWidget(widgetCfg)
+	memWidget, err := memory.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create memory widget: %v", err)
 	}
@@ -317,7 +324,7 @@ func TestCPUWidget_BarMode(t *testing.T) {
 				},
 			}
 
-			cpuWidget, err := widget.NewCPUWidget(widgetCfg)
+			cpuWidget, err := cpu.New(widgetCfg)
 			if err != nil {
 				t.Fatalf("Failed to create CPU widget: %v", err)
 			}
@@ -355,7 +362,7 @@ func TestCPUWidget_GaugeMode(t *testing.T) {
 		},
 	}
 
-	cpuWidget, err := widget.NewCPUWidget(widgetCfg)
+	cpuWidget, err := cpu.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create CPU widget: %v", err)
 	}
@@ -399,7 +406,7 @@ func TestCPUWidget_PerCore(t *testing.T) {
 		},
 	}
 
-	cpuWidget, err := widget.NewCPUWidget(widgetCfg)
+	cpuWidget, err := cpu.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create CPU widget: %v", err)
 	}
@@ -437,7 +444,7 @@ func TestNetworkWidget_GraphMode(t *testing.T) {
 		},
 	}
 
-	netWidget, err := widget.NewNetworkWidget(widgetCfg)
+	netWidget, err := network.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create network widget: %v", err)
 	}
@@ -473,7 +480,7 @@ func TestNetworkWidget_GaugeMode(t *testing.T) {
 		},
 	}
 
-	netWidget, err := widget.NewNetworkWidget(widgetCfg)
+	netWidget, err := network.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create network widget: %v", err)
 	}
@@ -521,7 +528,7 @@ func TestVolumeWidget_BarMode(t *testing.T) {
 				},
 			}
 
-			volWidget, err := widget.NewVolumeWidget(widgetCfg)
+			volWidget, err := volume.New(widgetCfg)
 			if err != nil {
 				t.Skipf("Volume widget not available: %v", err)
 			}
@@ -558,7 +565,7 @@ func TestVolumeWidget_GaugeMode(t *testing.T) {
 		},
 	}
 
-	volWidget, err := widget.NewVolumeWidget(widgetCfg)
+	volWidget, err := volume.New(widgetCfg)
 	if err != nil {
 		t.Skipf("Volume widget not available: %v", err)
 	}
@@ -608,7 +615,7 @@ func TestKeyboardWidget_WithIndicators(t *testing.T) {
 		},
 	}
 
-	kbdWidget, err := widget.NewKeyboardWidget(widgetCfg)
+	kbdWidget, err := keyboard.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create keyboard widget: %v", err)
 	}
@@ -653,7 +660,7 @@ func TestKeyboardWidget_WithLayout(t *testing.T) {
 		},
 	}
 
-	kbdWidget, err := widget.NewKeyboardWidget(widgetCfg)
+	kbdWidget, err := keyboard.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create keyboard widget: %v", err)
 	}
@@ -694,7 +701,7 @@ func TestDiskWidget_BarMode(t *testing.T) {
 		},
 	}
 
-	diskWidget, err := widget.NewDiskWidget(widgetCfg)
+	diskWidget, err := disk.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create disk widget: %v", err)
 	}
@@ -730,7 +737,7 @@ func TestDiskWidget_TextMode(t *testing.T) {
 		},
 	}
 
-	diskWidget, err := widget.NewDiskWidget(widgetCfg)
+	diskWidget, err := disk.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create disk widget: %v", err)
 	}
