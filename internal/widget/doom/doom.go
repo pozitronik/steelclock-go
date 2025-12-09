@@ -1,4 +1,4 @@
-package widget
+package doom
 
 import (
 	"fmt"
@@ -13,11 +13,12 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 )
 
 func init() {
-	Register("doom", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewDoomWidget(cfg)
+	widget.Register("doom", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
@@ -38,9 +39,9 @@ var (
 	doomHasRunMu sync.Mutex
 )
 
-// DoomWidget displays DOOM running on the device
-type DoomWidget struct {
-	*BaseWidget
+// Widget displays DOOM running on the device
+type Widget struct {
+	*widget.BaseWidget
 
 	// DOOM engine state
 	wadFile       string
@@ -71,9 +72,9 @@ type DoomWidget struct {
 	ditherSize      int     // Bayer matrix size for dither mode
 }
 
-// NewDoomWidget creates a new DOOM widget
-func NewDoomWidget(cfg config.WidgetConfig) (*DoomWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new DOOM widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 
 	// Get WAD file name from config
 	wadName := cfg.Wad
@@ -158,7 +159,7 @@ func NewDoomWidget(cfg config.WidgetConfig) (*DoomWidget, error) {
 		grayBuffer[y] = make([]uint8, width)
 	}
 
-	w := &DoomWidget{
+	w := &Widget{
 		BaseWidget:      base,
 		wadFile:         wadName,
 		bundledWadURL:   bundledWadURL,
@@ -181,7 +182,7 @@ func NewDoomWidget(cfg config.WidgetConfig) (*DoomWidget, error) {
 }
 
 // runDoom runs the DOOM engine in a background goroutine
-func (w *DoomWidget) runDoom() {
+func (w *Widget) runDoom() {
 	defer w.wg.Done()
 
 	// Check if DOOM has already been run in this process.
@@ -264,7 +265,7 @@ func (w *DoomWidget) runDoom() {
 }
 
 // DrawFrame implements DoomFrontend interface - called by DOOM engine with each frame
-func (w *DoomWidget) DrawFrame(img *image.RGBA) {
+func (w *Widget) DrawFrame(img *image.RGBA) {
 	select {
 	case <-w.stopChan:
 		return
@@ -348,12 +349,12 @@ func (w *DoomWidget) DrawFrame(img *image.RGBA) {
 }
 
 // SetTitle implements DoomFrontend interface
-func (w *DoomWidget) SetTitle(_ string) {
+func (w *Widget) SetTitle(_ string) {
 	// No-op for embedded display
 }
 
 // GetEvent implements DoomFrontend interface
-func (w *DoomWidget) GetEvent(event *gore.DoomEvent) bool {
+func (w *Widget) GetEvent(event *gore.DoomEvent) bool {
 	select {
 	case <-w.stopChan:
 		event.Type = gore.Ev_quit
@@ -366,17 +367,17 @@ func (w *DoomWidget) GetEvent(event *gore.DoomEvent) bool {
 }
 
 // CacheSound implements DoomFrontend interface
-func (w *DoomWidget) CacheSound(_ string, _ []byte) {
+func (w *Widget) CacheSound(_ string, _ []byte) {
 	// No-op - no audio on OLED display
 }
 
 // PlaySound implements DoomFrontend interface
-func (w *DoomWidget) PlaySound(_ string, _, _, _ int) {
+func (w *Widget) PlaySound(_ string, _, _, _ int) {
 	// No-op - no audio on OLED display
 }
 
 // Render renders the current DOOM frame or download progress
-func (w *DoomWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
@@ -411,8 +412,8 @@ func (w *DoomWidget) Render() (image.Image, error) {
 }
 
 // drawProgressBar renders a download progress bar
-func (w *DoomWidget) drawProgressBar(img *image.Gray, progress float64, width, height int) {
-	// Draw title using 3×5 pixel font
+func (w *Widget) drawProgressBar(img *image.Gray, progress float64, width, height int) {
+	// Draw title using 3x5 pixel font
 	title := "Downloading DOOM"
 	titleWidth := glyphs.MeasureText(title, glyphs.Font3x5)
 	titleX := (width - titleWidth) / 2
@@ -436,7 +437,7 @@ func (w *DoomWidget) drawProgressBar(img *image.Gray, progress float64, width, h
 		bitmap.DrawFilledRectangle(img, barX+1, barY+1, fillWidth, barHeight-2, 255)
 	}
 
-	// Draw percentage text using 3×5 pixel font
+	// Draw percentage text using 3x5 pixel font
 	percentText := fmt.Sprintf("%.0f%%", progress*100)
 	textWidth := glyphs.MeasureText(percentText, glyphs.Font3x5)
 	textX := (width - textWidth) / 2
@@ -444,13 +445,13 @@ func (w *DoomWidget) drawProgressBar(img *image.Gray, progress float64, width, h
 }
 
 // Update is called periodically
-func (w *DoomWidget) Update() error {
+func (w *Widget) Update() error {
 	// DOOM updates itself in background goroutine
 	return nil
 }
 
 // Stop stops the DOOM engine
-func (w *DoomWidget) Stop() {
+func (w *Widget) Stop() {
 	// Close stop channel to signal runDoom to exit
 	// runDoom() will call gore.Stop() and wait for cleanup
 	close(w.stopChan)
@@ -462,7 +463,7 @@ func (w *DoomWidget) Stop() {
 
 // applyContrast applies auto-contrast stretching (histogram stretching)
 // Maps the actual min-max range to full 0-255 range
-func (w *DoomWidget) applyContrast(gray, minGray, maxGray uint8) uint8 {
+func (w *Widget) applyContrast(gray, minGray, maxGray uint8) uint8 {
 	if maxGray == minGray {
 		return gray
 	}
@@ -475,7 +476,7 @@ func (w *DoomWidget) applyContrast(gray, minGray, maxGray uint8) uint8 {
 }
 
 // applyPosterize reduces the image to N discrete gray levels
-func (w *DoomWidget) applyPosterize(gray uint8) uint8 {
+func (w *Widget) applyPosterize(gray uint8) uint8 {
 	levels := w.posterizeLevels
 	if levels < 2 {
 		levels = 2
@@ -491,7 +492,7 @@ func (w *DoomWidget) applyPosterize(gray uint8) uint8 {
 }
 
 // applyThreshold converts to pure black/white based on threshold value
-func (w *DoomWidget) applyThreshold(gray uint8) uint8 {
+func (w *Widget) applyThreshold(gray uint8) uint8 {
 	if int(gray) >= w.thresholdValue {
 		return 255
 	}
@@ -499,7 +500,7 @@ func (w *DoomWidget) applyThreshold(gray uint8) uint8 {
 }
 
 // applyDither applies ordered dithering using Bayer matrix
-func (w *DoomWidget) applyDither(gray uint8, x, y int) uint8 {
+func (w *Widget) applyDither(gray uint8, x, y int) uint8 {
 	// Bayer matrices for different sizes
 	var threshold float64
 
@@ -545,7 +546,7 @@ func (w *DoomWidget) applyDither(gray uint8, x, y int) uint8 {
 
 // applyGamma applies gamma correction with optional contrast boost
 // First stretches contrast, then applies gamma curve
-func (w *DoomWidget) applyGamma(gray, minGray, maxGray uint8) uint8 {
+func (w *Widget) applyGamma(gray, minGray, maxGray uint8) uint8 {
 	// First apply contrast stretching
 	var normalized float64
 	if maxGray == minGray {

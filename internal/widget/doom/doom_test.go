@@ -1,4 +1,4 @@
-package widget
+package doom
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-func TestNewDoomWidget(t *testing.T) {
+func TestNew(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
 	}
@@ -41,13 +41,13 @@ func TestNewDoomWidget(t *testing.T) {
 		Wad: tmpFile,
 	}
 
-	widget, err := NewDoomWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewDoomWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget == nil {
-		t.Fatal("NewDoomWidget() returned nil")
+		t.Fatal("New() returned nil")
 	}
 
 	if widget.Name() != "test_doom" {
@@ -59,7 +59,7 @@ func TestNewDoomWidget(t *testing.T) {
 	time.Sleep(10 * time.Millisecond) // Let goroutines finish
 }
 
-func TestDoomWidgetRender_EmptyFrame(t *testing.T) {
+func TestWidget_Render_EmptyFrame(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
 	}
@@ -89,7 +89,7 @@ func TestDoomWidgetRender_EmptyFrame(t *testing.T) {
 		Wad: tmpFile,
 	}
 
-	widget, _ := NewDoomWidget(cfg)
+	widget, _ := New(cfg)
 	defer widget.Stop()
 
 	// Render before any frames - should return empty image
@@ -111,7 +111,7 @@ func TestDoomWidgetRender_EmptyFrame(t *testing.T) {
 	}
 }
 
-func TestDoomWidgetRender_DownloadProgress(t *testing.T) {
+func TestWidget_Render_DownloadProgress(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
 	}
@@ -141,7 +141,7 @@ func TestDoomWidgetRender_DownloadProgress(t *testing.T) {
 		Wad: tmpFile,
 	}
 
-	widget, _ := NewDoomWidget(cfg)
+	widget, _ := New(cfg)
 	defer widget.Stop()
 
 	// Simulate download in progress
@@ -183,7 +183,7 @@ func TestDoomWidgetRender_DownloadProgress(t *testing.T) {
 	}
 }
 
-func TestDoomWidgetRender_DownloadError(t *testing.T) {
+func TestWidget_Render_DownloadError(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
 	}
@@ -213,7 +213,7 @@ func TestDoomWidgetRender_DownloadError(t *testing.T) {
 		Wad: tmpFile,
 	}
 
-	widget, _ := NewDoomWidget(cfg)
+	widget, _ := New(cfg)
 	defer widget.Stop()
 
 	// Simulate download error
@@ -254,7 +254,7 @@ func TestDoomWidgetRender_DownloadError(t *testing.T) {
 	}
 }
 
-func TestDoomWidget_DrawProgressBar(t *testing.T) {
+func TestWidget_DrawProgressBar(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
 	}
@@ -271,7 +271,7 @@ func TestDoomWidget_DrawProgressBar(t *testing.T) {
 		},
 	}
 
-	widget, _ := NewDoomWidget(cfg)
+	widget, _ := New(cfg)
 	defer widget.Stop()
 
 	img := image.NewGray(image.Rect(0, 0, 128, 40))
@@ -322,7 +322,7 @@ func TestDoomWidget_DrawProgressBar(t *testing.T) {
 	}
 }
 
-func TestDoomWidget_DrawFrame(t *testing.T) {
+func TestWidget_DrawFrame(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
 	}
@@ -339,7 +339,7 @@ func TestDoomWidget_DrawFrame(t *testing.T) {
 		},
 	}
 
-	widget, _ := NewDoomWidget(cfg)
+	widget, _ := New(cfg)
 	defer widget.Stop()
 
 	// Create a test RGBA image (320x200)
@@ -403,7 +403,7 @@ func TestDoomWidget_DrawFrame(t *testing.T) {
 	}
 }
 
-func TestDoomWidget_Update(t *testing.T) {
+func TestWidget_Update(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
 	}
@@ -420,7 +420,7 @@ func TestDoomWidget_Update(t *testing.T) {
 		},
 	}
 
-	widget, _ := NewDoomWidget(cfg)
+	widget, _ := New(cfg)
 	defer widget.Stop()
 
 	// Update should not return error (DOOM updates in background)
@@ -430,9 +430,9 @@ func TestDoomWidget_Update(t *testing.T) {
 	}
 }
 
-// TestDoomWidget_StopCleansUpGoroutines tests that Stop() properly terminates all goroutines
+// TestWidget_StopCleansUpGoroutines tests that Stop() properly terminates all goroutines
 // This test exposes the goroutine leak where gore.Run() goroutine may not exit
-func TestDoomWidget_StopCleansUpGoroutines(t *testing.T) {
+func TestWidget_StopCleansUpGoroutines(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Gore engine test in short/CI mode (checkptr issues)")
 	}
@@ -458,9 +458,9 @@ func TestDoomWidget_StopCleansUpGoroutines(t *testing.T) {
 		Wad: tmpFile,
 	}
 
-	widget, err := NewDoomWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewDoomWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Give it a moment to start

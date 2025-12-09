@@ -1,4 +1,4 @@
-package widget
+package doom
 
 import (
 	"os"
