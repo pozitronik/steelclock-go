@@ -6,8 +6,8 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/metrics"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
-	"github.com/shirou/gopsutil/v4/disk"
 )
 
 func init() {
@@ -19,8 +19,9 @@ func init() {
 // DiskWidget displays disk I/O (Read/Write)
 type DiskWidget struct {
 	*shared.BaseDualIOWidget
-	base     *BaseWidget
-	diskName *string
+	base         *BaseWidget
+	diskName     *string
+	diskProvider metrics.DiskProvider
 
 	// State for delta calculation
 	lastRead  uint64
@@ -143,6 +144,7 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 		BaseDualIOWidget: baseDualIO,
 		base:             base,
 		diskName:         cfg.Disk,
+		diskProvider:     metrics.DefaultDisk,
 	}, nil
 }
 
@@ -168,7 +170,7 @@ func (w *DiskWidget) GetStyle() config.StyleConfig {
 
 // Update updates the disk stats
 func (w *DiskWidget) Update() error {
-	stats, err := disk.IOCounters()
+	stats, err := w.diskProvider.IOCounters()
 	if err != nil {
 		return err
 	}

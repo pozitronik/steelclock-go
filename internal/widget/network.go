@@ -6,8 +6,8 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/metrics"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
-	"github.com/shirou/gopsutil/v4/net"
 )
 
 func init() {
@@ -19,8 +19,9 @@ func init() {
 // NetworkWidget displays network I/O (RX/TX)
 type NetworkWidget struct {
 	*shared.BaseDualIOWidget
-	base          *BaseWidget
-	interfaceName *string
+	base            *BaseWidget
+	interfaceName   *string
+	networkProvider metrics.NetworkProvider
 
 	// State for delta calculation
 	lastRx   uint64
@@ -167,6 +168,7 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		BaseDualIOWidget: baseDualIO,
 		base:             base,
 		interfaceName:    cfg.Interface,
+		networkProvider:  metrics.DefaultNetwork,
 	}, nil
 }
 
@@ -192,7 +194,7 @@ func (w *NetworkWidget) GetStyle() config.StyleConfig {
 
 // Update updates the network stats
 func (w *NetworkWidget) Update() error {
-	stats, err := net.IOCounters(true)
+	stats, err := w.networkProvider.IOCounters()
 	if err != nil {
 		return err
 	}

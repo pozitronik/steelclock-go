@@ -9,8 +9,8 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/metrics"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
-	"github.com/shirou/gopsutil/v4/cpu"
 	"golang.org/x/image/font"
 )
 
@@ -33,6 +33,9 @@ type CPUWidget struct {
 
 	// MetricRenderer for single-value (non-perCore) rendering
 	renderer *shared.MetricRenderer
+
+	// Metrics provider (abstraction over gopsutil)
+	cpuProvider metrics.CPUProvider
 
 	// Separate typed fields instead of interface{} to avoid runtime type assertions
 	currentUsageSingle  float64   // Aggregate CPU usage (when perCore=false)
@@ -61,8 +64,11 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 	gaugeSettings := helper.GetGaugeSettings()
 	perCore, coreBorder, coreMargin := helper.GetPerCoreSettings()
 
+	// Use default CPU provider
+	cpuProvider := metrics.DefaultCPU
+
 	// Get core count
-	cores, err := cpu.Counts(true)
+	cores, err := cpuProvider.Counts(true)
 	if err != nil || cores == 0 {
 		cores = 1
 	}
@@ -116,6 +122,7 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 		fillColor:      graphSettings.FillColor,
 		historyLen:     graphSettings.HistoryLen,
 		renderer:       renderer,
+		cpuProvider:    cpuProvider,
 		historySingle:  shared.NewRingBuffer[float64](graphSettings.HistoryLen),
 		historyPerCore: shared.NewRingBuffer[[]float64](graphSettings.HistoryLen),
 		coreCount:      cores,
@@ -128,7 +135,7 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 func (w *CPUWidget) Update() error {
 	if w.perCore {
 		// Per-core usage
-		percentages, err := cpu.Percent(100*time.Millisecond, true)
+		percentages, err := w.cpuProvider.Percent(100*time.Millisecond, true)
 		if err != nil {
 			return err
 		}
@@ -154,7 +161,7 @@ func (w *CPUWidget) Update() error {
 		w.mu.Unlock()
 	} else {
 		// Aggregate usage
-		percentages, err := cpu.Percent(100*time.Millisecond, false)
+		percentages, err := w.cpuProvider.Percent(100*time.Millisecond, false)
 		if err != nil {
 			return err
 		}

@@ -7,8 +7,8 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/metrics"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
-	"github.com/shirou/gopsutil/v4/mem"
 )
 
 func init() {
@@ -20,12 +20,13 @@ func init() {
 // MemoryWidget displays RAM usage
 type MemoryWidget struct {
 	*BaseWidget
-	displayMode  shared.DisplayMode
-	padding      int
-	renderer     *shared.MetricRenderer
-	currentUsage float64
-	history      *shared.RingBuffer[float64]
-	mu           sync.RWMutex
+	displayMode    shared.DisplayMode
+	padding        int
+	renderer       *shared.MetricRenderer
+	memoryProvider metrics.MemoryProvider
+	currentUsage   float64
+	history        *shared.RingBuffer[float64]
+	mu             sync.RWMutex
 }
 
 // NewMemoryWidget creates a new memory widget
@@ -81,23 +82,24 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 	)
 
 	return &MemoryWidget{
-		BaseWidget:  base,
-		displayMode: displayMode,
-		padding:     padding,
-		renderer:    renderer,
-		history:     shared.NewRingBuffer[float64](graphSettings.HistoryLen),
+		BaseWidget:     base,
+		displayMode:    displayMode,
+		padding:        padding,
+		renderer:       renderer,
+		memoryProvider: metrics.DefaultMemory,
+		history:        shared.NewRingBuffer[float64](graphSettings.HistoryLen),
 	}, nil
 }
 
 // Update updates the memory usage
 func (w *MemoryWidget) Update() error {
-	vmem, err := mem.VirtualMemory()
+	percent, err := w.memoryProvider.UsedPercent()
 	if err != nil {
 		return err
 	}
 
 	w.mu.Lock()
-	w.currentUsage = vmem.UsedPercent
+	w.currentUsage = percent
 
 	// Clamp to 0-100
 	if w.currentUsage < 0 {
