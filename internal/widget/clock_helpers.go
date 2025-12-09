@@ -210,7 +210,7 @@ func drawSmallText(img *image.Gray, text string, x, y int, c color.Gray) {
 
 // drawDot draws a single dot (circle or square) for binary clock
 func drawDot(img *image.Gray, cx, cy int, dotSize int, dotStyle string, c color.Gray) {
-	if dotStyle == "square" {
+	if dotStyle == dotStyleSquare {
 		// Draw filled square
 		half := dotSize / 2
 		for dy := -half; dy <= half; dy++ {

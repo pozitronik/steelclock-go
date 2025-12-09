@@ -25,7 +25,7 @@ func NewClockBinaryRenderer(cfg ClockBinaryConfig) *ClockBinaryRenderer {
 func (r *ClockBinaryRenderer) Render(img *image.Gray, t time.Time, x, y, w, h int) error {
 	components := parseBinaryFormat(r.config.Format)
 
-	if r.config.Style == "true" {
+	if r.config.Style == binaryStyleTrue {
 		r.renderTrueBinaryClock(img, t, x, y, w, h, components)
 	} else {
 		r.renderBCDClock(img, t, x, y, w, h, components)

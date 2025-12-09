@@ -102,7 +102,7 @@ func (r *ClockSegmentRenderer) Render(img *image.Gray, t time.Time, x, y, w, h i
 	startY := y + (h-digitH)/2
 
 	// Check if flip animation is enabled
-	flipEnabled := r.config.FlipStyle != "" && r.config.FlipStyle != "none"
+	flipEnabled := r.config.FlipStyle != "" && r.config.FlipStyle != flipStyleNone
 
 	// Update animation state
 	r.mu.Lock()
@@ -169,9 +169,9 @@ func (r *ClockSegmentRenderer) NeedsUpdate() bool {
 func (r *ClockSegmentRenderer) drawSegmentDigit(img *image.Gray, x, y, width, height int, digit int, animProgress float64) {
 	style := bitmap.SegmentStyleRectangle
 	switch r.config.SegmentStyle {
-	case "hexagon":
+	case segmentStyleHexagon:
 		style = bitmap.SegmentStyleHexagon
-	case "rounded":
+	case segmentStyleRounded:
 		style = bitmap.SegmentStyleRounded
 	}
 
@@ -190,9 +190,9 @@ func (r *ClockSegmentRenderer) drawColon(img *image.Gray, x, y, width, height in
 	// Convert style string to bitmap.ColonStyle
 	style := bitmap.ColonStyleDots
 	switch r.config.ColonStyle {
-	case "bar":
+	case colonStyleBar:
 		style = bitmap.ColonStyleBar
-	case "none":
+	case colonStyleNone:
 		style = bitmap.ColonStyleNone
 	}
 

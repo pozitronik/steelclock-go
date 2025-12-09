@@ -15,6 +15,37 @@ const (
 	ClockModeSegment ClockDisplayMode = "segment"
 )
 
+// Binary clock styles
+const (
+	binaryStyleBCD  = "bcd"
+	binaryStyleTrue = "true"
+)
+
+// Dot styles for binary clock
+const (
+	dotStyleCircle = "circle"
+	dotStyleSquare = "square"
+)
+
+// Segment styles for 7-segment clock
+const (
+	segmentStyleRectangle = "rectangle"
+	segmentStyleHexagon   = "hexagon"
+	segmentStyleRounded   = "rounded"
+)
+
+// Colon styles for segment clock
+const (
+	colonStyleDots = "dots"
+	colonStyleBar  = "bar"
+	colonStyleNone = "none"
+)
+
+// Flip animation styles
+const (
+	flipStyleNone = "none"
+)
+
 // ClockTextConfig holds configuration for text mode clock rendering
 type ClockTextConfig struct {
 	FontFace   font.Face
@@ -70,14 +101,14 @@ type ClockSegmentConfig struct {
 // NewClockBinaryConfig creates a ClockBinaryConfig with default values
 func NewClockBinaryConfig() ClockBinaryConfig {
 	return ClockBinaryConfig{
-		Style:      "bcd",
+		Style:      binaryStyleBCD,
 		Layout:     config.DirectionVertical,
 		Format:     "%H:%M:%S",
 		ShowLabels: false,
 		ShowHint:   false,
 		DotSize:    4,
 		DotSpacing: 2,
-		DotStyle:   "circle",
+		DotStyle:   dotStyleCircle,
 		OnColor:    255,
 		OffColor:   40,
 	}
@@ -89,13 +120,13 @@ func NewClockSegmentConfig() ClockSegmentConfig {
 		Format:           "%H:%M:%S",
 		DigitHeight:      0, // auto-fit
 		SegmentThickness: 2,
-		SegmentStyle:     "rectangle",
+		SegmentStyle:     segmentStyleRectangle,
 		DigitSpacing:     2,
-		ColonStyle:       "dots",
+		ColonStyle:       colonStyleDots,
 		ColonBlink:       true,
 		OnColor:          255,
 		OffColor:         30,
-		FlipStyle:        "none",
+		FlipStyle:        flipStyleNone,
 		FlipSpeed:        0.15,
 	}
 }
