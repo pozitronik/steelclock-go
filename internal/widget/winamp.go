@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"strings"
 	"sync"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
@@ -285,8 +284,6 @@ func (w *WinampWidget) formatOutput(info *winamp.TrackInfo) string {
 		return ""
 	}
 
-	result := w.format
-
 	// Format shuffle/repeat as symbols or text
 	shuffleStr := ""
 	if info.Shuffle {
@@ -297,31 +294,26 @@ func (w *WinampWidget) formatOutput(info *winamp.TrackInfo) string {
 		repeatStr = "R"
 	}
 
-	// Replace all placeholders
-	replacements := map[string]string{
-		"{title}":           info.Title,
-		"{filename}":        info.FileName,
-		"{filepath}":        info.FilePath,
-		"{position}":        formatTime(info.PositionMs / 1000),
-		"{duration}":        formatTime(info.DurationS),
-		"{position_ms}":     fmt.Sprintf("%d", info.PositionMs),
-		"{duration_s}":      fmt.Sprintf("%d", info.DurationS),
-		"{bitrate}":         fmt.Sprintf("%d", info.Bitrate),
-		"{samplerate}":      fmt.Sprintf("%d", info.SampleRate),
-		"{channels}":        fmt.Sprintf("%d", info.Channels),
-		"{status}":          info.Status.String(),
-		"{track_num}":       fmt.Sprintf("%d", info.TrackNumber),
-		"{playlist_length}": fmt.Sprintf("%d", info.PlaylistLength),
-		"{shuffle}":         shuffleStr,
-		"{repeat}":          repeatStr,
-		"{version}":         info.Version,
-	}
+	// Use TokenFormatter for placeholder replacement
+	formatter := shared.NewTokenFormatter().
+		Set("title", info.Title).
+		Set("filename", info.FileName).
+		Set("filepath", info.FilePath).
+		Set("position", formatTime(info.PositionMs/1000)).
+		Set("duration", formatTime(info.DurationS)).
+		Set("position_ms", fmt.Sprintf("%d", info.PositionMs)).
+		Set("duration_s", fmt.Sprintf("%d", info.DurationS)).
+		Set("bitrate", fmt.Sprintf("%d", info.Bitrate)).
+		Set("samplerate", fmt.Sprintf("%d", info.SampleRate)).
+		Set("channels", fmt.Sprintf("%d", info.Channels)).
+		Set("status", info.Status.String()).
+		Set("track_num", fmt.Sprintf("%d", info.TrackNumber)).
+		Set("playlist_length", fmt.Sprintf("%d", info.PlaylistLength)).
+		Set("shuffle", shuffleStr).
+		Set("repeat", repeatStr).
+		Set("version", info.Version)
 
-	for placeholder, value := range replacements {
-		result = strings.ReplaceAll(result, placeholder, value)
-	}
-
-	return result
+	return formatter.Format(w.format)
 }
 
 // formatTime converts seconds to MM:SS format

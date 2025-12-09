@@ -3,7 +3,6 @@ package widget
 import (
 	"fmt"
 	"image"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -455,107 +454,86 @@ func formatMinutes(minutes int) string {
 	return fmt.Sprintf("%dm", mins)
 }
 
-// expandToken expands a single token to its value
-func (w *BatteryWidget) expandToken(token string, status BatteryStatus) string {
-	switch token {
-	// Percentage
-	case "percent", "pct":
-		return fmt.Sprintf("%d", status.Percentage)
-
-	// Status text (respects power_status visibility and blink)
-	case "status":
-		if w.shouldShowIndicator(&w.chargingState, status.IsCharging) && !w.shouldBlinkIndicator(&w.chargingState) {
-			return "CHG"
-		}
-		if w.shouldShowIndicator(&w.economyState, status.IsEconomyMode) && !w.shouldBlinkIndicator(&w.economyState) {
-			return "ECO"
-		}
-		if w.shouldShowIndicator(&w.pluggedState, status.IsPluggedIn) && !w.shouldBlinkIndicator(&w.pluggedState) {
-			return "AC"
-		}
-		return ""
-
-	case "status_full":
-		if w.shouldShowIndicator(&w.chargingState, status.IsCharging) && !w.shouldBlinkIndicator(&w.chargingState) {
-			return "Charging"
-		}
-		if w.shouldShowIndicator(&w.economyState, status.IsEconomyMode) && !w.shouldBlinkIndicator(&w.economyState) {
-			return "Economy"
-		}
-		if w.shouldShowIndicator(&w.pluggedState, status.IsPluggedIn) && !w.shouldBlinkIndicator(&w.pluggedState) {
-			return "AC Power"
-		}
-		return ""
-
-	// Time remaining
-	case "time":
-		// Smart: time to full if charging, time to empty otherwise
-		if status.IsCharging && status.TimeToFull > 0 {
-			return formatMinutes(status.TimeToFull)
-		}
-		return formatMinutes(status.TimeToEmpty)
-
-	case "time_left":
-		return formatMinutes(status.TimeToEmpty)
-
-	case "time_to_full":
-		return formatMinutes(status.TimeToFull)
-
-	case "time_left_min":
-		if status.TimeToEmpty > 0 {
-			return fmt.Sprintf("%d", status.TimeToEmpty)
-		}
-		return "-"
-
-	// Battery level state
-	case "level":
-		if status.Percentage <= w.criticalThreshold {
-			return "critical"
-		}
-		if status.Percentage <= w.lowThreshold {
-			return "low"
-		}
-		return "normal"
-
-	// Boolean indicators (always show if status is active, ignoring visibility settings)
-	case "charging":
-		if status.IsCharging {
-			return "CHG"
-		}
-		return ""
-
-	case "plugged":
-		if status.IsPluggedIn {
-			return "AC"
-		}
-		return ""
-
-	case "economy":
-		if status.IsEconomyMode {
-			return "ECO"
-		}
-		return ""
-
-	default:
-		// Unknown token - return as-is with braces
-		return "{" + token + "}"
+// buildTokenFormatter creates a TokenFormatter with all battery token values
+func (w *BatteryWidget) buildTokenFormatter(status BatteryStatus) *shared.TokenFormatter {
+	// Calculate status text (respects power_status visibility and blink)
+	statusText := ""
+	if w.shouldShowIndicator(&w.chargingState, status.IsCharging) && !w.shouldBlinkIndicator(&w.chargingState) {
+		statusText = "CHG"
+	} else if w.shouldShowIndicator(&w.economyState, status.IsEconomyMode) && !w.shouldBlinkIndicator(&w.economyState) {
+		statusText = "ECO"
+	} else if w.shouldShowIndicator(&w.pluggedState, status.IsPluggedIn) && !w.shouldBlinkIndicator(&w.pluggedState) {
+		statusText = "AC"
 	}
+
+	// Calculate full status text
+	statusFullText := ""
+	if w.shouldShowIndicator(&w.chargingState, status.IsCharging) && !w.shouldBlinkIndicator(&w.chargingState) {
+		statusFullText = "Charging"
+	} else if w.shouldShowIndicator(&w.economyState, status.IsEconomyMode) && !w.shouldBlinkIndicator(&w.economyState) {
+		statusFullText = "Economy"
+	} else if w.shouldShowIndicator(&w.pluggedState, status.IsPluggedIn) && !w.shouldBlinkIndicator(&w.pluggedState) {
+		statusFullText = "AC Power"
+	}
+
+	// Calculate smart time (to full if charging, to empty otherwise)
+	timeText := formatMinutes(status.TimeToEmpty)
+	if status.IsCharging && status.TimeToFull > 0 {
+		timeText = formatMinutes(status.TimeToFull)
+	}
+
+	// Calculate time_left_min
+	timeLeftMin := "-"
+	if status.TimeToEmpty > 0 {
+		timeLeftMin = fmt.Sprintf("%d", status.TimeToEmpty)
+	}
+
+	// Calculate level
+	level := "normal"
+	if status.Percentage <= w.criticalThreshold {
+		level = "critical"
+	} else if status.Percentage <= w.lowThreshold {
+		level = "low"
+	}
+
+	// Calculate boolean indicators
+	chargingStr := ""
+	if status.IsCharging {
+		chargingStr = "CHG"
+	}
+	pluggedStr := ""
+	if status.IsPluggedIn {
+		pluggedStr = "AC"
+	}
+	economyStr := ""
+	if status.IsEconomyMode {
+		economyStr = "ECO"
+	}
+
+	percentStr := fmt.Sprintf("%d", status.Percentage)
+
+	return shared.NewTokenFormatter().
+		Set("percent", percentStr).
+		Set("pct", percentStr).
+		Set("status", statusText).
+		Set("status_full", statusFullText).
+		Set("time", timeText).
+		Set("time_left", formatMinutes(status.TimeToEmpty)).
+		Set("time_to_full", formatMinutes(status.TimeToFull)).
+		Set("time_left_min", timeLeftMin).
+		Set("level", level).
+		Set("charging", chargingStr).
+		Set("plugged", pluggedStr).
+		Set("economy", economyStr)
 }
 
 // expandFormat expands all tokens in the format string
 func (w *BatteryWidget) expandFormat(format string, status BatteryStatus) string {
-	// Regex to match {token}
-	re := regexp.MustCompile(`\{([a-zA-Z_][a-zA-Z0-9_]*)\}`)
-
-	result := re.ReplaceAllStringFunc(format, func(match string) string {
-		// Extract token name (remove braces)
-		token := match[1 : len(match)-1]
-		return w.expandToken(token, status)
-	})
+	formatter := w.buildTokenFormatter(status)
+	result := formatter.Format(format)
 
 	// Clean up multiple spaces that may result from empty tokens
-	result = regexp.MustCompile(`\s+`).ReplaceAllString(result, " ")
-	result = strings.TrimSpace(result)
+	result = strings.TrimSpace(strings.Join(strings.Fields(result), " "))
 
 	return result
 }
