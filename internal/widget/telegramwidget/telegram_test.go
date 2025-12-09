@@ -1,4 +1,4 @@
-package widget
+package telegramwidget
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-func TestNewTelegramWidget(t *testing.T) {
+func TestNew(t *testing.T) {
 	tests := []struct {
 		name    string
 		cfg     config.WidgetConfig
@@ -61,19 +61,19 @@ func TestNewTelegramWidget(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			w, err := NewTelegramWidget(tt.cfg)
+			w, err := New(tt.cfg)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewTelegramWidget() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !tt.wantErr && w == nil {
-				t.Error("NewTelegramWidget() returned nil widget without error")
+				t.Error("New() returned nil widget without error")
 			}
 		})
 	}
 }
 
-func TestTelegramWidget_Render(t *testing.T) {
+func TestWidget_Render(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "telegram",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -84,9 +84,9 @@ func TestTelegramWidget_Render(t *testing.T) {
 		},
 	}
 
-	w, err := NewTelegramWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewTelegramWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	img, err := w.Render()
@@ -100,7 +100,7 @@ func TestTelegramWidget_Render(t *testing.T) {
 	}
 }
 
-func TestTelegramWidget_Update(t *testing.T) {
+func TestWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "telegram",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -111,9 +111,9 @@ func TestTelegramWidget_Update(t *testing.T) {
 		},
 	}
 
-	w, err := NewTelegramWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewTelegramWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update should not error even when not connected
@@ -122,7 +122,7 @@ func TestTelegramWidget_Update(t *testing.T) {
 	}
 }
 
-func TestTelegramWidget_AppearanceSettings(t *testing.T) {
+func TestWidget_AppearanceSettings(t *testing.T) {
 	trueVal := true
 	falseVal := false
 
@@ -230,9 +230,9 @@ func TestTelegramWidget_AppearanceSettings(t *testing.T) {
 				Appearance: appearance,
 			}
 
-			w, err := NewTelegramWidget(cfg)
+			w, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewTelegramWidget() error = %v", err)
+				t.Fatalf("New() error = %v", err)
 			}
 
 			if w.appearance.Header.Enabled != tt.wantHeaderEnabled {
@@ -254,7 +254,7 @@ func TestTelegramWidget_AppearanceSettings(t *testing.T) {
 	}
 }
 
-func TestTelegramWidget_Stop(t *testing.T) {
+func TestWidget_Stop(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "telegram",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -265,16 +265,16 @@ func TestTelegramWidget_Stop(t *testing.T) {
 		},
 	}
 
-	w, err := NewTelegramWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewTelegramWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Stop should not panic
 	w.Stop()
 }
 
-func TestTelegramWidget_GetAppearance(t *testing.T) {
+func TestWidget_GetAppearance(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "telegram",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -288,9 +288,9 @@ func TestTelegramWidget_GetAppearance(t *testing.T) {
 		},
 	}
 
-	w, err := NewTelegramWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewTelegramWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Test that appearance is set correctly
@@ -299,7 +299,7 @@ func TestTelegramWidget_GetAppearance(t *testing.T) {
 	}
 }
 
-func TestTelegramWidget_AutoHide(t *testing.T) {
+func TestWidget_AutoHide(t *testing.T) {
 	t.Run("widget hidden when auto_hide enabled and no message", func(t *testing.T) {
 		cfg := config.WidgetConfig{
 			Type:     "telegram",
@@ -315,9 +315,9 @@ func TestTelegramWidget_AutoHide(t *testing.T) {
 			},
 		}
 
-		w, err := NewTelegramWidget(cfg)
+		w, err := New(cfg)
 		if err != nil {
-			t.Fatalf("NewTelegramWidget() error = %v", err)
+			t.Fatalf("New() error = %v", err)
 		}
 
 		// Widget should be hidden initially (no message received)
@@ -345,9 +345,9 @@ func TestTelegramWidget_AutoHide(t *testing.T) {
 			},
 		}
 
-		w, err := NewTelegramWidget(cfg)
+		w, err := New(cfg)
 		if err != nil {
-			t.Fatalf("NewTelegramWidget() error = %v", err)
+			t.Fatalf("New() error = %v", err)
 		}
 
 		// Trigger auto-hide (simulates message arrival)
@@ -375,9 +375,9 @@ func TestTelegramWidget_AutoHide(t *testing.T) {
 			// No AutoHide config = disabled
 		}
 
-		w, err := NewTelegramWidget(cfg)
+		w, err := New(cfg)
 		if err != nil {
-			t.Fatalf("NewTelegramWidget() error = %v", err)
+			t.Fatalf("New() error = %v", err)
 		}
 
 		// Widget should be visible without TriggerAutoHide

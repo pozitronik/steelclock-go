@@ -1,4 +1,4 @@
-package widget
+package telegramwidget
 
 import (
 	"fmt"
@@ -9,13 +9,14 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	tgclient "github.com/pozitronik/steelclock-go/internal/telegram"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
 func init() {
-	Register("telegram", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewTelegramWidget(cfg)
+	widget.Register("telegram", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
@@ -55,9 +56,9 @@ type ChatAppearance struct {
 	Transitions config.TransitionConfig
 }
 
-// TelegramWidget displays Telegram notifications
-type TelegramWidget struct {
-	*BaseWidget
+// Widget displays Telegram notifications
+type Widget struct {
+	*widget.BaseWidget
 	mu sync.RWMutex
 
 	// Telegram client (shared via registry)
@@ -94,9 +95,9 @@ type TelegramWidget struct {
 	statusRenderer *shared.StatusRenderer
 }
 
-// NewTelegramWidget creates a new Telegram notification widget
-func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new Telegram notification widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	pos := base.GetPosition()
 
 	if cfg.Auth == nil {
@@ -138,7 +139,7 @@ func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
 		Gap:       appearance.Message.ScrollGap,
 	}
 
-	w := &TelegramWidget{
+	w := &Widget{
 		BaseWidget:      base,
 		client:          client,
 		authCfg:         cfg.Auth,
@@ -388,12 +389,12 @@ func parseAppearance(appCfg *config.TelegramAppearanceConfig) (ChatAppearance, e
 }
 
 // getAppearance returns the appearance settings (now single appearance for all chat types)
-func (w *TelegramWidget) getAppearance(_ tgclient.ChatType) *ChatAppearance {
+func (w *Widget) getAppearance(_ tgclient.ChatType) *ChatAppearance {
 	return &w.appearance
 }
 
 // Update handles widget state updates
-func (w *TelegramWidget) Update() error {
+func (w *Widget) Update() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -466,7 +467,7 @@ func (w *TelegramWidget) Update() error {
 }
 
 // startTransition initiates a transition to a new message
-func (w *TelegramWidget) startTransition(chatType tgclient.ChatType) {
+func (w *Widget) startTransition(chatType tgclient.ChatType) {
 	appearance := w.getAppearance(chatType)
 	if appearance.Transitions.In == "none" {
 		return
@@ -489,7 +490,7 @@ func (w *TelegramWidget) startTransition(chatType tgclient.ChatType) {
 }
 
 // Render draws the widget
-func (w *TelegramWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	// Check if widget should be hidden (auto-hide mode)
 	if w.ShouldHide() {
 		return nil, nil
@@ -535,7 +536,7 @@ func (w *TelegramWidget) Render() (image.Image, error) {
 }
 
 // renderError displays error message on two lines
-func (w *TelegramWidget) renderError(img *image.Gray) {
+func (w *Widget) renderError(img *image.Gray) {
 	connErr := w.connection.GetError()
 	if connErr == nil {
 		return
@@ -559,13 +560,13 @@ func (w *TelegramWidget) renderError(img *image.Gray) {
 }
 
 // drawStatusText draws status text using internal font
-func (w *TelegramWidget) drawStatusText(img *image.Gray, text string) {
+func (w *Widget) drawStatusText(img *image.Gray, text string) {
 	w.statusRenderer.DrawAt(img, text, 2, w.height/2-3)
 }
 
 // renderMessage renders a message with header, separator, and message text
 // Each region (header, message) is rendered to a sub-image for proper clipping
-func (w *TelegramWidget) renderMessage(img *image.Gray, msg tgclient.MessageInfo) {
+func (w *Widget) renderMessage(img *image.Gray, msg tgclient.MessageInfo) {
 	appearance := w.getAppearance(msg.ChatType)
 
 	// Calculate layout based on what's enabled
@@ -661,7 +662,7 @@ func (w *TelegramWidget) renderMessage(img *image.Gray, msg tgclient.MessageInfo
 }
 
 // renderMultiLineText renders wrapped text with optional vertical scrolling
-func (w *TelegramWidget) renderMultiLineText(img *image.Gray, text string, elem ElementAppearance, scrollOffset float64, x, y, width, height int) {
+func (w *Widget) renderMultiLineText(img *image.Gray, text string, elem ElementAppearance, scrollOffset float64, x, y, width, height int) {
 	renderer := shared.NewMultiLineRenderer(shared.MultiLineRendererConfig{
 		FontFace:      elem.FontFace,
 		FontName:      elem.FontName,
@@ -678,7 +679,7 @@ func (w *TelegramWidget) renderMultiLineText(img *image.Gray, text string, elem 
 }
 
 // renderScrollingText renders text with scrolling support (single line, horizontal scroll)
-func (w *TelegramWidget) renderScrollingText(img *image.Gray, text string, elem ElementAppearance, scrollOffset float64, x, y, width, height int) {
+func (w *Widget) renderScrollingText(img *image.Gray, text string, elem ElementAppearance, scrollOffset float64, x, y, width, height int) {
 	renderer := shared.NewHorizontalTextRenderer(shared.HorizontalTextRendererConfig{
 		FontFace:      elem.FontFace,
 		FontName:      elem.FontName,
@@ -696,7 +697,7 @@ func (w *TelegramWidget) renderScrollingText(img *image.Gray, text string, elem 
 // formatHeader creates the header string for a message
 // Supports format tokens: {sender}, {chat}, {type}, {time}, {date}, {forwarded}
 // If format is empty, uses auto format based on chat type
-func (w *TelegramWidget) formatHeader(msg tgclient.MessageInfo) string {
+func (w *Widget) formatHeader(msg tgclient.MessageInfo) string {
 	appearance := w.getAppearance(msg.ChatType)
 
 	// Get sender name with fallback for private chats
@@ -773,7 +774,7 @@ func (w *TelegramWidget) formatHeader(msg tgclient.MessageInfo) string {
 }
 
 // Stop cleans up resources
-func (w *TelegramWidget) Stop() {
+func (w *Widget) Stop() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 

@@ -1,4 +1,4 @@
-package widget
+package telegramcounter
 
 import (
 	"fmt"
@@ -11,25 +11,26 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	tgclient "github.com/pozitronik/steelclock-go/internal/telegram"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
 func init() {
-	Register("telegram_counter", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewTelegramCounterWidget(cfg)
+	widget.Register("telegram_counter", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
 // Display mode constants
 const (
-	telegramCounterModeBadge = "badge"
-	telegramCounterModeText  = "text"
+	modeBadge = "badge"
+	modeText  = "text"
 )
 
-// TelegramCounterWidget displays unread message count
-type TelegramCounterWidget struct {
-	*BaseWidget
+// Widget displays unread message count
+type Widget struct {
+	*widget.BaseWidget
 	mu sync.RWMutex
 
 	// Telegram client (shared via registry)
@@ -63,9 +64,9 @@ type TelegramCounterWidget struct {
 	height int
 }
 
-// NewTelegramCounterWidget creates a new Telegram unread count widget
-func NewTelegramCounterWidget(cfg config.WidgetConfig) (*TelegramCounterWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new Telegram unread count widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	pos := base.GetPosition()
 
 	if cfg.Auth == nil {
@@ -87,7 +88,7 @@ func NewTelegramCounterWidget(cfg config.WidgetConfig) (*TelegramCounterWidget, 
 	// Parse counter-specific settings from flat config
 	mode := cfg.Mode
 	if mode == "" {
-		mode = telegramCounterModeBadge // default mode
+		mode = modeBadge // default mode
 	}
 
 	blinkMode := shared.BlinkNever
@@ -129,7 +130,7 @@ func NewTelegramCounterWidget(cfg config.WidgetConfig) (*TelegramCounterWidget, 
 	// Create connection manager
 	connManager := shared.NewConnectionManager(client, 30*time.Second, 60*time.Second)
 
-	w := &TelegramCounterWidget{
+	w := &Widget{
 		BaseWidget:      base,
 		client:          client,
 		authCfg:         cfg.Auth,
@@ -157,7 +158,7 @@ func NewTelegramCounterWidget(cfg config.WidgetConfig) (*TelegramCounterWidget, 
 }
 
 // Update handles widget state updates
-func (w *TelegramCounterWidget) Update() error {
+func (w *Widget) Update() error {
 	now := time.Now()
 
 	w.mu.Lock()
@@ -188,7 +189,7 @@ func (w *TelegramCounterWidget) Update() error {
 }
 
 // Render draws the widget
-func (w *TelegramCounterWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
@@ -225,21 +226,21 @@ func (w *TelegramCounterWidget) Render() (image.Image, error) {
 }
 
 // renderUnreadCount renders the unread count in the configured format
-func (w *TelegramCounterWidget) renderUnreadCount(img *image.Gray) {
+func (w *Widget) renderUnreadCount(img *image.Gray) {
 	switch w.mode {
-	case telegramCounterModeBadge:
+	case modeBadge:
 		// Draw Telegram icon (paper airplane) centered
 		w.drawTelegramIcon(img, (w.width-w.getIconSize())/2, (w.height-w.getIconSize())/2)
-	case telegramCounterModeText:
+	case modeText:
 		// Formatted text with tokens (may include {icon})
 		w.renderFormattedText(img)
-	default: // telegramCounterModeBadge by default
+	default: // modeBadge by default
 		w.drawTelegramIcon(img, (w.width-w.getIconSize())/2, (w.height-w.getIconSize())/2)
 	}
 }
 
 // formatText replaces tokens in the text format with actual values (except {icon})
-func (w *TelegramCounterWidget) formatText() string {
+func (w *Widget) formatText() string {
 	text := w.textFormat
 
 	// Replace all supported tokens (except {icon} which is handled separately)
@@ -265,9 +266,9 @@ func (w *TelegramCounterWidget) formatText() string {
 }
 
 // getIconSize returns the icon size based on actual text height
-func (w *TelegramCounterWidget) getIconSize() int {
+func (w *Widget) getIconSize() int {
 	// For text mode, measure actual text height
-	if w.mode == telegramCounterModeText {
+	if w.mode == modeText {
 		_, textHeight := bitmap.SmartMeasureText("X", w.fontFace, w.fontName)
 		if textHeight > 0 {
 			return textHeight
@@ -284,7 +285,7 @@ func (w *TelegramCounterWidget) getIconSize() int {
 }
 
 // renderFormattedText renders text with {icon} token support
-func (w *TelegramCounterWidget) renderFormattedText(img *image.Gray) {
+func (w *Widget) renderFormattedText(img *image.Gray) {
 	text := w.formatText()
 
 	// Check if text contains {icon} token
@@ -335,7 +336,7 @@ func (w *TelegramCounterWidget) renderFormattedText(img *image.Gray) {
 }
 
 // drawTelegramIcon draws the Telegram paper airplane icon at specified position
-func (w *TelegramCounterWidget) drawTelegramIcon(img *image.Gray, x, y int) {
+func (w *Widget) drawTelegramIcon(img *image.Gray, x, y int) {
 	iconSize := w.getIconSize()
 
 	iconSet := glyphs.GetTelegramIcon(iconSize)
@@ -355,7 +356,7 @@ func (w *TelegramCounterWidget) drawTelegramIcon(img *image.Gray, x, y int) {
 }
 
 // Stop cleans up resources
-func (w *TelegramCounterWidget) Stop() {
+func (w *Widget) Stop() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
