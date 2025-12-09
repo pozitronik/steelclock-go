@@ -185,6 +185,7 @@ func applyCommonWidgetDefaults(w *WidgetConfig) {
 	}
 }
 
+// todo: plugins have to return defaults themselves
 // applyTypeSpecificDefaults sets default values specific to widget types
 func applyTypeSpecificDefaults(w *WidgetConfig) {
 	switch w.Type {
