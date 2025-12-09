@@ -3,7 +3,6 @@ package widget
 import (
 	"fmt"
 	"image"
-	"strings"
 	"sync"
 	"time"
 
@@ -661,404 +660,37 @@ func (w *TelegramWidget) renderMessage(img *image.Gray, msg tgclient.MessageInfo
 	}
 }
 
-// wrapText wraps text into lines that fit within the given width
-// wordBreak: "normal" (break on spaces/newlines) or "break-all" (break anywhere)
-func (w *TelegramWidget) wrapText(text string, elem ElementAppearance, maxWidth int) []string {
-	if text == "" {
-		return nil
-	}
-
-	var lines []string
-	var currentLine string
-
-	// Helper to measure text width
-	measureWidth := func(s string) int {
-		width, _ := bitmap.SmartMeasureText(s, elem.FontFace, elem.FontName)
-		return width
-	}
-
-	// Helper to add a word to current line or start new line
-	addWord := func(word string) {
-		if currentLine == "" {
-			// Check if word itself fits
-			if measureWidth(word) <= maxWidth {
-				currentLine = word
-			} else {
-				// Word doesn't fit - break it character by character
-				for _, r := range word {
-					ch := string(r)
-					testLine := currentLine + ch
-					if measureWidth(testLine) <= maxWidth {
-						currentLine = testLine
-					} else {
-						if currentLine != "" {
-							lines = append(lines, currentLine)
-						}
-						currentLine = ch
-					}
-				}
-			}
-		} else {
-			testLine := currentLine + " " + word
-			if measureWidth(testLine) <= maxWidth {
-				currentLine = testLine
-			} else {
-				// Word doesn't fit on current line
-				lines = append(lines, currentLine)
-				// Check if word fits on new line
-				if measureWidth(word) <= maxWidth {
-					currentLine = word
-				} else {
-					// Break the word character by character
-					currentLine = ""
-					for _, r := range word {
-						ch := string(r)
-						testLine := currentLine + ch
-						if measureWidth(testLine) <= maxWidth {
-							currentLine = testLine
-						} else {
-							if currentLine != "" {
-								lines = append(lines, currentLine)
-							}
-							currentLine = ch
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if elem.WordBreak == "break-all" {
-		// Break at any character
-		for _, r := range text {
-			if r == '\n' {
-				lines = append(lines, currentLine)
-				currentLine = ""
-				continue
-			}
-			ch := string(r)
-			testLine := currentLine + ch
-			if measureWidth(testLine) <= maxWidth {
-				currentLine = testLine
-			} else {
-				if currentLine != "" {
-					lines = append(lines, currentLine)
-				}
-				currentLine = ch
-			}
-		}
-	} else {
-		// Normal word break - break on spaces and newlines
-		// Split by newlines first
-		paragraphs := splitByNewlines(text)
-		for i, para := range paragraphs {
-			if i > 0 {
-				// Add previous line before starting new paragraph
-				if currentLine != "" {
-					lines = append(lines, currentLine)
-					currentLine = ""
-				}
-			}
-			// Split paragraph into words
-			words := splitIntoWords(para)
-			for _, word := range words {
-				if word != "" {
-					addWord(word)
-				}
-			}
-		}
-	}
-
-	// Don't forget the last line
-	if currentLine != "" {
-		lines = append(lines, currentLine)
-	}
-
-	return lines
-}
-
-// splitByNewlines splits text by newline characters
-func splitByNewlines(text string) []string {
-	var result []string
-	current := ""
-	for _, r := range text {
-		if r == '\n' || r == '\r' {
-			result = append(result, current)
-			current = ""
-		} else {
-			current += string(r)
-		}
-	}
-	result = append(result, current)
-	return result
-}
-
-// splitIntoWords splits text into words by spaces
-func splitIntoWords(text string) []string {
-	var words []string
-	current := ""
-	for _, r := range text {
-		if r == ' ' || r == '\t' {
-			if current != "" {
-				words = append(words, current)
-				current = ""
-			}
-		} else {
-			current += string(r)
-		}
-	}
-	if current != "" {
-		words = append(words, current)
-	}
-	return words
-}
-
-// truncateWithEllipsis truncates lines that don't fit and adds "..." to the last visible line
-func (w *TelegramWidget) truncateWithEllipsis(lines []string, elem ElementAppearance, maxWidth, maxHeight int) []string {
-	if len(lines) == 0 {
-		return lines
-	}
-
-	_, lineHeight := bitmap.SmartMeasureText("Ag", elem.FontFace, elem.FontName)
-	if lineHeight == 0 {
-		lineHeight = 16
-	}
-
-	maxLines := maxHeight / lineHeight
-	if maxLines <= 0 {
-		maxLines = 1
-	}
-
-	if len(lines) <= maxLines {
-		return lines
-	}
-
-	// Truncate to maxLines and add ellipsis to last line
-	result := lines[:maxLines]
-	lastLine := result[maxLines-1]
-
-	ellipsis := "..."
-	ellipsisWidth, _ := bitmap.SmartMeasureText(ellipsis, elem.FontFace, elem.FontName)
-
-	// Remove characters from end until ellipsis fits
-	for len(lastLine) > 0 {
-		lineWidth, _ := bitmap.SmartMeasureText(lastLine+ellipsis, elem.FontFace, elem.FontName)
-		if lineWidth <= maxWidth {
-			break
-		}
-		// Remove last rune
-		runes := []rune(lastLine)
-		lastLine = string(runes[:len(runes)-1])
-	}
-
-	// If the line is too short, try without removing characters
-	if lastLine == "" {
-		testWidth, _ := bitmap.SmartMeasureText(ellipsis, elem.FontFace, elem.FontName)
-		if testWidth <= maxWidth {
-			lastLine = ""
-		}
-	}
-
-	result[maxLines-1] = lastLine + ellipsis
-
-	// Handle edge case where ellipsis alone doesn't fit
-	if ellipsisWidth > maxWidth && maxLines > 1 {
-		result = result[:maxLines-1]
-	}
-
-	return result
-}
-
 // renderMultiLineText renders wrapped text with optional vertical scrolling
 func (w *TelegramWidget) renderMultiLineText(img *image.Gray, text string, elem ElementAppearance, scrollOffset float64, x, y, width, height int) {
-	// Wrap text into lines
-	lines := w.wrapText(text, elem, width)
-	if len(lines) == 0 {
-		return
-	}
+	renderer := shared.NewMultiLineRenderer(shared.MultiLineRendererConfig{
+		FontFace:      elem.FontFace,
+		FontName:      elem.FontName,
+		HorizAlign:    elem.HorizAlign,
+		VertAlign:     elem.VertAlign,
+		ScrollMode:    elem.ScrollMode,
+		ScrollGap:     elem.ScrollGap,
+		ScrollEnabled: elem.ScrollEnabled,
+		WordBreak:     elem.WordBreak,
+	}, width)
 
-	_, lineHeight := bitmap.SmartMeasureText("Ag", elem.FontFace, elem.FontName)
-	if lineHeight == 0 {
-		lineHeight = 16
-	}
-
-	totalTextHeight := len(lines) * lineHeight
-
-	// Check if scrolling is needed
-	if totalTextHeight <= height || !elem.ScrollEnabled {
-		// No scrolling - truncate with ellipsis if needed
-		if totalTextHeight > height {
-			lines = w.truncateWithEllipsis(lines, elem, width, height)
-		}
-
-		// Render lines
-		currentY := y
-		for _, line := range lines {
-			if currentY+lineHeight > y+height {
-				break
-			}
-			w.renderSingleLine(img, line, elem, x, currentY, width, lineHeight)
-			currentY += lineHeight
-		}
-		return
-	}
-
-	// Scrolling enabled - vertical scroll through lines
-	totalScrollHeight := totalTextHeight + elem.ScrollGap
-
-	switch elem.ScrollMode {
-	case shared.ScrollContinuous:
-		offset := int(scrollOffset) % totalScrollHeight
-		startY := y - offset
-
-		// Draw lines with wrapping
-		for i := 0; i < 2; i++ { // Draw twice for seamless loop
-			lineY := startY + i*totalScrollHeight
-			for _, line := range lines {
-				if lineY+lineHeight > y && lineY < y+height {
-					// Line is visible
-					w.renderSingleLine(img, line, elem, x, lineY, width, lineHeight)
-				}
-				lineY += lineHeight
-			}
-		}
-
-	case shared.ScrollBounce:
-		maxOffset := float64(totalTextHeight - height)
-		if maxOffset <= 0 {
-			// Fits without scrolling
-			currentY := y
-			for _, line := range lines {
-				w.renderSingleLine(img, line, elem, x, currentY, width, lineHeight)
-				currentY += lineHeight
-			}
-			return
-		}
-
-		offset := scrollOffset
-		cycle := int(offset / maxOffset)
-		progress := offset - float64(cycle)*maxOffset
-		if cycle%2 == 1 {
-			progress = maxOffset - progress
-		}
-		startY := y - int(progress)
-
-		for _, line := range lines {
-			if startY+lineHeight > y && startY < y+height {
-				w.renderSingleLine(img, line, elem, x, startY, width, lineHeight)
-			}
-			startY += lineHeight
-		}
-
-	case shared.ScrollPauseEnds:
-		maxOffset := float64(totalTextHeight - height)
-		if maxOffset <= 0 {
-			currentY := y
-			for _, line := range lines {
-				w.renderSingleLine(img, line, elem, x, currentY, width, lineHeight)
-				currentY += lineHeight
-			}
-			return
-		}
-
-		pausePixels := 100
-		offset := int(scrollOffset) % (int(maxOffset) + pausePixels)
-		if offset > int(maxOffset) {
-			offset = int(maxOffset)
-		}
-		startY := y - offset
-
-		for _, line := range lines {
-			if startY+lineHeight > y && startY < y+height {
-				w.renderSingleLine(img, line, elem, x, startY, width, lineHeight)
-			}
-			startY += lineHeight
-		}
-
-	default:
-		// No scroll mode - just render what fits
-		currentY := y
-		for _, line := range lines {
-			if currentY+lineHeight > y+height {
-				break
-			}
-			w.renderSingleLine(img, line, elem, x, currentY, width, lineHeight)
-			currentY += lineHeight
-		}
-	}
-}
-
-// renderSingleLine renders a single line of text
-func (w *TelegramWidget) renderSingleLine(img *image.Gray, text string, elem ElementAppearance, x, y, width, height int) {
-	// Calculate position with alignment
-	textX, textY := bitmap.SmartCalculateTextPosition(text, elem.FontFace, elem.FontName, x, y, width, height, elem.HorizAlign, elem.VertAlign)
-	bitmap.SmartDrawTextAtPosition(img, text, elem.FontFace, elem.FontName, textX, textY, x, y, width, height)
+	bounds := image.Rect(x, y, x+width, y+height)
+	renderer.Render(img, text, scrollOffset, bounds)
 }
 
 // renderScrollingText renders text with scrolling support (single line, horizontal scroll)
 func (w *TelegramWidget) renderScrollingText(img *image.Gray, text string, elem ElementAppearance, scrollOffset float64, x, y, width, height int) {
-	textWidth, _ := bitmap.SmartMeasureText(text, elem.FontFace, elem.FontName)
+	renderer := shared.NewHorizontalTextRenderer(shared.HorizontalTextRendererConfig{
+		FontFace:      elem.FontFace,
+		FontName:      elem.FontName,
+		HorizAlign:    elem.HorizAlign,
+		VertAlign:     elem.VertAlign,
+		ScrollMode:    elem.ScrollMode,
+		ScrollGap:     elem.ScrollGap,
+		ScrollEnabled: elem.ScrollEnabled,
+	})
 
-	// Calculate base position using SmartCalculateTextPosition which handles TTF baseline correctly
-	textX, textY := bitmap.SmartCalculateTextPosition(text, elem.FontFace, elem.FontName, x, y, width, height, elem.HorizAlign, elem.VertAlign)
-
-	// If text fits or scrolling disabled, draw normally
-	if textWidth <= width || !elem.ScrollEnabled {
-		bitmap.SmartDrawTextAtPosition(img, text, elem.FontFace, elem.FontName, textX, textY, x, y, width, height)
-		return
-	}
-
-	// Handle scrolling - text is wider than container
-	totalWidth := textWidth + elem.ScrollGap
-
-	switch elem.ScrollMode {
-	case shared.ScrollContinuous:
-		// Wrap scroll offset
-		offset := int(scrollOffset) % totalWidth
-		// Start at x position and scroll left
-		scrollX := x - offset
-
-		// Draw first copy
-		bitmap.SmartDrawTextAtPosition(img, text, elem.FontFace, elem.FontName, scrollX, textY, x, y, width, height)
-
-		// Draw second copy for seamless loop
-		scrollX2 := scrollX + totalWidth
-		if scrollX2 < x+width {
-			bitmap.SmartDrawTextAtPosition(img, text, elem.FontFace, elem.FontName, scrollX2, textY, x, y, width, height)
-		}
-
-	case shared.ScrollBounce:
-		maxOffset := float64(textWidth - width)
-		if maxOffset <= 0 {
-			// Text fits, no bouncing needed
-			bitmap.SmartDrawTextAtPosition(img, text, elem.FontFace, elem.FontName, textX, textY, x, y, width, height)
-			return
-		}
-		offset := scrollOffset
-		// Bounce back and forth
-		cycle := int(offset / maxOffset)
-		progress := offset - float64(cycle)*maxOffset
-		if cycle%2 == 1 {
-			progress = maxOffset - progress
-		}
-		scrollX := x - int(progress)
-		bitmap.SmartDrawTextAtPosition(img, text, elem.FontFace, elem.FontName, scrollX, textY, x, y, width, height)
-
-	case shared.ScrollPauseEnds:
-		maxOffset := float64(textWidth - width)
-		if maxOffset <= 0 {
-			// Text fits, no scrolling needed
-			bitmap.SmartDrawTextAtPosition(img, text, elem.FontFace, elem.FontName, textX, textY, x, y, width, height)
-			return
-		}
-		pausePixels := 100
-		offset := int(scrollOffset) % (int(maxOffset) + pausePixels)
-		if offset > int(maxOffset) {
-			offset = int(maxOffset) // Pause at end
-		}
-		scrollX := x - offset
-		bitmap.SmartDrawTextAtPosition(img, text, elem.FontFace, elem.FontName, scrollX, textY, x, y, width, height)
-	}
+	bounds := image.Rect(x, y, x+width, y+height)
+	renderer.Render(img, text, scrollOffset, bounds)
 }
 
 // formatHeader creates the header string for a message
@@ -1128,16 +760,16 @@ func (w *TelegramWidget) formatHeader(msg tgclient.MessageInfo) string {
 		return header
 	}
 
-	// Apply format tokens
-	result := format
-	result = strings.ReplaceAll(result, "{sender}", senderName)
-	result = strings.ReplaceAll(result, "{chat}", chatTitle)
-	result = strings.ReplaceAll(result, "{type}", chatTypeStr)
-	result = strings.ReplaceAll(result, "{time}", msg.Time.Format("15:04"))
-	result = strings.ReplaceAll(result, "{date}", msg.Time.Format("Jan 2"))
-	result = strings.ReplaceAll(result, "{forwarded}", forwardedStr)
+	// Apply format tokens using TokenFormatter
+	formatter := shared.NewTokenFormatter().
+		Set("sender", senderName).
+		Set("chat", chatTitle).
+		Set("type", chatTypeStr).
+		Set("time", msg.Time.Format("15:04")).
+		Set("date", msg.Time.Format("Jan 2")).
+		Set("forwarded", forwardedStr)
 
-	return result
+	return formatter.Format(format)
 }
 
 // Stop cleans up resources
