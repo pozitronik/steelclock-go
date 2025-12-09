@@ -1,4 +1,4 @@
-package widget
+package disk
 
 import (
 	"fmt"
@@ -7,19 +7,20 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/metrics"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 func init() {
-	Register("disk", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewDiskWidget(cfg)
+	widget.Register("disk", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
-// DiskWidget displays disk I/O (Read/Write)
-type DiskWidget struct {
+// Widget displays disk I/O (Read/Write)
+type Widget struct {
 	*shared.BaseDualIOWidget
-	base         *BaseWidget
+	base         *widget.BaseWidget
 	diskName     *string
 	diskProvider metrics.DiskProvider
 
@@ -29,9 +30,9 @@ type DiskWidget struct {
 	lastTime  time.Time
 }
 
-// NewDiskWidget creates a new disk widget
-func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new disk widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
@@ -140,7 +141,7 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 		HistoryLen: graphSettings.HistoryLen,
 	})
 
-	return &DiskWidget{
+	return &Widget{
 		BaseDualIOWidget: baseDualIO,
 		base:             base,
 		diskName:         cfg.Disk,
@@ -149,27 +150,27 @@ func NewDiskWidget(cfg config.WidgetConfig) (*DiskWidget, error) {
 }
 
 // Name returns the widget's ID
-func (w *DiskWidget) Name() string {
+func (w *Widget) Name() string {
 	return w.base.Name()
 }
 
 // GetUpdateInterval returns the update interval
-func (w *DiskWidget) GetUpdateInterval() time.Duration {
+func (w *Widget) GetUpdateInterval() time.Duration {
 	return w.base.GetUpdateInterval()
 }
 
 // GetPosition returns the widget's position
-func (w *DiskWidget) GetPosition() config.PositionConfig {
+func (w *Widget) GetPosition() config.PositionConfig {
 	return w.base.GetPosition()
 }
 
 // GetStyle returns the widget's style
-func (w *DiskWidget) GetStyle() config.StyleConfig {
+func (w *Widget) GetStyle() config.StyleConfig {
 	return w.base.GetStyle()
 }
 
 // Update updates the disk stats
-func (w *DiskWidget) Update() error {
+func (w *Widget) Update() error {
 	stats, err := w.diskProvider.IOCounters()
 	if err != nil {
 		return err

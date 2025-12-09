@@ -1,4 +1,4 @@
-package widget
+package disk
 
 import (
 	"testing"
@@ -7,8 +7,8 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
-// TestNewDiskWidget tests successful disk widget creation
-func TestNewDiskWidget(t *testing.T) {
+// TestNew tests successful disk widget creation
+func TestNew(t *testing.T) {
 	diskName := "sda"
 	cfg := config.WidgetConfig{
 		Type:    "disk",
@@ -32,13 +32,13 @@ func TestNewDiskWidget(t *testing.T) {
 		},
 	}
 
-	widget, err := NewDiskWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewDiskWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget == nil {
-		t.Fatal("NewDiskWidget() returned nil")
+		t.Fatal("New() returned nil")
 	}
 
 	if widget.Name() != "test_disk" {
@@ -46,8 +46,8 @@ func TestNewDiskWidget(t *testing.T) {
 	}
 }
 
-// TestNewDiskWidget_AllDisks tests monitoring all disks
-func TestNewDiskWidget_AllDisks(t *testing.T) {
+// TestNew_AllDisks tests monitoring all disks
+func TestNew_AllDisks(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_all",
@@ -59,18 +59,18 @@ func TestNewDiskWidget_AllDisks(t *testing.T) {
 		// Disk intentionally nil to monitor all disks
 	}
 
-	widget, err := NewDiskWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewDiskWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget.diskName != nil {
-		t.Error("NewDiskWidget() should accept nil diskName for all disks mode")
+		t.Error("New() should accept nil diskName for all disks mode")
 	}
 }
 
-// TestNewDiskWidget_Defaults tests default values
-func TestNewDiskWidget_Defaults(t *testing.T) {
+// TestNew_Defaults tests default values
+func TestNew_Defaults(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_defaults",
@@ -80,9 +80,9 @@ func TestNewDiskWidget_Defaults(t *testing.T) {
 		},
 	}
 
-	widget, err := NewDiskWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewDiskWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Check defaults
@@ -103,8 +103,8 @@ func TestNewDiskWidget_Defaults(t *testing.T) {
 	}
 }
 
-// TestDiskWidget_Update tests disk I/O stat collection
-func TestDiskWidget_Update(t *testing.T) {
+// TestWidget_Update tests disk I/O stat collection
+func TestWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_update",
@@ -115,9 +115,9 @@ func TestDiskWidget_Update(t *testing.T) {
 		Mode: "text",
 	}
 
-	widget, err := NewDiskWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewDiskWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// First update initializes baseline
@@ -142,8 +142,8 @@ func TestDiskWidget_Update(t *testing.T) {
 	}
 }
 
-// TestDiskWidget_RenderText tests text mode rendering
-func TestDiskWidget_RenderText(t *testing.T) {
+// TestWidget_RenderText tests text mode rendering
+func TestWidget_RenderText(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_text",
@@ -157,9 +157,9 @@ func TestDiskWidget_RenderText(t *testing.T) {
 		},
 	}
 
-	widget, err := NewDiskWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewDiskWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	_ = widget.Update()
@@ -179,8 +179,8 @@ func TestDiskWidget_RenderText(t *testing.T) {
 	}
 }
 
-// TestDiskWidget_RenderBarHorizontal tests horizontal bar rendering
-func TestDiskWidget_RenderBarHorizontal(t *testing.T) {
+// TestWidget_RenderBarHorizontal tests horizontal bar rendering
+func TestWidget_RenderBarHorizontal(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_bar_h",
@@ -196,9 +196,9 @@ func TestDiskWidget_RenderBarHorizontal(t *testing.T) {
 		},
 	}
 
-	widget, err := NewDiskWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewDiskWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	_ = widget.Update()
@@ -213,8 +213,8 @@ func TestDiskWidget_RenderBarHorizontal(t *testing.T) {
 	}
 }
 
-// TestDiskWidget_RenderBarVertical tests vertical bar rendering
-func TestDiskWidget_RenderBarVertical(t *testing.T) {
+// TestWidget_RenderBarVertical tests vertical bar rendering
+func TestWidget_RenderBarVertical(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_bar_v",
@@ -229,9 +229,9 @@ func TestDiskWidget_RenderBarVertical(t *testing.T) {
 		},
 	}
 
-	widget, err := NewDiskWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewDiskWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	_ = widget.Update()
@@ -246,8 +246,8 @@ func TestDiskWidget_RenderBarVertical(t *testing.T) {
 	}
 }
 
-// TestDiskWidget_RenderGraph tests graph mode rendering
-func TestDiskWidget_RenderGraph(t *testing.T) {
+// TestWidget_RenderGraph tests graph mode rendering
+func TestWidget_RenderGraph(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_graph",
@@ -265,9 +265,9 @@ func TestDiskWidget_RenderGraph(t *testing.T) {
 		},
 	}
 
-	widget, err := NewDiskWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewDiskWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Build history
@@ -285,8 +285,8 @@ func TestDiskWidget_RenderGraph(t *testing.T) {
 	}
 }
 
-// TestDiskWidget_RenderGraph_InsufficientHistory tests graph with insufficient data
-func TestDiskWidget_RenderGraph_InsufficientHistory(t *testing.T) {
+// TestWidget_RenderGraph_InsufficientHistory tests graph with insufficient data
+func TestWidget_RenderGraph_InsufficientHistory(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_graph_nodata",
@@ -300,9 +300,9 @@ func TestDiskWidget_RenderGraph_InsufficientHistory(t *testing.T) {
 		},
 	}
 
-	widget, err := NewDiskWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewDiskWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update only once (not enough for graph)
@@ -319,8 +319,8 @@ func TestDiskWidget_RenderGraph_InsufficientHistory(t *testing.T) {
 	}
 }
 
-// TestDiskWidget_AutoScale tests auto-scaling
-func TestDiskWidget_AutoScale(t *testing.T) {
+// TestWidget_AutoScale tests auto-scaling
+func TestWidget_AutoScale(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_autoscale",
@@ -332,9 +332,9 @@ func TestDiskWidget_AutoScale(t *testing.T) {
 		MaxSpeedMbps: -1, // Auto-scale
 	}
 
-	widget, err := NewDiskWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewDiskWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	_ = widget.Update()
@@ -349,8 +349,8 @@ func TestDiskWidget_AutoScale(t *testing.T) {
 	}
 }
 
-// TestDiskWidget_SpecificDisk tests monitoring specific disk
-func TestDiskWidget_SpecificDisk(t *testing.T) {
+// TestWidget_SpecificDisk tests monitoring specific disk
+func TestWidget_SpecificDisk(t *testing.T) {
 	// Use a likely non-existent disk
 	diskName := "nonexistent_disk_xyz123"
 	cfg := config.WidgetConfig{
@@ -364,9 +364,9 @@ func TestDiskWidget_SpecificDisk(t *testing.T) {
 		Disk: &diskName,
 	}
 
-	widget, err := NewDiskWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewDiskWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update should work even if disk doesn't exist (returns 0 stats)
@@ -376,8 +376,8 @@ func TestDiskWidget_SpecificDisk(t *testing.T) {
 	}
 }
 
-// TestDiskWidget_ConcurrentAccess tests thread safety
-func TestDiskWidget_ConcurrentAccess(t *testing.T) {
+// TestWidget_ConcurrentAccess tests thread safety
+func TestWidget_ConcurrentAccess(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "disk",
 		ID:      "test_disk_concurrent",
@@ -388,9 +388,9 @@ func TestDiskWidget_ConcurrentAccess(t *testing.T) {
 		Mode: "text",
 	}
 
-	widget, err := NewDiskWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewDiskWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	done := make(chan bool)
