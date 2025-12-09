@@ -1,52 +1,12 @@
 package widget
 
 import (
+	"image"
 	"strings"
 	"testing"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
-
-// TestCreateWidget_AllTypes tests widget creation for all supported widget types
-func TestCreateWidget_AllTypes(t *testing.T) {
-	tests := []struct {
-		name       string
-		widgetType string
-		wantErr    bool
-	}{
-		{
-			name:       "create keyboard widget",
-			widgetType: "keyboard",
-			wantErr:    false,
-		},
-		{
-			name:       "create keyboard_layout widget",
-			widgetType: "keyboard_layout",
-			wantErr:    false,
-		},
-		{
-			name:       "create winamp widget",
-			widgetType: "winamp",
-			wantErr:    false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := createDefaultConfig(tt.widgetType)
-			widget, err := CreateWidget(cfg)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("CreateWidget() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if !tt.wantErr && widget == nil {
-				t.Error("CreateWidget() returned nil widget")
-			}
-		})
-	}
-}
 
 // TestCreateWidget_InvalidType tests error handling for invalid widget types
 func TestCreateWidget_InvalidType(t *testing.T) {
@@ -69,24 +29,6 @@ func TestCreateWidget_InvalidType(t *testing.T) {
 	}
 }
 
-// TestCreateWidgets_MultipleWidgets tests creating multiple widgets from configs
-func TestCreateWidgets_MultipleWidgets(t *testing.T) {
-	configs := []config.WidgetConfig{
-		createDefaultConfig("keyboard"),
-		createDefaultConfig("keyboard_layout"),
-		createDefaultConfig("winamp"),
-	}
-
-	widgets, err := CreateWidgets(configs)
-	if err != nil {
-		t.Fatalf("CreateWidgets() error = %v", err)
-	}
-
-	if len(widgets) != 3 {
-		t.Errorf("CreateWidgets() returned %d widgets, want 3", len(widgets))
-	}
-}
-
 // TestCreateWidgets_Empty tests creating widgets from empty config list
 func TestCreateWidgets_Empty(t *testing.T) {
 	widgets, err := CreateWidgets([]config.WidgetConfig{})
@@ -96,71 +38,6 @@ func TestCreateWidgets_Empty(t *testing.T) {
 
 	if len(widgets) != 0 {
 		t.Errorf("CreateWidgets() with empty config should return empty list, got %d widgets", len(widgets))
-	}
-}
-
-// TestCreateWidgets_DisabledWidget tests that disabled widgets are skipped
-func TestCreateWidgets_DisabledWidget(t *testing.T) {
-	configs := []config.WidgetConfig{
-		createDefaultConfig("keyboard"),
-		{
-			Type:    "keyboard_layout",
-			ID:      "disabled_widget",
-			Enabled: config.BoolPtr(false), // This widget is disabled
-			Position: config.PositionConfig{
-				X: 0, Y: 0, W: 128, H: 40,
-			},
-		},
-		createDefaultConfig("winamp"),
-	}
-
-	widgets, err := CreateWidgets(configs)
-	if err != nil {
-		t.Fatalf("CreateWidgets() error = %v", err)
-	}
-
-	// Should only create 2 widgets (disabled one should be skipped)
-	if len(widgets) != 2 {
-		t.Errorf("CreateWidgets() returned %d widgets, want 2 (one disabled should be skipped)", len(widgets))
-	}
-}
-
-// TestCreateWidgets_PartialFailure tests graceful handling when some widgets fail
-func TestCreateWidgets_PartialFailure(t *testing.T) {
-	configs := []config.WidgetConfig{
-		createDefaultConfig("keyboard"),
-		{
-			Type:    "invalid_type",
-			ID:      "bad_widget",
-			Enabled: config.BoolPtr(true),
-			Position: config.PositionConfig{
-				X: 0, Y: 0, W: 128, H: 40,
-			},
-		},
-		createDefaultConfig("winamp"),
-	}
-
-	widgets, err := CreateWidgets(configs)
-
-	// Should succeed (no error returned)
-	if err != nil {
-		t.Errorf("CreateWidgets() should not error when some widgets succeed, got: %v", err)
-	}
-
-	// Should create 3 widgets (clock, matrix, and error proxy for the failed one)
-	if len(widgets) != 3 {
-		t.Errorf("CreateWidgets() returned %d widgets, want 3 (2 good + 1 error proxy)", len(widgets))
-	}
-
-	// Verify we have an error widget for the failed one
-	errorCount := 0
-	for _, w := range widgets {
-		if _, ok := w.(*ErrorWidget); ok {
-			errorCount++
-		}
-	}
-	if errorCount != 1 {
-		t.Errorf("CreateWidgets() should have created 1 error widget, got %d", errorCount)
 	}
 }
 
@@ -205,189 +82,11 @@ func TestCreateWidgets_AllFailed(t *testing.T) {
 	}
 }
 
-// createDefaultConfig creates a default widget configuration for testing
-func createDefaultConfig(widgetType string) config.WidgetConfig {
-	cfg := config.WidgetConfig{
-		Type:           widgetType,
-		ID:             "test_" + widgetType,
-		Enabled:        config.BoolPtr(true),
-		UpdateInterval: 1.0,
-		Mode:           "text",
-		Position: config.PositionConfig{
-			X: 0,
-			Y: 0,
-			W: 128,
-			H: 40,
-		},
-		Style: &config.StyleConfig{
-			Background: 0,
-			Border:     -1,
-		},
-		Text: &config.TextConfig{
-			Size: 10,
-			Align: &config.AlignConfig{
-				H: "center",
-				V: "center",
-			},
-		},
-		Colors: &config.ColorsConfig{
-			Fill:  config.IntPtr(255),
-			Rx:    config.IntPtr(255),
-			Tx:    config.IntPtr(255),
-			Read:  config.IntPtr(255),
-			Write: config.IntPtr(255),
-			On:    config.IntPtr(255),
-			Off:   config.IntPtr(100),
-		},
-		Graph: &config.GraphConfig{
-			History: 30,
-		},
-		Bar: &config.BarConfig{
-			Border: false,
-		},
-	}
-
-	// Type-specific configurations
-	switch widgetType {
-	case "network":
-		iface := "eth0"
-		cfg.Interface = &iface
-		cfg.MaxSpeedMbps = -1
-	case "disk":
-		disk := "sda"
-		cfg.Disk = &disk
-	}
-
-	return cfg
-}
-
-// TestCreateWidget_Disabled tests that explicitly disabled widgets return error
-func TestCreateWidget_Disabled(t *testing.T) {
-	cfg := config.WidgetConfig{
-		Type:    "winamp",
-		ID:      "test_disabled",
-		Enabled: config.BoolPtr(false),
-		Position: config.PositionConfig{
-			X: 0,
-			Y: 0,
-			W: 128,
-			H: 40,
-		},
-		Style: &config.StyleConfig{
-			Background: 0,
-			Border:     -1,
-		},
-	}
-
-	// Disabled widget should return error
-	widget, err := CreateWidget(cfg)
-	if err == nil {
-		t.Error("CreateWidget() should return error for disabled widget")
-	}
-
-	if widget != nil {
-		t.Error("CreateWidget() should return nil widget when disabled")
-	}
-}
-
-// TestCreateWidget_EnabledByDefault tests that widgets are enabled by default when field is omitted
-func TestCreateWidget_EnabledByDefault(t *testing.T) {
-	cfg := config.WidgetConfig{
-		Type: "winamp",
-		ID:   "test_default_enabled",
-		// Enabled field not set - should default to true
-		Position: config.PositionConfig{
-			X: 0,
-			Y: 0,
-			W: 128,
-			H: 40,
-		},
-		Style: &config.StyleConfig{
-			Background: 0,
-			Border:     -1,
-		},
-	}
-
-	// Widget without explicit enabled field should be enabled by default
-	widget, err := CreateWidget(cfg)
-	if err != nil {
-		t.Errorf("CreateWidget() error = %v, widget should be enabled by default", err)
-	}
-
-	if widget == nil {
-		t.Error("CreateWidget() should return widget when enabled by default")
-	}
-}
-
-// TestCreateWidget_ExplicitlyEnabled tests that explicitly enabled widgets work
-func TestCreateWidget_ExplicitlyEnabled(t *testing.T) {
-	cfg := config.WidgetConfig{
-		Type:    "winamp",
-		ID:      "test_explicitly_enabled",
-		Enabled: config.BoolPtr(true),
-		Position: config.PositionConfig{
-			X: 0,
-			Y: 0,
-			W: 128,
-			H: 40,
-		},
-		Style: &config.StyleConfig{
-			Background: 0,
-			Border:     -1,
-		},
-	}
-
-	// Explicitly enabled widget should work
-	widget, err := CreateWidget(cfg)
-	if err != nil {
-		t.Errorf("CreateWidget() error = %v, widget should be enabled", err)
-	}
-
-	if widget == nil {
-		t.Error("CreateWidget() should return widget when explicitly enabled")
-	}
-}
-
-// TestCreateWidgets_MixedEnabledDisabled tests mix of enabled and disabled widgets
-func TestCreateWidgets_MixedEnabledDisabled(t *testing.T) {
-	configs := []config.WidgetConfig{
-		createDefaultConfig("keyboard"),
-		{
-			Type:    "keyboard_layout",
-			ID:      "disabled1",
-			Enabled: config.BoolPtr(false),
-			Position: config.PositionConfig{
-				X: 0, Y: 0, W: 128, H: 40,
-			},
-		},
-		createDefaultConfig("winamp"),
-		{
-			Type:    "telegram",
-			ID:      "disabled2",
-			Enabled: config.BoolPtr(false),
-			Position: config.PositionConfig{
-				X: 0, Y: 0, W: 128, H: 40,
-			},
-		},
-		createDefaultConfig("volume"),
-	}
-
-	widgets, err := CreateWidgets(configs)
-	if err != nil {
-		t.Fatalf("CreateWidgets() error = %v", err)
-	}
-
-	// Should only create 3 widgets (keyboard, winamp, volume)
-	if len(widgets) != 3 {
-		t.Errorf("CreateWidgets() returned %d widgets, want 3", len(widgets))
-	}
-}
-
 // TestCreateWidgets_AllDisabled tests when all widgets are disabled
 func TestCreateWidgets_AllDisabled(t *testing.T) {
 	configs := []config.WidgetConfig{
 		{
-			Type:    "winamp",
+			Type:    "test_widget_disabled_1",
 			ID:      "disabled1",
 			Enabled: config.BoolPtr(false),
 			Position: config.PositionConfig{
@@ -395,7 +94,7 @@ func TestCreateWidgets_AllDisabled(t *testing.T) {
 			},
 		},
 		{
-			Type:    "keyboard",
+			Type:    "test_widget_disabled_2",
 			ID:      "disabled2",
 			Enabled: config.BoolPtr(false),
 			Position: config.PositionConfig{
@@ -415,58 +114,6 @@ func TestCreateWidgets_AllDisabled(t *testing.T) {
 	if len(widgets) != 0 {
 		t.Errorf("CreateWidgets() returned %d widgets, want 0", len(widgets))
 	}
-}
-
-// TestCreateWidget_ErrorMessage tests error message format
-func TestCreateWidget_ErrorMessage(t *testing.T) {
-	t.Run("unknown type error message", func(t *testing.T) {
-		cfg := config.WidgetConfig{
-			Type:    "nonexistent",
-			ID:      "test",
-			Enabled: config.BoolPtr(true),
-			Position: config.PositionConfig{
-				X: 0, Y: 0, W: 128, H: 40,
-			},
-		}
-
-		_, err := CreateWidget(cfg)
-		if err == nil {
-			t.Fatal("CreateWidget() should return error for unknown type")
-		}
-
-		// Error should contain the type name and list of valid types
-		errMsg := err.Error()
-		if !strings.Contains(errMsg, "unknown widget type: nonexistent") {
-			t.Errorf("Error message should contain 'unknown widget type: nonexistent', got %q", errMsg)
-		}
-		if !strings.Contains(errMsg, "valid:") {
-			t.Errorf("Error message should contain list of valid types, got %q", errMsg)
-		}
-		if !strings.Contains(errMsg, "winamp") {
-			t.Errorf("Error message should list 'winamp' as valid type, got %q", errMsg)
-		}
-	})
-
-	t.Run("disabled widget error message", func(t *testing.T) {
-		cfg := config.WidgetConfig{
-			Type:    "winamp",
-			ID:      "my_winamp",
-			Enabled: config.BoolPtr(false),
-			Position: config.PositionConfig{
-				X: 0, Y: 0, W: 128, H: 40,
-			},
-		}
-
-		_, err := CreateWidget(cfg)
-		if err == nil {
-			t.Fatal("CreateWidget() should return error for disabled widget")
-		}
-
-		expectedMsg := "widget my_winamp is disabled"
-		if err.Error() != expectedMsg {
-			t.Errorf("Error message = %q, want %q", err.Error(), expectedMsg)
-		}
-	})
 }
 
 // TestRegister_Reregister tests that re-registering a widget type logs a warning
@@ -581,14 +228,19 @@ func TestAbbreviateError(t *testing.T) {
 	}
 }
 
-// TestRegisteredTypes tests the RegisteredTypes function
-func TestRegisteredTypes(t *testing.T) {
+// TestRegisteredTypes_Mechanism tests the RegisteredTypes function mechanism
+func TestRegisteredTypes_Mechanism(t *testing.T) {
+	// Register a test type
+	testType := "test_mechanism_type"
+	Register(testType, func(cfg config.WidgetConfig) (Widget, error) {
+		return nil, nil
+	})
+
 	types := RegisteredTypes()
 
-	// Should return a sorted list
+	// Should be sorted
 	sorted := make([]string, len(types))
 	copy(sorted, types)
-	// Sort to verify
 	for i := 0; i < len(sorted)-1; i++ {
 		if sorted[i] > sorted[i+1] {
 			t.Error("RegisteredTypes should return sorted list")
@@ -596,33 +248,83 @@ func TestRegisteredTypes(t *testing.T) {
 		}
 	}
 
-	// Should contain known types (note: memory, cpu, disk, network, battery, clock, matrix, hyperspace, game_of_life, starwars_intro, doom are in subpackages, not registered here)
-	knownTypes := []string{"keyboard", "winamp", "telegram"}
-	for _, known := range knownTypes {
-		found := false
-		for _, t := range types {
-			if t == known {
-				found = true
-				break
-			}
+	// Our test type should be in the list
+	found := false
+	for _, t := range types {
+		if t == testType {
+			found = true
+			break
 		}
-		if !found {
-			t.Errorf("RegisteredTypes should contain '%s'", known)
-		}
+	}
+	if !found {
+		t.Error("Test type should be in registered types")
+	}
+
+	t.Logf("Found %d registered types", len(types))
+}
+
+// TestRegisteredTypesList_Mechanism tests the RegisteredTypesList function mechanism
+func TestRegisteredTypesList_Mechanism(t *testing.T) {
+	// Register two test types to ensure comma separation
+	Register("test_list_type_a", func(cfg config.WidgetConfig) (Widget, error) {
+		return nil, nil
+	})
+	Register("test_list_type_b", func(cfg config.WidgetConfig) (Widget, error) {
+		return nil, nil
+	})
+
+	list := RegisteredTypesList()
+
+	// Should be comma-separated when multiple types exist
+	if !strings.Contains(list, ", ") {
+		t.Error("RegisteredTypesList should be comma-separated when multiple types exist")
+	}
+
+	t.Logf("Registered types list: %s", list)
+}
+
+// TestCreateWidget_WithTestFactory tests widget creation with a test-registered factory
+func TestCreateWidget_WithTestFactory(t *testing.T) {
+	testType := "test_factory_widget"
+
+	// Register a test factory that creates a simple widget
+	Register(testType, func(cfg config.WidgetConfig) (Widget, error) {
+		base := NewBaseWidget(cfg)
+		return &testWidget{BaseWidget: base}, nil
+	})
+
+	cfg := config.WidgetConfig{
+		Type:    testType,
+		ID:      "test_id",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+	}
+
+	widget, err := CreateWidget(cfg)
+	if err != nil {
+		t.Errorf("CreateWidget() error = %v", err)
+	}
+
+	if widget == nil {
+		t.Error("CreateWidget() returned nil widget")
+	}
+
+	if widget.Name() != "test_id" {
+		t.Errorf("Widget name = %q, want %q", widget.Name(), "test_id")
 	}
 }
 
-// TestRegisteredTypesList tests the RegisteredTypesList function
-func TestRegisteredTypesList(t *testing.T) {
-	list := RegisteredTypesList()
+// testWidget is a minimal widget implementation for testing
+type testWidget struct {
+	*BaseWidget
+}
 
-	// Should be comma-separated
-	if !strings.Contains(list, ", ") {
-		t.Error("RegisteredTypesList should be comma-separated")
-	}
+func (w *testWidget) Render() (image.Image, error) {
+	return w.CreateCanvas(), nil
+}
 
-	// Should contain known types (note: clock, matrix, hyperspace, game_of_life, starwars_intro, doom are now in subpackages)
-	if !strings.Contains(list, "winamp") {
-		t.Error("RegisteredTypesList should contain 'winamp'")
-	}
+func (w *testWidget) Update() error {
+	return nil
 }

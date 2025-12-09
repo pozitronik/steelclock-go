@@ -14,6 +14,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/widget/clock"
 	"github.com/pozitronik/steelclock-go/internal/widget/cpu"
 	"github.com/pozitronik/steelclock-go/internal/widget/disk"
+	"github.com/pozitronik/steelclock-go/internal/widget/keyboard"
 	"github.com/pozitronik/steelclock-go/internal/widget/memory"
 )
 
@@ -154,7 +155,7 @@ func TestKeyboardWidget_Rendering(t *testing.T) {
 		},
 	}
 
-	kbdWidget, err := widget.NewKeyboardWidget(widgetCfg)
+	kbdWidget, err := keyboard.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create keyboard widget: %v", err)
 	}
