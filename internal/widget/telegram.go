@@ -39,9 +39,9 @@ type ElementAppearance struct {
 	Format string
 	// Scroll settings
 	ScrollEnabled   bool
-	ScrollDirection string
+	ScrollDirection shared.ScrollDirection
 	ScrollSpeed     float64
-	ScrollMode      string
+	ScrollMode      shared.ScrollMode
 	ScrollGap       int
 	// Word break mode: "normal" or "break-all"
 	WordBreak string
@@ -128,14 +128,14 @@ func NewTelegramWidget(cfg config.WidgetConfig) (*TelegramWidget, error) {
 	// Create scrollers from appearance config
 	headerScrollerCfg := shared.ScrollerConfig{
 		Speed:     appearance.Header.ScrollSpeed,
-		Mode:      shared.ScrollMode(appearance.Header.ScrollMode),
-		Direction: shared.ScrollDirection(appearance.Header.ScrollDirection),
+		Mode:      appearance.Header.ScrollMode,
+		Direction: appearance.Header.ScrollDirection,
 		Gap:       appearance.Header.ScrollGap,
 	}
 	messageScrollerCfg := shared.ScrollerConfig{
 		Speed:     appearance.Message.ScrollSpeed,
-		Mode:      shared.ScrollMode(appearance.Message.ScrollMode),
-		Direction: shared.ScrollDirection(appearance.Message.ScrollDirection),
+		Mode:      appearance.Message.ScrollMode,
+		Direction: appearance.Message.ScrollDirection,
 		Gap:       appearance.Message.ScrollGap,
 	}
 
@@ -201,13 +201,13 @@ func parseAppearance(appCfg *config.TelegramAppearanceConfig) (ChatAppearance, e
 			Blink:           false,
 			FontName:        "",
 			FontSize:        16,
-			HorizAlign:      "left",
-			VertAlign:       "top",
+			HorizAlign:      config.AlignLeft,
+			VertAlign:       config.AlignTop,
 			Format:          "", // empty = auto format based on chat type
 			ScrollEnabled:   true,
-			ScrollDirection: "left",
+			ScrollDirection: shared.ScrollLeft,
 			ScrollSpeed:     30,
-			ScrollMode:      "continuous",
+			ScrollMode:      shared.ScrollContinuous,
 			ScrollGap:       20,
 			WordBreak:       "normal",
 		},
@@ -216,13 +216,13 @@ func parseAppearance(appCfg *config.TelegramAppearanceConfig) (ChatAppearance, e
 			Blink:           false,
 			FontName:        "",
 			FontSize:        16,
-			HorizAlign:      "left",
-			VertAlign:       "top",
+			HorizAlign:      config.AlignLeft,
+			VertAlign:       config.AlignTop,
 			Format:          "", // not used for message
 			ScrollEnabled:   true,
-			ScrollDirection: "left",
+			ScrollDirection: shared.ScrollLeft,
 			ScrollSpeed:     30,
-			ScrollMode:      "continuous",
+			ScrollMode:      shared.ScrollContinuous,
 			ScrollGap:       20,
 			WordBreak:       "normal",
 		},
@@ -285,13 +285,13 @@ func parseAppearance(appCfg *config.TelegramAppearanceConfig) (ChatAppearance, e
 		if app.Header.Scroll != nil {
 			appearance.Header.ScrollEnabled = app.Header.Scroll.Enabled
 			if app.Header.Scroll.Direction != "" {
-				appearance.Header.ScrollDirection = app.Header.Scroll.Direction
+				appearance.Header.ScrollDirection = shared.ScrollDirection(app.Header.Scroll.Direction)
 			}
 			if app.Header.Scroll.Speed > 0 {
 				appearance.Header.ScrollSpeed = app.Header.Scroll.Speed
 			}
 			if app.Header.Scroll.Mode != "" {
-				appearance.Header.ScrollMode = app.Header.Scroll.Mode
+				appearance.Header.ScrollMode = shared.ScrollMode(app.Header.Scroll.Mode)
 			}
 			if app.Header.Scroll.Gap > 0 {
 				appearance.Header.ScrollGap = app.Header.Scroll.Gap
@@ -330,13 +330,13 @@ func parseAppearance(appCfg *config.TelegramAppearanceConfig) (ChatAppearance, e
 		if app.Message.Scroll != nil {
 			appearance.Message.ScrollEnabled = app.Message.Scroll.Enabled
 			if app.Message.Scroll.Direction != "" {
-				appearance.Message.ScrollDirection = app.Message.Scroll.Direction
+				appearance.Message.ScrollDirection = shared.ScrollDirection(app.Message.Scroll.Direction)
 			}
 			if app.Message.Scroll.Speed > 0 {
 				appearance.Message.ScrollSpeed = app.Message.Scroll.Speed
 			}
 			if app.Message.Scroll.Mode != "" {
-				appearance.Message.ScrollMode = app.Message.Scroll.Mode
+				appearance.Message.ScrollMode = shared.ScrollMode(app.Message.Scroll.Mode)
 			}
 			if app.Message.Scroll.Gap > 0 {
 				appearance.Message.ScrollGap = app.Message.Scroll.Gap
@@ -907,7 +907,7 @@ func (w *TelegramWidget) renderMultiLineText(img *image.Gray, text string, elem 
 	totalScrollHeight := totalTextHeight + elem.ScrollGap
 
 	switch elem.ScrollMode {
-	case "continuous":
+	case shared.ScrollContinuous:
 		offset := int(scrollOffset) % totalScrollHeight
 		startY := y - offset
 
@@ -923,7 +923,7 @@ func (w *TelegramWidget) renderMultiLineText(img *image.Gray, text string, elem 
 			}
 		}
 
-	case "bounce":
+	case shared.ScrollBounce:
 		maxOffset := float64(totalTextHeight - height)
 		if maxOffset <= 0 {
 			// Fits without scrolling
@@ -950,7 +950,7 @@ func (w *TelegramWidget) renderMultiLineText(img *image.Gray, text string, elem 
 			startY += lineHeight
 		}
 
-	case "pause_ends":
+	case shared.ScrollPauseEnds:
 		maxOffset := float64(totalTextHeight - height)
 		if maxOffset <= 0 {
 			currentY := y
@@ -1012,7 +1012,7 @@ func (w *TelegramWidget) renderScrollingText(img *image.Gray, text string, elem 
 	totalWidth := textWidth + elem.ScrollGap
 
 	switch elem.ScrollMode {
-	case "continuous":
+	case shared.ScrollContinuous:
 		// Wrap scroll offset
 		offset := int(scrollOffset) % totalWidth
 		// Start at x position and scroll left
@@ -1027,7 +1027,7 @@ func (w *TelegramWidget) renderScrollingText(img *image.Gray, text string, elem 
 			bitmap.SmartDrawTextAtPosition(img, text, elem.FontFace, elem.FontName, scrollX2, textY, x, y, width, height)
 		}
 
-	case "bounce":
+	case shared.ScrollBounce:
 		maxOffset := float64(textWidth - width)
 		if maxOffset <= 0 {
 			// Text fits, no bouncing needed
@@ -1044,7 +1044,7 @@ func (w *TelegramWidget) renderScrollingText(img *image.Gray, text string, elem 
 		scrollX := x - int(progress)
 		bitmap.SmartDrawTextAtPosition(img, text, elem.FontFace, elem.FontName, scrollX, textY, x, y, width, height)
 
-	case "pause_ends":
+	case shared.ScrollPauseEnds:
 		maxOffset := float64(textWidth - width)
 		if maxOffset <= 0 {
 			// Text fits, no scrolling needed
