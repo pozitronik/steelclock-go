@@ -90,14 +90,7 @@ func NewTelegramCounterWidget(cfg config.WidgetConfig) (*TelegramCounterWidget, 
 
 	if cfg.Badge != nil {
 		if cfg.Badge.Blink != "" {
-			switch cfg.Badge.Blink {
-			case "always":
-				blinkMode = shared.BlinkAlways
-			case "progressive":
-				blinkMode = shared.BlinkProgressive
-			default:
-				blinkMode = shared.BlinkNever
-			}
+			blinkMode = cfg.Badge.Blink
 		}
 		if cfg.Badge.Colors != nil {
 			badgeForeground = cfg.Badge.Colors.Foreground

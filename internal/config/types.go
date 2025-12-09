@@ -860,7 +860,7 @@ type TelegramChatFilterConfig struct {
 type TelegramBadgeConfig struct {
 	// Blink: blink mode - "never", "always", "progressive" (default: "never")
 	// "progressive" increases blink frequency based on unread count (1/sec at 1 msg, 10/sec at 10+ msgs)
-	Blink string `json:"blink,omitempty"`
+	Blink BlinkMode `json:"blink,omitempty"`
 	// Colors: custom colors for the badge icon
 	Colors *TelegramBadgeColorsConfig `json:"colors,omitempty"`
 }
