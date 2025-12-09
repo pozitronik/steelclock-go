@@ -1,4 +1,4 @@
-package widget
+package matrix
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-func TestNewMatrixWidget(t *testing.T) {
+func TestNew(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "matrix",
 		ID:      "test_matrix",
@@ -20,13 +20,13 @@ func TestNewMatrixWidget(t *testing.T) {
 		},
 	}
 
-	widget, err := NewMatrixWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewMatrixWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget == nil {
-		t.Fatal("NewMatrixWidget() returned nil")
+		t.Fatal("New() returned nil")
 	}
 
 	if widget.Name() != "test_matrix" {
@@ -34,7 +34,7 @@ func TestNewMatrixWidget(t *testing.T) {
 	}
 }
 
-func TestMatrixWidget_WithConfig(t *testing.T) {
+func TestWidget_WithConfig(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "matrix",
 		ID:      "test_matrix_config",
@@ -58,9 +58,9 @@ func TestMatrixWidget_WithConfig(t *testing.T) {
 		},
 	}
 
-	widget, err := NewMatrixWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewMatrixWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget.charsetName != "binary" {
@@ -76,7 +76,7 @@ func TestMatrixWidget_WithConfig(t *testing.T) {
 	}
 }
 
-func TestMatrixWidget_Update(t *testing.T) {
+func TestWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "matrix",
 		ID:      "test_matrix_update",
@@ -89,9 +89,9 @@ func TestMatrixWidget_Update(t *testing.T) {
 		},
 	}
 
-	widget, err := NewMatrixWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewMatrixWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update should not error
@@ -110,7 +110,7 @@ func TestMatrixWidget_Update(t *testing.T) {
 	}
 }
 
-func TestMatrixWidget_Render(t *testing.T) {
+func TestWidget_Render(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "matrix",
 		ID:      "test_matrix_render",
@@ -123,9 +123,9 @@ func TestMatrixWidget_Render(t *testing.T) {
 		},
 	}
 
-	widget, err := NewMatrixWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewMatrixWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Render should return valid image
@@ -144,7 +144,7 @@ func TestMatrixWidget_Render(t *testing.T) {
 	}
 }
 
-func TestMatrixWidget_Charsets(t *testing.T) {
+func TestWidget_Charsets(t *testing.T) {
 	charsets := []string{"ascii", "katakana", "binary", "digits", "hex"}
 
 	for _, charset := range charsets {
@@ -164,9 +164,9 @@ func TestMatrixWidget_Charsets(t *testing.T) {
 				},
 			}
 
-			widget, err := NewMatrixWidget(cfg)
+			widget, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewMatrixWidget() error = %v", err)
+				t.Fatalf("New() error = %v", err)
 			}
 
 			if widget.charsetName != charset {
@@ -182,7 +182,7 @@ func TestMatrixWidget_Charsets(t *testing.T) {
 	}
 }
 
-func TestMatrixWidget_SmallDisplay(t *testing.T) {
+func TestWidget_SmallDisplay(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "matrix",
 		ID:      "test_matrix_small",
@@ -195,9 +195,9 @@ func TestMatrixWidget_SmallDisplay(t *testing.T) {
 		},
 	}
 
-	widget, err := NewMatrixWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewMatrixWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Should use smaller font for small display
@@ -220,7 +220,7 @@ func TestMatrixWidget_SmallDisplay(t *testing.T) {
 	}
 }
 
-func TestMatrixWidget_ColumnsInitialized(t *testing.T) {
+func TestWidget_ColumnsInitialized(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "matrix",
 		ID:      "test_matrix_columns",
@@ -233,9 +233,9 @@ func TestMatrixWidget_ColumnsInitialized(t *testing.T) {
 		},
 	}
 
-	widget, err := NewMatrixWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewMatrixWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if len(widget.columns) == 0 {

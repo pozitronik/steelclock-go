@@ -1,4 +1,4 @@
-package widget
+package matrix
 
 import (
 	"image"
@@ -10,11 +10,12 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 )
 
 func init() {
-	Register("matrix", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewMatrixWidget(cfg)
+	widget.Register("matrix", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
@@ -44,8 +45,8 @@ const (
 	fontSizeAuto  = "auto"
 )
 
-// MatrixColumn represents a single falling column of characters
-type MatrixColumn struct {
+// Column represents a single falling column of characters
+type Column struct {
 	x          int     // X position
 	y          float64 // Current Y position (float for smooth movement)
 	speed      float64 // Fall speed in pixels per update
@@ -56,9 +57,9 @@ type MatrixColumn struct {
 	spawnDelay int     // Frames until spawn
 }
 
-// MatrixWidget displays the classic Matrix "digital rain" effect
-type MatrixWidget struct {
-	*BaseWidget
+// Widget displays the classic Matrix "digital rain" effect
+type Widget struct {
+	*widget.BaseWidget
 	mu sync.Mutex
 
 	// Configuration
@@ -74,7 +75,7 @@ type MatrixWidget struct {
 	charChangeRate float64 // Probability of character changing per frame
 
 	// State
-	columns    []*MatrixColumn
+	columns    []*Column
 	glyphSet   *glyphs.GlyphSet
 	charWidth  int
 	charHeight int
@@ -97,9 +98,9 @@ var (
 	matrixHex = []rune("0123456789ABCDEF")
 )
 
-// NewMatrixWidget creates a new Matrix digital rain widget
-func NewMatrixWidget(cfg config.WidgetConfig) (*MatrixWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new Matrix digital rain widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	pos := base.GetPosition()
 
 	// Get matrix-specific configuration
@@ -190,7 +191,7 @@ func NewMatrixWidget(cfg config.WidgetConfig) (*MatrixWidget, error) {
 	// Initialize random number generator
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	w := &MatrixWidget{
+	w := &Widget{
 		BaseWidget:     base,
 		charset:        charset,
 		charsetName:    charsetName,
@@ -217,12 +218,12 @@ func NewMatrixWidget(cfg config.WidgetConfig) (*MatrixWidget, error) {
 }
 
 // initColumns creates initial column state
-func (w *MatrixWidget) initColumns() {
+func (w *Widget) initColumns() {
 	pos := w.GetPosition()
-	w.columns = make([]*MatrixColumn, w.numColumns)
+	w.columns = make([]*Column, w.numColumns)
 
 	for i := 0; i < w.numColumns; i++ {
-		w.columns[i] = &MatrixColumn{
+		w.columns[i] = &Column{
 			x:          i * w.charWidth,
 			y:          float64(-w.rng.Intn(pos.H)), // Start above screen
 			speed:      w.minSpeed + w.rng.Float64()*(w.maxSpeed-w.minSpeed),
@@ -250,12 +251,12 @@ func (w *MatrixWidget) initColumns() {
 }
 
 // randomChar returns a random character from the charset
-func (w *MatrixWidget) randomChar() rune {
+func (w *Widget) randomChar() rune {
 	return w.charset[w.rng.Intn(len(w.charset))]
 }
 
 // Update advances the matrix animation
-func (w *MatrixWidget) Update() error {
+func (w *Widget) Update() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -303,7 +304,7 @@ func (w *MatrixWidget) Update() error {
 }
 
 // Render draws the matrix effect
-func (w *MatrixWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -348,7 +349,7 @@ func (w *MatrixWidget) Render() (image.Image, error) {
 }
 
 // drawChar draws a single character at the specified position
-func (w *MatrixWidget) drawChar(img *image.Gray, x, y int, char rune, brightness uint8) {
+func (w *Widget) drawChar(img *image.Gray, x, y int, char rune, brightness uint8) {
 	glyph := glyphs.GetGlyph(w.glyphSet, char)
 	if glyph == nil {
 		return
