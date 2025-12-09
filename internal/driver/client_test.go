@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/pozitronik/steelclock-go/internal/display"
@@ -280,10 +281,9 @@ func TestClient_SendScreenDataMultiRes_KeyFormat(t *testing.T) {
 		t.Error("SendScreenDataMultiRes() should fail due to disconnected device")
 	}
 	// Check it's a "not connected" error, not a "resolution not found" error
-	expectedErr := "device not connected"
-	if err != nil && err.Error() != expectedErr {
+	if err != nil && !errors.Is(err, ErrDeviceNotConnected) {
 		// Could be "resolution not found" if key format is wrong
-		if err.Error() == "resolution 128x40 not found in data" {
+		if errors.Is(err, ErrResolutionNotFound) {
 			t.Error("SendScreenDataMultiRes() used wrong key format")
 		}
 	}
@@ -376,7 +376,7 @@ func TestClient_SendScreenDataMultiRes_MultipleResolutions(t *testing.T) {
 	}
 
 	// Should be "device not connected", not "resolution not found"
-	if err.Error() == "resolution 128x40 not found in data" {
+	if errors.Is(err, ErrResolutionNotFound) {
 		t.Error("Should have found resolution but failed on send")
 	}
 }

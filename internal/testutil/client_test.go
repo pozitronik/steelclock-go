@@ -594,7 +594,7 @@ func TestTestClient_BindScreenEvent_Error(t *testing.T) {
 	client.SetBindError(expectedErr)
 
 	err := client.BindScreenEvent("EVENT", "device")
-	if err != expectedErr {
+	if !errors.Is(err, expectedErr) {
 		t.Errorf("Expected error %v, got %v", expectedErr, err)
 	}
 
@@ -646,7 +646,7 @@ func TestTestClient_SenderrorCount_Zero(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		err := client.SendScreenData("EVENT", make([]byte, 640))
-		if err != expectedErr {
+		if !errors.Is(err, expectedErr) {
 			t.Errorf("Send %d: expected error, got %v", i, err)
 		}
 	}

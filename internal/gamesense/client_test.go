@@ -846,9 +846,9 @@ func TestFindCorePropsPath_WithPROGRAMDATA(t *testing.T) {
 
 	// Save and restore PROGRAMDATA
 	oldProgramData := os.Getenv("PROGRAMDATA")
-	defer func() { os.Setenv("PROGRAMDATA", oldProgramData) }()
+	defer func() { _ = os.Setenv("PROGRAMDATA", oldProgramData) }()
 
-	os.Setenv("PROGRAMDATA", tmpDir)
+	_ = os.Setenv("PROGRAMDATA", tmpDir)
 
 	path, err := findCorePropsPath()
 	if err != nil {
@@ -863,13 +863,13 @@ func TestFindCorePropsPath_WithPROGRAMDATA(t *testing.T) {
 func TestFindCorePropsPath_NoPROGRAMDATA(t *testing.T) {
 	// Save and restore PROGRAMDATA
 	oldProgramData := os.Getenv("PROGRAMDATA")
-	defer func() { os.Setenv("PROGRAMDATA", oldProgramData) }()
+	defer func() { _ = os.Setenv("PROGRAMDATA", oldProgramData) }()
 
 	// Save and restore defaultFallbackPath
 	oldFallbackPath := defaultFallbackPath
 	defer func() { defaultFallbackPath = oldFallbackPath }()
 
-	os.Setenv("PROGRAMDATA", "")
+	_ = os.Setenv("PROGRAMDATA", "")
 	defaultFallbackPath = "/nonexistent/fallback/path/coreProps.json"
 
 	// Should fail since neither PROGRAMDATA nor fallback path exist
@@ -885,13 +885,13 @@ func TestFindCorePropsPath_PROGRAMDATANotFound(t *testing.T) {
 
 	// Save and restore PROGRAMDATA
 	oldProgramData := os.Getenv("PROGRAMDATA")
-	defer func() { os.Setenv("PROGRAMDATA", oldProgramData) }()
+	defer func() { _ = os.Setenv("PROGRAMDATA", oldProgramData) }()
 
 	// Save and restore defaultFallbackPath
 	oldFallbackPath := defaultFallbackPath
 	defer func() { defaultFallbackPath = oldFallbackPath }()
 
-	os.Setenv("PROGRAMDATA", tmpDir)
+	_ = os.Setenv("PROGRAMDATA", tmpDir)
 	defaultFallbackPath = "/nonexistent/fallback/path/coreProps.json"
 
 	// Directory exists but no coreProps.json

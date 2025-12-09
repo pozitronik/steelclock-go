@@ -1,10 +1,17 @@
 package driver
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
 	"github.com/pozitronik/steelclock-go/internal/display"
+)
+
+// Sentinel errors for Client
+var (
+	ErrDeviceNotConnected = errors.New("device not connected")
+	ErrResolutionNotFound = errors.New("resolution not found in data")
 )
 
 // Client wraps HIDDriver and implements display.Backend interface
@@ -58,7 +65,7 @@ func (c *Client) SendScreenData(_ string, bitmapData []byte) error {
 			log.Printf("Direct driver: device disconnected, skipping frames until reconnected")
 			c.disconnectLogged = true
 		}
-		return fmt.Errorf("device not connected")
+		return ErrDeviceNotConnected
 	}
 
 	if err := c.driver.SendFrame(bitmapData); err != nil {
@@ -121,7 +128,7 @@ func (c *Client) SendScreenDataMultiRes(_ string, resolutionData map[string][]by
 	if data, ok := resolutionData[key]; ok {
 		return c.SendScreenData("", data)
 	}
-	return fmt.Errorf("resolution %dx%d not found in data", c.width, c.height)
+	return fmt.Errorf("resolution %dx%d: %w", c.width, c.height, ErrResolutionNotFound)
 }
 
 // SendMultipleScreenData sends the last frame from the batch.
