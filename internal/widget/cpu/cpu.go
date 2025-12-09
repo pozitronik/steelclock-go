@@ -1,4 +1,4 @@
-package widget
+package cpu
 
 import (
 	"fmt"
@@ -9,19 +9,20 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/metrics"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
 func init() {
-	Register("cpu", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewCPUWidget(cfg)
+	widget.Register("cpu", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
-// CPUWidget displays CPU usage
-type CPUWidget struct {
-	*BaseWidget
+// Widget displays CPU usage
+type Widget struct {
+	*widget.BaseWidget
 	displayMode shared.DisplayMode
 	perCore     bool
 	padding     int
@@ -35,7 +36,7 @@ type CPUWidget struct {
 	// Strategy pattern for per-core (grid) mode rendering
 	gridStrategy shared.GridMetricDisplayStrategy
 	// MetricRenderer for rendering
-	renderer *shared.MetricRenderer
+	Renderer *shared.MetricRenderer
 
 	// Metrics provider (abstraction over gopsutil)
 	cpuProvider metrics.CPUProvider
@@ -53,9 +54,9 @@ type CPUWidget struct {
 	mu             sync.RWMutex // Protects currentUsage and history
 }
 
-// NewCPUWidget creates a new CPU widget
-func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new CPU widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
@@ -115,7 +116,7 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 		},
 	)
 
-	return &CPUWidget{
+	return &Widget{
 		BaseWidget:     base,
 		displayMode:    displayMode,
 		perCore:        perCore,
@@ -126,7 +127,7 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 		historyLen:     graphSettings.HistoryLen,
 		strategy:       shared.GetMetricStrategy(displayMode),
 		gridStrategy:   shared.GetGridMetricStrategy(displayMode),
-		renderer:       renderer,
+		Renderer:       renderer,
 		cpuProvider:    cpuProvider,
 		historySingle:  shared.NewRingBuffer[float64](graphSettings.HistoryLen),
 		historyPerCore: shared.NewRingBuffer[[]float64](graphSettings.HistoryLen),
@@ -137,7 +138,7 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 }
 
 // Update updates the CPU usage
-func (w *CPUWidget) Update() error {
+func (w *Widget) Update() error {
 	if w.perCore {
 		// Per-core usage
 		percentages, err := w.cpuProvider.Percent(100*time.Millisecond, true)
@@ -199,7 +200,7 @@ func (w *CPUWidget) Update() error {
 }
 
 // Render creates an image of the CPU widget
-func (w *CPUWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	// Create canvas with background and border
 	img := w.CreateCanvas()
 	w.ApplyBorder(img)
@@ -251,7 +252,7 @@ func (w *CPUWidget) Render() (image.Image, error) {
 			gridData.History = coreHistories
 		}
 
-		w.gridStrategy.Render(img, gridData, w.renderer)
+		w.gridStrategy.Render(img, gridData, w.Renderer)
 		return img, nil
 	}
 
@@ -262,7 +263,7 @@ func (w *CPUWidget) Render() (image.Image, error) {
 		TextFormat:  "%.0f",
 		ContentArea: image.Rect(content.X, content.Y, content.X+content.Width, content.Y+content.Height),
 		GaugeArea:   image.Rect(0, 0, pos.W, pos.H),
-	}, w.renderer)
+	}, w.Renderer)
 
 	return img, nil
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/cpu"
 	"github.com/pozitronik/steelclock-go/internal/widget/memory"
 )
 
@@ -318,7 +319,7 @@ func TestCPUWidget_BarMode(t *testing.T) {
 				},
 			}
 
-			cpuWidget, err := widget.NewCPUWidget(widgetCfg)
+			cpuWidget, err := cpu.New(widgetCfg)
 			if err != nil {
 				t.Fatalf("Failed to create CPU widget: %v", err)
 			}
@@ -356,7 +357,7 @@ func TestCPUWidget_GaugeMode(t *testing.T) {
 		},
 	}
 
-	cpuWidget, err := widget.NewCPUWidget(widgetCfg)
+	cpuWidget, err := cpu.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create CPU widget: %v", err)
 	}
@@ -400,7 +401,7 @@ func TestCPUWidget_PerCore(t *testing.T) {
 		},
 	}
 
-	cpuWidget, err := widget.NewCPUWidget(widgetCfg)
+	cpuWidget, err := cpu.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create CPU widget: %v", err)
 	}

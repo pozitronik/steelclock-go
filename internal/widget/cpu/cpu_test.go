@@ -1,4 +1,4 @@
-package widget
+package cpu
 
 import (
 	"testing"
@@ -7,8 +7,8 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
-// TestNewCPUWidget tests successful CPU widget creation
-func TestNewCPUWidget(t *testing.T) {
+// TestNew tests successful CPU widget creation
+func TestNew(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu",
@@ -29,13 +29,13 @@ func TestNewCPUWidget(t *testing.T) {
 		},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget == nil {
-		t.Fatal("NewCPUWidget() returned nil")
+		t.Fatal("New() returned nil")
 	}
 
 	if widget.Name() != "test_cpu" {
@@ -43,8 +43,8 @@ func TestNewCPUWidget(t *testing.T) {
 	}
 }
 
-// TestNewCPUWidget_PerCore tests CPU widget with per-core mode
-func TestNewCPUWidget_PerCore(t *testing.T) {
+// TestNew_PerCore tests CPU widget with per-core mode
+func TestNew_PerCore(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_per_core",
@@ -59,18 +59,18 @@ func TestNewCPUWidget_PerCore(t *testing.T) {
 		},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if !widget.perCore {
-		t.Error("NewCPUWidget() did not set perCore mode")
+		t.Error("New() did not set perCore mode")
 	}
 }
 
-// TestNewCPUWidget_Defaults tests that defaults are properly applied
-func TestNewCPUWidget_Defaults(t *testing.T) {
+// TestNew_Defaults tests that defaults are properly applied
+func TestNew_Defaults(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_defaults",
@@ -81,9 +81,9 @@ func TestNewCPUWidget_Defaults(t *testing.T) {
 		// Intentionally leave fields empty to test defaults
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Verify defaults
@@ -100,8 +100,8 @@ func TestNewCPUWidget_Defaults(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_Update tests CPU widget update functionality
-func TestCPUWidget_Update(t *testing.T) {
+// TestWidget_Update tests CPU widget update functionality
+func TestWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_update",
@@ -112,9 +112,9 @@ func TestCPUWidget_Update(t *testing.T) {
 		Mode: "text",
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// First update
@@ -133,8 +133,8 @@ func TestCPUWidget_Update(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_Update_PerCore tests per-core CPU update
-func TestCPUWidget_Update_PerCore(t *testing.T) {
+// TestWidget_Update_PerCore tests per-core CPU update
+func TestWidget_Update_PerCore(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_per_core",
@@ -146,9 +146,9 @@ func TestCPUWidget_Update_PerCore(t *testing.T) {
 		PerCore: &config.PerCoreConfig{Enabled: true},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	err = widget.Update()
@@ -170,8 +170,8 @@ func TestCPUWidget_Update_PerCore(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_RenderText tests text mode rendering
-func TestCPUWidget_RenderText(t *testing.T) {
+// TestWidget_RenderText tests text mode rendering
+func TestWidget_RenderText(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_render_text",
@@ -185,9 +185,9 @@ func TestCPUWidget_RenderText(t *testing.T) {
 		},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update before render
@@ -212,8 +212,8 @@ func TestCPUWidget_RenderText(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_RenderBarHorizontal tests horizontal bar rendering
-func TestCPUWidget_RenderBarHorizontal(t *testing.T) {
+// TestWidget_RenderBarHorizontal tests horizontal bar rendering
+func TestWidget_RenderBarHorizontal(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_bar_h",
@@ -227,9 +227,9 @@ func TestCPUWidget_RenderBarHorizontal(t *testing.T) {
 		},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	err = widget.Update()
@@ -247,8 +247,8 @@ func TestCPUWidget_RenderBarHorizontal(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_RenderBarVertical tests vertical bar rendering
-func TestCPUWidget_RenderBarVertical(t *testing.T) {
+// TestWidget_RenderBarVertical tests vertical bar rendering
+func TestWidget_RenderBarVertical(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_bar_v",
@@ -263,9 +263,9 @@ func TestCPUWidget_RenderBarVertical(t *testing.T) {
 		},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	err = widget.Update()
@@ -283,8 +283,8 @@ func TestCPUWidget_RenderBarVertical(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_RenderGraph tests graph mode rendering
-func TestCPUWidget_RenderGraph(t *testing.T) {
+// TestWidget_RenderGraph tests graph mode rendering
+func TestWidget_RenderGraph(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_graph",
@@ -301,9 +301,9 @@ func TestCPUWidget_RenderGraph(t *testing.T) {
 		},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Need multiple updates to build history for graph
@@ -324,8 +324,8 @@ func TestCPUWidget_RenderGraph(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_RenderGraph_InsufficientHistory tests graph with insufficient data
-func TestCPUWidget_RenderGraph_InsufficientHistory(t *testing.T) {
+// TestWidget_RenderGraph_InsufficientHistory tests graph with insufficient data
+func TestWidget_RenderGraph_InsufficientHistory(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_graph_nodata",
@@ -342,9 +342,9 @@ func TestCPUWidget_RenderGraph_InsufficientHistory(t *testing.T) {
 		},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update only once (not enough for graph)
@@ -364,8 +364,8 @@ func TestCPUWidget_RenderGraph_InsufficientHistory(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_RenderGauge tests gauge mode rendering
-func TestCPUWidget_RenderGauge(t *testing.T) {
+// TestWidget_RenderGauge tests gauge mode rendering
+func TestWidget_RenderGauge(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_gauge",
@@ -380,9 +380,9 @@ func TestCPUWidget_RenderGauge(t *testing.T) {
 		},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	err = widget.Update()
@@ -400,8 +400,8 @@ func TestCPUWidget_RenderGauge(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_RenderGauge_PerCore tests gauge mode with per-core
-func TestCPUWidget_RenderGauge_PerCore(t *testing.T) {
+// TestWidget_RenderGauge_PerCore tests gauge mode with per-core
+func TestWidget_RenderGauge_PerCore(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_gauge_percore",
@@ -417,9 +417,9 @@ func TestCPUWidget_RenderGauge_PerCore(t *testing.T) {
 		},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	err = widget.Update()
@@ -437,8 +437,8 @@ func TestCPUWidget_RenderGauge_PerCore(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_GaugeDefaults tests gauge mode with default colors
-func TestCPUWidget_GaugeDefaults(t *testing.T) {
+// TestWidget_GaugeDefaults tests gauge mode with default colors
+func TestWidget_GaugeDefaults(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_gauge_defaults",
@@ -450,18 +450,18 @@ func TestCPUWidget_GaugeDefaults(t *testing.T) {
 		// Don't specify colors to test defaults
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Verify defaults via renderer config
-	if widget.renderer.Gauge.ArcColor != 200 {
-		t.Errorf("default Gauge.ArcColor = %d, want 200", widget.renderer.Gauge.ArcColor)
+	if widget.Renderer.Gauge.ArcColor != 200 {
+		t.Errorf("default Gauge.ArcColor = %d, want 200", widget.Renderer.Gauge.ArcColor)
 	}
 
-	if widget.renderer.Gauge.NeedleColor != 255 {
-		t.Errorf("default Gauge.NeedleColor = %d, want 255", widget.renderer.Gauge.NeedleColor)
+	if widget.Renderer.Gauge.NeedleColor != 255 {
+		t.Errorf("default Gauge.NeedleColor = %d, want 255", widget.Renderer.Gauge.NeedleColor)
 	}
 
 	err = widget.Update()
@@ -479,8 +479,8 @@ func TestCPUWidget_GaugeDefaults(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_ConcurrentAccess tests thread safety
-func TestCPUWidget_ConcurrentAccess(t *testing.T) {
+// TestWidget_ConcurrentAccess tests thread safety
+func TestWidget_ConcurrentAccess(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_concurrent",
@@ -491,9 +491,9 @@ func TestCPUWidget_ConcurrentAccess(t *testing.T) {
 		Mode: "text",
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Initial update
@@ -527,8 +527,8 @@ func TestCPUWidget_ConcurrentAccess(t *testing.T) {
 	// Should not panic or race
 }
 
-// TestCPUWidget_RenderTextGrid tests text mode with per-core (grid layout)
-func TestCPUWidget_RenderTextGrid(t *testing.T) {
+// TestWidget_RenderTextGrid tests text mode with per-core (grid layout)
+func TestWidget_RenderTextGrid(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_text_grid",
@@ -543,9 +543,9 @@ func TestCPUWidget_RenderTextGrid(t *testing.T) {
 		},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	err = widget.Update()
@@ -563,8 +563,8 @@ func TestCPUWidget_RenderTextGrid(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_RenderBarHorizontal_PerCore tests horizontal bar with per-core
-func TestCPUWidget_RenderBarHorizontal_PerCore(t *testing.T) {
+// TestWidget_RenderBarHorizontal_PerCore tests horizontal bar with per-core
+func TestWidget_RenderBarHorizontal_PerCore(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_bar_h_percore",
@@ -579,9 +579,9 @@ func TestCPUWidget_RenderBarHorizontal_PerCore(t *testing.T) {
 		},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	err = widget.Update()
@@ -599,8 +599,8 @@ func TestCPUWidget_RenderBarHorizontal_PerCore(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_RenderGraph_PerCore tests graph mode with per-core
-func TestCPUWidget_RenderGraph_PerCore(t *testing.T) {
+// TestWidget_RenderGraph_PerCore tests graph mode with per-core
+func TestWidget_RenderGraph_PerCore(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_graph_percore",
@@ -618,9 +618,9 @@ func TestCPUWidget_RenderGraph_PerCore(t *testing.T) {
 		},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Need multiple updates to build history for graph
@@ -641,8 +641,8 @@ func TestCPUWidget_RenderGraph_PerCore(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_RenderGraph_EmptyHistory tests graph with no history
-func TestCPUWidget_RenderGraph_EmptyHistory(t *testing.T) {
+// TestWidget_RenderGraph_EmptyHistory tests graph with no history
+func TestWidget_RenderGraph_EmptyHistory(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_graph_empty",
@@ -659,9 +659,9 @@ func TestCPUWidget_RenderGraph_EmptyHistory(t *testing.T) {
 		},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Don't update - render with no data
@@ -675,8 +675,8 @@ func TestCPUWidget_RenderGraph_EmptyHistory(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_SmallSize tests rendering with very small dimensions
-func TestCPUWidget_SmallSize(t *testing.T) {
+// TestWidget_SmallSize tests rendering with very small dimensions
+func TestWidget_SmallSize(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_small",
@@ -690,9 +690,9 @@ func TestCPUWidget_SmallSize(t *testing.T) {
 		},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	err = widget.Update()
@@ -711,8 +711,8 @@ func TestCPUWidget_SmallSize(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_ZeroSize tests rendering with zero dimensions
-func TestCPUWidget_ZeroSize(t *testing.T) {
+// TestWidget_ZeroSize tests rendering with zero dimensions
+func TestWidget_ZeroSize(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_zero",
@@ -723,9 +723,9 @@ func TestCPUWidget_ZeroSize(t *testing.T) {
 		Mode: "text",
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	err = widget.Update()
@@ -745,8 +745,8 @@ func TestCPUWidget_ZeroSize(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_InvalidDisplayMode tests handling of invalid display mode
-func TestCPUWidget_InvalidDisplayMode(t *testing.T) {
+// TestWidget_InvalidDisplayMode tests handling of invalid display mode
+func TestWidget_InvalidDisplayMode(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_invalid_mode",
@@ -757,9 +757,9 @@ func TestCPUWidget_InvalidDisplayMode(t *testing.T) {
 		Mode: "invalid_mode",
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	err = widget.Update()
@@ -778,8 +778,8 @@ func TestCPUWidget_InvalidDisplayMode(t *testing.T) {
 	}
 }
 
-// TestCPUWidget_BeforeFirstUpdate tests rendering before any update
-func TestCPUWidget_BeforeFirstUpdate(t *testing.T) {
+// TestWidget_BeforeFirstUpdate tests rendering before any update
+func TestWidget_BeforeFirstUpdate(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "cpu",
 		ID:      "test_cpu_no_update",
@@ -793,9 +793,9 @@ func TestCPUWidget_BeforeFirstUpdate(t *testing.T) {
 		},
 	}
 
-	widget, err := NewCPUWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewCPUWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Render without calling Update first

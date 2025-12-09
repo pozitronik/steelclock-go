@@ -20,11 +20,6 @@ func TestCreateWidget_AllTypes(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name:       "create cpu widget",
-			widgetType: "cpu",
-			wantErr:    false,
-		},
-		{
 			name:       "create network widget",
 			widgetType: "network",
 			wantErr:    false,
@@ -157,7 +152,7 @@ func TestCreateWidgets_PartialFailure(t *testing.T) {
 				X: 0, Y: 0, W: 128, H: 40,
 			},
 		},
-		createDefaultConfig("cpu"),
+		createDefaultConfig("disk"),
 	}
 
 	widgets, err := CreateWidgets(configs)
@@ -167,7 +162,7 @@ func TestCreateWidgets_PartialFailure(t *testing.T) {
 		t.Errorf("CreateWidgets() should not error when some widgets succeed, got: %v", err)
 	}
 
-	// Should create 3 widgets (clock, cpu, and error proxy for the failed one)
+	// Should create 3 widgets (clock, disk, and error proxy for the failed one)
 	if len(widgets) != 3 {
 		t.Errorf("CreateWidgets() returned %d widgets, want 3 (2 good + 1 error proxy)", len(widgets))
 	}
@@ -630,8 +625,8 @@ func TestRegisteredTypes(t *testing.T) {
 		}
 	}
 
-	// Should contain known types (note: memory is in subpackage, not registered here)
-	knownTypes := []string{"clock", "cpu", "matrix", "battery"}
+	// Should contain known types (note: memory and cpu are in subpackages, not registered here)
+	knownTypes := []string{"clock", "matrix", "battery", "network"}
 	for _, known := range knownTypes {
 		found := false
 		for _, t := range types {

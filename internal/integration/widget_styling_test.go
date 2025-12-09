@@ -8,6 +8,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/cpu"
 	"github.com/pozitronik/steelclock-go/internal/widget/memory"
 )
 
@@ -392,7 +393,7 @@ func TestStyle_GaugeColors(t *testing.T) {
 		},
 	}
 
-	cpuWidget, _ := widget.NewCPUWidget(widgetCfg)
+	cpuWidget, _ := cpu.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{cpuWidget}, cfg)

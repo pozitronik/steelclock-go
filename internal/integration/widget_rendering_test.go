@@ -11,6 +11,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/layout"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/cpu"
 	"github.com/pozitronik/steelclock-go/internal/widget/memory"
 )
 
@@ -229,7 +230,7 @@ func TestCPUWidget_Rendering(t *testing.T) {
 		},
 	}
 
-	cpuWidget, err := widget.NewCPUWidget(widgetCfg)
+	cpuWidget, err := cpu.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create CPU widget: %v", err)
 	}
