@@ -11,12 +11,12 @@ import (
 
 // OpenMeteoProvider implements WeatherProvider for Open-Meteo API
 type OpenMeteoProvider struct {
-	config     WeatherProviderConfig
+	config     ProviderConfig
 	httpClient *http.Client
 }
 
 // NewOpenMeteoProvider creates a new Open-Meteo provider
-func NewOpenMeteoProvider(cfg WeatherProviderConfig, client *http.Client) *OpenMeteoProvider {
+func NewOpenMeteoProvider(cfg ProviderConfig, client *http.Client) *OpenMeteoProvider {
 	return &OpenMeteoProvider{
 		config:     cfg,
 		httpClient: client,
@@ -29,7 +29,7 @@ func (p *OpenMeteoProvider) Name() string {
 }
 
 // FetchWeather fetches weather data from Open-Meteo API
-func (p *OpenMeteoProvider) FetchWeather(needForecast bool) (*Data, *ForecastData, error) {
+func (p *OpenMeteoProvider) FetchWeather(needForecast bool) (*WData, *ForecastData, error) {
 	baseURL := "https://api.open-meteo.com/v1/forecast"
 	params := url.Values{}
 	params.Set("latitude", fmt.Sprintf("%f", p.config.Lat))
@@ -99,7 +99,7 @@ func (p *OpenMeteoProvider) FetchWeather(needForecast bool) (*Data, *ForecastDat
 		sunset, _ = time.Parse("2006-01-02T15:04", result.Daily.Sunset[0])
 	}
 
-	weatherData := &Data{
+	weatherData := &WData{
 		Temperature:   result.Current.Temperature,
 		FeelsLike:     result.Current.Temperature, // Open-Meteo doesn't provide feels_like in free tier
 		Condition:     condition,

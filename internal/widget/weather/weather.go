@@ -38,7 +38,7 @@ const (
 type Widget struct {
 	*widget.BaseWidget
 	// Configuration
-	weatherProvider WeatherProvider
+	weatherProvider Provider
 	units           string
 	iconSize        int
 	formatCycle     []string // Format strings (single or multiple for cycling)
@@ -69,7 +69,7 @@ type Widget struct {
 	scrollOffset float64
 	lastUpdate   time.Time
 	// Weather data
-	weather    *Data
+	weather    *WData
 	forecast   *ForecastData
 	airQuality *AirQualityData
 	uvIndex    *UVIndexData
@@ -207,7 +207,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	}
 
 	// Create provider config
-	providerCfg := WeatherProviderConfig{
+	providerCfg := ProviderConfig{
 		City:          city,
 		Lat:           lat,
 		Lon:           lon,
@@ -217,7 +217,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	}
 
 	// Create the weather provider
-	var weatherProvider WeatherProvider
+	var weatherProvider Provider
 	switch providerName {
 	case providerOpenWeatherMap:
 		weatherProvider = NewOpenWeatherMapProvider(providerCfg, apiKey, httpClient)

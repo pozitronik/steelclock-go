@@ -11,13 +11,13 @@ import (
 
 // OpenWeatherMapProvider implements WeatherProvider for OpenWeatherMap API
 type OpenWeatherMapProvider struct {
-	config     WeatherProviderConfig
+	config     ProviderConfig
 	apiKey     string
 	httpClient *http.Client
 }
 
 // NewOpenWeatherMapProvider creates a new OpenWeatherMap provider
-func NewOpenWeatherMapProvider(cfg WeatherProviderConfig, apiKey string, client *http.Client) *OpenWeatherMapProvider {
+func NewOpenWeatherMapProvider(cfg ProviderConfig, apiKey string, client *http.Client) *OpenWeatherMapProvider {
 	return &OpenWeatherMapProvider{
 		config:     cfg,
 		apiKey:     apiKey,
@@ -31,7 +31,7 @@ func (p *OpenWeatherMapProvider) Name() string {
 }
 
 // FetchWeather fetches weather data from OpenWeatherMap API
-func (p *OpenWeatherMapProvider) FetchWeather(needForecast bool) (*Data, *ForecastData, error) {
+func (p *OpenWeatherMapProvider) FetchWeather(needForecast bool) (*WData, *ForecastData, error) {
 	baseURL := "https://api.openweathermap.org/data/2.5/weather"
 	params := url.Values{}
 	params.Set("appid", p.apiKey)
@@ -88,7 +88,7 @@ func (p *OpenWeatherMapProvider) FetchWeather(needForecast bool) (*Data, *Foreca
 		description = result.Weather[0].Description
 	}
 
-	weatherData := &Data{
+	weatherData := &WData{
 		Temperature:   result.Main.Temp,
 		FeelsLike:     result.Main.FeelsLike,
 		Condition:     condition,

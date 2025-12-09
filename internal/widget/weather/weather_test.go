@@ -198,7 +198,7 @@ func TestWidget_Render_WithData(t *testing.T) {
 
 	// Manually set weather data to avoid network call
 	widget.mu.Lock()
-	widget.weather = &Data{
+	widget.weather = &WData{
 		Temperature: 15.5,
 		FeelsLike:   14.0,
 		Condition:   Clear,
@@ -258,7 +258,7 @@ func TestWidget_TextFormat(t *testing.T) {
 
 	// Set weather data
 	widget.mu.Lock()
-	widget.weather = &Data{
+	widget.weather = &WData{
 		Temperature: 20.0,
 		Condition:   Rain,
 		Description: "Light rain",
@@ -440,7 +440,7 @@ func TestWidget_ForecastGraphFormat(t *testing.T) {
 
 	// Set weather and forecast data
 	widget.mu.Lock()
-	widget.weather = &Data{
+	widget.weather = &WData{
 		Temperature: 15.0,
 		Condition:   Clear,
 		Description: "Clear",
@@ -502,7 +502,7 @@ func TestWidget_ForecastIconsFormat(t *testing.T) {
 
 	// Set weather and daily forecast data
 	widget.mu.Lock()
-	widget.weather = &Data{
+	widget.weather = &WData{
 		Temperature: 15.0,
 		Condition:   Clear,
 		Description: "Clear",
@@ -562,7 +562,7 @@ func TestWidget_ScrollFormat(t *testing.T) {
 
 	// Set weather and forecast data
 	widget.mu.Lock()
-	widget.weather = &Data{
+	widget.weather = &WData{
 		Temperature: 15.0,
 		Condition:   Clear,
 		Description: "Clear sky",
@@ -630,7 +630,7 @@ func TestWidget_FormatCycle(t *testing.T) {
 
 	// Set weather data
 	widget.mu.Lock()
-	widget.weather = &Data{
+	widget.weather = &WData{
 		Temperature:   15.0,
 		Condition:     Clear,
 		Description:   "Clear",
@@ -723,7 +723,7 @@ func TestWidget_AQIFormat(t *testing.T) {
 
 	// Set weather and AQI data
 	widget.mu.Lock()
-	widget.weather = &Data{
+	widget.weather = &WData{
 		Temperature: 15.0,
 		Condition:   Clear,
 		Description: "Clear",
@@ -770,7 +770,7 @@ func TestWidget_MultilineFormat(t *testing.T) {
 
 	// Set weather data
 	widget.mu.Lock()
-	widget.weather = &Data{
+	widget.weather = &WData{
 		Temperature:   15.0,
 		Condition:     Clear,
 		Description:   "Clear",
@@ -932,7 +932,7 @@ func TestAbbreviateWeatherError(t *testing.T) {
 		{"bad gateway", "bad gateway response", "HTTP 502"},
 		{"unavailable", "service unavailable", "HTTP 503"},
 
-		// Data errors
+		// WData errors
 		{"json error", "json: cannot unmarshal", "BAD DATA"},
 		{"unmarshal error", "unmarshal failed", "BAD DATA"},
 		{"eof error", "unexpected EOF", "NO RESP"},

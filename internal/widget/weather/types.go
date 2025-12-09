@@ -51,8 +51,8 @@ type Token struct {
 	Literal string // For literal tokens, the text content
 }
 
-// WeatherData holds the current weather information
-type Data struct {
+// WData holds the current weather information
+type WData struct {
 	Temperature   float64
 	FeelsLike     float64
 	Condition     string // One of the Weather* constants

@@ -1,9 +1,9 @@
 package weather
 
-// WeatherProvider defines the interface for weather data providers
-type WeatherProvider interface {
+// Provider WeatherProvider defines the interface for weather data providers
+type Provider interface {
 	// FetchWeather fetches current weather and optionally forecast
-	FetchWeather(needForecast bool) (*Data, *ForecastData, error)
+	FetchWeather(needForecast bool) (*WData, *ForecastData, error)
 
 	// FetchAirQuality fetches air quality data (may return nil, nil if not supported)
 	FetchAirQuality() (*AirQualityData, error)
@@ -15,8 +15,8 @@ type WeatherProvider interface {
 	Name() string
 }
 
-// WeatherProviderConfig holds common configuration for weather providers
-type WeatherProviderConfig struct {
+// ProviderConfig WeatherProviderConfig holds common configuration for weather providers
+type ProviderConfig struct {
 	City          string
 	Lat           float64
 	Lon           float64
