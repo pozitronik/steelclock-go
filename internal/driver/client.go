@@ -1,13 +1,20 @@
 package driver
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
-	"github.com/pozitronik/steelclock-go/internal/gamesense"
+	"github.com/pozitronik/steelclock-go/internal/display"
 )
 
-// Client wraps HIDDriver and implements gamesense.API interface
+// Sentinel errors for Client
+var (
+	ErrDeviceNotConnected = errors.New("device not connected")
+	ErrResolutionNotFound = errors.New("resolution not found in data")
+)
+
+// Client wraps HIDDriver and implements display.Backend interface
 // This allows the direct driver to be used interchangeably with the GameSense client
 type Client struct {
 	driver           *HIDDriver
@@ -16,8 +23,8 @@ type Client struct {
 	disconnectLogged bool // prevents log spam on disconnect
 }
 
-// Ensure Client implements gamesense.API
-var _ gamesense.API = (*Client)(nil)
+// Ensure Client implements display.Backend
+var _ display.Backend = (*Client)(nil)
 
 // NewClient creates a new direct driver client
 func NewClient(cfg Config) (*Client, error) {
@@ -49,25 +56,19 @@ func (c *Client) BindScreenEvent(_, _ string) error {
 	return nil
 }
 
-// SendScreenData converts the bitmap data and sends it to the display
-// bitmapData is an array of 640 integers (0-255), each representing a byte of packed pixels
-func (c *Client) SendScreenData(_ string, bitmapData []int) error {
+// SendScreenData sends the bitmap data directly to the display
+// bitmapData is an array of 640 bytes, each representing packed pixels
+func (c *Client) SendScreenData(_ string, bitmapData []byte) error {
 	if !c.driver.IsConnected() {
 		// Log disconnection only once to avoid spam
 		if !c.disconnectLogged {
 			log.Printf("Direct driver: device disconnected, skipping frames until reconnected")
 			c.disconnectLogged = true
 		}
-		return fmt.Errorf("device not connected")
+		return ErrDeviceNotConnected
 	}
 
-	// Convert []int to []byte
-	byteData := make([]byte, len(bitmapData))
-	for i, v := range bitmapData {
-		byteData[i] = byte(v)
-	}
-
-	if err := c.driver.SendFrame(byteData); err != nil {
+	if err := c.driver.SendFrame(bitmapData); err != nil {
 		// Log disconnection only once to avoid spam
 		if !c.disconnectLogged {
 			log.Printf("Direct driver: device disconnected: %v", err)
@@ -121,18 +122,18 @@ func (c *Client) SupportsMultipleEvents() bool {
 
 // SendScreenDataMultiRes sends screen data for the resolution matching the driver's configured dimensions.
 // Other resolutions in the map are ignored.
-func (c *Client) SendScreenDataMultiRes(_ string, resolutionData map[string][]int) error {
+func (c *Client) SendScreenDataMultiRes(_ string, resolutionData map[string][]byte) error {
 	// Find our resolution in the map
 	key := fmt.Sprintf("image-data-%dx%d", c.width, c.height)
 	if data, ok := resolutionData[key]; ok {
 		return c.SendScreenData("", data)
 	}
-	return fmt.Errorf("resolution %dx%d not found in data", c.width, c.height)
+	return fmt.Errorf("resolution %dx%d: %w", c.width, c.height, ErrResolutionNotFound)
 }
 
 // SendMultipleScreenData sends the last frame from the batch.
 // USB HID doesn't benefit from batching (no HTTP overhead), so only the most recent frame is sent.
-func (c *Client) SendMultipleScreenData(_ string, frames [][]int) error {
+func (c *Client) SendMultipleScreenData(_ string, frames [][]byte) error {
 	if len(frames) > 0 {
 		return c.SendScreenData("", frames[len(frames)-1])
 	}

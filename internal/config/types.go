@@ -43,6 +43,7 @@ type Config struct {
 	DeinitializeTimerMs  int                 `json:"deinitialize_timer_ms,omitempty"`
 	EventBatchingEnabled bool                `json:"event_batching_enabled,omitempty"`
 	EventBatchSize       int                 `json:"event_batch_size,omitempty"`
+	FrameDedupEnabled    *bool               `json:"frame_dedup_enabled,omitempty"` // Skip sending unchanged frames (default: true)
 	SupportedResolutions []ResolutionConfig  `json:"supported_resolutions,omitempty"`
 	BundledFontURL       *string             `json:"bundled_font_url,omitempty"`
 	Backend              string              `json:"backend,omitempty"`
@@ -161,6 +162,18 @@ type WidgetConfig struct {
 
 	// Star Wars intro crawl widget
 	StarWarsIntro *StarWarsIntroConfig `json:"starwars_intro,omitempty"` // Star Wars intro crawl settings
+
+	// Telegram widgets (shared auth config)
+	Auth *TelegramAuthConfig `json:"auth,omitempty"` // Telegram API authentication (shared by telegram and telegram_counter)
+
+	// Telegram widget filters (for both telegram and telegram_counter)
+	Filters *TelegramFiltersConfig `json:"filters,omitempty"` // Message filters (private_chats, groups, channels)
+
+	// Telegram notification widget appearance
+	Appearance *TelegramAppearanceConfig `json:"appearance,omitempty"` // Notification appearance settings
+
+	// Telegram counter widget specific
+	Badge *TelegramBadgeConfig `json:"badge,omitempty"` // Badge mode settings (for telegram_counter)
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -199,8 +212,8 @@ type TextConfig struct {
 
 // AlignConfig represents text alignment
 type AlignConfig struct {
-	H string `json:"h,omitempty"` // "left", "center", "right"
-	V string `json:"v,omitempty"` // "top", "center", "bottom"
+	H HAlign `json:"h,omitempty"` // "left", "center", "right"
+	V VAlign `json:"v,omitempty"` // "top", "center", "bottom"
 }
 
 // ColorsConfig represents widget colors (keys vary by widget type)
@@ -478,11 +491,11 @@ type ScrollConfig struct {
 	// Enabled explicitly enables/disables scrolling
 	Enabled bool `json:"enabled,omitempty"`
 	// Direction: "left", "right", "up", "down"
-	Direction string `json:"direction,omitempty"`
+	Direction ScrollDirection `json:"direction,omitempty"`
 	// Speed in pixels per second
 	Speed float64 `json:"speed,omitempty"`
 	// Mode: "continuous" (loop), "bounce" (reverse at edges), "pause_ends" (pause at start/end)
-	Mode string `json:"mode,omitempty"`
+	Mode ScrollMode `json:"mode,omitempty"`
 	// PauseMs - pause duration in milliseconds at ends (for bounce/pause_ends modes)
 	PauseMs int `json:"pause_ms,omitempty"`
 	// Gap - pixels between end and start of text in continuous mode
@@ -783,4 +796,107 @@ type StarWarsStarsConfig struct {
 	Count int `json:"count,omitempty"`
 	// Brightness: maximum star brightness (1-255, default: 200)
 	Brightness int `json:"brightness,omitempty"`
+}
+
+// SeparatorConfig represents a separator line between elements
+type SeparatorConfig struct {
+	// Color: separator color (-1 = disabled, 0-255 = grayscale, default: 128)
+	Color int `json:"color,omitempty"`
+	// Thickness: separator thickness in pixels (default: 1)
+	Thickness int `json:"thickness,omitempty"`
+}
+
+// TransitionConfig represents transition effect settings
+// Transition types: "none", "push_left", "push_right", "push_up", "push_down",
+// "slide_left", "slide_right", "slide_up", "slide_down",
+// "dissolve_fade", "dissolve_pixel", "dissolve_dither",
+// "box_in", "box_out", "clock_wipe", "random"
+type TransitionConfig struct {
+	// In: transition effect when showing (default: "none")
+	In string `json:"in,omitempty"`
+	// InSpeed: transition duration in seconds (default: 0.5)
+	InSpeed float64 `json:"in_speed,omitempty"`
+	// Out: transition effect when hiding (default: "none")
+	Out string `json:"out,omitempty"`
+	// OutSpeed: transition duration in seconds (default: 0.5)
+	OutSpeed float64 `json:"out_speed,omitempty"`
+}
+
+// TelegramAuthConfig contains Telegram API authentication credentials
+type TelegramAuthConfig struct {
+	// APIID: Telegram API ID from my.telegram.org (required)
+	APIID int `json:"api_id"`
+	// APIHash: Telegram API Hash from my.telegram.org (required)
+	APIHash string `json:"api_hash"`
+	// PhoneNumber: phone number in international format, e.g., "+1234567890" (required)
+	PhoneNumber string `json:"phone_number"`
+	// SessionPath: path to session file (default: telegram/{api_id}_{phone}.session)
+	SessionPath string `json:"session_path,omitempty"`
+}
+
+// TelegramFiltersConfig contains filter settings for all chat types
+type TelegramFiltersConfig struct {
+	// PrivateChats: private message filter settings
+	PrivateChats *TelegramChatFilterConfig `json:"private_chats,omitempty"`
+	// Groups: group chat filter settings
+	Groups *TelegramChatFilterConfig `json:"groups,omitempty"`
+	// Channels: channel filter settings
+	Channels *TelegramChatFilterConfig `json:"channels,omitempty"`
+}
+
+// TelegramChatFilterConfig contains filter settings for a chat type
+type TelegramChatFilterConfig struct {
+	// Enabled: enable messages from this chat type (default: true for private, false for groups/channels)
+	Enabled *bool `json:"enabled,omitempty"`
+	// Whitelist: always include these chat IDs, even if this chat type is disabled
+	Whitelist []string `json:"whitelist,omitempty"`
+	// Blacklist: never include these chat IDs, even if this chat type is enabled
+	Blacklist []string `json:"blacklist,omitempty"`
+	// PinnedMessages: include pinned message notifications (default: true)
+	PinnedMessages *bool `json:"pinned_messages,omitempty"`
+}
+
+// TelegramBadgeConfig contains settings for badge display mode
+type TelegramBadgeConfig struct {
+	// Blink: blink mode - "never", "always", "progressive" (default: "never")
+	// "progressive" increases blink frequency based on unread count (1/sec at 1 msg, 10/sec at 10+ msgs)
+	Blink BlinkMode `json:"blink,omitempty"`
+	// Colors: custom colors for the badge icon
+	Colors *TelegramBadgeColorsConfig `json:"colors,omitempty"`
+}
+
+// TelegramBadgeColorsConfig contains color settings for badge icon
+type TelegramBadgeColorsConfig struct {
+	// Foreground: color for icon shape (0-255, or -1 for transparent)
+	Foreground int `json:"foreground"`
+	// Background: color for icon background (0-255, or -1 for transparent)
+	Background int `json:"background"`
+}
+
+// TelegramAppearanceConfig contains appearance settings for notifications
+type TelegramAppearanceConfig struct {
+	// Header: header element settings (sender/chat name)
+	Header *TelegramElementConfig `json:"header,omitempty"`
+	// Message: message text element settings
+	Message *TelegramElementConfig `json:"message,omitempty"`
+	// Separator: separator line between header and message
+	Separator *SeparatorConfig `json:"separator,omitempty"`
+	// Timeout: seconds to show notification (0 = show until next message, default: 0)
+	Timeout int `json:"timeout,omitempty"`
+	// Transitions: transition effects for showing/hiding notifications
+	Transitions *TransitionConfig `json:"transitions,omitempty"`
+}
+
+// TelegramElementConfig contains settings for a notification element (header or message)
+type TelegramElementConfig struct {
+	// Enabled: show this element (default: true)
+	Enabled *bool `json:"enabled,omitempty"`
+	// Blink: make element blink (default: false)
+	Blink bool `json:"blink,omitempty"`
+	// Text: text rendering settings (font, size, alignment)
+	Text *TextConfig `json:"text,omitempty"`
+	// Scroll: text scrolling settings when text doesn't fit
+	Scroll *ScrollConfig `json:"scroll,omitempty"`
+	// WordBreak: how to break lines - "normal" (break on spaces) or "break-all" (break anywhere)
+	WordBreak string `json:"word_break,omitempty"`
 }

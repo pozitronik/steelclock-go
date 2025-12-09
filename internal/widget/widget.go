@@ -2,13 +2,13 @@ package widget
 
 import (
 	"image"
-	"sync"
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-// Widget is the interface that all widgets must implement
+// Widget is the interface that all widgets must implement.
+// All widgets should embed *BaseWidget to get common functionality.
 type Widget interface {
 	// Name returns the widget's unique identifier
 	Name() string
@@ -29,121 +29,23 @@ type Widget interface {
 	GetStyle() config.StyleConfig
 }
 
-// BaseWidget provides common functionality for all widgets
-type BaseWidget struct {
-	id             string
-	position       config.PositionConfig
-	style          config.StyleConfig
-	updateInterval time.Duration
-
-	// Auto-hide support
-	autoHide        bool
-	autoHideTimeout time.Duration
-	lastTriggerTime time.Time
-	autoHideMu      sync.RWMutex
+// Stoppable is an optional interface for widgets that need cleanup on shutdown.
+// Widgets with goroutines, file watchers, or subscriptions should implement this.
+type Stoppable interface {
+	Stop()
 }
 
-// NewBaseWidget creates a new base widget
-func NewBaseWidget(cfg config.WidgetConfig) *BaseWidget {
-	interval := cfg.UpdateInterval
-	if interval == 0 {
-		interval = 1.0
-	}
-
-	// Extract auto-hide settings
-	autoHide := false
-	autoHideTimeout := 2.0 // Default 2 seconds
-	if cfg.AutoHide != nil {
-		autoHide = cfg.AutoHide.Enabled
-		if cfg.AutoHide.Timeout > 0 {
-			autoHideTimeout = cfg.AutoHide.Timeout
-		}
-	}
-
-	// Extract style (handle nil pointer)
-	style := config.StyleConfig{}
-	if cfg.Style != nil {
-		style = *cfg.Style
-	}
-
-	return &BaseWidget{
-		id:              cfg.ID,
-		position:        cfg.Position,
-		style:           style,
-		updateInterval:  time.Duration(interval * float64(time.Second)),
-		autoHide:        autoHide,
-		autoHideTimeout: time.Duration(autoHideTimeout * float64(time.Second)),
-		lastTriggerTime: time.Time{}, // Zero time = widget starts hidden if auto-hide enabled
+// StopWidget calls Stop() on the widget if it implements Stoppable.
+// Safe to call on any widget - does nothing if widget doesn't implement Stoppable.
+func StopWidget(w Widget) {
+	if s, ok := w.(Stoppable); ok {
+		s.Stop()
 	}
 }
 
-// Name returns the widget's ID
-func (b *BaseWidget) Name() string {
-	return b.id
-}
-
-// GetUpdateInterval returns the update interval
-func (b *BaseWidget) GetUpdateInterval() time.Duration {
-	return b.updateInterval
-}
-
-// GetPosition returns the widget's position
-func (b *BaseWidget) GetPosition() config.PositionConfig {
-	return b.position
-}
-
-// GetStyle returns the widget's style
-func (b *BaseWidget) GetStyle() config.StyleConfig {
-	return b.style
-}
-
-// TriggerAutoHide marks the widget as visible and resets the auto-hide timer
-// Widgets should call this when their content changes (e.g., volume change, notification received)
-func (b *BaseWidget) TriggerAutoHide() {
-	if !b.autoHide {
-		return
+// StopWidgets calls Stop() on all widgets that implement Stoppable.
+func StopWidgets(widgets []Widget) {
+	for _, w := range widgets {
+		StopWidget(w)
 	}
-
-	b.autoHideMu.Lock()
-	b.lastTriggerTime = time.Now()
-	b.autoHideMu.Unlock()
-}
-
-// ShouldHide returns true if the widget should be hidden based on auto-hide settings
-// Widgets should call this in their Render() method and return nil, nil if true
-func (b *BaseWidget) ShouldHide() bool {
-	if !b.autoHide {
-		return false
-	}
-
-	b.autoHideMu.RLock()
-	defer b.autoHideMu.RUnlock()
-
-	// If never triggered, widget stays hidden
-	if b.lastTriggerTime.IsZero() {
-		return true
-	}
-
-	// Check if timeout expired
-	return time.Since(b.lastTriggerTime) > b.autoHideTimeout
-}
-
-// IsAutoHideEnabled returns whether auto-hide is enabled for this widget
-func (b *BaseWidget) IsAutoHideEnabled() bool {
-	return b.autoHide
-}
-
-// GetAutoHideTimeout returns the auto-hide timeout duration
-func (b *BaseWidget) GetAutoHideTimeout() time.Duration {
-	return b.autoHideTimeout
-}
-
-// GetRenderBackgroundColor returns the background color to use when rendering
-// Handles the special case of -1 (transparent) by returning 0 (black)
-// The compositor will skip black pixels for transparent widgets
-func (b *BaseWidget) GetRenderBackgroundColor() uint8 {
-	if b.style.Background == -1 {
-		return 0 // Use black as background for transparent widgets
-	}
-	return uint8(b.style.Background)
 }

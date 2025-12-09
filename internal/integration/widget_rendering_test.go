@@ -11,12 +11,19 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/layout"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/clock"
+	"github.com/pozitronik/steelclock-go/internal/widget/cpu"
+	"github.com/pozitronik/steelclock-go/internal/widget/disk"
+	"github.com/pozitronik/steelclock-go/internal/widget/keyboard"
+	"github.com/pozitronik/steelclock-go/internal/widget/memory"
 )
 
 // createTestConfig creates a minimal config for testing
 func createTestConfig() *config.Config {
+	dedupDisabled := false
 	return &config.Config{
-		RefreshRateMs: 50,
+		RefreshRateMs:     50,
+		FrameDedupEnabled: &dedupDisabled, // Disable dedup for tests that count frames
 		Display: config.DisplayConfig{
 			Width:      128,
 			Height:     40,
@@ -54,7 +61,7 @@ func TestClockWidget_Rendering(t *testing.T) {
 		},
 	}
 
-	clockWidget, err := widget.NewClockWidget(widgetCfg)
+	clockWidget, err := clock.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create clock widget: %v", err)
 	}
@@ -101,7 +108,7 @@ func TestClockWidget_ConsistentRendering(t *testing.T) {
 		},
 	}
 
-	clockWidget, err := widget.NewClockWidget(widgetCfg)
+	clockWidget, err := clock.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create clock widget: %v", err)
 	}
@@ -148,7 +155,7 @@ func TestKeyboardWidget_Rendering(t *testing.T) {
 		},
 	}
 
-	kbdWidget, err := widget.NewKeyboardWidget(widgetCfg)
+	kbdWidget, err := keyboard.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create keyboard widget: %v", err)
 	}
@@ -183,7 +190,7 @@ func TestMemoryWidget_Rendering(t *testing.T) {
 		},
 	}
 
-	memWidget, err := widget.NewMemoryWidget(widgetCfg)
+	memWidget, err := memory.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create memory widget: %v", err)
 	}
@@ -226,7 +233,7 @@ func TestCPUWidget_Rendering(t *testing.T) {
 		},
 	}
 
-	cpuWidget, err := widget.NewCPUWidget(widgetCfg)
+	cpuWidget, err := cpu.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create CPU widget: %v", err)
 	}
@@ -273,12 +280,12 @@ func TestMultipleWidgets_Composition(t *testing.T) {
 		},
 	}
 
-	clockWidget, err := widget.NewClockWidget(clockCfg)
+	clockWidget, err := clock.New(clockCfg)
 	if err != nil {
 		t.Fatalf("Failed to create clock widget: %v", err)
 	}
 
-	memWidget, err := widget.NewMemoryWidget(memCfg)
+	memWidget, err := memory.New(memCfg)
 	if err != nil {
 		t.Fatalf("Failed to create memory widget: %v", err)
 	}
@@ -296,7 +303,7 @@ func TestMultipleWidgets_Composition(t *testing.T) {
 	}
 
 	// Check both halves have content
-	blank := make([]int, 640)
+	blank := make([]byte, 640)
 
 	leftDiff := testutil.CompareRegion(frame.Data, blank, 0, 0, 64, 40)
 	rightDiff := testutil.CompareRegion(frame.Data, blank, 64, 0, 64, 40)
@@ -337,8 +344,8 @@ func TestWidgetZOrder(t *testing.T) {
 		},
 	}
 
-	bgWidget, _ := widget.NewClockWidget(bgCfg)
-	fgWidget, _ := widget.NewClockWidget(fgCfg)
+	bgWidget, _ := clock.New(bgCfg)
+	fgWidget, _ := clock.New(fgCfg)
 
 	cfg := createTestConfig()
 
@@ -378,7 +385,7 @@ func TestDiskWidget_Rendering(t *testing.T) {
 		},
 	}
 
-	diskWidget, err := widget.NewDiskWidget(widgetCfg)
+	diskWidget, err := disk.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create disk widget: %v", err)
 	}
@@ -410,7 +417,7 @@ func TestFrameConsistency(t *testing.T) {
 		Mode:     "bar",
 	}
 
-	memWidget, err := widget.NewMemoryWidget(widgetCfg)
+	memWidget, err := memory.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create memory widget: %v", err)
 	}

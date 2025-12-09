@@ -579,3 +579,55 @@ func TestApplyDefaults(t *testing.T) {
 		}
 	}
 }
+
+func TestApplyVolumeDefaults(t *testing.T) {
+	// Test with empty widget
+	w := &WidgetConfig{
+		Type: "volume",
+	}
+	applyVolumeDefaults(w)
+
+	if w.PollInterval != DefaultPollInterval {
+		t.Errorf("PollInterval = %v, want %v", w.PollInterval, DefaultPollInterval)
+	}
+	if w.Mode != "bar" {
+		t.Errorf("Mode = %q, want %q", w.Mode, "bar")
+	}
+	if w.Colors == nil {
+		t.Error("Colors is nil, want non-nil")
+	}
+	if w.Colors.Fill == nil || *w.Colors.Fill != 255 {
+		t.Error("Colors.Fill not set to 255")
+	}
+	if w.Bar == nil {
+		t.Error("Bar is nil, want non-nil")
+	}
+	if w.Bar.Direction != "horizontal" {
+		t.Errorf("Bar.Direction = %q, want %q", w.Bar.Direction, "horizontal")
+	}
+}
+
+func TestApplyVolumeDefaults_PresetValues(t *testing.T) {
+	// Test that preset values are not overwritten
+	w := &WidgetConfig{
+		Type:         "volume",
+		PollInterval: 2.0,
+		Mode:         "text",
+		Colors:       &ColorsConfig{Fill: IntPtr(128)},
+		Bar:          &BarConfig{Direction: "vertical"},
+	}
+	applyVolumeDefaults(w)
+
+	if w.PollInterval != 2.0 {
+		t.Errorf("PollInterval was overwritten: got %v, want 2.0", w.PollInterval)
+	}
+	if w.Mode != "text" {
+		t.Errorf("Mode was overwritten: got %q, want %q", w.Mode, "text")
+	}
+	if *w.Colors.Fill != 128 {
+		t.Errorf("Colors.Fill was overwritten: got %d, want 128", *w.Colors.Fill)
+	}
+	if w.Bar.Direction != "vertical" {
+		t.Errorf("Bar.Direction was overwritten: got %q, want %q", w.Bar.Direction, "vertical")
+	}
+}

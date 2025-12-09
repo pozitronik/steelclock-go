@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 
+	"github.com/pozitronik/steelclock-go/internal/config"
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
 )
@@ -12,7 +13,7 @@ import (
 // Returns the baseline position for drawing text with the given alignment.
 // contentX, contentY define the top-left of the content area.
 // contentW, contentH define the size of the content area.
-func CalculateTextPosition(text string, face font.Face, contentX, contentY, contentW, contentH int, horizAlign, vertAlign string) (x, y int) {
+func CalculateTextPosition(text string, face font.Face, contentX, contentY, contentW, contentH int, horizAlign config.HAlign, vertAlign config.VAlign) (x, y int) {
 	fontMutex.Lock()
 	defer fontMutex.Unlock()
 
@@ -20,14 +21,14 @@ func CalculateTextPosition(text string, face font.Face, contentX, contentY, cont
 }
 
 // calculateTextPositionUnsafe is the internal implementation without mutex (caller must hold lock)
-func calculateTextPositionUnsafe(text string, face font.Face, contentX, contentY, contentW, contentH int, horizAlign, vertAlign string) (x, y int) {
+func calculateTextPositionUnsafe(text string, face font.Face, contentX, contentY, contentW, contentH int, horizAlign config.HAlign, vertAlign config.VAlign) (x, y int) {
 	textWidth, textHeight := measureTextUnsafe(text, face)
 
 	// Calculate X position
 	switch horizAlign {
-	case "left":
+	case config.AlignLeft:
 		x = contentX
-	case "right":
+	case config.AlignRight:
 		x = contentX + contentW - textWidth
 	default: // center
 		x = contentX + (contentW-textWidth)/2
@@ -38,9 +39,9 @@ func calculateTextPositionUnsafe(text string, face font.Face, contentX, contentY
 	ascent := metrics.Ascent.Ceil()
 
 	switch vertAlign {
-	case "top":
+	case config.AlignTop:
 		y = contentY + ascent
-	case "bottom":
+	case config.AlignBottom:
 		y = contentY + contentH - textHeight + ascent
 	default: // center
 		y = contentY + (contentH-textHeight)/2 + ascent
@@ -50,7 +51,7 @@ func calculateTextPositionUnsafe(text string, face font.Face, contentX, contentY
 }
 
 // DrawAlignedText draws text on an image with alignment and padding
-func DrawAlignedText(img *image.Gray, text string, face font.Face, horizAlign, vertAlign string, padding int) {
+func DrawAlignedText(img *image.Gray, text string, face font.Face, horizAlign config.HAlign, vertAlign config.VAlign, padding int) {
 	// Protect font face access - font.Face is not thread-safe
 	fontMutex.Lock()
 	defer fontMutex.Unlock()
@@ -85,7 +86,7 @@ func DrawAlignedText(img *image.Gray, text string, face font.Face, horizAlign, v
 }
 
 // DrawTextInRect draws text within a specific rectangle with alignment and padding
-func DrawTextInRect(img *image.Gray, text string, face font.Face, x, y, width, height int, horizAlign, vertAlign string, padding int) {
+func DrawTextInRect(img *image.Gray, text string, face font.Face, x, y, width, height int, horizAlign config.HAlign, vertAlign config.VAlign, padding int) {
 	// Protect font face access - font.Face is not thread-safe
 	fontMutex.Lock()
 	defer fontMutex.Unlock()
@@ -102,9 +103,9 @@ func DrawTextInRect(img *image.Gray, text string, face font.Face, x, y, width, h
 	// Calculate X position
 	var textX int
 	switch horizAlign {
-	case "left":
+	case config.AlignLeft:
 		textX = contentX
-	case "right":
+	case config.AlignRight:
 		textX = contentX + contentW - textWidth
 	default: // center
 		textX = contentX + (contentW-textWidth)/2
@@ -116,9 +117,9 @@ func DrawTextInRect(img *image.Gray, text string, face font.Face, x, y, width, h
 
 	var textY int
 	switch vertAlign {
-	case "top":
+	case config.AlignTop:
 		textY = contentY + ascent
-	case "bottom":
+	case config.AlignBottom:
 		textY = contentY + contentH - textHeight + ascent
 	default: // center
 		textY = contentY + (contentH-textHeight)/2 + ascent
@@ -223,7 +224,7 @@ func DrawBorder(img *image.Gray, borderColor uint8) {
 // SmartDrawAlignedText draws text using either TTF font or internal font based on the fontFace.
 // If fontFace is nil and fontName is an internal font name, uses internal font rendering.
 // Otherwise, uses TTF font rendering.
-func SmartDrawAlignedText(img *image.Gray, text string, fontFace font.Face, fontName string, horizAlign, vertAlign string, padding int) {
+func SmartDrawAlignedText(img *image.Gray, text string, fontFace font.Face, fontName string, horizAlign config.HAlign, vertAlign config.VAlign, padding int) {
 	if fontFace == nil && IsInternalFont(fontName) {
 		glyphSet := GetInternalFontByName(fontName)
 		DrawAlignedInternalText(img, text, glyphSet, horizAlign, vertAlign, padding)
@@ -239,7 +240,7 @@ func SmartDrawAlignedText(img *image.Gray, text string, fontFace font.Face, font
 // SmartDrawTextInRect draws text within a rectangle using either TTF font or internal font.
 // If fontFace is nil and fontName is an internal font name, uses internal font rendering.
 // Otherwise, uses TTF font rendering.
-func SmartDrawTextInRect(img *image.Gray, text string, fontFace font.Face, fontName string, x, y, width, height int, horizAlign, vertAlign string, padding int) {
+func SmartDrawTextInRect(img *image.Gray, text string, fontFace font.Face, fontName string, x, y, width, height int, horizAlign config.HAlign, vertAlign config.VAlign, padding int) {
 	if fontFace == nil && IsInternalFont(fontName) {
 		glyphSet := GetInternalFontByName(fontName)
 		DrawInternalTextInRect(img, text, glyphSet, x, y, width, height, horizAlign, vertAlign, padding)
@@ -276,7 +277,7 @@ func SmartMeasureText(text string, fontFace font.Face, fontName string) (int, in
 // SmartCalculateTextPosition calculates text position using either TTF font or internal font.
 // If fontFace is nil and fontName is an internal font name, uses internal font.
 // Returns x, y position for text drawing (baseline for TTF, top-left for internal).
-func SmartCalculateTextPosition(text string, fontFace font.Face, fontName string, contentX, contentY, contentW, contentH int, horizAlign, vertAlign string) (x, y int) {
+func SmartCalculateTextPosition(text string, fontFace font.Face, fontName string, contentX, contentY, contentW, contentH int, horizAlign config.HAlign, vertAlign config.VAlign) (x, y int) {
 	if fontFace == nil && IsInternalFont(fontName) {
 		glyphSet := GetInternalFontByName(fontName)
 		if glyphSet == nil {
@@ -288,9 +289,9 @@ func SmartCalculateTextPosition(text string, fontFace font.Face, fontName string
 
 		// Calculate X position
 		switch horizAlign {
-		case "left":
+		case config.AlignLeft:
 			x = contentX
-		case "right":
+		case config.AlignRight:
 			x = contentX + contentW - textWidth
 		default: // center
 			x = contentX + (contentW-textWidth)/2
@@ -298,9 +299,9 @@ func SmartCalculateTextPosition(text string, fontFace font.Face, fontName string
 
 		// Calculate Y position (top-left, not baseline)
 		switch vertAlign {
-		case "top":
+		case config.AlignTop:
 			y = contentY
-		case "bottom":
+		case config.AlignBottom:
 			y = contentY + contentH - textHeight
 		default: // center
 			y = contentY + (contentH-textHeight)/2

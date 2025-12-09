@@ -5,7 +5,6 @@ import (
 	"image/color"
 	"time"
 
-	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
@@ -46,6 +45,27 @@ func NewErrorWidget(displayWidth, displayHeight int, message string) *ErrorWidge
 	}
 }
 
+// NewErrorWidgetWithConfig creates an error widget using an existing widget config.
+// This is useful for creating error proxies that inherit the original widget's position.
+func NewErrorWidgetWithConfig(cfg config.WidgetConfig, message string) *ErrorWidget {
+	// Override some config values for error display
+	cfg.Type = "error"
+	cfg.ID = cfg.ID + "_error"
+	if cfg.Style == nil {
+		cfg.Style = &config.StyleConfig{}
+	}
+	cfg.Style.Background = 0
+	cfg.Style.Border = -1
+
+	return &ErrorWidget{
+		BaseWidget:  NewBaseWidget(cfg),
+		message:     message,
+		flashState:  true,
+		lastFlash:   time.Now(),
+		flashPeriod: 500 * time.Millisecond,
+	}
+}
+
 // Update toggles flash state
 func (w *ErrorWidget) Update() error {
 	now := time.Now()
@@ -58,15 +78,15 @@ func (w *ErrorWidget) Update() error {
 
 // Render draws the error display with warning triangles
 func (w *ErrorWidget) Render() (image.Image, error) {
-	pos := w.GetPosition()
-
-	// Create image with background
-	img := bitmap.NewGrayscaleImage(pos.W, pos.H, w.GetRenderBackgroundColor())
+	// Create canvas (no border for error widget)
+	img := w.CreateCanvas()
 
 	// Only draw if flash state is on
 	if !w.flashState {
 		return img, nil
 	}
+
+	width, height := w.Dimensions()
 
 	c := color.Gray{Y: 255} // White foreground for error display
 
@@ -88,13 +108,13 @@ func (w *ErrorWidget) Render() (image.Image, error) {
 	}
 
 	for _, opt := range options {
-		if w.tryRenderLayout(img, pos.W, pos.H, opt.iconSet, opt.font, opt.margin, c) {
+		if w.tryRenderLayout(img, width, height, opt.iconSet, opt.font, opt.margin, c) {
 			return img, nil
 		}
 	}
 
 	// Ultimate fallback: just draw a centered warning icon (smallest available)
-	w.renderIconOnly(img, pos.W, pos.H, c)
+	w.renderIconOnly(img, width, height, c)
 
 	return img, nil
 }

@@ -8,6 +8,8 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/clock"
+	"github.com/pozitronik/steelclock-go/internal/widget/memory"
 )
 
 // =============================================================================
@@ -42,7 +44,7 @@ func TestLayout_AbsolutePositioning(t *testing.T) {
 				},
 			}
 
-			clockWidget, err := widget.NewClockWidget(widgetCfg)
+			clockWidget, err := clock.New(widgetCfg)
 			if err != nil {
 				t.Fatalf("Failed to create widget: %v", err)
 			}
@@ -60,7 +62,7 @@ func TestLayout_AbsolutePositioning(t *testing.T) {
 			}
 
 			// Verify content is within expected region
-			regionDiff := testutil.CompareRegion(frame.Data, make([]int, 640), tt.x, tt.y, tt.w, tt.h)
+			regionDiff := testutil.CompareRegion(frame.Data, make([]byte, 640), tt.x, tt.y, tt.w, tt.h)
 			if regionDiff.DifferentPixels == 0 {
 				t.Errorf("Expected content at position (%d,%d) size %dx%d", tt.x, tt.y, tt.w, tt.h)
 			}
@@ -92,7 +94,7 @@ func TestLayout_CornerPositions(t *testing.T) {
 			Position: config.PositionConfig{X: c.x, Y: c.y, W: 16, H: 8},
 			Text:     &config.TextConfig{Format: "X"},
 		}
-		w, err := widget.NewClockWidget(widgetCfg)
+		w, err := clock.New(widgetCfg)
 		if err != nil {
 			t.Fatalf("Failed to create widget: %v", err)
 		}
@@ -123,7 +125,7 @@ func TestLayout_CornerPositions(t *testing.T) {
 	}
 
 	for _, corner := range corners {
-		blank := make([]int, 640)
+		blank := make([]byte, 640)
 		diff := testutil.CompareRegion(frame.Data, blank, corner.x, corner.y, 16, 8)
 		if diff.DifferentPixels == 0 {
 			t.Errorf("%s corner should have content", corner.name)
@@ -158,8 +160,8 @@ func TestLayout_ZOrderBasic(t *testing.T) {
 		Style:    &config.StyleConfig{Background: -1}, // Transparent
 	}
 
-	bgWidget, _ := widget.NewMemoryWidget(bgCfg)
-	fgWidget, _ := widget.NewClockWidget(fgCfg)
+	bgWidget, _ := memory.New(bgCfg)
+	fgWidget, _ := clock.New(fgCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{bgWidget, fgWidget}, cfg)
@@ -200,8 +202,8 @@ func TestLayout_ZOrderReverse(t *testing.T) {
 		Text:     &config.TextConfig{Format: "BG"},
 	}
 
-	fgWidget, _ := widget.NewClockWidget(fgCfg)
-	bgWidget, _ := widget.NewClockWidget(bgCfg)
+	fgWidget, _ := clock.New(fgCfg)
+	bgWidget, _ := clock.New(bgCfg)
 
 	cfg := createTestConfig()
 	// Add fg first, bg second - layout manager should sort by z
@@ -250,9 +252,9 @@ func TestLayout_MultipleZLevels(t *testing.T) {
 		Style:    &config.StyleConfig{Background: -1},
 	}
 
-	bottomWidget, _ := widget.NewMemoryWidget(bottomCfg)
-	middleWidget, _ := widget.NewClockWidget(middleCfg)
-	topWidget, _ := widget.NewClockWidget(topCfg)
+	bottomWidget, _ := memory.New(bottomCfg)
+	middleWidget, _ := clock.New(middleCfg)
+	topWidget, _ := clock.New(topCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{bottomWidget, middleWidget, topWidget}, cfg)
@@ -300,8 +302,8 @@ func TestLayout_TransparentBackground(t *testing.T) {
 		Style:    &config.StyleConfig{Background: -1}, // Transparent
 	}
 
-	bgWidget, _ := widget.NewMemoryWidget(bgCfg)
-	fgWidget, _ := widget.NewClockWidget(fgCfg)
+	bgWidget, _ := memory.New(bgCfg)
+	fgWidget, _ := clock.New(fgCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{bgWidget, fgWidget}, cfg)
@@ -342,8 +344,8 @@ func TestLayout_OpaqueBackground(t *testing.T) {
 		Style:    &config.StyleConfig{Background: 0}, // Opaque black
 	}
 
-	bgWidget, _ := widget.NewMemoryWidget(bgCfg)
-	fgWidget, _ := widget.NewClockWidget(fgCfg)
+	bgWidget, _ := memory.New(bgCfg)
+	fgWidget, _ := clock.New(fgCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{bgWidget, fgWidget}, cfg)
@@ -358,7 +360,7 @@ func TestLayout_OpaqueBackground(t *testing.T) {
 	}
 
 	// With opaque foreground, center region should be mostly foreground content
-	centerRegion := testutil.CompareRegion(frame.Data, make([]int, 640), 32, 10, 64, 20)
+	centerRegion := testutil.CompareRegion(frame.Data, make([]byte, 640), 32, 10, 64, 20)
 	t.Logf("Opaque overlay center region: %d pixels", centerRegion.DifferentPixels)
 }
 
@@ -377,7 +379,7 @@ func TestLayout_ClippingLeftEdge(t *testing.T) {
 		Text:     &config.TextConfig{Format: "CLIP"},
 	}
 
-	clockWidget, _ := widget.NewClockWidget(widgetCfg)
+	clockWidget, _ := clock.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{clockWidget}, cfg)
@@ -407,7 +409,7 @@ func TestLayout_ClippingRightEdge(t *testing.T) {
 		Text:     &config.TextConfig{Format: "CLIP"},
 	}
 
-	clockWidget, _ := widget.NewClockWidget(widgetCfg)
+	clockWidget, _ := clock.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{clockWidget}, cfg)
@@ -438,7 +440,7 @@ func TestLayout_ClippingBottom(t *testing.T) {
 		Bar:      &config.BarConfig{Direction: "horizontal"},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -483,7 +485,7 @@ func TestLayout_2x2Grid(t *testing.T) {
 			Mode:     "bar",
 			Bar:      &config.BarConfig{Direction: "horizontal"},
 		}
-		w, err := widget.NewMemoryWidget(widgetCfg)
+		w, err := memory.New(widgetCfg)
 		if err != nil {
 			t.Fatalf("Failed to create widget: %v", err)
 		}
@@ -503,7 +505,7 @@ func TestLayout_2x2Grid(t *testing.T) {
 	}
 
 	// Check each quadrant has content
-	blank := make([]int, 640)
+	blank := make([]byte, 640)
 	quadrants := []struct {
 		name string
 		x, y int
@@ -538,7 +540,7 @@ func TestLayout_HorizontalStrip(t *testing.T) {
 			Mode:     "bar",
 			Bar:      &config.BarConfig{Direction: "vertical"},
 		}
-		w, _ := widget.NewMemoryWidget(widgetCfg)
+		w, _ := memory.New(widgetCfg)
 		widgets = append(widgets, w)
 	}
 
@@ -555,7 +557,7 @@ func TestLayout_HorizontalStrip(t *testing.T) {
 	}
 
 	// Verify each strip has content
-	blank := make([]int, 640)
+	blank := make([]byte, 640)
 	for i := 0; i < numWidgets; i++ {
 		diff := testutil.CompareRegion(frame.Data, blank, i*widthPerWidget, 0, widthPerWidget, 40)
 		t.Logf("Strip %d: %d pixels", i, diff.DifferentPixels)
@@ -577,7 +579,7 @@ func TestLayout_FullScreen(t *testing.T) {
 		Bar:      &config.BarConfig{Direction: "horizontal"},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -612,7 +614,7 @@ func TestLayout_OversizedWidget(t *testing.T) {
 		Bar:      &config.BarConfig{Direction: "horizontal"},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -646,7 +648,7 @@ func TestLayout_StaticStability(t *testing.T) {
 		Bar:      &config.BarConfig{Direction: "horizontal"},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -686,7 +688,7 @@ func TestLayout_MultiWidgetStability(t *testing.T) {
 			Mode:     "bar",
 			Bar:      &config.BarConfig{Direction: "vertical"},
 		}
-		w, _ := widget.NewMemoryWidget(widgetCfg)
+		w, _ := memory.New(widgetCfg)
 		widgets = append(widgets, w)
 	}
 
@@ -726,7 +728,7 @@ func TestLayout_ZeroSizeWidget(t *testing.T) {
 		Text:     &config.TextConfig{Format: "X"},
 	}
 
-	clockWidget, err := widget.NewClockWidget(widgetCfg)
+	clockWidget, err := clock.New(widgetCfg)
 	if err != nil {
 		// Zero-size might be invalid
 		t.Skipf("Zero-size widget rejected: %v", err)
@@ -753,7 +755,7 @@ func TestLayout_NegativePosition(t *testing.T) {
 		Text:     &config.TextConfig{Format: "NEG"},
 	}
 
-	clockWidget, _ := widget.NewClockWidget(widgetCfg)
+	clockWidget, _ := clock.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{clockWidget}, cfg)
@@ -768,7 +770,7 @@ func TestLayout_NegativePosition(t *testing.T) {
 	}
 
 	// Should show partial content in top-left
-	topLeftPixels := testutil.CompareRegion(frame.Data, make([]int, 640), 0, 0, 30, 20)
+	topLeftPixels := testutil.CompareRegion(frame.Data, make([]byte, 640), 0, 0, 30, 20)
 	t.Logf("Negative position - top-left region: %d pixels", topLeftPixels.DifferentPixels)
 }
 
@@ -790,7 +792,7 @@ func TestLayout_ManyWidgets(t *testing.T) {
 				Mode:     "bar",
 				Bar:      &config.BarConfig{Direction: "vertical"},
 			}
-			w, _ := widget.NewMemoryWidget(widgetCfg)
+			w, _ := memory.New(widgetCfg)
 			widgets = append(widgets, w)
 		}
 	}

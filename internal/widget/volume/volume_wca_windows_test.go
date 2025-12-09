@@ -1,0 +1,340 @@
+//go:build windows
+
+package volume
+
+import (
+	"strings"
+	"testing"
+	"time"
+
+	wcautil "github.com/pozitronik/steelclock-go/internal/wca"
+)
+
+// skipIfNoAudioDeviceWCA skips the test if no audio device is available (CI environments)
+func skipIfNoAudioDeviceWCA(t *testing.T) {
+	t.Helper()
+
+	// Try to create a volume reader to see if audio devices are available
+	reader, err := wcautil.NewVolumeReaderWCA()
+	if err != nil {
+		// Check if error is "Element not found" (no audio device)
+		if strings.Contains(err.Error(), "Element not found") {
+			t.Skip("No audio device available (common in CI environments)")
+		}
+		// For other errors, skip as well but with different message
+		t.Skipf("Cannot initialize audio: %v", err)
+	}
+
+	// Clean up the test reader
+	if reader != nil {
+		reader.Close()
+	}
+}
+
+// TestReaderWCA_Initialize tests COM initialization
+func TestReaderWCA_Initialize(t *testing.T) {
+	skipIfNoAudioDeviceWCA(t)
+
+	reader, err := wcautil.NewVolumeReaderWCA()
+	if err != nil {
+		t.Fatalf("Failed to create volume reader: %v", err)
+	}
+	defer reader.Close()
+
+	if !reader.IsInitialized() {
+		t.Error("Expected reader to be initialized")
+	}
+}
+
+// TestReaderWCA_GetVolume tests volume reading
+func TestReaderWCA_GetVolume(t *testing.T) {
+	skipIfNoAudioDeviceWCA(t)
+
+	reader, err := wcautil.NewVolumeReaderWCA()
+	if err != nil {
+		t.Fatalf("Failed to create volume reader: %v", err)
+	}
+	defer reader.Close()
+
+	volume, muted, err := reader.GetVolume()
+	if err != nil {
+		t.Fatalf("Failed to get volume: %v", err)
+	}
+
+	// Volume should be between 0 and 100
+	if volume < 0 || volume > 100 {
+		t.Errorf("Volume out of range: %.2f (expected 0-100)", volume)
+	}
+
+	// Muted is a boolean, just verify we got a value
+	t.Logf("Current volume: %.2f%%, muted: %v", volume, muted)
+}
+
+// TestReaderWCA_MultipleReads tests repeated volume reads
+func TestReaderWCA_MultipleReads(t *testing.T) {
+	skipIfNoAudioDeviceWCA(t)
+
+	reader, err := wcautil.NewVolumeReaderWCA()
+	if err != nil {
+		t.Fatalf("Failed to create volume reader: %v", err)
+	}
+	defer reader.Close()
+
+	// Read volume 100 times
+	for i := 0; i < 100; i++ {
+		volume, muted, err := reader.GetVolume()
+		if err != nil {
+			t.Fatalf("Failed to get volume on iteration %d: %v", i, err)
+		}
+
+		if volume < 0 || volume > 100 {
+			t.Errorf("Volume out of range on iteration %d: %.2f", i, volume)
+		}
+
+		// Log first and last values
+		if i == 0 || i == 99 {
+			t.Logf("Iteration %d: volume=%.2f%%, muted=%v", i, volume, muted)
+		}
+	}
+}
+
+// TestReaderWCA_ConcurrentReads tests thread safety
+func TestReaderWCA_ConcurrentReads(t *testing.T) {
+	skipIfNoAudioDeviceWCA(t)
+
+	reader, err := wcautil.NewVolumeReaderWCA()
+	if err != nil {
+		t.Fatalf("Failed to create volume reader: %v", err)
+	}
+	defer reader.Close()
+
+	// Start 10 goroutines reading concurrently
+	done := make(chan bool, 10)
+	errors := make(chan error, 10)
+
+	for i := 0; i < 10; i++ {
+		go func(id int) {
+			for j := 0; j < 10; j++ {
+				volume, _, err := reader.GetVolume()
+				if err != nil {
+					errors <- err
+					done <- false
+					return
+				}
+				if volume < 0 || volume > 100 {
+					errors <- err
+					done <- false
+					return
+				}
+			}
+			done <- true
+		}(i)
+	}
+
+	// Wait for all goroutines
+	for i := 0; i < 10; i++ {
+		select {
+		case success := <-done:
+			if !success {
+				t.Fatal("Goroutine failed")
+			}
+		case err := <-errors:
+			t.Fatalf("Error in concurrent read: %v", err)
+		case <-time.After(5 * time.Second):
+			t.Fatal("Timeout waiting for concurrent reads")
+		}
+	}
+}
+
+// TestReaderWCA_PerformanceStability tests performance over time
+func TestReaderWCA_PerformanceStability(t *testing.T) {
+	skipIfNoAudioDeviceWCA(t)
+
+	reader, err := wcautil.NewVolumeReaderWCA()
+	if err != nil {
+		t.Fatalf("Failed to create volume reader: %v", err)
+	}
+	defer reader.Close()
+
+	// Read 1000 times and measure timing
+	iterations := 1000
+	totalDuration := time.Duration(0)
+	maxDuration := time.Duration(0)
+
+	for i := 0; i < iterations; i++ {
+		start := time.Now()
+		_, _, err := reader.GetVolume()
+		duration := time.Since(start)
+
+		if err != nil {
+			t.Fatalf("Failed on iteration %d: %v", i, err)
+		}
+
+		totalDuration += duration
+		if duration > maxDuration {
+			maxDuration = duration
+		}
+	}
+
+	avgDuration := totalDuration / time.Duration(iterations)
+
+	t.Logf("Performance over %d iterations:", iterations)
+	t.Logf("  Average: %v", avgDuration)
+	t.Logf("  Max: %v", maxDuration)
+
+	// Average should be under 1ms for healthy COM calls
+	if avgDuration > 1*time.Millisecond {
+		t.Errorf("Average duration too high: %v (expected < 1ms)", avgDuration)
+	}
+
+	// Max should be under 10ms
+	if maxDuration > 10*time.Millisecond {
+		t.Errorf("Max duration too high: %v (expected < 10ms)", maxDuration)
+	}
+}
+
+// TestReaderWCA_CloseCleanup tests proper cleanup
+func TestReaderWCA_CloseCleanup(t *testing.T) {
+	skipIfNoAudioDeviceWCA(t)
+
+	reader, err := wcautil.NewVolumeReaderWCA()
+	if err != nil {
+		t.Fatalf("Failed to create volume reader: %v", err)
+	}
+
+	// Verify initialized
+	if !reader.IsInitialized() {
+		t.Fatal("Reader not initialized")
+	}
+
+	// Close
+	reader.Close()
+
+	// Verify cleanup
+	if reader.IsInitialized() {
+		t.Error("Reader still marked as initialized after Close()")
+	}
+}
+
+// TestReaderWCA_GetVolumeAfterClose tests error handling after close
+func TestReaderWCA_GetVolumeAfterClose(t *testing.T) {
+	skipIfNoAudioDeviceWCA(t)
+
+	reader, err := wcautil.NewVolumeReaderWCA()
+	if err != nil {
+		t.Fatalf("Failed to create volume reader: %v", err)
+	}
+
+	reader.Close()
+
+	// Try to read after close - should error
+	_, _, err = reader.GetVolume()
+	if err == nil {
+		t.Error("Expected error when reading after Close(), got nil")
+	}
+}
+
+// TestReaderWCA_DoubleClose tests double close safety
+func TestReaderWCA_DoubleClose(t *testing.T) {
+	skipIfNoAudioDeviceWCA(t)
+
+	reader, err := wcautil.NewVolumeReaderWCA()
+	if err != nil {
+		t.Fatalf("Failed to create volume reader: %v", err)
+	}
+
+	// Close twice - should not panic
+	reader.Close()
+	reader.Close() // Should be safe to call multiple times
+}
+
+// TestNewVolumeReader_Factory tests the factory function
+func TestNewVolumeReader_Factory(t *testing.T) {
+	skipIfNoAudioDeviceWCA(t)
+
+	reader, err := newVolumeReader()
+	if err != nil {
+		t.Fatalf("newVolumeReader() failed: %v", err)
+	}
+	defer reader.Close()
+
+	// Verify it returns VolumeReaderWCA
+	wcaReader, ok := reader.(*wcautil.VolumeReaderWCA)
+	if !ok {
+		t.Fatalf("Expected *wcautil.VolumeReaderWCA, got %T", reader)
+	}
+
+	if !wcaReader.IsInitialized() {
+		t.Error("Factory-created reader not initialized")
+	}
+}
+
+// TestGetSharedVolumeReader_Singleton verifies singleton behavior
+func TestGetSharedVolumeReader_Singleton(t *testing.T) {
+	skipIfNoAudioDeviceWCA(t)
+
+	// Get shared instance twice
+	reader1, err1 := wcautil.GetSharedVolumeReader()
+	if err1 != nil {
+		t.Fatalf("First GetSharedVolumeReader() failed: %v", err1)
+	}
+
+	reader2, err2 := wcautil.GetSharedVolumeReader()
+	if err2 != nil {
+		t.Fatalf("Second GetSharedVolumeReader() failed: %v", err2)
+	}
+
+	// Should return the same instance
+	if reader1 != reader2 {
+		t.Error("GetSharedVolumeReader() returned different instances (expected singleton)")
+	}
+
+	// Verify it's initialized
+	if !reader1.IsInitialized() {
+		t.Error("Shared reader not initialized")
+	}
+}
+
+// TestGetSharedVolumeReader_ConcurrentCreation tests thread-safe singleton creation
+func TestGetSharedVolumeReader_ConcurrentCreation(t *testing.T) {
+	skipIfNoAudioDeviceWCA(t)
+
+	// Note: This test assumes we're running in a fresh process where the singleton hasn't been created yet
+	// In practice, the first test will create it, but sync.Once guarantees thread safety
+
+	// Start 100 goroutines trying to get the shared instance concurrently
+	done := make(chan *wcautil.VolumeReaderWCA, 100)
+	errors := make(chan error, 100)
+
+	for i := 0; i < 100; i++ {
+		go func() {
+			reader, err := wcautil.GetSharedVolumeReader()
+			if err != nil {
+				errors <- err
+				return
+			}
+			done <- reader
+		}()
+	}
+
+	// Collect all results
+	var readers []*wcautil.VolumeReaderWCA
+	for i := 0; i < 100; i++ {
+		select {
+		case reader := <-done:
+			readers = append(readers, reader)
+		case err := <-errors:
+			t.Fatalf("Error getting shared reader: %v", err)
+		case <-time.After(5 * time.Second):
+			t.Fatal("Timeout waiting for concurrent creation")
+		}
+	}
+
+	// All readers should be the same instance
+	firstReader := readers[0]
+	for i, reader := range readers {
+		if reader != firstReader {
+			t.Errorf("Reader %d is different from first reader (expected all same)", i)
+		}
+	}
+}

@@ -7,7 +7,7 @@ import (
 // mockSplashClient is a mock client for splash screen testing
 type mockSplashClient struct {
 	framesSent    int
-	lastFrameData []int
+	lastFrameData []byte
 	sendErr       error
 }
 
@@ -19,13 +19,13 @@ func (m *mockSplashClient) BindScreenEvent(_, _ string) error {
 	return nil
 }
 
-func (m *mockSplashClient) SendScreenData(_ string, bitmapData []int) error {
+func (m *mockSplashClient) SendScreenData(_ string, bitmapData []byte) error {
 	m.framesSent++
 	m.lastFrameData = bitmapData
 	return m.sendErr
 }
 
-func (m *mockSplashClient) SendScreenDataMultiRes(_ string, _ map[string][]int) error {
+func (m *mockSplashClient) SendScreenDataMultiRes(_ string, _ map[string][]byte) error {
 	return nil
 }
 
@@ -41,7 +41,7 @@ func (m *mockSplashClient) SupportsMultipleEvents() bool {
 	return false
 }
 
-func (m *mockSplashClient) SendMultipleScreenData(_ string, _ [][]int) error {
+func (m *mockSplashClient) SendMultipleScreenData(_ string, _ [][]byte) error {
 	return nil
 }
 

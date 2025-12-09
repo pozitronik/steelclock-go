@@ -1,13 +1,14 @@
 package driver
 
 import (
+	"errors"
 	"testing"
 
-	"github.com/pozitronik/steelclock-go/internal/gamesense"
+	"github.com/pozitronik/steelclock-go/internal/display"
 )
 
-// Verify Client implements gamesense.API interface at compile time
-var _ gamesense.API = (*Client)(nil)
+// Verify Client implements display.Backend interface at compile time
+var _ display.Backend = (*Client)(nil)
 
 func TestNewClient_NoDevice(t *testing.T) {
 	// Without a device, NewClient should fail
@@ -102,7 +103,7 @@ func TestClient_SendScreenData_DisconnectedDevice(t *testing.T) {
 		height: 40,
 	}
 
-	err := client.SendScreenData("event", make([]int, 640))
+	err := client.SendScreenData("event", make([]byte, 640))
 	if err == nil {
 		t.Error("SendScreenData() should return error when device is disconnected")
 	}
@@ -117,8 +118,8 @@ func TestClient_SendScreenDataMultiRes_WrongResolution(t *testing.T) {
 	}
 
 	// Only provide data for a different resolution
-	resolutionData := map[string][]int{
-		"image-data-256x64": make([]int, 2048),
+	resolutionData := map[string][]byte{
+		"image-data-256x64": make([]byte, 2048),
 	}
 
 	err := client.SendScreenDataMultiRes("event", resolutionData)
@@ -135,7 +136,7 @@ func TestClient_SendMultipleScreenData_EmptyFrames(t *testing.T) {
 		height: 40,
 	}
 
-	err := client.SendMultipleScreenData("event", [][]int{})
+	err := client.SendMultipleScreenData("event", [][]byte{})
 	if err != nil {
 		t.Errorf("SendMultipleScreenData() with empty frames returned error: %v", err)
 	}
@@ -235,13 +236,13 @@ func TestClient_DisconnectLogFlag(t *testing.T) {
 	}
 
 	// First call should set disconnectLogged
-	_ = client.SendScreenData("event", make([]int, 640))
+	_ = client.SendScreenData("event", make([]byte, 640))
 	if !client.disconnectLogged {
 		t.Error("SendScreenData() should set disconnectLogged on disconnect")
 	}
 
 	// Second call should still work (not panic)
-	_ = client.SendScreenData("event", make([]int, 640))
+	_ = client.SendScreenData("event", make([]byte, 640))
 }
 
 func TestClient_WidthHeight(t *testing.T) {
@@ -270,8 +271,8 @@ func TestClient_SendScreenDataMultiRes_KeyFormat(t *testing.T) {
 
 	// Test that the key format is "image-data-WxH"
 	// Even though this will fail (not connected), it validates key lookup
-	resolutionData := map[string][]int{
-		"image-data-128x40": make([]int, 640),
+	resolutionData := map[string][]byte{
+		"image-data-128x40": make([]byte, 640),
 	}
 
 	// Will fail because device not connected, but won't fail due to key not found
@@ -280,10 +281,9 @@ func TestClient_SendScreenDataMultiRes_KeyFormat(t *testing.T) {
 		t.Error("SendScreenDataMultiRes() should fail due to disconnected device")
 	}
 	// Check it's a "not connected" error, not a "resolution not found" error
-	expectedErr := "device not connected"
-	if err != nil && err.Error() != expectedErr {
+	if err != nil && !errors.Is(err, ErrDeviceNotConnected) {
 		// Could be "resolution not found" if key format is wrong
-		if err.Error() == "resolution 128x40 not found in data" {
+		if errors.Is(err, ErrResolutionNotFound) {
 			t.Error("SendScreenDataMultiRes() used wrong key format")
 		}
 	}
@@ -297,9 +297,9 @@ func TestClient_SendMultipleScreenData_WithFrames(t *testing.T) {
 		height: 40,
 	}
 
-	frames := [][]int{
-		make([]int, 640),
-		make([]int, 640),
+	frames := [][]byte{
+		make([]byte, 640),
+		make([]byte, 640),
 	}
 
 	// Will fail because not connected, but should not panic
@@ -330,12 +330,194 @@ func TestClient_SendScreenData_DataLength(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			data := make([]int, tc.size)
+			data := make([]byte, tc.size)
 			// Should not panic even with wrong sizes
 			err := client.SendScreenData("event", data)
 			if err == nil {
 				t.Error("SendScreenData() should fail due to disconnected device")
 			}
 		})
+	}
+}
+
+func TestClient_SendScreenDataMultiRes_EmptyMap(t *testing.T) {
+	driver := NewDriver(Config{Width: 128, Height: 40})
+	client := &Client{
+		driver: driver,
+		width:  128,
+		height: 40,
+	}
+
+	// Empty resolution map should return error (resolution not found)
+	err := client.SendScreenDataMultiRes("event", map[string][]byte{})
+	if err == nil {
+		t.Error("SendScreenDataMultiRes() with empty map should return error")
+	}
+}
+
+func TestClient_SendScreenDataMultiRes_MultipleResolutions(t *testing.T) {
+	driver := NewDriver(Config{Width: 128, Height: 40})
+	client := &Client{
+		driver: driver,
+		width:  128,
+		height: 40,
+	}
+
+	// Provide multiple resolutions including the correct one
+	resolutionData := map[string][]byte{
+		"image-data-128x40": make([]byte, 640),
+		"image-data-256x64": make([]byte, 2048),
+	}
+
+	// Should find correct resolution but fail due to disconnected device
+	err := client.SendScreenDataMultiRes("event", resolutionData)
+	if err == nil {
+		t.Error("SendScreenDataMultiRes() should fail due to disconnected device")
+	}
+
+	// Should be "device not connected", not "resolution not found"
+	if errors.Is(err, ErrResolutionNotFound) {
+		t.Error("Should have found resolution but failed on send")
+	}
+}
+
+func TestClient_SendMultipleScreenData_SingleFrame(t *testing.T) {
+	driver := NewDriver(Config{Width: 128, Height: 40})
+	client := &Client{
+		driver: driver,
+		width:  128,
+		height: 40,
+	}
+
+	frames := [][]byte{
+		make([]byte, 640),
+	}
+
+	// Should fail due to disconnected device
+	err := client.SendMultipleScreenData("event", frames)
+	if err == nil {
+		t.Error("SendMultipleScreenData() should fail due to disconnected device")
+	}
+}
+
+func TestClient_DisconnectLogFlag_Reset(t *testing.T) {
+	driver := NewDriver(Config{
+		VID:    0x1038,
+		PID:    0xFFFF,
+		Width:  128,
+		Height: 40,
+	})
+	client := &Client{
+		driver:           driver,
+		width:            128,
+		height:           40,
+		disconnectLogged: true, // Start as logged
+	}
+
+	// Call SendHeartbeat - this will try to reconnect and fail
+	// But if it succeeded, it should reset the flag
+	err := client.SendHeartbeat()
+	if err == nil {
+		// Reconnection succeeded unexpectedly
+		if client.disconnectLogged {
+			t.Error("disconnectLogged should be false after successful reconnect")
+		}
+	}
+}
+
+func TestClient_SendScreenData_ResetDisconnectLogOnSuccess(t *testing.T) {
+	// This tests that the disconnectLogged flag prevents log spam
+	driver := NewDriver(Config{Width: 128, Height: 40})
+	client := &Client{
+		driver:           driver,
+		width:            128,
+		height:           40,
+		disconnectLogged: false,
+	}
+
+	// First call should set disconnectLogged to true
+	_ = client.SendScreenData("event", make([]byte, 640))
+	if !client.disconnectLogged {
+		t.Error("First disconnect should set disconnectLogged")
+	}
+
+	// Store the flag value
+	firstValue := client.disconnectLogged
+
+	// Second call should not change anything
+	_ = client.SendScreenData("event", make([]byte, 640))
+
+	// Flag should still be true
+	if client.disconnectLogged != firstValue {
+		t.Error("disconnectLogged should not change on repeated disconnects")
+	}
+}
+
+func TestClient_WidthHeightDifferentSizes(t *testing.T) {
+	testCases := []struct {
+		width  int
+		height int
+	}{
+		{128, 40}, // Standard
+		{256, 64}, // Large
+		{64, 20},  // Small
+		{128, 52}, // Different height
+	}
+
+	for _, tc := range testCases {
+		t.Run("", func(t *testing.T) {
+			driver := NewDriver(Config{Width: tc.width, Height: tc.height})
+			client := &Client{
+				driver: driver,
+				width:  tc.width,
+				height: tc.height,
+			}
+
+			if client.width != tc.width {
+				t.Errorf("width = %d, want %d", client.width, tc.width)
+			}
+			if client.height != tc.height {
+				t.Errorf("height = %d, want %d", client.height, tc.height)
+			}
+
+			// Verify key format in SendScreenDataMultiRes
+			expectedKey := "image-data-" + string(rune('0'+tc.width/100)) + string(rune('0'+(tc.width/10)%10)) + string(rune('0'+tc.width%10)) + "x" + string(rune('0'+tc.height/10)) + string(rune('0'+tc.height%10))
+			_ = expectedKey // Key format is tested elsewhere
+		})
+	}
+}
+
+func TestConfig_Default(t *testing.T) {
+	cfg := Config{}
+
+	// Verify default values
+	if cfg.VID != 0 {
+		t.Errorf("Default VID = %d, want 0", cfg.VID)
+	}
+	if cfg.PID != 0 {
+		t.Errorf("Default PID = %d, want 0", cfg.PID)
+	}
+	if cfg.Interface != "" {
+		t.Errorf("Default Interface = %q, want empty", cfg.Interface)
+	}
+}
+
+func TestConfig_WithValues(t *testing.T) {
+	cfg := Config{
+		VID:       0x1038,
+		PID:       0x12AA,
+		Interface: "mi_01",
+		Width:     128,
+		Height:    40,
+	}
+
+	if cfg.VID != 0x1038 {
+		t.Errorf("VID = 0x%04X, want 0x1038", cfg.VID)
+	}
+	if cfg.PID != 0x12AA {
+		t.Errorf("PID = 0x%04X, want 0x12AA", cfg.PID)
+	}
+	if cfg.Interface != "mi_01" {
+		t.Errorf("Interface = %q, want mi_01", cfg.Interface)
 	}
 }

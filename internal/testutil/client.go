@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pozitronik/steelclock-go/internal/gamesense"
+	"github.com/pozitronik/steelclock-go/internal/display"
 )
 
 // Frame represents a captured frame with metadata
 type Frame struct {
-	Data      []int     // Bitmap data (640 bytes for 128x40)
+	Data      []byte    // Bitmap data (640 bytes for 128x40)
 	EventName string    // Event name used when sending
 	Timestamp time.Time // When the frame was received
 	Index     int       // Sequential frame number
@@ -26,7 +26,7 @@ type CallRecord struct {
 	Error     error
 }
 
-// TestClient implements gamesense.API for testing purposes.
+// TestClient implements display.Backend for testing purposes.
 // It captures frames, tracks calls, and supports error injection.
 type TestClient struct {
 	mu sync.RWMutex
@@ -68,8 +68,8 @@ type TestClient struct {
 	paused                 bool // When true, SendScreenData does nothing
 }
 
-// Ensure TestClient implements gamesense.API
-var _ gamesense.API = (*TestClient)(nil)
+// Ensure TestClient implements display.Backend
+var _ display.Backend = (*TestClient)(nil)
 
 // TestClientOption is a functional option for configuring TestClient
 type TestClientOption func(*TestClient)
@@ -120,7 +120,7 @@ func NewTestClient(opts ...TestClientOption) *TestClient {
 	return c
 }
 
-// RegisterGame implements gamesense.API
+// RegisterGame implements display.Backend
 func (c *TestClient) RegisterGame(developer string, deinitializeTimerMs int) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -136,7 +136,7 @@ func (c *TestClient) RegisterGame(developer string, deinitializeTimerMs int) err
 	return nil
 }
 
-// BindScreenEvent implements gamesense.API
+// BindScreenEvent implements display.Backend
 func (c *TestClient) BindScreenEvent(eventName, deviceType string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -152,8 +152,8 @@ func (c *TestClient) BindScreenEvent(eventName, deviceType string) error {
 	return nil
 }
 
-// SendScreenData implements gamesense.API
-func (c *TestClient) SendScreenData(eventName string, bitmapData []int) error {
+// SendScreenData implements display.Backend
+func (c *TestClient) SendScreenData(eventName string, bitmapData []byte) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -176,8 +176,8 @@ func (c *TestClient) SendScreenData(eventName string, bitmapData []int) error {
 	return nil
 }
 
-// SendScreenDataMultiRes implements gamesense.API
-func (c *TestClient) SendScreenDataMultiRes(eventName string, resolutionData map[string][]int) error {
+// SendScreenDataMultiRes implements display.Backend
+func (c *TestClient) SendScreenDataMultiRes(eventName string, resolutionData map[string][]byte) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -205,7 +205,7 @@ func (c *TestClient) SendScreenDataMultiRes(eventName string, resolutionData map
 	return nil
 }
 
-// SendHeartbeat implements gamesense.API
+// SendHeartbeat implements display.Backend
 func (c *TestClient) SendHeartbeat() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -219,7 +219,7 @@ func (c *TestClient) SendHeartbeat() error {
 	return nil
 }
 
-// RemoveGame implements gamesense.API
+// RemoveGame implements display.Backend
 func (c *TestClient) RemoveGame() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -234,7 +234,7 @@ func (c *TestClient) RemoveGame() error {
 	return nil
 }
 
-// SupportsMultipleEvents implements gamesense.API
+// SupportsMultipleEvents implements display.Backend
 func (c *TestClient) SupportsMultipleEvents() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -243,8 +243,8 @@ func (c *TestClient) SupportsMultipleEvents() bool {
 	return c.supportsMultipleEvents
 }
 
-// SendMultipleScreenData implements gamesense.API
-func (c *TestClient) SendMultipleScreenData(eventName string, frames [][]int) error {
+// SendMultipleScreenData implements display.Backend
+func (c *TestClient) SendMultipleScreenData(eventName string, frames [][]byte) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -272,13 +272,13 @@ func (c *TestClient) SendMultipleScreenData(eventName string, frames [][]int) er
 }
 
 // captureFrame stores a frame in history (must be called with lock held)
-func (c *TestClient) captureFrame(eventName string, data []int) {
+func (c *TestClient) captureFrame(eventName string, data []byte) {
 	now := time.Now()
 	c.lastSendTime = now
 	c.frameCount++
 
 	frame := Frame{
-		Data:      make([]int, len(data)),
+		Data:      make([]byte, len(data)),
 		EventName: eventName,
 		Timestamp: now,
 		Index:     c.frameCount,
@@ -443,7 +443,7 @@ func (c *TestClient) LastFrame() *Frame {
 	}
 
 	frame := *c.lastFrame
-	frame.Data = make([]int, len(c.lastFrame.Data))
+	frame.Data = make([]byte, len(c.lastFrame.Data))
 	copy(frame.Data, c.lastFrame.Data)
 	return &frame
 }
@@ -456,7 +456,7 @@ func (c *TestClient) Frame(index int) *Frame {
 	for _, f := range c.frames {
 		if f.Index == index {
 			frame := f
-			frame.Data = make([]int, len(f.Data))
+			frame.Data = make([]byte, len(f.Data))
 			copy(frame.Data, f.Data)
 			return &frame
 		}

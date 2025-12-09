@@ -8,7 +8,7 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
-	"github.com/pozitronik/steelclock-go/internal/gamesense"
+	"github.com/pozitronik/steelclock-go/internal/display"
 )
 
 // Splash animation constants
@@ -31,13 +31,13 @@ const (
 
 // SplashRenderer handles animated splash screens
 type SplashRenderer struct {
-	client gamesense.API
+	client display.FrameSender
 	width  int
 	height int
 }
 
 // NewSplashRenderer creates a new splash renderer
-func NewSplashRenderer(client gamesense.API, width, height int) *SplashRenderer {
+func NewSplashRenderer(client display.FrameSender, width, height int) *SplashRenderer {
 	return &SplashRenderer{
 		client: client,
 		width:  width,

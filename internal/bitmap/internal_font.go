@@ -5,6 +5,7 @@ import (
 	"image/color"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
+	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
 // Internal font names - use these in config "font" field
@@ -42,7 +43,7 @@ func MeasureInternalText(text string, glyphSet *glyphs.GlyphSet) int {
 }
 
 // DrawAlignedInternalText draws text on an image with alignment and padding using internal fonts
-func DrawAlignedInternalText(img *image.Gray, text string, glyphSet *glyphs.GlyphSet, horizAlign, vertAlign string, padding int) {
+func DrawAlignedInternalText(img *image.Gray, text string, glyphSet *glyphs.GlyphSet, horizAlign config.HAlign, vertAlign config.VAlign, padding int) {
 	if glyphSet == nil {
 		glyphSet = glyphs.Font5x7
 	}
@@ -62,9 +63,9 @@ func DrawAlignedInternalText(img *image.Gray, text string, glyphSet *glyphs.Glyp
 	// Calculate X position
 	var x int
 	switch horizAlign {
-	case "left":
+	case config.AlignLeft:
 		x = padding
-	case "right":
+	case config.AlignRight:
 		x = padding + contentW - textWidth
 	default: // center
 		x = padding + (contentW-textWidth)/2
@@ -73,9 +74,9 @@ func DrawAlignedInternalText(img *image.Gray, text string, glyphSet *glyphs.Glyp
 	// Calculate Y position
 	var y int
 	switch vertAlign {
-	case "top":
+	case config.AlignTop:
 		y = padding
-	case "bottom":
+	case config.AlignBottom:
 		y = padding + contentH - textHeight
 	default: // center
 		y = padding + (contentH-textHeight)/2
@@ -86,7 +87,7 @@ func DrawAlignedInternalText(img *image.Gray, text string, glyphSet *glyphs.Glyp
 }
 
 // DrawInternalTextInRect draws text within a specific rectangle with alignment using internal fonts
-func DrawInternalTextInRect(img *image.Gray, text string, glyphSet *glyphs.GlyphSet, rectX, rectY, rectW, rectH int, horizAlign, vertAlign string, padding int) {
+func DrawInternalTextInRect(img *image.Gray, text string, glyphSet *glyphs.GlyphSet, rectX, rectY, rectW, rectH int, horizAlign config.HAlign, vertAlign config.VAlign, padding int) {
 	if glyphSet == nil {
 		glyphSet = glyphs.Font5x7
 	}
@@ -104,9 +105,9 @@ func DrawInternalTextInRect(img *image.Gray, text string, glyphSet *glyphs.Glyph
 	// Calculate X position
 	var x int
 	switch horizAlign {
-	case "left":
+	case config.AlignLeft:
 		x = contentX
-	case "right":
+	case config.AlignRight:
 		x = contentX + contentW - textWidth
 	default: // center
 		x = contentX + (contentW-textWidth)/2
@@ -115,9 +116,9 @@ func DrawInternalTextInRect(img *image.Gray, text string, glyphSet *glyphs.Glyph
 	// Calculate Y position
 	var y int
 	switch vertAlign {
-	case "top":
+	case config.AlignTop:
 		y = contentY
-	case "bottom":
+	case config.AlignBottom:
 		y = contentY + contentH - textHeight
 	default: // center
 		y = contentY + (contentH-textHeight)/2

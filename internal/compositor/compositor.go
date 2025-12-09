@@ -10,7 +10,7 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
-	"github.com/pozitronik/steelclock-go/internal/gamesense"
+	"github.com/pozitronik/steelclock-go/internal/display"
 	"github.com/pozitronik/steelclock-go/internal/layout"
 	"github.com/pozitronik/steelclock-go/internal/widget"
 )
@@ -34,22 +34,25 @@ type Resolution struct {
 
 // Compositor manages the rendering loop and API updates
 type Compositor struct {
-	client          gamesense.API
-	layoutManager   *layout.Manager
-	refreshRate     time.Duration
-	eventName       string
-	widgets         []widget.Widget
-	stopChan        chan struct{}
-	wg              sync.WaitGroup
-	batchingEnabled bool
-	batchSize       int
-	batchSupported  bool
-	frameBuffer     [][]int
-	bufferMu        sync.Mutex
-	resolutions     []Resolution // All resolutions to render (main + supported)
+	client        display.Client
+	layoutManager *layout.Manager
+	refreshRate   time.Duration
+	eventName     string
+	scheduler     *WidgetScheduler
+	stopChan      chan struct{}
+	wg            sync.WaitGroup
+
+	// Frame batching
+	batcher *FrameBatcher
+
+	// Multi-resolution support
+	resolutions []Resolution // All resolutions to render (main + supported)
 
 	// Pre-allocated buffers for ImageToBytes to reduce allocations in render loop
-	bitmapBuffers map[string][]int
+	bitmapBuffers map[string][]byte
+
+	// Frame deduplication - skip sending unchanged frames
+	deduplicator *FrameDeduplicator
 
 	// Backend failure handling
 	OnBackendFailure     func()     // Callback when backend fails (called once per failure)
@@ -59,7 +62,7 @@ type Compositor struct {
 }
 
 // NewCompositor creates a new compositor
-func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []widget.Widget, cfg *config.Config) *Compositor {
+func NewCompositor(client display.Client, layoutMgr *layout.Manager, widgets []widget.Widget, cfg *config.Config) *Compositor {
 	refreshRate := time.Duration(cfg.RefreshRateMs) * time.Millisecond
 
 	// Build list of resolutions (main display + supported resolutions)
@@ -71,25 +74,35 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 	}
 
 	// Pre-allocate bitmap buffers for each resolution
-	bitmapBuffers := make(map[string][]int)
+	bitmapBuffers := make(map[string][]byte)
 	for _, res := range resolutions {
 		bufferSize := (res.Width*res.Height + 7) / 8
 		key := fmt.Sprintf("image-data-%dx%d", res.Width, res.Height)
-		bitmapBuffers[key] = make([]int, bufferSize)
+		bitmapBuffers[key] = make([]byte, bufferSize)
 	}
 
+	// Frame deduplication: enabled by default, can be disabled via config
+	dedupEnabled := cfg.FrameDedupEnabled == nil || *cfg.FrameDedupEnabled
+	deduplicator := NewFrameDeduplicator(dedupEnabled)
+
+	// Frame batching: check if enabled and supported
+	batchingEnabled := cfg.EventBatchingEnabled && client.SupportsMultipleEvents()
+	if cfg.EventBatchingEnabled && !client.SupportsMultipleEvents() {
+		log.Println("Event batching disabled: not supported by client")
+	}
+	batcher := NewFrameBatcher(batchingEnabled, cfg.EventBatchSize, client, DefaultEventName)
+
 	comp := &Compositor{
-		client:          client,
-		layoutManager:   layoutMgr,
-		refreshRate:     refreshRate,
-		eventName:       DefaultEventName,
-		widgets:         widgets,
-		stopChan:        make(chan struct{}),
-		batchingEnabled: cfg.EventBatchingEnabled,
-		batchSize:       cfg.EventBatchSize,
-		frameBuffer:     make([][]int, 0, cfg.EventBatchSize),
-		resolutions:     resolutions,
-		bitmapBuffers:   bitmapBuffers,
+		client:        client,
+		layoutManager: layoutMgr,
+		refreshRate:   refreshRate,
+		eventName:     DefaultEventName,
+		scheduler:     NewWidgetScheduler(widgets),
+		stopChan:      make(chan struct{}),
+		batcher:       batcher,
+		resolutions:   resolutions,
+		bitmapBuffers: bitmapBuffers,
+		deduplicator:  deduplicator,
 	}
 
 	log.Printf("Rendering for %d resolution(s):", len(resolutions))
@@ -97,15 +110,12 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 		log.Printf("  - %dx%d", res.Width, res.Height)
 	}
 
-	// Check if batching is supported by API (only if enabled in config)
-	if comp.batchingEnabled {
-		comp.batchSupported = client.SupportsMultipleEvents()
-		if !comp.batchSupported {
-			log.Println("Event batching disabled: not supported by client")
-			comp.batchingEnabled = false
-		} else {
-			log.Printf("Event batching enabled with batch size: %d", comp.batchSize)
-		}
+	if comp.deduplicator.IsEnabled() {
+		log.Println("Frame deduplication enabled")
+	}
+
+	if comp.batcher.IsEnabled() {
+		log.Printf("Event batching enabled with batch size: %d", cfg.EventBatchSize)
 	}
 
 	return comp
@@ -115,11 +125,8 @@ func NewCompositor(client gamesense.API, layoutMgr *layout.Manager, widgets []wi
 func (c *Compositor) Start() error {
 	log.Println("Compositor starting...")
 
-	// Start widget update threads
-	for _, w := range c.widgets {
-		c.wg.Add(1)
-		go c.widgetUpdateLoop(w)
-	}
+	// Start widget update scheduler
+	c.scheduler.Start()
 
 	// Start rendering loop
 	c.wg.Add(1)
@@ -136,14 +143,17 @@ func (c *Compositor) Start() error {
 // Stop stops the compositor
 func (c *Compositor) Stop() {
 	log.Println("Compositor stopping...")
+
+	// Stop widget scheduler
+	c.scheduler.Stop()
+
+	// Stop render and heartbeat loops
 	close(c.stopChan)
 	c.wg.Wait()
 
 	// Flush any remaining buffered frames
-	if c.batchingEnabled {
-		if err := c.flushBatch(); err != nil {
-			log.Printf("Error flushing batch on stop: %v", err)
-		}
+	if err := c.batcher.Flush(); err != nil {
+		log.Printf("Error flushing batch on stop: %v", err)
 	}
 
 	log.Println("Compositor stopped")
@@ -170,31 +180,6 @@ func logPanic(context string) {
 			log.Printf("Failed to write to panic.log: %v", err)
 		}
 		log.Print(panicMsg)
-	}
-}
-
-// widgetUpdateLoop periodically updates a widget
-func (c *Compositor) widgetUpdateLoop(w widget.Widget) {
-	defer c.wg.Done()
-	defer logPanic(fmt.Sprintf("widgetUpdateLoop for %s", w.Name()))
-
-	ticker := time.NewTicker(w.GetUpdateInterval())
-	defer ticker.Stop()
-
-	// Initial update
-	if err := w.Update(); err != nil {
-		log.Printf("Widget %s update error: %v", w.Name(), err)
-	}
-
-	for {
-		select {
-		case <-c.stopChan:
-			return
-		case <-ticker.C:
-			if err := w.Update(); err != nil {
-				log.Printf("Widget %s update error: %v", w.Name(), err)
-			}
-		}
 	}
 }
 
@@ -227,7 +212,7 @@ func (c *Compositor) renderFrame() error {
 	}
 
 	// Render at all resolutions using pre-allocated buffers
-	resolutionData := make(map[string][]int)
+	resolutionData := make(map[string][]byte)
 	for _, res := range c.resolutions {
 		key := fmt.Sprintf("image-data-%dx%d", res.Width, res.Height)
 		buffer := c.bitmapBuffers[key]
@@ -238,46 +223,36 @@ func (c *Compositor) renderFrame() error {
 		resolutionData[key] = bitmapData
 	}
 
-	// If batching is enabled, buffer the frame (only main resolution for now)
-	if c.batchingEnabled {
-		mainKey := fmt.Sprintf("image-data-%dx%d", c.resolutions[0].Width, c.resolutions[0].Height)
-		c.bufferMu.Lock()
-		c.frameBuffer = append(c.frameBuffer, resolutionData[mainKey])
-		shouldFlush := len(c.frameBuffer) >= c.batchSize
-		c.bufferMu.Unlock()
+	// Frame deduplication: skip send if all resolutions are unchanged
+	// Note: dedup is disabled when batching is enabled (batching buffers frames intentionally)
+	shouldUpdateDedup := false
+	if !c.batcher.IsEnabled() && !c.deduplicator.HasChanged(resolutionData) {
+		// All frames unchanged, skip send
+		return nil
+	} else if !c.batcher.IsEnabled() {
+		// Mark that we need to update deduplicator after successful send
+		shouldUpdateDedup = true
+	}
 
-		// Flush if buffer is full
-		if shouldFlush {
-			return c.flushBatch()
-		}
+	// If batching is enabled, buffer the frame (only main resolution for now)
+	mainKey := fmt.Sprintf("image-data-%dx%d", c.resolutions[0].Width, c.resolutions[0].Height)
+	shouldSendDirectly, err := c.batcher.Add(resolutionData[mainKey])
+	if err != nil {
+		return err
+	}
+	if !shouldSendDirectly {
+		// Frame was buffered or batch was flushed
 		return nil
 	}
 
-	// Send immediately if batching disabled
+	// Send immediately (batching disabled)
 	if err := c.client.SendScreenDataMultiRes(c.eventName, resolutionData); err != nil {
 		return fmt.Errorf("send failed: %w", err)
 	}
 
-	return nil
-}
-
-// flushBatch sends all buffered frames in a single request
-func (c *Compositor) flushBatch() error {
-	c.bufferMu.Lock()
-	if len(c.frameBuffer) == 0 {
-		c.bufferMu.Unlock()
-		return nil
-	}
-
-	// Copy buffer to send
-	framesToSend := make([][]int, len(c.frameBuffer))
-	copy(framesToSend, c.frameBuffer)
-	c.frameBuffer = c.frameBuffer[:0] // Clear buffer
-	c.bufferMu.Unlock()
-
-	// Send batch
-	if err := c.client.SendMultipleScreenData(c.eventName, framesToSend); err != nil {
-		return fmt.Errorf("batch send failed: %w", err)
+	// Update deduplicator only after successful send
+	if shouldUpdateDedup {
+		c.deduplicator.Update(resolutionData)
 	}
 
 	return nil

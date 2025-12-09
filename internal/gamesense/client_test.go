@@ -140,9 +140,9 @@ func TestSendScreenData(t *testing.T) {
 	}
 
 	// Create valid 640-byte bitmap
-	bitmapData := make([]int, 640)
+	bitmapData := make([]byte, 640)
 	for i := range bitmapData {
-		bitmapData[i] = i % 256
+		bitmapData[i] = byte(i % 256)
 	}
 
 	err := client.SendScreenData("TEST_EVENT", bitmapData)
@@ -167,7 +167,7 @@ func TestSendScreenDataInvalidSize(t *testing.T) {
 	}
 
 	// Create invalid bitmap (wrong size)
-	bitmapData := make([]int, 100)
+	bitmapData := make([]byte, 100)
 
 	err := client.SendScreenData("TEST_EVENT", bitmapData)
 	if err == nil {
@@ -381,7 +381,7 @@ func TestSendScreenData_EdgeCases(t *testing.T) {
 				httpClient:      &http.Client{},
 			}
 
-			bitmapData := make([]int, tc.bitmapSize)
+			bitmapData := make([]byte, tc.bitmapSize)
 			err := client.SendScreenData("TEST_EVENT", bitmapData)
 
 			if tc.expectError && err == nil {
@@ -540,9 +540,9 @@ func TestPost_LargePayload(t *testing.T) {
 	}
 
 	// Send full-size valid bitmap data (640 bytes for 128x40 screen)
-	largeBitmap := make([]int, 640)
+	largeBitmap := make([]byte, 640)
 	for i := range largeBitmap {
-		largeBitmap[i] = i % 256
+		largeBitmap[i] = byte(i % 256)
 	}
 
 	err := client.SendScreenData("EVENT", largeBitmap)
@@ -655,9 +655,9 @@ func TestSendScreenDataMultiRes(t *testing.T) {
 		httpClient: &http.Client{},
 	}
 
-	resolutionData := map[string][]int{
-		"image-data-128x40": make([]int, 640),
-		"image-data-128x36": make([]int, 576),
+	resolutionData := map[string][]byte{
+		"image-data-128x40": make([]byte, 640),
+		"image-data-128x36": make([]byte, 576),
 	}
 
 	err := client.SendScreenDataMultiRes("TEST_EVENT", resolutionData)
@@ -691,7 +691,7 @@ func TestSendScreenDataMultiRes_Empty(t *testing.T) {
 		httpClient: &http.Client{},
 	}
 
-	err := client.SendScreenDataMultiRes("TEST_EVENT", map[string][]int{})
+	err := client.SendScreenDataMultiRes("TEST_EVENT", map[string][]byte{})
 	if err == nil {
 		t.Error("SendScreenDataMultiRes() with empty data should return error")
 	}
@@ -714,10 +714,10 @@ func TestSendMultipleScreenData(t *testing.T) {
 		httpClient: &http.Client{},
 	}
 
-	frames := [][]int{
-		make([]int, 640),
-		make([]int, 640),
-		make([]int, 640),
+	frames := [][]byte{
+		make([]byte, 640),
+		make([]byte, 640),
+		make([]byte, 640),
 	}
 
 	err := client.SendMultipleScreenData("TEST_EVENT", frames)
@@ -744,7 +744,7 @@ func TestSendMultipleScreenData_Empty(t *testing.T) {
 	}
 
 	// Empty frames should return nil (no-op)
-	err := client.SendMultipleScreenData("TEST_EVENT", [][]int{})
+	err := client.SendMultipleScreenData("TEST_EVENT", [][]byte{})
 	if err != nil {
 		t.Errorf("SendMultipleScreenData() with empty frames should not error, got: %v", err)
 	}
@@ -757,9 +757,9 @@ func TestSendMultipleScreenData_InvalidSize(t *testing.T) {
 		httpClient: &http.Client{},
 	}
 
-	frames := [][]int{
-		make([]int, 640),
-		make([]int, 100), // Invalid size
+	frames := [][]byte{
+		make([]byte, 640),
+		make([]byte, 100), // Invalid size
 	}
 
 	err := client.SendMultipleScreenData("TEST_EVENT", frames)
@@ -827,5 +827,105 @@ func TestRegisterGame_WithoutDeinitializeTimer(t *testing.T) {
 	// Verify deinitialize timer was NOT included when 0
 	if _, ok := receivedPayload["deinitialize_timer_length_ms"]; ok {
 		t.Error("RegisterGame() with timer = 0 should not include deinitialize_timer_length_ms")
+	}
+}
+
+// TestFindCorePropsPath_WithPROGRAMDATA tests the PROGRAMDATA env var path
+func TestFindCorePropsPath_WithPROGRAMDATA(t *testing.T) {
+	// Create temp directory structure
+	tmpDir := t.TempDir()
+	ssDir := filepath.Join(tmpDir, "SteelSeries", "SteelSeries Engine 3")
+	if err := os.MkdirAll(ssDir, 0755); err != nil {
+		t.Fatalf("Failed to create directory: %v", err)
+	}
+
+	corePropsPath := filepath.Join(ssDir, "coreProps.json")
+	if err := os.WriteFile(corePropsPath, []byte(`{"address": "localhost:12345"}`), 0644); err != nil {
+		t.Fatalf("Failed to write coreProps.json: %v", err)
+	}
+
+	// Save and restore PROGRAMDATA
+	oldProgramData := os.Getenv("PROGRAMDATA")
+	defer func() { _ = os.Setenv("PROGRAMDATA", oldProgramData) }()
+
+	_ = os.Setenv("PROGRAMDATA", tmpDir)
+
+	path, err := findCorePropsPath()
+	if err != nil {
+		t.Errorf("findCorePropsPath() error = %v", err)
+	}
+	if path != corePropsPath {
+		t.Errorf("findCorePropsPath() = %s, want %s", path, corePropsPath)
+	}
+}
+
+// TestFindCorePropsPath_NoPROGRAMDATA tests when PROGRAMDATA is empty
+func TestFindCorePropsPath_NoPROGRAMDATA(t *testing.T) {
+	// Save and restore PROGRAMDATA
+	oldProgramData := os.Getenv("PROGRAMDATA")
+	defer func() { _ = os.Setenv("PROGRAMDATA", oldProgramData) }()
+
+	// Save and restore defaultFallbackPath
+	oldFallbackPath := defaultFallbackPath
+	defer func() { defaultFallbackPath = oldFallbackPath }()
+
+	_ = os.Setenv("PROGRAMDATA", "")
+	defaultFallbackPath = "/nonexistent/fallback/path/coreProps.json"
+
+	// Should fail since neither PROGRAMDATA nor fallback path exist
+	_, err := findCorePropsPath()
+	if err == nil {
+		t.Error("findCorePropsPath() should error when no valid path found")
+	}
+}
+
+// TestFindCorePropsPath_PROGRAMDATANotFound tests when PROGRAMDATA exists but file doesn't
+func TestFindCorePropsPath_PROGRAMDATANotFound(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Save and restore PROGRAMDATA
+	oldProgramData := os.Getenv("PROGRAMDATA")
+	defer func() { _ = os.Setenv("PROGRAMDATA", oldProgramData) }()
+
+	// Save and restore defaultFallbackPath
+	oldFallbackPath := defaultFallbackPath
+	defer func() { defaultFallbackPath = oldFallbackPath }()
+
+	_ = os.Setenv("PROGRAMDATA", tmpDir)
+	defaultFallbackPath = "/nonexistent/fallback/path/coreProps.json"
+
+	// Directory exists but no coreProps.json
+	_, err := findCorePropsPath()
+	if err == nil {
+		t.Error("findCorePropsPath() should error when file not found")
+	}
+}
+
+// TestSupportsMultipleEvents_RequestCreationError tests error when creating request fails
+// This is difficult to trigger naturally, but we can test with invalid URL
+func TestSupportsMultipleEvents_InvalidURL(t *testing.T) {
+	client := &Client{
+		baseURL:    "://invalid-url", // Invalid URL scheme
+		gameName:   "TEST_GAME",
+		httpClient: &http.Client{},
+	}
+
+	// Should return false on request creation error
+	if client.SupportsMultipleEvents() {
+		t.Error("SupportsMultipleEvents() should return false on invalid URL")
+	}
+}
+
+// TestPost_InvalidURL tests post with invalid URL
+func TestPost_InvalidURL(t *testing.T) {
+	client := &Client{
+		baseURL:    "://invalid-url",
+		gameName:   "TEST_GAME",
+		httpClient: &http.Client{},
+	}
+
+	err := client.RegisterGame("Developer", 0)
+	if err == nil {
+		t.Error("RegisterGame() with invalid URL should return error")
 	}
 }

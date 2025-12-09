@@ -24,7 +24,7 @@ type FrameDiff struct {
 }
 
 // CompareFrames compares two frames and returns detailed diff information
-func CompareFrames(expected, actual []int) *FrameDiff {
+func CompareFrames(expected, actual []byte) *FrameDiff {
 	diff := &FrameDiff{
 		ExpectedSize: len(expected),
 		ActualSize:   len(actual),
@@ -44,12 +44,12 @@ func CompareFrames(expected, actual []int) *FrameDiff {
 	totalDiff := 0
 	for i := 0; i < len(expected); i++ {
 		if expected[i] != actual[i] {
-			byteDiff := countBitDifferences(expected[i], actual[i])
+			byteDiff := countBitDifferences(int(expected[i]), int(actual[i]))
 			diff.DifferentPixels += byteDiff
-			totalDiff += absDiff(expected[i], actual[i])
+			totalDiff += absDiff(int(expected[i]), int(actual[i]))
 
-			if absDiff(expected[i], actual[i]) > diff.MaxDifference {
-				diff.MaxDifference = absDiff(expected[i], actual[i])
+			if absDiff(int(expected[i]), int(actual[i])) > diff.MaxDifference {
+				diff.MaxDifference = absDiff(int(expected[i]), int(actual[i]))
 			}
 
 			if len(diff.DiffPositions) < 100 {
@@ -66,20 +66,20 @@ func CompareFrames(expected, actual []int) *FrameDiff {
 }
 
 // CompareFramesWithTolerance compares frames allowing some pixel differences
-func CompareFramesWithTolerance(expected, actual []int, tolerancePixels int) bool {
+func CompareFramesWithTolerance(expected, actual []byte, tolerancePixels int) bool {
 	diff := CompareFrames(expected, actual)
 	return diff.DifferentPixels <= tolerancePixels
 }
 
 // CompareFramesWithRatio compares frames allowing a ratio of differences
-func CompareFramesWithRatio(expected, actual []int, maxRatio float64) bool {
+func CompareFramesWithRatio(expected, actual []byte, maxRatio float64) bool {
 	diff := CompareFrames(expected, actual)
 	return diff.DifferenceRatio <= maxRatio
 }
 
 // CompareRegion compares a rectangular region of two frames.
 // Frames are 128x40 packed as 640 bytes (128/8 * 40 = 16 * 40)
-func CompareRegion(expected, actual []int, x, y, width, height int) *FrameDiff {
+func CompareRegion(expected, actual []byte, x, y, width, height int) *FrameDiff {
 	const frameWidth = 128
 	const frameHeight = 40
 	const bytesPerRow = frameWidth / 8 // 16 bytes per row
@@ -123,16 +123,16 @@ func CompareRegion(expected, actual []int, x, y, width, height int) *FrameDiff {
 }
 
 // CountSetPixels counts the number of white (set) pixels in a frame
-func CountSetPixels(frame []int) int {
+func CountSetPixels(frame []byte) int {
 	count := 0
 	for _, b := range frame {
-		count += countBits(b)
+		count += countBits(int(b))
 	}
 	return count
 }
 
 // IsBlankFrame returns true if the frame has no set pixels
-func IsBlankFrame(frame []int) bool {
+func IsBlankFrame(frame []byte) bool {
 	for _, b := range frame {
 		if b != 0 {
 			return false
@@ -142,7 +142,7 @@ func IsBlankFrame(frame []int) bool {
 }
 
 // IsFullFrame returns true if all pixels are set
-func IsFullFrame(frame []int) bool {
+func IsFullFrame(frame []byte) bool {
 	for _, b := range frame {
 		if b != 255 {
 			return false
@@ -152,7 +152,7 @@ func IsFullFrame(frame []int) bool {
 }
 
 // GetPixel returns the value of a single pixel (0 or 1)
-func GetPixel(frame []int, x, y int) int {
+func GetPixel(frame []byte, x, y int) int {
 	const bytesPerRow = 16 // 128 / 8
 
 	if len(frame) != 640 || x < 0 || x >= 128 || y < 0 || y >= 40 {
@@ -161,11 +161,11 @@ func GetPixel(frame []int, x, y int) int {
 
 	byteIdx := y*bytesPerRow + x/8
 	bitIdx := 7 - (x % 8)
-	return (frame[byteIdx] >> bitIdx) & 1
+	return int((frame[byteIdx] >> bitIdx) & 1)
 }
 
 // GetRow extracts a single row of pixels as 128 individual bits
-func GetRow(frame []int, row int) []int {
+func GetRow(frame []byte, row int) []int {
 	const bytesPerRow = 16
 
 	if len(frame) != 640 || row < 0 || row >= 40 {
@@ -178,7 +178,7 @@ func GetRow(frame []int, row int) []int {
 	for i := 0; i < bytesPerRow; i++ {
 		b := frame[startByte+i]
 		for bit := 0; bit < 8; bit++ {
-			pixels[i*8+bit] = (b >> (7 - bit)) & 1
+			pixels[i*8+bit] = int((b >> (7 - bit)) & 1)
 		}
 	}
 
@@ -186,7 +186,7 @@ func GetRow(frame []int, row int) []int {
 }
 
 // FrameToASCII converts a frame to ASCII art for visualization
-func FrameToASCII(frame []int) string {
+func FrameToASCII(frame []byte) string {
 	if len(frame) != 640 {
 		return fmt.Sprintf("<invalid frame size: %d>", len(frame))
 	}
@@ -213,7 +213,7 @@ func FrameToASCII(frame []int) string {
 
 // FrameDiffToASCII creates ASCII visualization showing differences
 // Expected pixels shown as '.', actual as '+', matching set as '#', matching unset as ' '
-func FrameDiffToASCII(expected, actual []int) string {
+func FrameDiffToASCII(expected, actual []byte) string {
 	if len(expected) != 640 || len(actual) != 640 {
 		return "<size mismatch>"
 	}
@@ -248,7 +248,7 @@ func FrameDiffToASCII(expected, actual []int) string {
 }
 
 // SaveFrameAsPNG saves a frame as a PNG file for debugging
-func SaveFrameAsPNG(frame []int, filename string) error {
+func SaveFrameAsPNG(frame []byte, filename string) error {
 	if len(frame) != 640 {
 		return fmt.Errorf("invalid frame size: %d", len(frame))
 	}
@@ -279,7 +279,7 @@ func SaveFrameAsPNG(frame []int, filename string) error {
 
 // SaveDiffAsPNG saves a diff visualization as PNG
 // Red = expected only, Green = actual only, White = both set, Black = both unset
-func SaveDiffAsPNG(expected, actual []int, filename string) error {
+func SaveDiffAsPNG(expected, actual []byte, filename string) error {
 	if len(expected) != 640 || len(actual) != 640 {
 		return fmt.Errorf("invalid frame sizes")
 	}

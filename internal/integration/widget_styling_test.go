@@ -8,6 +8,9 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/clock"
+	"github.com/pozitronik/steelclock-go/internal/widget/cpu"
+	"github.com/pozitronik/steelclock-go/internal/widget/memory"
 )
 
 // =============================================================================
@@ -26,7 +29,7 @@ func TestStyle_BackgroundBlack(t *testing.T) {
 		Style:    &config.StyleConfig{Background: 0},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -61,7 +64,7 @@ func TestStyle_BackgroundWhite(t *testing.T) {
 		Style:    &config.StyleConfig{Background: 255},
 	}
 
-	clockWidget, _ := widget.NewClockWidget(widgetCfg)
+	clockWidget, _ := clock.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{clockWidget}, cfg)
@@ -107,8 +110,8 @@ func TestStyle_BackgroundTransparent(t *testing.T) {
 		Style:    &config.StyleConfig{Background: -1}, // Transparent
 	}
 
-	bgWidget, _ := widget.NewMemoryWidget(bgCfg)
-	fgWidget, _ := widget.NewClockWidget(fgCfg)
+	bgWidget, _ := memory.New(bgCfg)
+	fgWidget, _ := clock.New(fgCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{bgWidget, fgWidget}, cfg)
@@ -137,7 +140,7 @@ func TestStyle_BackgroundGray(t *testing.T) {
 		Style:    &config.StyleConfig{Background: 128},
 	}
 
-	clockWidget, _ := widget.NewClockWidget(widgetCfg)
+	clockWidget, _ := clock.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{clockWidget}, cfg)
@@ -178,7 +181,7 @@ func TestStyle_BorderEnabled(t *testing.T) {
 		},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -214,7 +217,7 @@ func TestStyle_BorderDisabled(t *testing.T) {
 		},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -247,7 +250,7 @@ func TestStyle_BorderComparison(t *testing.T) {
 		},
 	}
 
-	withBorderWidget, _ := widget.NewMemoryWidget(withBorderCfg)
+	withBorderWidget, _ := memory.New(withBorderCfg)
 	cfg := createTestConfig()
 	client1, comp1 := createTestSetup([]widget.Widget{withBorderWidget}, cfg)
 
@@ -274,7 +277,7 @@ func TestStyle_BorderComparison(t *testing.T) {
 		},
 	}
 
-	withoutBorderWidget, _ := widget.NewMemoryWidget(withoutBorderCfg)
+	withoutBorderWidget, _ := memory.New(withoutBorderCfg)
 	client2, comp2 := createTestSetup([]widget.Widget{withoutBorderWidget}, cfg)
 
 	_ = comp2.Start()
@@ -316,7 +319,7 @@ func TestStyle_BarFillColor(t *testing.T) {
 		},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -353,7 +356,7 @@ func TestStyle_GraphColors(t *testing.T) {
 		},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -391,7 +394,7 @@ func TestStyle_GaugeColors(t *testing.T) {
 		},
 	}
 
-	cpuWidget, _ := widget.NewCPUWidget(widgetCfg)
+	cpuWidget, _ := cpu.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{cpuWidget}, cfg)
@@ -417,18 +420,18 @@ func TestStyle_GaugeColors(t *testing.T) {
 func TestStyle_TextAlignment(t *testing.T) {
 	alignments := []struct {
 		name string
-		h    string
-		v    string
+		h    config.HAlign
+		v    config.VAlign
 	}{
-		{"TopLeft", "left", "top"},
-		{"TopCenter", "center", "top"},
-		{"TopRight", "right", "top"},
-		{"CenterLeft", "left", "center"},
-		{"Center", "center", "center"},
-		{"CenterRight", "right", "center"},
-		{"BottomLeft", "left", "bottom"},
-		{"BottomCenter", "center", "bottom"},
-		{"BottomRight", "right", "bottom"},
+		{"TopLeft", config.AlignLeft, config.AlignTop},
+		{"TopCenter", config.AlignCenter, config.AlignTop},
+		{"TopRight", config.AlignRight, config.AlignTop},
+		{"CenterLeft", config.AlignLeft, config.AlignMiddle},
+		{"Center", config.AlignCenter, config.AlignMiddle},
+		{"CenterRight", config.AlignRight, config.AlignMiddle},
+		{"BottomLeft", config.AlignLeft, config.AlignBottom},
+		{"BottomCenter", config.AlignCenter, config.AlignBottom},
+		{"BottomRight", config.AlignRight, config.AlignBottom},
 	}
 
 	for _, a := range alignments {
@@ -447,7 +450,7 @@ func TestStyle_TextAlignment(t *testing.T) {
 				},
 			}
 
-			clockWidget, _ := widget.NewClockWidget(widgetCfg)
+			clockWidget, _ := clock.New(widgetCfg)
 
 			cfg := createTestConfig()
 			client, comp := createTestSetup([]widget.Widget{clockWidget}, cfg)
@@ -485,7 +488,7 @@ func TestStyle_DisplayBackgroundBlack(t *testing.T) {
 		Text:     &config.TextConfig{Format: "HI"},
 	}
 
-	clockWidget, _ := widget.NewClockWidget(widgetCfg)
+	clockWidget, _ := clock.New(widgetCfg)
 
 	cfg := &config.Config{
 		RefreshRateMs: 50,
@@ -526,7 +529,7 @@ func TestStyle_DisplayBackgroundWhite(t *testing.T) {
 		Text:     &config.TextConfig{Format: "HI"},
 	}
 
-	clockWidget, _ := widget.NewClockWidget(widgetCfg)
+	clockWidget, _ := clock.New(widgetCfg)
 
 	cfg := &config.Config{
 		RefreshRateMs: 50,
@@ -583,7 +586,7 @@ func TestStyle_ComplexStyling(t *testing.T) {
 		},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -643,10 +646,10 @@ func TestStyle_MultipleStyledWidgets(t *testing.T) {
 		Style:    &config.StyleConfig{Background: -1},
 	}
 
-	w1, _ := widget.NewClockWidget(cfg1)
-	w2, _ := widget.NewClockWidget(cfg2)
-	w3, _ := widget.NewClockWidget(cfg3)
-	w4, _ := widget.NewClockWidget(cfg4)
+	w1, _ := clock.New(cfg1)
+	w2, _ := clock.New(cfg2)
+	w3, _ := clock.New(cfg3)
+	w4, _ := clock.New(cfg4)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{w1, w2, w3, w4}, cfg)
@@ -661,7 +664,7 @@ func TestStyle_MultipleStyledWidgets(t *testing.T) {
 	}
 
 	// Check each quadrant
-	blank := make([]int, 640)
+	blank := make([]byte, 640)
 	quadrants := []struct {
 		name string
 		x, y int

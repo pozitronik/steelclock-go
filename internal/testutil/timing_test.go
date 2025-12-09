@@ -13,7 +13,7 @@ func TestCalculateTimingStats_NotEnoughFrames(t *testing.T) {
 		t.Errorf("Expected 0 frames, got %d", stats.FrameCount)
 	}
 
-	_ = client.SendScreenData("EVENT", make([]int, 640))
+	_ = client.SendScreenData("EVENT", make([]byte, 640))
 	stats = client.CalculateTimingStats()
 	if stats.FrameCount != 1 {
 		t.Errorf("Expected 1 frame, got %d", stats.FrameCount)
@@ -28,7 +28,7 @@ func TestCalculateTimingStats_MultipleFrames(t *testing.T) {
 
 	// Send 5 frames with ~10ms intervals
 	for i := 0; i < 5; i++ {
-		_ = client.SendScreenData("EVENT", make([]int, 640))
+		_ = client.SendScreenData("EVENT", make([]byte, 640))
 		time.Sleep(10 * time.Millisecond)
 	}
 
@@ -57,7 +57,7 @@ func TestVerifyFrameRate(t *testing.T) {
 
 	// Send frames at roughly 100ms intervals
 	for i := 0; i < 5; i++ {
-		_ = client.SendScreenData("EVENT", make([]int, 640))
+		_ = client.SendScreenData("EVENT", make([]byte, 640))
 		if i < 4 {
 			time.Sleep(100 * time.Millisecond)
 		}
@@ -96,7 +96,7 @@ func TestVerifyMinimumFrames(t *testing.T) {
 
 	// Add some frames
 	for i := 0; i < 5; i++ {
-		_ = client.SendScreenData("EVENT", make([]int, 640))
+		_ = client.SendScreenData("EVENT", make([]byte, 640))
 	}
 
 	err = client.VerifyMinimumFrames(5)
@@ -119,7 +119,7 @@ func TestVerifyFrameCountInRange(t *testing.T) {
 	client := NewTestClient()
 
 	for i := 0; i < 5; i++ {
-		_ = client.SendScreenData("EVENT", make([]int, 640))
+		_ = client.SendScreenData("EVENT", make([]byte, 640))
 	}
 
 	err := client.VerifyFrameCountInRange(3, 10)
@@ -150,7 +150,7 @@ func TestWaitForFrames(t *testing.T) {
 	go func() {
 		for i := 0; i < 5; i++ {
 			time.Sleep(10 * time.Millisecond)
-			_ = client.SendScreenData("EVENT", make([]int, 640))
+			_ = client.SendScreenData("EVENT", make([]byte, 640))
 		}
 	}()
 
@@ -176,8 +176,8 @@ func TestWaitForFrameMatching(t *testing.T) {
 	go func() {
 		for i := 0; i < 10; i++ {
 			time.Sleep(10 * time.Millisecond)
-			frame := make([]int, 640)
-			frame[0] = i
+			frame := make([]byte, 640)
+			frame[0] = byte(i)
 			_ = client.SendScreenData("EVENT", frame)
 		}
 	}()
@@ -205,7 +205,7 @@ func TestWaitForFrameMatching_Timeout(t *testing.T) {
 	go func() {
 		for i := 0; i < 5; i++ {
 			time.Sleep(10 * time.Millisecond)
-			_ = client.SendScreenData("EVENT", make([]int, 640))
+			_ = client.SendScreenData("EVENT", make([]byte, 640))
 		}
 	}()
 
@@ -228,9 +228,9 @@ func TestWaitForNonBlankFrame(t *testing.T) {
 	// Send blank frame, then non-blank
 	go func() {
 		time.Sleep(10 * time.Millisecond)
-		_ = client.SendScreenData("EVENT", make([]int, 640)) // blank
+		_ = client.SendScreenData("EVENT", make([]byte, 640)) // blank
 		time.Sleep(10 * time.Millisecond)
-		frame := make([]int, 640)
+		frame := make([]byte, 640)
 		frame[0] = 0xFF // non-blank
 		_ = client.SendScreenData("EVENT", frame)
 	}()
@@ -258,5 +258,73 @@ func TestTimingStats_String(t *testing.T) {
 	str := stats.String()
 	if len(str) == 0 {
 		t.Error("String() should return non-empty string")
+	}
+}
+
+func TestSqrt_EdgeCases(t *testing.T) {
+	// Test sqrt with negative and zero values
+	// sqrt is an internal function, but we can test it through CalculateTimingStats
+	// when standard deviation is calculated
+
+	// Create a client and send frames with zero variance (identical intervals)
+	// This will exercise the sqrt function with value close to or equal to zero
+	client := NewTestClient()
+
+	// We need enough frames to calculate std dev
+	for i := 0; i < 10; i++ {
+		_ = client.SendScreenData("EVENT", make([]byte, 640))
+	}
+
+	// This calculates timing stats including sqrt
+	stats := client.CalculateTimingStats()
+
+	// Just verify it doesn't panic and returns valid stats
+	if stats.StdDev < 0 {
+		t.Error("StdDev should not be negative")
+	}
+
+	// Test with exactly 0 frames to ensure sqrt handles zero
+	client2 := NewTestClient()
+	stats2 := client2.CalculateTimingStats()
+	if stats2.StdDev != 0 {
+		t.Error("StdDev should be 0 with no frames")
+	}
+}
+
+func TestSqrt_Direct(t *testing.T) {
+	// Direct test of sqrt function to cover all branches
+
+	// Test zero
+	result := sqrt(0)
+	if result != 0 {
+		t.Errorf("sqrt(0) should be 0, got %f", result)
+	}
+
+	// Test negative value
+	result = sqrt(-1)
+	if result != 0 {
+		t.Errorf("sqrt(-1) should be 0, got %f", result)
+	}
+
+	// Test very negative value
+	result = sqrt(-100)
+	if result != 0 {
+		t.Errorf("sqrt(-100) should be 0, got %f", result)
+	}
+
+	// Test positive values for correctness
+	result = sqrt(4)
+	if result < 1.99 || result > 2.01 {
+		t.Errorf("sqrt(4) should be ~2, got %f", result)
+	}
+
+	result = sqrt(9)
+	if result < 2.99 || result > 3.01 {
+		t.Errorf("sqrt(9) should be ~3, got %f", result)
+	}
+
+	result = sqrt(2)
+	if result < 1.41 || result > 1.42 {
+		t.Errorf("sqrt(2) should be ~1.414, got %f", result)
 	}
 }
