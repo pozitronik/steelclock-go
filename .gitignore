@@ -44,3 +44,4 @@ Thumbs.db
 /internal/widget/doom1.wad
 *.ttf
 *.wad
+*.session
