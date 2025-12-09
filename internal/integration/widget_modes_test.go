@@ -9,8 +9,11 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/clock"
 	"github.com/pozitronik/steelclock-go/internal/widget/cpu"
+	"github.com/pozitronik/steelclock-go/internal/widget/disk"
 	"github.com/pozitronik/steelclock-go/internal/widget/memory"
+	"github.com/pozitronik/steelclock-go/internal/widget/network"
 )
 
 // =============================================================================
@@ -43,7 +46,7 @@ func TestClockWidget_TextMode(t *testing.T) {
 				},
 			}
 
-			clockWidget, err := widget.NewClockWidget(widgetCfg)
+			clockWidget, err := clock.New(widgetCfg)
 			if err != nil {
 				t.Fatalf("Failed to create clock widget: %v", err)
 			}
@@ -101,7 +104,7 @@ func TestClockWidget_AnalogMode(t *testing.T) {
 				},
 			}
 
-			clockWidget, err := widget.NewClockWidget(widgetCfg)
+			clockWidget, err := clock.New(widgetCfg)
 			if err != nil {
 				t.Fatalf("Failed to create clock widget: %v", err)
 			}
@@ -439,7 +442,7 @@ func TestNetworkWidget_GraphMode(t *testing.T) {
 		},
 	}
 
-	netWidget, err := widget.NewNetworkWidget(widgetCfg)
+	netWidget, err := network.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create network widget: %v", err)
 	}
@@ -475,7 +478,7 @@ func TestNetworkWidget_GaugeMode(t *testing.T) {
 		},
 	}
 
-	netWidget, err := widget.NewNetworkWidget(widgetCfg)
+	netWidget, err := network.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create network widget: %v", err)
 	}
@@ -696,7 +699,7 @@ func TestDiskWidget_BarMode(t *testing.T) {
 		},
 	}
 
-	diskWidget, err := widget.NewDiskWidget(widgetCfg)
+	diskWidget, err := disk.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create disk widget: %v", err)
 	}
@@ -732,7 +735,7 @@ func TestDiskWidget_TextMode(t *testing.T) {
 		},
 	}
 
-	diskWidget, err := widget.NewDiskWidget(widgetCfg)
+	diskWidget, err := disk.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create disk widget: %v", err)
 	}

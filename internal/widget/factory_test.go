@@ -15,21 +15,6 @@ func TestCreateWidget_AllTypes(t *testing.T) {
 		wantErr    bool
 	}{
 		{
-			name:       "create clock widget",
-			widgetType: "clock",
-			wantErr:    false,
-		},
-		{
-			name:       "create network widget",
-			widgetType: "network",
-			wantErr:    false,
-		},
-		{
-			name:       "create disk widget",
-			widgetType: "disk",
-			wantErr:    false,
-		},
-		{
 			name:       "create keyboard widget",
 			widgetType: "keyboard",
 			wantErr:    false,
@@ -40,8 +25,8 @@ func TestCreateWidget_AllTypes(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name:       "create matrix widget",
-			widgetType: "matrix",
+			name:       "create winamp widget",
+			widgetType: "winamp",
 			wantErr:    false,
 		},
 	}
@@ -87,9 +72,9 @@ func TestCreateWidget_InvalidType(t *testing.T) {
 // TestCreateWidgets_MultipleWidgets tests creating multiple widgets from configs
 func TestCreateWidgets_MultipleWidgets(t *testing.T) {
 	configs := []config.WidgetConfig{
-		createDefaultConfig("clock"),
-		createDefaultConfig("battery"),
-		createDefaultConfig("cpu"),
+		createDefaultConfig("keyboard"),
+		createDefaultConfig("keyboard_layout"),
+		createDefaultConfig("winamp"),
 	}
 
 	widgets, err := CreateWidgets(configs)
@@ -117,16 +102,16 @@ func TestCreateWidgets_Empty(t *testing.T) {
 // TestCreateWidgets_DisabledWidget tests that disabled widgets are skipped
 func TestCreateWidgets_DisabledWidget(t *testing.T) {
 	configs := []config.WidgetConfig{
-		createDefaultConfig("clock"),
+		createDefaultConfig("keyboard"),
 		{
-			Type:    "battery",
+			Type:    "keyboard_layout",
 			ID:      "disabled_widget",
 			Enabled: config.BoolPtr(false), // This widget is disabled
 			Position: config.PositionConfig{
 				X: 0, Y: 0, W: 128, H: 40,
 			},
 		},
-		createDefaultConfig("cpu"),
+		createDefaultConfig("winamp"),
 	}
 
 	widgets, err := CreateWidgets(configs)
@@ -143,7 +128,7 @@ func TestCreateWidgets_DisabledWidget(t *testing.T) {
 // TestCreateWidgets_PartialFailure tests graceful handling when some widgets fail
 func TestCreateWidgets_PartialFailure(t *testing.T) {
 	configs := []config.WidgetConfig{
-		createDefaultConfig("clock"),
+		createDefaultConfig("keyboard"),
 		{
 			Type:    "invalid_type",
 			ID:      "bad_widget",
@@ -152,7 +137,7 @@ func TestCreateWidgets_PartialFailure(t *testing.T) {
 				X: 0, Y: 0, W: 128, H: 40,
 			},
 		},
-		createDefaultConfig("disk"),
+		createDefaultConfig("winamp"),
 	}
 
 	widgets, err := CreateWidgets(configs)
@@ -162,7 +147,7 @@ func TestCreateWidgets_PartialFailure(t *testing.T) {
 		t.Errorf("CreateWidgets() should not error when some widgets succeed, got: %v", err)
 	}
 
-	// Should create 3 widgets (clock, disk, and error proxy for the failed one)
+	// Should create 3 widgets (clock, matrix, and error proxy for the failed one)
 	if len(widgets) != 3 {
 		t.Errorf("CreateWidgets() returned %d widgets, want 3 (2 good + 1 error proxy)", len(widgets))
 	}
@@ -264,8 +249,6 @@ func createDefaultConfig(widgetType string) config.WidgetConfig {
 
 	// Type-specific configurations
 	switch widgetType {
-	case "clock":
-		cfg.Text.Format = "%H:%M:%S"
 	case "network":
 		iface := "eth0"
 		cfg.Interface = &iface
@@ -281,7 +264,7 @@ func createDefaultConfig(widgetType string) config.WidgetConfig {
 // TestCreateWidget_Disabled tests that explicitly disabled widgets return error
 func TestCreateWidget_Disabled(t *testing.T) {
 	cfg := config.WidgetConfig{
-		Type:    "clock",
+		Type:    "winamp",
 		ID:      "test_disabled",
 		Enabled: config.BoolPtr(false),
 		Position: config.PositionConfig{
@@ -293,10 +276,6 @@ func TestCreateWidget_Disabled(t *testing.T) {
 		Style: &config.StyleConfig{
 			Background: 0,
 			Border:     -1,
-		},
-		Text: &config.TextConfig{
-			Format: "15:04",
-			Size:   12,
 		},
 	}
 
@@ -314,7 +293,7 @@ func TestCreateWidget_Disabled(t *testing.T) {
 // TestCreateWidget_EnabledByDefault tests that widgets are enabled by default when field is omitted
 func TestCreateWidget_EnabledByDefault(t *testing.T) {
 	cfg := config.WidgetConfig{
-		Type: "clock",
+		Type: "winamp",
 		ID:   "test_default_enabled",
 		// Enabled field not set - should default to true
 		Position: config.PositionConfig{
@@ -326,10 +305,6 @@ func TestCreateWidget_EnabledByDefault(t *testing.T) {
 		Style: &config.StyleConfig{
 			Background: 0,
 			Border:     -1,
-		},
-		Text: &config.TextConfig{
-			Format: "15:04",
-			Size:   12,
 		},
 	}
 
@@ -347,7 +322,7 @@ func TestCreateWidget_EnabledByDefault(t *testing.T) {
 // TestCreateWidget_ExplicitlyEnabled tests that explicitly enabled widgets work
 func TestCreateWidget_ExplicitlyEnabled(t *testing.T) {
 	cfg := config.WidgetConfig{
-		Type:    "clock",
+		Type:    "winamp",
 		ID:      "test_explicitly_enabled",
 		Enabled: config.BoolPtr(true),
 		Position: config.PositionConfig{
@@ -359,10 +334,6 @@ func TestCreateWidget_ExplicitlyEnabled(t *testing.T) {
 		Style: &config.StyleConfig{
 			Background: 0,
 			Border:     -1,
-		},
-		Text: &config.TextConfig{
-			Format: "15:04",
-			Size:   12,
 		},
 	}
 
@@ -380,25 +351,25 @@ func TestCreateWidget_ExplicitlyEnabled(t *testing.T) {
 // TestCreateWidgets_MixedEnabledDisabled tests mix of enabled and disabled widgets
 func TestCreateWidgets_MixedEnabledDisabled(t *testing.T) {
 	configs := []config.WidgetConfig{
-		createDefaultConfig("clock"),
+		createDefaultConfig("keyboard"),
 		{
-			Type:    "battery",
+			Type:    "keyboard_layout",
 			ID:      "disabled1",
 			Enabled: config.BoolPtr(false),
 			Position: config.PositionConfig{
 				X: 0, Y: 0, W: 128, H: 40,
 			},
 		},
-		createDefaultConfig("cpu"),
+		createDefaultConfig("winamp"),
 		{
-			Type:    "network",
+			Type:    "telegram",
 			ID:      "disabled2",
 			Enabled: config.BoolPtr(false),
 			Position: config.PositionConfig{
 				X: 0, Y: 0, W: 128, H: 40,
 			},
 		},
-		createDefaultConfig("disk"),
+		createDefaultConfig("volume"),
 	}
 
 	widgets, err := CreateWidgets(configs)
@@ -406,7 +377,7 @@ func TestCreateWidgets_MixedEnabledDisabled(t *testing.T) {
 		t.Fatalf("CreateWidgets() error = %v", err)
 	}
 
-	// Should only create 3 widgets (clock, cpu, disk)
+	// Should only create 3 widgets (keyboard, winamp, volume)
 	if len(widgets) != 3 {
 		t.Errorf("CreateWidgets() returned %d widgets, want 3", len(widgets))
 	}
@@ -416,7 +387,7 @@ func TestCreateWidgets_MixedEnabledDisabled(t *testing.T) {
 func TestCreateWidgets_AllDisabled(t *testing.T) {
 	configs := []config.WidgetConfig{
 		{
-			Type:    "clock",
+			Type:    "winamp",
 			ID:      "disabled1",
 			Enabled: config.BoolPtr(false),
 			Position: config.PositionConfig{
@@ -424,7 +395,7 @@ func TestCreateWidgets_AllDisabled(t *testing.T) {
 			},
 		},
 		{
-			Type:    "battery",
+			Type:    "keyboard",
 			ID:      "disabled2",
 			Enabled: config.BoolPtr(false),
 			Position: config.PositionConfig{
@@ -471,15 +442,15 @@ func TestCreateWidget_ErrorMessage(t *testing.T) {
 		if !strings.Contains(errMsg, "valid:") {
 			t.Errorf("Error message should contain list of valid types, got %q", errMsg)
 		}
-		if !strings.Contains(errMsg, "matrix") {
-			t.Errorf("Error message should list 'matrix' as valid type, got %q", errMsg)
+		if !strings.Contains(errMsg, "winamp") {
+			t.Errorf("Error message should list 'winamp' as valid type, got %q", errMsg)
 		}
 	})
 
 	t.Run("disabled widget error message", func(t *testing.T) {
 		cfg := config.WidgetConfig{
-			Type:    "clock",
-			ID:      "my_clock",
+			Type:    "winamp",
+			ID:      "my_winamp",
 			Enabled: config.BoolPtr(false),
 			Position: config.PositionConfig{
 				X: 0, Y: 0, W: 128, H: 40,
@@ -491,7 +462,7 @@ func TestCreateWidget_ErrorMessage(t *testing.T) {
 			t.Fatal("CreateWidget() should return error for disabled widget")
 		}
 
-		expectedMsg := "widget my_clock is disabled"
+		expectedMsg := "widget my_winamp is disabled"
 		if err.Error() != expectedMsg {
 			t.Errorf("Error message = %q, want %q", err.Error(), expectedMsg)
 		}
@@ -625,8 +596,8 @@ func TestRegisteredTypes(t *testing.T) {
 		}
 	}
 
-	// Should contain known types (note: memory and cpu are in subpackages, not registered here)
-	knownTypes := []string{"clock", "matrix", "battery", "network"}
+	// Should contain known types (note: memory, cpu, disk, network, battery, clock, matrix, hyperspace, game_of_life, starwars_intro, doom are in subpackages, not registered here)
+	knownTypes := []string{"keyboard", "winamp", "telegram"}
 	for _, known := range knownTypes {
 		found := false
 		for _, t := range types {
@@ -650,8 +621,8 @@ func TestRegisteredTypesList(t *testing.T) {
 		t.Error("RegisteredTypesList should be comma-separated")
 	}
 
-	// Should contain known types
-	if !strings.Contains(list, "clock") {
-		t.Error("RegisteredTypesList should contain 'clock'")
+	// Should contain known types (note: clock, matrix, hyperspace, game_of_life, starwars_intro, doom are now in subpackages)
+	if !strings.Contains(list, "winamp") {
+		t.Error("RegisteredTypesList should contain 'winamp'")
 	}
 }

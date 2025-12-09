@@ -11,7 +11,9 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/layout"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/clock"
 	"github.com/pozitronik/steelclock-go/internal/widget/cpu"
+	"github.com/pozitronik/steelclock-go/internal/widget/disk"
 	"github.com/pozitronik/steelclock-go/internal/widget/memory"
 )
 
@@ -58,7 +60,7 @@ func TestClockWidget_Rendering(t *testing.T) {
 		},
 	}
 
-	clockWidget, err := widget.NewClockWidget(widgetCfg)
+	clockWidget, err := clock.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create clock widget: %v", err)
 	}
@@ -105,7 +107,7 @@ func TestClockWidget_ConsistentRendering(t *testing.T) {
 		},
 	}
 
-	clockWidget, err := widget.NewClockWidget(widgetCfg)
+	clockWidget, err := clock.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create clock widget: %v", err)
 	}
@@ -277,7 +279,7 @@ func TestMultipleWidgets_Composition(t *testing.T) {
 		},
 	}
 
-	clockWidget, err := widget.NewClockWidget(clockCfg)
+	clockWidget, err := clock.New(clockCfg)
 	if err != nil {
 		t.Fatalf("Failed to create clock widget: %v", err)
 	}
@@ -341,8 +343,8 @@ func TestWidgetZOrder(t *testing.T) {
 		},
 	}
 
-	bgWidget, _ := widget.NewClockWidget(bgCfg)
-	fgWidget, _ := widget.NewClockWidget(fgCfg)
+	bgWidget, _ := clock.New(bgCfg)
+	fgWidget, _ := clock.New(fgCfg)
 
 	cfg := createTestConfig()
 
@@ -382,7 +384,7 @@ func TestDiskWidget_Rendering(t *testing.T) {
 		},
 	}
 
-	diskWidget, err := widget.NewDiskWidget(widgetCfg)
+	diskWidget, err := disk.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create disk widget: %v", err)
 	}

@@ -8,6 +8,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/clock"
 	"github.com/pozitronik/steelclock-go/internal/widget/memory"
 )
 
@@ -43,7 +44,7 @@ func TestLayout_AbsolutePositioning(t *testing.T) {
 				},
 			}
 
-			clockWidget, err := widget.NewClockWidget(widgetCfg)
+			clockWidget, err := clock.New(widgetCfg)
 			if err != nil {
 				t.Fatalf("Failed to create widget: %v", err)
 			}
@@ -93,7 +94,7 @@ func TestLayout_CornerPositions(t *testing.T) {
 			Position: config.PositionConfig{X: c.x, Y: c.y, W: 16, H: 8},
 			Text:     &config.TextConfig{Format: "X"},
 		}
-		w, err := widget.NewClockWidget(widgetCfg)
+		w, err := clock.New(widgetCfg)
 		if err != nil {
 			t.Fatalf("Failed to create widget: %v", err)
 		}
@@ -160,7 +161,7 @@ func TestLayout_ZOrderBasic(t *testing.T) {
 	}
 
 	bgWidget, _ := memory.New(bgCfg)
-	fgWidget, _ := widget.NewClockWidget(fgCfg)
+	fgWidget, _ := clock.New(fgCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{bgWidget, fgWidget}, cfg)
@@ -201,8 +202,8 @@ func TestLayout_ZOrderReverse(t *testing.T) {
 		Text:     &config.TextConfig{Format: "BG"},
 	}
 
-	fgWidget, _ := widget.NewClockWidget(fgCfg)
-	bgWidget, _ := widget.NewClockWidget(bgCfg)
+	fgWidget, _ := clock.New(fgCfg)
+	bgWidget, _ := clock.New(bgCfg)
 
 	cfg := createTestConfig()
 	// Add fg first, bg second - layout manager should sort by z
@@ -252,8 +253,8 @@ func TestLayout_MultipleZLevels(t *testing.T) {
 	}
 
 	bottomWidget, _ := memory.New(bottomCfg)
-	middleWidget, _ := widget.NewClockWidget(middleCfg)
-	topWidget, _ := widget.NewClockWidget(topCfg)
+	middleWidget, _ := clock.New(middleCfg)
+	topWidget, _ := clock.New(topCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{bottomWidget, middleWidget, topWidget}, cfg)
@@ -302,7 +303,7 @@ func TestLayout_TransparentBackground(t *testing.T) {
 	}
 
 	bgWidget, _ := memory.New(bgCfg)
-	fgWidget, _ := widget.NewClockWidget(fgCfg)
+	fgWidget, _ := clock.New(fgCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{bgWidget, fgWidget}, cfg)
@@ -344,7 +345,7 @@ func TestLayout_OpaqueBackground(t *testing.T) {
 	}
 
 	bgWidget, _ := memory.New(bgCfg)
-	fgWidget, _ := widget.NewClockWidget(fgCfg)
+	fgWidget, _ := clock.New(fgCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{bgWidget, fgWidget}, cfg)
@@ -378,7 +379,7 @@ func TestLayout_ClippingLeftEdge(t *testing.T) {
 		Text:     &config.TextConfig{Format: "CLIP"},
 	}
 
-	clockWidget, _ := widget.NewClockWidget(widgetCfg)
+	clockWidget, _ := clock.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{clockWidget}, cfg)
@@ -408,7 +409,7 @@ func TestLayout_ClippingRightEdge(t *testing.T) {
 		Text:     &config.TextConfig{Format: "CLIP"},
 	}
 
-	clockWidget, _ := widget.NewClockWidget(widgetCfg)
+	clockWidget, _ := clock.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{clockWidget}, cfg)
@@ -727,7 +728,7 @@ func TestLayout_ZeroSizeWidget(t *testing.T) {
 		Text:     &config.TextConfig{Format: "X"},
 	}
 
-	clockWidget, err := widget.NewClockWidget(widgetCfg)
+	clockWidget, err := clock.New(widgetCfg)
 	if err != nil {
 		// Zero-size might be invalid
 		t.Skipf("Zero-size widget rejected: %v", err)
@@ -754,7 +755,7 @@ func TestLayout_NegativePosition(t *testing.T) {
 		Text:     &config.TextConfig{Format: "NEG"},
 	}
 
-	clockWidget, _ := widget.NewClockWidget(widgetCfg)
+	clockWidget, _ := clock.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{clockWidget}, cfg)

@@ -8,6 +8,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/clock"
 	"github.com/pozitronik/steelclock-go/internal/widget/cpu"
 	"github.com/pozitronik/steelclock-go/internal/widget/memory"
 )
@@ -63,7 +64,7 @@ func TestStyle_BackgroundWhite(t *testing.T) {
 		Style:    &config.StyleConfig{Background: 255},
 	}
 
-	clockWidget, _ := widget.NewClockWidget(widgetCfg)
+	clockWidget, _ := clock.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{clockWidget}, cfg)
@@ -110,7 +111,7 @@ func TestStyle_BackgroundTransparent(t *testing.T) {
 	}
 
 	bgWidget, _ := memory.New(bgCfg)
-	fgWidget, _ := widget.NewClockWidget(fgCfg)
+	fgWidget, _ := clock.New(fgCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{bgWidget, fgWidget}, cfg)
@@ -139,7 +140,7 @@ func TestStyle_BackgroundGray(t *testing.T) {
 		Style:    &config.StyleConfig{Background: 128},
 	}
 
-	clockWidget, _ := widget.NewClockWidget(widgetCfg)
+	clockWidget, _ := clock.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{clockWidget}, cfg)
@@ -449,7 +450,7 @@ func TestStyle_TextAlignment(t *testing.T) {
 				},
 			}
 
-			clockWidget, _ := widget.NewClockWidget(widgetCfg)
+			clockWidget, _ := clock.New(widgetCfg)
 
 			cfg := createTestConfig()
 			client, comp := createTestSetup([]widget.Widget{clockWidget}, cfg)
@@ -487,7 +488,7 @@ func TestStyle_DisplayBackgroundBlack(t *testing.T) {
 		Text:     &config.TextConfig{Format: "HI"},
 	}
 
-	clockWidget, _ := widget.NewClockWidget(widgetCfg)
+	clockWidget, _ := clock.New(widgetCfg)
 
 	cfg := &config.Config{
 		RefreshRateMs: 50,
@@ -528,7 +529,7 @@ func TestStyle_DisplayBackgroundWhite(t *testing.T) {
 		Text:     &config.TextConfig{Format: "HI"},
 	}
 
-	clockWidget, _ := widget.NewClockWidget(widgetCfg)
+	clockWidget, _ := clock.New(widgetCfg)
 
 	cfg := &config.Config{
 		RefreshRateMs: 50,
@@ -645,10 +646,10 @@ func TestStyle_MultipleStyledWidgets(t *testing.T) {
 		Style:    &config.StyleConfig{Background: -1},
 	}
 
-	w1, _ := widget.NewClockWidget(cfg1)
-	w2, _ := widget.NewClockWidget(cfg2)
-	w3, _ := widget.NewClockWidget(cfg3)
-	w4, _ := widget.NewClockWidget(cfg4)
+	w1, _ := clock.New(cfg1)
+	w2, _ := clock.New(cfg2)
+	w3, _ := clock.New(cfg3)
+	w4, _ := clock.New(cfg4)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{w1, w2, w3, w4}, cfg)
