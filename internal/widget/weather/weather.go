@@ -1,4 +1,4 @@
-package widget
+package weather
 
 import (
 	"fmt"
@@ -11,31 +11,32 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
 func init() {
-	Register("weather", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewWeatherWidget(cfg)
+	widget.Register("weather", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
 // Weather provider constants
 const (
-	weatherProviderOpenWeatherMap = "openweathermap"
-	weatherProviderOpenMeteo      = "open-meteo"
+	providerOpenWeatherMap = "openweathermap"
+	providerOpenMeteo      = "open-meteo"
 )
 
 // Weather unit constants
 const (
-	weatherUnitsMetric   = "metric"
-	weatherUnitsImperial = "imperial"
+	unitsMetric   = "metric"
+	unitsImperial = "imperial"
 )
 
-// WeatherWidget displays weather information using a format string
-type WeatherWidget struct {
-	*BaseWidget
+// Widget displays weather information using a format string
+type Widget struct {
+	*widget.BaseWidget
 	// Configuration
 	weatherProvider WeatherProvider
 	units           string
@@ -76,9 +77,9 @@ type WeatherWidget struct {
 	mu         sync.RWMutex
 }
 
-// NewWeatherWidget creates a new weather widget
-func NewWeatherWidget(cfg config.WidgetConfig) (*WeatherWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new weather widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings
@@ -86,12 +87,12 @@ func NewWeatherWidget(cfg config.WidgetConfig) (*WeatherWidget, error) {
 	padding := helper.GetPadding()
 
 	// Weather-specific settings with defaults
-	providerName := weatherProviderOpenMeteo
+	providerName := providerOpenMeteo
 	apiKey := ""
 	city := ""
 	lat := 0.0
 	lon := 0.0
-	units := weatherUnitsMetric
+	units := unitsMetric
 	iconSize := 16
 	formatCycle := []string{"{icon} {temp}"}
 	cycleInterval := 10
@@ -161,7 +162,7 @@ func NewWeatherWidget(cfg config.WidgetConfig) (*WeatherWidget, error) {
 	}
 
 	// Validate configuration
-	if providerName == weatherProviderOpenWeatherMap && apiKey == "" {
+	if providerName == providerOpenWeatherMap && apiKey == "" {
 		return nil, fmt.Errorf("api_key is required for OpenWeatherMap provider")
 	}
 
@@ -173,7 +174,7 @@ func NewWeatherWidget(cfg config.WidgetConfig) (*WeatherWidget, error) {
 	}
 
 	// Open-Meteo requires coordinates
-	if providerName == weatherProviderOpenMeteo && hasCity && !hasCoords {
+	if providerName == providerOpenMeteo && hasCity && !hasCoords {
 		return nil, fmt.Errorf("open-meteo provider requires lat/lon coordinates; city name is only supported with openweathermap")
 	}
 
@@ -218,16 +219,16 @@ func NewWeatherWidget(cfg config.WidgetConfig) (*WeatherWidget, error) {
 	// Create the weather provider
 	var weatherProvider WeatherProvider
 	switch providerName {
-	case weatherProviderOpenWeatherMap:
+	case providerOpenWeatherMap:
 		weatherProvider = NewOpenWeatherMapProvider(providerCfg, apiKey, httpClient)
-	case weatherProviderOpenMeteo:
+	case providerOpenMeteo:
 		weatherProvider = NewOpenMeteoProvider(providerCfg, httpClient)
 	default:
 		return nil, fmt.Errorf("unknown weather provider: %s", providerName)
 	}
 
 	pos := base.GetPosition()
-	w := &WeatherWidget{
+	w := &Widget{
 		BaseWidget:      base,
 		weatherProvider: weatherProvider,
 		units:           units,
@@ -259,7 +260,7 @@ func NewWeatherWidget(cfg config.WidgetConfig) (*WeatherWidget, error) {
 }
 
 // Update fetches fresh weather data from the API
-func (w *WeatherWidget) Update() error {
+func (w *Widget) Update() error {
 	// Check if we need forecast data
 	needForecast := needsWeatherForecast(w.formatCycle)
 
@@ -297,7 +298,7 @@ func (w *WeatherWidget) Update() error {
 }
 
 // Render creates the weather widget image
-func (w *WeatherWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	pos := w.GetPosition()
 	img := w.CreateCanvas()
 

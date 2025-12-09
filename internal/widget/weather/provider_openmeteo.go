@@ -1,4 +1,4 @@
-package widget
+package weather
 
 import (
 	"encoding/json"
@@ -25,7 +25,7 @@ func NewOpenMeteoProvider(cfg WeatherProviderConfig, client *http.Client) *OpenM
 
 // Name returns the provider name
 func (p *OpenMeteoProvider) Name() string {
-	return weatherProviderOpenMeteo
+	return providerOpenMeteo
 }
 
 // FetchWeather fetches weather data from Open-Meteo API
@@ -44,7 +44,7 @@ func (p *OpenMeteoProvider) FetchWeather(needForecast bool) (*WeatherData, *Fore
 		params.Set("forecast_days", fmt.Sprintf("%d", p.config.ForecastDays+1))
 	}
 
-	if p.config.Units == weatherUnitsImperial {
+	if p.config.Units == unitsImperial {
 		params.Set("temperature_unit", "fahrenheit")
 		params.Set("wind_speed_unit", "mph")
 	}

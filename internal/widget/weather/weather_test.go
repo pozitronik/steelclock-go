@@ -1,4 +1,4 @@
-package widget
+package weather
 
 import (
 	"image"
@@ -8,7 +8,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-func TestNewWeatherWidget(t *testing.T) {
+func TestNew(t *testing.T) {
 	tests := []struct {
 		name    string
 		cfg     config.WidgetConfig
@@ -113,20 +113,20 @@ func TestNewWeatherWidget(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			widget, err := NewWeatherWidget(tt.cfg)
+			widget, err := New(tt.cfg)
 			if tt.wantErr {
 				if err == nil {
-					t.Errorf("NewWeatherWidget() expected error containing %q, got nil", tt.errMsg)
+					t.Errorf("New() expected error containing %q, got nil", tt.errMsg)
 				} else if tt.errMsg != "" && !containsString(err.Error(), tt.errMsg) {
-					t.Errorf("NewWeatherWidget() error = %v, want error containing %q", err, tt.errMsg)
+					t.Errorf("New() error = %v, want error containing %q", err, tt.errMsg)
 				}
 				return
 			}
 			if err != nil {
-				t.Fatalf("NewWeatherWidget() unexpected error: %v", err)
+				t.Fatalf("New() unexpected error: %v", err)
 			}
 			if widget == nil {
-				t.Fatal("NewWeatherWidget() returned nil")
+				t.Fatal("New() returned nil")
 			}
 			if widget.Name() != tt.cfg.ID {
 				t.Errorf("Name() = %s, want %s", widget.Name(), tt.cfg.ID)
@@ -135,7 +135,7 @@ func TestNewWeatherWidget(t *testing.T) {
 	}
 }
 
-func TestWeatherWidget_Render_NoData(t *testing.T) {
+func TestWidget_Render_NoData(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "weather",
 		ID:      "test_weather",
@@ -152,9 +152,9 @@ func TestWeatherWidget_Render_NoData(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWeatherWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWeatherWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Render without calling Update first - should show "..."
@@ -173,7 +173,7 @@ func TestWeatherWidget_Render_NoData(t *testing.T) {
 	}
 }
 
-func TestWeatherWidget_Render_WithData(t *testing.T) {
+func TestWidget_Render_WithData(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "weather",
 		ID:      "test_weather",
@@ -191,9 +191,9 @@ func TestWeatherWidget_Render_WithData(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWeatherWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWeatherWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Manually set weather data to avoid network call
@@ -228,7 +228,7 @@ func TestWeatherWidget_Render_WithData(t *testing.T) {
 	}
 }
 
-func TestWeatherWidget_TextFormat(t *testing.T) {
+func TestWidget_TextFormat(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "weather",
 		ID:      "test_weather",
@@ -247,9 +247,9 @@ func TestWeatherWidget_TextFormat(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWeatherWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWeatherWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget.formatCycle[0] != "{temp} {description}" {
@@ -274,7 +274,7 @@ func TestWeatherWidget_TextFormat(t *testing.T) {
 	}
 }
 
-func TestWeatherWidget_ImperialUnits(t *testing.T) {
+func TestWidget_ImperialUnits(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "weather",
 		ID:      "test_weather",
@@ -292,9 +292,9 @@ func TestWeatherWidget_ImperialUnits(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWeatherWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWeatherWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget.units != "imperial" {
@@ -382,8 +382,7 @@ func TestGetWeatherDescription(t *testing.T) {
 	}
 }
 
-func TestWeatherWidget_GetIconName(t *testing.T) {
-	// getWeatherIconName is now a standalone function
+func TestGetWeatherIconName(t *testing.T) {
 	tests := []struct {
 		condition string
 		expected  string
@@ -409,7 +408,7 @@ func TestWeatherWidget_GetIconName(t *testing.T) {
 	}
 }
 
-func TestWeatherWidget_ForecastGraphFormat(t *testing.T) {
+func TestWidget_ForecastGraphFormat(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "weather",
 		ID:      "test_weather",
@@ -430,9 +429,9 @@ func TestWeatherWidget_ForecastGraphFormat(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWeatherWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWeatherWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget.forecastHours != 12 {
@@ -471,7 +470,7 @@ func TestWeatherWidget_ForecastGraphFormat(t *testing.T) {
 	}
 }
 
-func TestWeatherWidget_ForecastIconsFormat(t *testing.T) {
+func TestWidget_ForecastIconsFormat(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "weather",
 		ID:      "test_weather",
@@ -492,9 +491,9 @@ func TestWeatherWidget_ForecastIconsFormat(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWeatherWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWeatherWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget.forecastDays != 3 {
@@ -531,7 +530,7 @@ func TestWeatherWidget_ForecastIconsFormat(t *testing.T) {
 	}
 }
 
-func TestWeatherWidget_ScrollFormat(t *testing.T) {
+func TestWidget_ScrollFormat(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "weather",
 		ID:      "test_weather",
@@ -552,9 +551,9 @@ func TestWeatherWidget_ScrollFormat(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWeatherWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWeatherWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget.scrollSpeed != 50 {
@@ -595,7 +594,7 @@ func TestWeatherWidget_ScrollFormat(t *testing.T) {
 	}
 }
 
-func TestWeatherWidget_FormatCycle(t *testing.T) {
+func TestWidget_FormatCycle(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "weather",
 		ID:      "test_weather",
@@ -616,9 +615,9 @@ func TestWeatherWidget_FormatCycle(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWeatherWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWeatherWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if len(widget.formatCycle) != 3 {
@@ -650,7 +649,7 @@ func TestWeatherWidget_FormatCycle(t *testing.T) {
 	}
 }
 
-func TestWeatherWidget_ConfigDefaults(t *testing.T) {
+func TestWidget_ConfigDefaults(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "weather",
 		ID:      "test_weather",
@@ -668,9 +667,9 @@ func TestWeatherWidget_ConfigDefaults(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWeatherWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWeatherWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Check defaults
@@ -694,7 +693,7 @@ func TestWeatherWidget_ConfigDefaults(t *testing.T) {
 	}
 }
 
-func TestWeatherWidget_AQIFormat(t *testing.T) {
+func TestWidget_AQIFormat(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "weather",
 		ID:      "test_weather",
@@ -712,9 +711,9 @@ func TestWeatherWidget_AQIFormat(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWeatherWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWeatherWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// AQI should be auto-enabled because format contains {aqi}
@@ -746,7 +745,7 @@ func TestWeatherWidget_AQIFormat(t *testing.T) {
 	}
 }
 
-func TestWeatherWidget_MultilineFormat(t *testing.T) {
+func TestWidget_MultilineFormat(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "weather",
 		ID:      "test_weather",
@@ -764,9 +763,9 @@ func TestWeatherWidget_MultilineFormat(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWeatherWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWeatherWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Set weather data

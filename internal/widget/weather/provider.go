@@ -1,4 +1,4 @@
-package widget
+package weather
 
 // WeatherProvider defines the interface for weather data providers
 type WeatherProvider interface {

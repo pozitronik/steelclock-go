@@ -1,4 +1,4 @@
-package widget
+package weather
 
 import "strings"
 
@@ -70,11 +70,11 @@ func getHumidityIcon(humidity int) string {
 
 // getWindIcon returns icon name for wind speed level
 // windSpeed is expected in m/s for metric or mph for imperial
-// units should be weatherUnitsMetric or weatherUnitsImperial
+// units should be unitsMetric or unitsImperial
 func getWindIcon(windSpeed float64, units string) string {
 	// Wind speed thresholds in m/s (convert if imperial)
 	speed := windSpeed
-	if units == weatherUnitsImperial {
+	if units == unitsImperial {
 		speed = windSpeed * 0.44704 // Convert mph to m/s
 	}
 

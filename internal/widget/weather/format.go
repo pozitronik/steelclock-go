@@ -1,4 +1,4 @@
-package widget
+package weather
 
 import (
 	"fmt"
@@ -88,7 +88,7 @@ func getWeatherTokenText(t *Token, weather *WeatherData, forecast *ForecastData,
 
 	unit := "C"
 	speedUnit := "m/s"
-	if units == weatherUnitsImperial {
+	if units == unitsImperial {
 		unit = "F"
 		speedUnit = "mph"
 	}
@@ -113,7 +113,7 @@ func getWeatherTokenText(t *Token, weather *WeatherData, forecast *ForecastData,
 	case "condition":
 		return getWeatherDescription(weather.Condition)
 	case "visibility":
-		if units == weatherUnitsImperial {
+		if units == unitsImperial {
 			return fmt.Sprintf("%.1fmi", weather.Visibility/1609.34)
 		}
 		return fmt.Sprintf("%.0fkm", weather.Visibility/1000)

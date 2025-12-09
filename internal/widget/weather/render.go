@@ -1,4 +1,4 @@
-package widget
+package weather
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 )
 
 // renderTokens renders all tokens to the image
-func (w *WeatherWidget) renderTokens(img *image.Gray, tokens []Token, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData, scrollOffset float64) {
+func (w *Widget) renderTokens(img *image.Gray, tokens []Token, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData, scrollOffset float64) {
 	pos := w.GetPosition()
 
 	// Check if format contains newlines (multi-line layout)
@@ -84,7 +84,7 @@ func (w *WeatherWidget) renderTokens(img *image.Gray, tokens []Token, weather *W
 }
 
 // renderMultiLine renders tokens with newline support
-func (w *WeatherWidget) renderMultiLine(img *image.Gray, tokens []Token, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData, scrollOffset float64) {
+func (w *Widget) renderMultiLine(img *image.Gray, tokens []Token, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData, scrollOffset float64) {
 	pos := w.GetPosition()
 
 	// Split tokens into lines
@@ -144,7 +144,7 @@ func (w *WeatherWidget) renderMultiLine(img *image.Gray, tokens []Token, weather
 }
 
 // renderLine renders a single line of tokens
-func (w *WeatherWidget) renderLine(img *image.Gray, tokens []Token, y, height int, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData, scrollOffset float64) {
+func (w *Widget) renderLine(img *image.Gray, tokens []Token, y, height int, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData, scrollOffset float64) {
 	pos := w.GetPosition()
 
 	// Measure line width
@@ -205,7 +205,7 @@ func (w *WeatherWidget) renderLine(img *image.Gray, tokens []Token, y, height in
 }
 
 // measureToken returns the width of a token
-func (w *WeatherWidget) measureToken(t *Token, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
+func (w *Widget) measureToken(t *Token, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
 	switch t.Type {
 	case TokenLiteral:
 		width, _ := bitmap.SmartMeasureText(t.Literal, w.fontFace, w.fontName)
@@ -223,7 +223,7 @@ func (w *WeatherWidget) measureToken(t *Token, weather *WeatherData, forecast *F
 }
 
 // getIconSize returns the icon size for an icon token
-func (w *WeatherWidget) getIconSize(t *Token) int {
+func (w *Widget) getIconSize(t *Token) int {
 	if t.Param != "" {
 		// Parse size from parameter
 		var size int
@@ -236,12 +236,12 @@ func (w *WeatherWidget) getIconSize(t *Token) int {
 }
 
 // renderTokenInRect renders a token within a rectangle using widget's vertical alignment
-func (w *WeatherWidget) renderTokenInRect(img *image.Gray, t *Token, x, y, height int, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
+func (w *Widget) renderTokenInRect(img *image.Gray, t *Token, x, y, height int, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
 	return w.renderTokenInRectWithAlign(img, t, x, y, height, w.vertAlign, weather, forecast, aqi, uv)
 }
 
 // renderTokenInRectWithAlign renders a token within a rectangle with explicit vertical alignment
-func (w *WeatherWidget) renderTokenInRectWithAlign(img *image.Gray, t *Token, x, y, height int, vAlign config.VAlign, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
+func (w *Widget) renderTokenInRectWithAlign(img *image.Gray, t *Token, x, y, height int, vAlign config.VAlign, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
 	switch t.Type {
 	case TokenLiteral:
 		width, _ := bitmap.SmartMeasureText(t.Literal, w.fontFace, w.fontName)
@@ -265,7 +265,7 @@ func (w *WeatherWidget) renderTokenInRectWithAlign(img *image.Gray, t *Token, x,
 }
 
 // renderIconTokenWithAlign renders an icon token with explicit vertical alignment
-func (w *WeatherWidget) renderIconTokenWithAlign(img *image.Gray, t *Token, x, y, height int, vAlign config.VAlign, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
+func (w *Widget) renderIconTokenWithAlign(img *image.Gray, t *Token, x, y, height int, vAlign config.VAlign, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
 	iconSize := w.getIconSize(t)
 
 	var iconSet *glyphs.GlyphSet
@@ -329,7 +329,7 @@ func (w *WeatherWidget) renderIconTokenWithAlign(img *image.Gray, t *Token, x, y
 }
 
 // getForecastIconName handles {day:+N:icon} and {hour:+N:icon} tokens
-func (w *WeatherWidget) getForecastIconName(t *Token, forecast *ForecastData) string {
+func (w *Widget) getForecastIconName(t *Token, forecast *ForecastData) string {
 	if forecast == nil {
 		return "sun"
 	}
@@ -363,7 +363,7 @@ func (w *WeatherWidget) getForecastIconName(t *Token, forecast *ForecastData) st
 }
 
 // renderLargeTokenInRect renders a large token within a rectangle
-func (w *WeatherWidget) renderLargeTokenInRect(img *image.Gray, t *Token, x, y, width, height int, weather *WeatherData, forecast *ForecastData, scrollOffset float64) {
+func (w *Widget) renderLargeTokenInRect(img *image.Gray, t *Token, x, y, width, height int, weather *WeatherData, forecast *ForecastData, scrollOffset float64) {
 	if width < 10 || height < 5 {
 		return
 	}
@@ -391,7 +391,7 @@ func (w *WeatherWidget) renderLargeTokenInRect(img *image.Gray, t *Token, x, y, 
 }
 
 // renderForecastGraph renders a temperature trend line graph
-func (w *WeatherWidget) renderForecastGraph(img *image.Gray, x, y, width, height int, weather *WeatherData, forecast *ForecastData) {
+func (w *Widget) renderForecastGraph(img *image.Gray, x, y, width, height int, weather *WeatherData, forecast *ForecastData) {
 	if forecast == nil || len(forecast.Hourly) == 0 {
 		return
 	}
@@ -444,7 +444,7 @@ func (w *WeatherWidget) renderForecastGraph(img *image.Gray, x, y, width, height
 }
 
 // renderForecastIcons renders multi-day forecast with icons
-func (w *WeatherWidget) renderForecastIcons(img *image.Gray, x, y, width, height int, forecast *ForecastData) {
+func (w *Widget) renderForecastIcons(img *image.Gray, x, y, width, height int, forecast *ForecastData) {
 	if forecast == nil || len(forecast.Daily) == 0 {
 		return
 	}
@@ -476,7 +476,7 @@ func (w *WeatherWidget) renderForecastIcons(img *image.Gray, x, y, width, height
 	}
 
 	unit := "C"
-	if w.units == weatherUnitsImperial {
+	if w.units == unitsImperial {
 		unit = "F"
 	}
 
@@ -512,9 +512,9 @@ func (w *WeatherWidget) renderForecastIcons(img *image.Gray, x, y, width, height
 }
 
 // renderForecastScroll renders scrolling forecast text
-func (w *WeatherWidget) renderForecastScroll(img *image.Gray, x, y, width, height int, weather *WeatherData, forecast *ForecastData, scrollOffset float64) {
+func (w *Widget) renderForecastScroll(img *image.Gray, x, y, width, height int, weather *WeatherData, forecast *ForecastData, scrollOffset float64) {
 	unit := "C"
-	if w.units == weatherUnitsImperial {
+	if w.units == unitsImperial {
 		unit = "F"
 	}
 
