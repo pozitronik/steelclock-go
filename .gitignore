@@ -42,3 +42,4 @@ Thumbs.db
 /internal/widget/test_doom.wad
 /internal/widget/test_empty_frame.wad
 /internal/widget/doom1.wad
+*.ttf
