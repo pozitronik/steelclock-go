@@ -8,15 +8,15 @@
 // - Run sequentially (not in parallel) due to COM threading model
 //
 // To run these tests:
-//   go test -tags=integration ./internal/widget -run TestAudioVisualizer
+//   go test -tags=integration ./internal/widget/audiovisualizer -run TestNew
 //
 // These tests are NOT run by default because:
 // 1. They require real audio hardware
-// 2. The shared singleton pattern used by AudioVisualizerWidget doesn't work well in parallel test execution
+// 2. The shared singleton pattern used by Widget doesn't work well in parallel test execution
 // 3. COM initialization is thread-specific and conflicts in test environments
 // 4. They fail in CI environments without audio devices
 
-package widget
+package audiovisualizer
 
 import (
 	"image"
@@ -25,7 +25,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-func TestNewAudioVisualizerWidget_Spectrum(t *testing.T) {
+func TestNew_Spectrum(t *testing.T) {
 
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
@@ -41,45 +41,51 @@ func TestNewAudioVisualizerWidget_Spectrum(t *testing.T) {
 			Background: 0,
 			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:            "spectrum",
-			UpdateInterval:         0.033,
-			BarCount:               32,
-			FrequencyScale:         "logarithmic",
-			BarStyle:               "bars",
-			Smoothing:              0.7,
-			PeakHold:               true,
-			PeakHoldTime:           1.0,
-			FillColor:              config.IntPtr(255),
-			FrequencyCompensation:  true,
-			SpectrumDynamicScaling: 1.0,
+		Mode:           "spectrum",
+		UpdateInterval: 0.033,
+		Spectrum: &config.SpectrumConfig{
+			Bars:                  32,
+			Scale:                 "logarithmic",
+			Style:                 "bars",
+			Smoothing:             0.7,
+			FrequencyCompensation: true,
+			Peak: &config.PeakConfig{
+				Enabled:  true,
+				HoldTime: 1.0,
+			},
+			DynamicScaling: &config.DynamicScalingConfig{
+				Strength: 1.0,
+			},
+			Colors: &config.AudioColorsConfig{
+				Fill: config.IntPtr(255),
+			},
 		},
 	}
 
-	widget, err := NewAudioVisualizerWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
-	if widget == nil {
-		t.Fatal("NewAudioVisualizerWidget() returned nil")
+	if w == nil {
+		t.Fatal("New() returned nil")
 	}
 
-	if widget.Name() != "test_spectrum" {
-		t.Errorf("Name() = %s, want test_spectrum", widget.Name())
+	if w.Name() != "test_spectrum" {
+		t.Errorf("Name() = %s, want test_spectrum", w.Name())
 	}
 
-	avWidget := widget.(*AudioVisualizerWidget)
-	if avWidget.properties.DisplayMode != "spectrum" {
-		t.Errorf("DisplayMode = %s, want spectrum", avWidget.properties.DisplayMode)
+	avWidget := w.(*Widget)
+	if avWidget.displayMode != "spectrum" {
+		t.Errorf("displayMode = %s, want spectrum", avWidget.displayMode)
 	}
 
-	if avWidget.properties.BarCount != 32 {
-		t.Errorf("BarCount = %d, want 32", avWidget.properties.BarCount)
+	if avWidget.barCount != 32 {
+		t.Errorf("barCount = %d, want 32", avWidget.barCount)
 	}
 }
 
-func TestNewAudioVisualizerWidget_Oscilloscope(t *testing.T) {
+func TestNew_Oscilloscope(t *testing.T) {
 
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
@@ -95,41 +101,43 @@ func TestNewAudioVisualizerWidget_Oscilloscope(t *testing.T) {
 			Background: 0,
 			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:       "oscilloscope",
-			UpdateInterval:    0.033,
-			WaveformStyle:     "line",
-			ChannelMode:       "stereo_separated",
-			SampleCount:       128,
-			LeftChannelColor:  config.IntPtr(255),
-			RightChannelColor: config.IntPtr(200),
+		Mode:           "oscilloscope",
+		UpdateInterval: 0.033,
+		Channel:        "stereo_separated",
+		Oscilloscope: &config.OscilloscopeConfig{
+			Samples: 128,
+			Style:   "line",
+			Colors: &config.AudioColorsConfig{
+				Left:  config.IntPtr(255),
+				Right: config.IntPtr(200),
+			},
 		},
 	}
 
-	widget, err := NewAudioVisualizerWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
-	if widget == nil {
-		t.Fatal("NewAudioVisualizerWidget() returned nil")
+	if w == nil {
+		t.Fatal("New() returned nil")
 	}
 
-	avWidget := widget.(*AudioVisualizerWidget)
-	if avWidget.properties.DisplayMode != "oscilloscope" {
-		t.Errorf("DisplayMode = %s, want oscilloscope", avWidget.properties.DisplayMode)
+	avWidget := w.(*Widget)
+	if avWidget.displayMode != "oscilloscope" {
+		t.Errorf("displayMode = %s, want oscilloscope", avWidget.displayMode)
 	}
 
-	if avWidget.properties.WaveformStyle != "line" {
-		t.Errorf("WaveformStyle = %s, want line", avWidget.properties.WaveformStyle)
+	if avWidget.waveformStyle != "line" {
+		t.Errorf("waveformStyle = %s, want line", avWidget.waveformStyle)
 	}
 
-	if avWidget.properties.ChannelMode != "stereo_separated" {
-		t.Errorf("ChannelMode = %s, want stereo_separated", avWidget.properties.ChannelMode)
+	if avWidget.channelMode != "stereo_separated" {
+		t.Errorf("channelMode = %s, want stereo_separated", avWidget.channelMode)
 	}
 }
 
-func TestNewAudioVisualizerWidget_DefaultBarCount(t *testing.T) {
+func TestNew_DefaultBarCount(t *testing.T) {
 
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
@@ -142,20 +150,18 @@ func TestNewAudioVisualizerWidget_DefaultBarCount(t *testing.T) {
 			H: 40,
 		},
 		Style: config.StyleConfig{
-			BackgroundColor: 0,
+			Background: 0,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "spectrum",
-			// BarCount not specified - should default to 32
-		},
+		Mode: "spectrum",
+		// BarCount not specified - should default to 32
 	}
 
-	widget, err := NewAudioVisualizerWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
-	avWidget := widget.(*AudioVisualizerWidget)
+	avWidget := w.(*Widget)
 
 	// Check that barCount was set to default (32)
 	if len(avWidget.spectrumData) != 32 {
@@ -167,7 +173,7 @@ func TestNewAudioVisualizerWidget_DefaultBarCount(t *testing.T) {
 	}
 }
 
-func TestNewAudioVisualizerWidget_DynamicScalingWindow(t *testing.T) {
+func TestNew_DynamicScalingWindow(t *testing.T) {
 
 	tests := []struct {
 		name           string
@@ -179,7 +185,7 @@ func TestNewAudioVisualizerWidget_DynamicScalingWindow(t *testing.T) {
 			name:           "default 0.5s window",
 			updateInterval: 0.033,
 			scalingWindow:  0.5,
-			wantWindowSize: 16, // 0.5 / 0.033 ≈ 15.15, +1 = 16
+			wantWindowSize: 16, // 0.5 / 0.033 ~ 15.15, +1 = 16
 		},
 		{
 			name:           "1 second window",
@@ -208,22 +214,24 @@ func TestNewAudioVisualizerWidget_DynamicScalingWindow(t *testing.T) {
 					H: 40,
 				},
 				Style: config.StyleConfig{
-					BackgroundColor: 0,
+					Background: 0,
 				},
-				Properties: config.WidgetProperties{
-					DisplayMode:                  "spectrum",
-					UpdateInterval:               tt.updateInterval,
-					BarCount:                     10,
-					SpectrumDynamicScalingWindow: tt.scalingWindow,
+				Mode:           "spectrum",
+				UpdateInterval: tt.updateInterval,
+				Spectrum: &config.SpectrumConfig{
+					Bars: 10,
+					DynamicScaling: &config.DynamicScalingConfig{
+						Window: tt.scalingWindow,
+					},
 				},
 			}
 
-			widget, err := NewAudioVisualizerWidget(cfg)
+			w, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
+				t.Fatalf("New() error = %v", err)
 			}
 
-			avWidget := widget.(*AudioVisualizerWidget)
+			avWidget := w.(*Widget)
 			if avWidget.barEnergyWindowSize != tt.wantWindowSize {
 				t.Errorf("barEnergyWindowSize = %d, want %d", avWidget.barEnergyWindowSize, tt.wantWindowSize)
 			}
@@ -242,7 +250,7 @@ func TestNewAudioVisualizerWidget_DynamicScalingWindow(t *testing.T) {
 	}
 }
 
-func TestAudioVisualizerWidget_Render_Spectrum(t *testing.T) {
+func TestWidget_Render_Spectrum(t *testing.T) {
 
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
@@ -258,21 +266,23 @@ func TestAudioVisualizerWidget_Render_Spectrum(t *testing.T) {
 			Background: 0,
 			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:    "spectrum",
-			UpdateInterval: 0.033,
-			BarCount:       32,
-			FillColor:      config.IntPtr(255),
+		Mode:           "spectrum",
+		UpdateInterval: 0.033,
+		Spectrum: &config.SpectrumConfig{
+			Bars: 32,
+			Colors: &config.AudioColorsConfig{
+				Fill: config.IntPtr(255),
+			},
 		},
 	}
 
-	widget, err := NewAudioVisualizerWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Render without update (should work with zero data)
-	img, err := widget.Render()
+	img, err := w.Render()
 	if err != nil {
 		t.Errorf("Render() error = %v", err)
 	}
@@ -290,7 +300,7 @@ func TestAudioVisualizerWidget_Render_Spectrum(t *testing.T) {
 	}
 }
 
-func TestAudioVisualizerWidget_Render_Oscilloscope(t *testing.T) {
+func TestWidget_Render_Oscilloscope(t *testing.T) {
 
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
@@ -306,24 +316,26 @@ func TestAudioVisualizerWidget_Render_Oscilloscope(t *testing.T) {
 			Background: 0,
 			Border:     -1,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:       "oscilloscope",
-			UpdateInterval:    0.033,
-			WaveformStyle:     "line",
-			ChannelMode:       "stereo_combined",
-			SampleCount:       128,
-			LeftChannelColor:  config.IntPtr(255),
-			RightChannelColor: config.IntPtr(200),
+		Mode:           "oscilloscope",
+		UpdateInterval: 0.033,
+		Channel:        "stereo_combined",
+		Oscilloscope: &config.OscilloscopeConfig{
+			Samples: 128,
+			Style:   "line",
+			Colors: &config.AudioColorsConfig{
+				Left:  config.IntPtr(255),
+				Right: config.IntPtr(200),
+			},
 		},
 	}
 
-	widget, err := NewAudioVisualizerWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Render without update (should work with zero data)
-	img, err := widget.Render()
+	img, err := w.Render()
 	if err != nil {
 		t.Errorf("Render() error = %v", err)
 	}
@@ -341,7 +353,7 @@ func TestAudioVisualizerWidget_Render_Oscilloscope(t *testing.T) {
 	}
 }
 
-func TestAudioVisualizerWidget_BarStyles(t *testing.T) {
+func TestWidget_BarStyles(t *testing.T) {
 
 	barStyles := []string{"bars", "gradient", "dots"}
 
@@ -358,23 +370,25 @@ func TestAudioVisualizerWidget_BarStyles(t *testing.T) {
 					H: 40,
 				},
 				Style: config.StyleConfig{
-					BackgroundColor: 0,
+					Background: 0,
 				},
-				Properties: config.WidgetProperties{
-					DisplayMode: "spectrum",
-					BarCount:    16,
-					BarStyle:    style,
-					FillColor:   config.IntPtr(255),
+				Mode: "spectrum",
+				Spectrum: &config.SpectrumConfig{
+					Bars:  16,
+					Style: style,
+					Colors: &config.AudioColorsConfig{
+						Fill: config.IntPtr(255),
+					},
 				},
 			}
 
-			widget, err := NewAudioVisualizerWidget(cfg)
+			w, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewAudioVisualizerWidget() with %s error = %v", style, err)
+				t.Fatalf("New() with %s error = %v", style, err)
 			}
 
 			// Should render without error
-			img, err := widget.Render()
+			img, err := w.Render()
 			if err != nil {
 				t.Errorf("Render() with %s error = %v", style, err)
 			}
@@ -383,15 +397,15 @@ func TestAudioVisualizerWidget_BarStyles(t *testing.T) {
 				t.Errorf("Render() with %s returned nil image", style)
 			}
 
-			avWidget := widget.(*AudioVisualizerWidget)
-			if avWidget.properties.BarStyle != style {
-				t.Errorf("BarStyle = %s, want %s", avWidget.properties.BarStyle, style)
+			avWidget := w.(*Widget)
+			if avWidget.barStyle != style {
+				t.Errorf("barStyle = %s, want %s", avWidget.barStyle, style)
 			}
 		})
 	}
 }
 
-func TestAudioVisualizerWidget_FrequencyScales(t *testing.T) {
+func TestWidget_FrequencyScales(t *testing.T) {
 
 	scales := []string{"linear", "logarithmic"}
 
@@ -408,23 +422,25 @@ func TestAudioVisualizerWidget_FrequencyScales(t *testing.T) {
 					H: 40,
 				},
 				Style: config.StyleConfig{
-					BackgroundColor: 0,
+					Background: 0,
 				},
-				Properties: config.WidgetProperties{
-					DisplayMode:    "spectrum",
-					BarCount:       16,
-					FrequencyScale: scale,
-					FillColor:      config.IntPtr(255),
+				Mode: "spectrum",
+				Spectrum: &config.SpectrumConfig{
+					Bars:  16,
+					Scale: scale,
+					Colors: &config.AudioColorsConfig{
+						Fill: config.IntPtr(255),
+					},
 				},
 			}
 
-			widget, err := NewAudioVisualizerWidget(cfg)
+			w, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewAudioVisualizerWidget() with %s error = %v", scale, err)
+				t.Fatalf("New() with %s error = %v", scale, err)
 			}
 
 			// Should render without error
-			img, err := widget.Render()
+			img, err := w.Render()
 			if err != nil {
 				t.Errorf("Render() with %s error = %v", scale, err)
 			}
@@ -433,15 +449,15 @@ func TestAudioVisualizerWidget_FrequencyScales(t *testing.T) {
 				t.Errorf("Render() with %s returned nil image", scale)
 			}
 
-			avWidget := widget.(*AudioVisualizerWidget)
-			if avWidget.properties.FrequencyScale != scale {
-				t.Errorf("FrequencyScale = %s, want %s", avWidget.properties.FrequencyScale, scale)
+			avWidget := w.(*Widget)
+			if avWidget.frequencyScale != scale {
+				t.Errorf("frequencyScale = %s, want %s", avWidget.frequencyScale, scale)
 			}
 		})
 	}
 }
 
-func TestAudioVisualizerWidget_WaveformStyles(t *testing.T) {
+func TestWidget_WaveformStyles(t *testing.T) {
 
 	styles := []string{"line", "filled"}
 
@@ -458,23 +474,25 @@ func TestAudioVisualizerWidget_WaveformStyles(t *testing.T) {
 					H: 40,
 				},
 				Style: config.StyleConfig{
-					BackgroundColor: 0,
+					Background: 0,
 				},
-				Properties: config.WidgetProperties{
-					DisplayMode:   "oscilloscope",
-					WaveformStyle: style,
-					SampleCount:   128,
-					FillColor:     config.IntPtr(255),
+				Mode: "oscilloscope",
+				Oscilloscope: &config.OscilloscopeConfig{
+					Samples: 128,
+					Style:   style,
+					Colors: &config.AudioColorsConfig{
+						Fill: config.IntPtr(255),
+					},
 				},
 			}
 
-			widget, err := NewAudioVisualizerWidget(cfg)
+			w, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewAudioVisualizerWidget() with %s error = %v", style, err)
+				t.Fatalf("New() with %s error = %v", style, err)
 			}
 
 			// Should render without error
-			img, err := widget.Render()
+			img, err := w.Render()
 			if err != nil {
 				t.Errorf("Render() with %s error = %v", style, err)
 			}
@@ -483,15 +501,15 @@ func TestAudioVisualizerWidget_WaveformStyles(t *testing.T) {
 				t.Errorf("Render() with %s returned nil image", style)
 			}
 
-			avWidget := widget.(*AudioVisualizerWidget)
-			if avWidget.properties.WaveformStyle != style {
-				t.Errorf("WaveformStyle = %s, want %s", avWidget.properties.WaveformStyle, style)
+			avWidget := w.(*Widget)
+			if avWidget.waveformStyle != style {
+				t.Errorf("waveformStyle = %s, want %s", avWidget.waveformStyle, style)
 			}
 		})
 	}
 }
 
-func TestAudioVisualizerWidget_ChannelModes(t *testing.T) {
+func TestWidget_ChannelModes(t *testing.T) {
 
 	modes := []string{"stereo_combined", "stereo_separated", "left_only", "right_only"}
 
@@ -508,24 +526,26 @@ func TestAudioVisualizerWidget_ChannelModes(t *testing.T) {
 					H: 40,
 				},
 				Style: config.StyleConfig{
-					BackgroundColor: 0,
+					Background: 0,
 				},
-				Properties: config.WidgetProperties{
-					DisplayMode:       "oscilloscope",
-					ChannelMode:       mode,
-					SampleCount:       128,
-					LeftChannelColor:  config.IntPtr(255),
-					RightChannelColor: config.IntPtr(200),
+				Mode:    "oscilloscope",
+				Channel: mode,
+				Oscilloscope: &config.OscilloscopeConfig{
+					Samples: 128,
+					Colors: &config.AudioColorsConfig{
+						Left:  config.IntPtr(255),
+						Right: config.IntPtr(200),
+					},
 				},
 			}
 
-			widget, err := NewAudioVisualizerWidget(cfg)
+			w, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewAudioVisualizerWidget() with %s error = %v", mode, err)
+				t.Fatalf("New() with %s error = %v", mode, err)
 			}
 
 			// Should render without error
-			img, err := widget.Render()
+			img, err := w.Render()
 			if err != nil {
 				t.Errorf("Render() with %s error = %v", mode, err)
 			}
@@ -534,15 +554,15 @@ func TestAudioVisualizerWidget_ChannelModes(t *testing.T) {
 				t.Errorf("Render() with %s returned nil image", mode)
 			}
 
-			avWidget := widget.(*AudioVisualizerWidget)
-			if avWidget.properties.ChannelMode != mode {
-				t.Errorf("ChannelMode = %s, want %s", avWidget.properties.ChannelMode, mode)
+			avWidget := w.(*Widget)
+			if avWidget.channelMode != mode {
+				t.Errorf("channelMode = %s, want %s", avWidget.channelMode, mode)
 			}
 		})
 	}
 }
 
-func TestAudioVisualizerWidget_DynamicScaling(t *testing.T) {
+func TestWidget_DynamicScaling(t *testing.T) {
 
 	tests := []struct {
 		name           string
@@ -579,27 +599,29 @@ func TestAudioVisualizerWidget_DynamicScaling(t *testing.T) {
 					H: 40,
 				},
 				Style: config.StyleConfig{
-					BackgroundColor: 0,
+					Background: 0,
 				},
-				Properties: config.WidgetProperties{
-					DisplayMode:            "spectrum",
-					BarCount:               16,
-					SpectrumDynamicScaling: tt.dynamicScaling,
+				Mode: "spectrum",
+				Spectrum: &config.SpectrumConfig{
+					Bars: 16,
+					DynamicScaling: &config.DynamicScalingConfig{
+						Strength: tt.dynamicScaling,
+					},
 				},
 			}
 
-			widget, err := NewAudioVisualizerWidget(cfg)
+			w, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
+				t.Fatalf("New() error = %v", err)
 			}
 
-			avWidget := widget.(*AudioVisualizerWidget)
-			if avWidget.properties.SpectrumDynamicScaling != tt.dynamicScaling {
-				t.Errorf("SpectrumDynamicScaling = %f, want %f", avWidget.properties.SpectrumDynamicScaling, tt.dynamicScaling)
+			avWidget := w.(*Widget)
+			if avWidget.spectrumDynamicScaling != tt.dynamicScaling {
+				t.Errorf("spectrumDynamicScaling = %f, want %f", avWidget.spectrumDynamicScaling, tt.dynamicScaling)
 			}
 
 			// Render should work regardless of dynamic scaling setting
-			_, err = widget.Render()
+			_, err = w.Render()
 			if err != nil {
 				t.Errorf("Render() with dynamic_scaling=%f error = %v", tt.dynamicScaling, err)
 			}
@@ -607,7 +629,7 @@ func TestAudioVisualizerWidget_DynamicScaling(t *testing.T) {
 	}
 }
 
-func TestAudioVisualizerWidget_GetMethods(t *testing.T) {
+func TestWidget_GetMethods(t *testing.T) {
 
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
@@ -624,43 +646,41 @@ func TestAudioVisualizerWidget_GetMethods(t *testing.T) {
 			Background: 100,
 			Border:     200,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:    "spectrum",
-			UpdateInterval: 0.05,
-		},
+		Mode:           "spectrum",
+		UpdateInterval: 0.05,
 	}
 
-	widget, err := NewAudioVisualizerWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Test Name()
-	if widget.Name() != "test_getters" {
-		t.Errorf("Name() = %s, want test_getters", widget.Name())
+	if w.Name() != "test_getters" {
+		t.Errorf("Name() = %s, want test_getters", w.Name())
 	}
 
 	// Test GetPosition()
-	pos := widget.GetPosition()
+	pos := w.GetPosition()
 	if pos.X != 10 || pos.Y != 20 || pos.W != 128 || pos.H != 40 || pos.ZOrder != 5 {
 		t.Errorf("GetPosition() = %+v, want {X:10 Y:20 W:128 H:40 ZOrder:5}", pos)
 	}
 
 	// Test GetStyle()
-	style := widget.GetStyle()
+	style := w.GetStyle()
 	if style.Background != 100 || style.Border != 200 {
 		t.Errorf("GetStyle() = %+v, want {Background:100 Border:200}", style)
 	}
 
 	// Test GetUpdateInterval()
-	interval := widget.GetUpdateInterval()
+	interval := w.GetUpdateInterval()
 	expectedInterval := int64(0.05 * 1e9) // 50ms in nanoseconds
 	if interval.Nanoseconds() != expectedInterval {
 		t.Errorf("GetUpdateInterval() = %v, want 50ms", interval)
 	}
 }
 
-func TestAudioVisualizerWidget_ConcurrentAccess(t *testing.T) {
+func TestWidget_ConcurrentAccess(t *testing.T) {
 
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
@@ -673,18 +693,18 @@ func TestAudioVisualizerWidget_ConcurrentAccess(t *testing.T) {
 			H: 40,
 		},
 		Style: config.StyleConfig{
-			BackgroundColor: 0,
+			Background: 0,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode:    "spectrum",
-			UpdateInterval: 0.033,
-			BarCount:       32,
+		Mode:           "spectrum",
+		UpdateInterval: 0.033,
+		Spectrum: &config.SpectrumConfig{
+			Bars: 32,
 		},
 	}
 
-	widget, err := NewAudioVisualizerWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Number of concurrent goroutines
@@ -702,7 +722,7 @@ func TestAudioVisualizerWidget_ConcurrentAccess(t *testing.T) {
 			for j := 0; j < numIterations; j++ {
 				// Update might fail in test environment without audio device
 				// but shouldn't panic or cause data races
-				_ = widget.Update()
+				_ = w.Update()
 			}
 		}(i)
 	}
@@ -712,7 +732,7 @@ func TestAudioVisualizerWidget_ConcurrentAccess(t *testing.T) {
 		go func(id int) {
 			defer func() { done <- true }()
 			for j := 0; j < numIterations; j++ {
-				_, err := widget.Render()
+				_, err := w.Render()
 				if err != nil {
 					errors <- err
 				}
@@ -740,7 +760,7 @@ func TestAudioVisualizerWidget_ConcurrentAccess(t *testing.T) {
 	t.Log("Concurrent access test completed. Run with -race flag to detect data races.")
 }
 
-func TestAudioVisualizerWidget_BorderRendering(t *testing.T) {
+func TestWidget_BorderRendering(t *testing.T) {
 
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
@@ -756,18 +776,18 @@ func TestAudioVisualizerWidget_BorderRendering(t *testing.T) {
 			Background: 0,
 			Border:     255,
 		},
-		Properties: config.WidgetProperties{
-			DisplayMode: "spectrum",
-			BarCount:    16,
+		Mode: "spectrum",
+		Spectrum: &config.SpectrumConfig{
+			Bars: 16,
 		},
 	}
 
-	widget, err := NewAudioVisualizerWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
-	img, err := widget.Render()
+	img, err := w.Render()
 	if err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
@@ -789,7 +809,7 @@ func TestAudioVisualizerWidget_BorderRendering(t *testing.T) {
 	}
 }
 
-func TestAudioVisualizerWidget_FrequencyCompensationToggle(t *testing.T) {
+func TestWidget_FrequencyCompensationToggle(t *testing.T) {
 
 	tests := []struct {
 		name    string
@@ -818,27 +838,27 @@ func TestAudioVisualizerWidget_FrequencyCompensationToggle(t *testing.T) {
 					H: 40,
 				},
 				Style: config.StyleConfig{
-					BackgroundColor: 0,
+					Background: 0,
 				},
-				Properties: config.WidgetProperties{
-					DisplayMode:           "spectrum",
-					BarCount:              16,
+				Mode: "spectrum",
+				Spectrum: &config.SpectrumConfig{
+					Bars:                  16,
 					FrequencyCompensation: tt.enabled,
 				},
 			}
 
-			widget, err := NewAudioVisualizerWidget(cfg)
+			w, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
+				t.Fatalf("New() error = %v", err)
 			}
 
-			avWidget := widget.(*AudioVisualizerWidget)
-			if avWidget.properties.FrequencyCompensation != tt.enabled {
-				t.Errorf("FrequencyCompensation = %v, want %v", avWidget.properties.FrequencyCompensation, tt.enabled)
+			avWidget := w.(*Widget)
+			if avWidget.frequencyCompensation != tt.enabled {
+				t.Errorf("frequencyCompensation = %v, want %v", avWidget.frequencyCompensation, tt.enabled)
 			}
 
 			// Should render without error
-			_, err = widget.Render()
+			_, err = w.Render()
 			if err != nil {
 				t.Errorf("Render() error = %v", err)
 			}

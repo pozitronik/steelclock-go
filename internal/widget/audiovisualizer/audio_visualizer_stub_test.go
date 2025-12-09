@@ -1,6 +1,6 @@
 //go:build !windows && !linux
 
-package widget
+package audiovisualizer
 
 import (
 	"strings"
@@ -9,7 +9,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-func TestNewAudioVisualizerWidget_Stub(t *testing.T) {
+func TestNew_Stub(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
 		ID:      "test_stub",
@@ -28,14 +28,14 @@ func TestNewAudioVisualizerWidget_Stub(t *testing.T) {
 		UpdateInterval: 0.033,
 	}
 
-	// On unsupported platforms, NewAudioVisualizerWidget should succeed (stub widget created)
-	widget, err := NewAudioVisualizerWidget(cfg)
+	// On unsupported platforms, New should succeed (stub widget created)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewAudioVisualizerWidget() error = %v (should create stub widget)", err)
+		t.Fatalf("New() error = %v (should create stub widget)", err)
 	}
 
 	if widget == nil {
-		t.Fatal("NewAudioVisualizerWidget() returned nil")
+		t.Fatal("New() returned nil")
 	}
 
 	if widget.Name() != "test_stub" {
@@ -43,7 +43,7 @@ func TestNewAudioVisualizerWidget_Stub(t *testing.T) {
 	}
 }
 
-func TestAudioVisualizerWidget_Stub_Render(t *testing.T) {
+func TestWidget_Stub_Render(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
 		ID:      "test_stub_render",
@@ -62,9 +62,9 @@ func TestAudioVisualizerWidget_Stub_Render(t *testing.T) {
 		UpdateInterval: 0.033,
 	}
 
-	widget, err := NewAudioVisualizerWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Render should succeed (stub renders via ErrorWidget)
@@ -87,7 +87,7 @@ func TestAudioVisualizerWidget_Stub_Render(t *testing.T) {
 	}
 }
 
-func TestAudioVisualizerWidget_Stub_Update(t *testing.T) {
+func TestWidget_Stub_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
 		ID:      "test_stub_update",
@@ -105,9 +105,9 @@ func TestAudioVisualizerWidget_Stub_Update(t *testing.T) {
 		UpdateInterval: 0.033,
 	}
 
-	widget, err := NewAudioVisualizerWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update should succeed (delegates to ErrorWidget)
@@ -117,7 +117,7 @@ func TestAudioVisualizerWidget_Stub_Update(t *testing.T) {
 	}
 }
 
-func TestAudioVisualizerWidget_Stub_GetMethods(t *testing.T) {
+func TestWidget_Stub_GetMethods(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
 		ID:      "test_stub_getters",
@@ -137,9 +137,9 @@ func TestAudioVisualizerWidget_Stub_GetMethods(t *testing.T) {
 		UpdateInterval: 0.05,
 	}
 
-	widget, err := NewAudioVisualizerWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Test Name()
@@ -184,7 +184,7 @@ func TestGetSharedAudioCapture_Stub(t *testing.T) {
 	}
 }
 
-func TestAudioVisualizerWidget_Stub_BorderRendering(t *testing.T) {
+func TestWidget_Stub_BorderRendering(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "audio_visualizer",
 		ID:      "test_stub_border",
@@ -202,9 +202,9 @@ func TestAudioVisualizerWidget_Stub_BorderRendering(t *testing.T) {
 		Mode: "spectrum",
 	}
 
-	widget, err := NewAudioVisualizerWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewAudioVisualizerWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Render should succeed (stub renders via ErrorWidget)

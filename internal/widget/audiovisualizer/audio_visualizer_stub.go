@@ -1,17 +1,18 @@
 //go:build !windows && !linux
 
-package widget
+package audiovisualizer
 
 import (
 	"fmt"
 	"image"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 )
 
 func init() {
-	Register("audio_visualizer", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewAudioVisualizerWidget(cfg)
+	widget.Register("audio_visualizer", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
@@ -23,36 +24,36 @@ func GetSharedAudioCapture() (*AudioCaptureWCA, error) {
 	return nil, fmt.Errorf("audio capture is not supported on this platform")
 }
 
-// AudioVisualizerWidget stub for unsupported platforms (not Windows or Linux)
-type AudioVisualizerWidget struct {
-	*BaseWidget
-	errorWidget *ErrorWidget
+// Widget stub for unsupported platforms (not Windows or Linux)
+type Widget struct {
+	*widget.BaseWidget
+	errorWidget *widget.ErrorWidget
 }
 
-// NewAudioVisualizerWidget creates a stub widget that displays an error
-func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
+// New creates a stub widget that displays an error
+func New(cfg config.WidgetConfig) (widget.Widget, error) {
 	// Set default update interval for audio visualizer (33ms = ~30fps)
 	if cfg.UpdateInterval <= 0 {
 		cfg.UpdateInterval = 0.033
 	}
 
-	base := NewBaseWidget(cfg)
+	base := widget.NewBaseWidget(cfg)
 	pos := base.GetPosition()
 
-	return &AudioVisualizerWidget{
+	return &Widget{
 		BaseWidget:  base,
-		errorWidget: NewErrorWidget(pos.W, pos.H, "UNSUPPORTED"),
+		errorWidget: widget.NewErrorWidget(pos.W, pos.H, "UNSUPPORTED"),
 	}, nil
 }
 
-func (w *AudioVisualizerWidget) Update() error {
+func (w *Widget) Update() error {
 	if w.errorWidget != nil {
 		return w.errorWidget.Update()
 	}
 	return nil
 }
 
-func (w *AudioVisualizerWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	if w.errorWidget != nil {
 		return w.errorWidget.Render()
 	}

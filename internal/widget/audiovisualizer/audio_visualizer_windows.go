@@ -1,6 +1,6 @@
 //go:build windows
 
-package widget
+package audiovisualizer
 
 import (
 	"errors"
@@ -20,12 +20,13 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	wcautil "github.com/pozitronik/steelclock-go/internal/wca"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 func init() {
-	Register("audio_visualizer", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewAudioVisualizerWidget(cfg)
+	widget.Register("audio_visualizer", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
@@ -45,11 +46,11 @@ var frequencyCompensationCurve = []struct {
 	{99999, 5.0}, // Very high frequencies: maximum boost
 }
 
-// AudioVisualizerWidget displays real-time spectrum analyzer or oscilloscope
-type AudioVisualizerWidget struct {
-	*BaseWidget
+// Widget displays real-time spectrum analyzer or oscilloscope
+type Widget struct {
+	*widget.BaseWidget
 	audioCapture *AudioCaptureWCA
-	volumeReader *VolumeReaderWCA
+	volumeReader *wcautil.VolumeReaderWCA
 	mu           sync.Mutex
 
 	// Display settings
@@ -90,17 +91,17 @@ type AudioVisualizerWidget struct {
 	lastUpdateTime      time.Time
 
 	// Error state tracking
-	errorWidget    *ErrorWidget // Error widget proxy (nil = normal operation)
-	errorCount     int          // Consecutive error count
-	errorThreshold int          // Threshold before entering error state
-	startupTime    time.Time    // Widget creation time for grace period
+	errorWidget    *widget.ErrorWidget // Error widget proxy (nil = normal operation)
+	errorCount     int                 // Consecutive error count
+	errorThreshold int                 // Threshold before entering error state
+	startupTime    time.Time           // Widget creation time for grace period
 
 	// Device change notification
 	deviceNotifyChan <-chan struct{} // Receives signal on audio device change
 }
 
-// NewAudioVisualizerWidget creates a new audio visualizer widget
-func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
+// New creates a new audio visualizer widget
+func New(cfg config.WidgetConfig) (widget.Widget, error) {
 	// Get shared audio capture instance
 	capture, err := GetSharedAudioCapture()
 	if err != nil {
@@ -108,7 +109,7 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 	}
 
 	// Get shared volume reader for volume compensation
-	volumeReader, err := GetSharedVolumeReader()
+	volumeReader, err := wcautil.GetSharedVolumeReader()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get shared volume reader: %w", err)
 	}
@@ -125,7 +126,7 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 	}
 
 	// Create base widget
-	base := NewBaseWidget(cfg)
+	base := widget.NewBaseWidget(cfg)
 
 	// Display mode
 	displayMode := cfg.Mode
@@ -252,7 +253,7 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 		energyHistory[i] = make([]float64, windowSize)
 	}
 
-	w := &AudioVisualizerWidget{
+	w := &Widget{
 		BaseWidget:             base,
 		audioCapture:           capture,
 		volumeReader:           volumeReader,
@@ -289,7 +290,7 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 }
 
 // Update captures audio and processes it
-func (w *AudioVisualizerWidget) Update() error {
+func (w *Widget) Update() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -336,7 +337,7 @@ func (w *AudioVisualizerWidget) Update() error {
 		if w.errorCount >= w.errorThreshold {
 			// Enter error state - create error widget proxy
 			pos := w.GetPosition()
-			w.errorWidget = NewErrorWidget(pos.W, pos.H, "AUDIO ERROR")
+			w.errorWidget = widget.NewErrorWidget(pos.W, pos.H, "AUDIO ERROR")
 			// Mark singleton as uninitialized so config reload can retry
 			w.audioCapture.initialized = false
 			log.Printf("[AUDIO-VIS] Audio capture failed after %d consecutive errors: %v", w.errorCount, err)
@@ -419,7 +420,7 @@ func (w *AudioVisualizerWidget) Update() error {
 }
 
 // updateSpectrum performs FFT and updates spectrum data
-func (w *AudioVisualizerWidget) updateSpectrum(samples []float32) {
+func (w *Widget) updateSpectrum(samples []float32) {
 	// Need power of 2 samples for FFT
 	// Use 8192 for better low-frequency resolution
 	fftSize := 8192
@@ -553,7 +554,7 @@ func (w *AudioVisualizerWidget) updateSpectrum(samples []float32) {
 }
 
 // mapFrequenciesLogarithmic maps FFT bins to bars using logarithmic scale
-func (w *AudioVisualizerWidget) mapFrequenciesLogarithmic(magnitudes []float64, barCount int) {
+func (w *Widget) mapFrequenciesLogarithmic(magnitudes []float64, barCount int) {
 	// Logarithmic frequency mapping (similar to Winamp)
 	// Start at 40 Hz to avoid sub-bass issues (narrow bars, spectral leakage)
 	minFreq := 40.0    // Hz
@@ -620,7 +621,7 @@ func (w *AudioVisualizerWidget) mapFrequenciesLogarithmic(magnitudes []float64, 
 }
 
 // mapFrequenciesLinear maps FFT bins to bars using linear scale
-func (w *AudioVisualizerWidget) mapFrequenciesLinear(magnitudes []float64, barCount int) {
+func (w *Widget) mapFrequenciesLinear(magnitudes []float64, barCount int) {
 	binsPerBar := len(magnitudes) / barCount
 
 	// Get sample rate for frequency calculation
@@ -667,7 +668,7 @@ func (w *AudioVisualizerWidget) mapFrequenciesLinear(magnitudes []float64, barCo
 
 // calculateDynamicGain computes per-bar dynamic gain to balance frequency energy
 // Returns gain multipliers (1.0-4.0) for each bar based on their rolling average energy
-func (w *AudioVisualizerWidget) calculateDynamicGain(barCount int) []float64 {
+func (w *Widget) calculateDynamicGain(barCount int) []float64 {
 	gains := make([]float64, barCount)
 
 	// Calculate rolling average energy for each bar
@@ -741,7 +742,7 @@ func (w *AudioVisualizerWidget) calculateDynamicGain(barCount int) []float64 {
 }
 
 // Render draws the visualization
-func (w *AudioVisualizerWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -765,14 +766,15 @@ func (w *AudioVisualizerWidget) Render() (image.Image, error) {
 }
 
 // renderSpectrum draws spectrum analyzer bars
-func (w *AudioVisualizerWidget) renderSpectrum(img *image.Gray) {
+func (w *Widget) renderSpectrum(img *image.Gray) {
 	barCount := len(w.spectrumData)
 	if barCount == 0 {
 		return
 	}
 
-	width := w.position.W
-	height := w.position.H
+	pos := w.GetPosition()
+	width := pos.W
+	height := pos.H
 	barWidth := width / barCount
 	gap := 0
 	if w.barStyle == shared.AudioBarStyleBars && barWidth > 2 {
@@ -839,8 +841,9 @@ func (w *AudioVisualizerWidget) renderSpectrum(img *image.Gray) {
 }
 
 // renderOscilloscope draws waveform
-func (w *AudioVisualizerWidget) renderOscilloscope(img *image.Gray) {
-	height := w.position.H
+func (w *Widget) renderOscilloscope(img *image.Gray) {
+	pos := w.GetPosition()
+	height := pos.H
 	sampleCount := w.sampleCount
 
 	if w.channelMode == shared.AudioChannelModeMono || w.channelMode == shared.AudioChannelModeStereoCombined {
@@ -882,8 +885,9 @@ func (w *AudioVisualizerWidget) renderOscilloscope(img *image.Gray) {
 }
 
 // drawWaveform draws a single waveform in the specified region
-func (w *AudioVisualizerWidget) drawWaveform(img *image.Gray, samples []float32, yStart, yEnd, centerY int, fillColor uint8) {
-	width := w.position.W
+func (w *Widget) drawWaveform(img *image.Gray, samples []float32, yStart, yEnd, centerY int, fillColor uint8) {
+	pos := w.GetPosition()
+	width := pos.W
 	sampleCount := len(samples)
 
 	// Use full height for amplitude (samples are in -1.0 to +1.0 range)

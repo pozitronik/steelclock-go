@@ -1,6 +1,6 @@
 //go:build linux
 
-package widget
+package audiovisualizer
 
 import (
 	"bufio"
