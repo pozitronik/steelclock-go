@@ -12,20 +12,6 @@ import (
 	"sync"
 )
 
-// ReaderWCA is a stub for Linux (uses LinuxReader internally)
-type ReaderWCA struct {
-	reader *LinuxReader
-}
-
-// GetSharedVolumeReader returns a volume reader for Linux
-func GetSharedVolumeReader() (*ReaderWCA, error) {
-	reader, err := NewLinuxReader()
-	if err != nil {
-		return nil, err
-	}
-	return &ReaderWCA{reader: reader}, nil
-}
-
 // LinuxReader reads system volume using available Linux audio tools
 // Supports: wpctl (PipeWire), pactl (PulseAudio), amixer (ALSA)
 type LinuxReader struct {

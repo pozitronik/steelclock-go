@@ -6,14 +6,6 @@ import (
 	"fmt"
 )
 
-// ReaderWCA stub for unsupported platforms
-type ReaderWCA struct{}
-
-// GetSharedVolumeReader returns an error on unsupported platforms
-func GetSharedVolumeReader() (*ReaderWCA, error) {
-	return nil, fmt.Errorf("volume reader is not supported on this platform")
-}
-
 // stubReader is a stub implementation for unsupported platforms
 type stubReader struct{}
 
