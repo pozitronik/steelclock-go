@@ -1,4 +1,4 @@
-package widget
+package hyperspace
 
 import (
 	"testing"
@@ -7,12 +7,12 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-func TestNewHyperspaceWidget(t *testing.T) {
+func TestNew(t *testing.T) {
 	tests := []struct {
 		name        string
 		cfg         config.WidgetConfig
 		wantErr     bool
-		checkValues func(t *testing.T, w *HyperspaceWidget)
+		checkValues func(t *testing.T, w *Widget)
 	}{
 		{
 			name: "default configuration",
@@ -21,7 +21,7 @@ func TestNewHyperspaceWidget(t *testing.T) {
 				Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 			},
 			wantErr: false,
-			checkValues: func(t *testing.T, w *HyperspaceWidget) {
+			checkValues: func(t *testing.T, w *Widget) {
 				if w.starCount != 100 {
 					t.Errorf("starCount = %d, want 100", w.starCount)
 				}
@@ -44,7 +44,7 @@ func TestNewHyperspaceWidget(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			checkValues: func(t *testing.T, w *HyperspaceWidget) {
+			checkValues: func(t *testing.T, w *Widget) {
 				if w.starCount != 200 {
 					t.Errorf("starCount = %d, want 200", w.starCount)
 				}
@@ -63,7 +63,7 @@ func TestNewHyperspaceWidget(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			checkValues: func(t *testing.T, w *HyperspaceWidget) {
+			checkValues: func(t *testing.T, w *Widget) {
 				if w.mode != "cycle" {
 					t.Errorf("mode = %s, want cycle", w.mode)
 				}
@@ -80,7 +80,7 @@ func TestNewHyperspaceWidget(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			checkValues: func(t *testing.T, w *HyperspaceWidget) {
+			checkValues: func(t *testing.T, w *Widget) {
 				if w.centerX != 32 {
 					t.Errorf("centerX = %d, want 32", w.centerX)
 				}
@@ -93,9 +93,9 @@ func TestNewHyperspaceWidget(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			w, err := NewHyperspaceWidget(tt.cfg)
+			w, err := New(tt.cfg)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewHyperspaceWidget() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if err == nil && tt.checkValues != nil {
@@ -110,7 +110,7 @@ func intPtr(i int) *int {
 	return &i
 }
 
-func TestHyperspaceWidget_Update(t *testing.T) {
+func TestWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "hyperspace",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -121,7 +121,7 @@ func TestHyperspaceWidget_Update(t *testing.T) {
 		},
 	}
 
-	w, err := NewHyperspaceWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -142,7 +142,7 @@ func TestHyperspaceWidget_Update(t *testing.T) {
 	}
 }
 
-func TestHyperspaceWidget_Render(t *testing.T) {
+func TestWidget_Render(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "hyperspace",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -151,7 +151,7 @@ func TestHyperspaceWidget_Render(t *testing.T) {
 		},
 	}
 
-	w, err := NewHyperspaceWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -167,7 +167,7 @@ func TestHyperspaceWidget_Render(t *testing.T) {
 	}
 }
 
-func TestHyperspaceWidget_PhaseProgression(t *testing.T) {
+func TestWidget_PhaseProgression(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "hyperspace",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -177,7 +177,7 @@ func TestHyperspaceWidget_PhaseProgression(t *testing.T) {
 		},
 	}
 
-	w, err := NewHyperspaceWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -204,7 +204,7 @@ func TestHyperspaceWidget_PhaseProgression(t *testing.T) {
 	}
 }
 
-func TestHyperspaceWidget_CycleMode(t *testing.T) {
+func TestWidget_CycleMode(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "hyperspace",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -216,7 +216,7 @@ func TestHyperspaceWidget_CycleMode(t *testing.T) {
 		},
 	}
 
-	w, err := NewHyperspaceWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -239,13 +239,13 @@ func TestHyperspaceWidget_CycleMode(t *testing.T) {
 	}
 }
 
-func TestHyperspaceWidget_InitStar(t *testing.T) {
+func TestWidget_InitStar(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "hyperspace",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 	}
 
-	w, err := NewHyperspaceWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -268,13 +268,13 @@ func TestHyperspaceWidget_InitStar(t *testing.T) {
 	}
 }
 
-func TestHyperspaceWidget_DrawStreak(t *testing.T) {
+func TestWidget_DrawStreak(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "hyperspace",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 	}
 
-	w, err := NewHyperspaceWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -295,7 +295,7 @@ func TestHyperspaceWidget_DrawStreak(t *testing.T) {
 	}
 }
 
-func TestHyperspaceWidget_RadialBlurEffect(t *testing.T) {
+func TestWidget_RadialBlurEffect(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "hyperspace",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -304,7 +304,7 @@ func TestHyperspaceWidget_RadialBlurEffect(t *testing.T) {
 		},
 	}
 
-	w, err := NewHyperspaceWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}

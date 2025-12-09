@@ -1,4 +1,4 @@
-package widget
+package hyperspace
 
 import (
 	"image"
@@ -9,29 +9,30 @@ import (
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 )
 
 func init() {
-	Register("hyperspace", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewHyperspaceWidget(cfg)
+	widget.Register("hyperspace", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
-// HyperspacePhase represents the current phase of the hyperspace effect
-type HyperspacePhase int
+// Phase represents the current phase of the hyperspace effect
+type Phase int
 
 const (
-	PhaseIdle       HyperspacePhase = iota
-	PhaseStretch                    // The "anticipation" - stars begin stretching
-	PhaseJump                       // The "burst" - rapid acceleration into lightspeed
-	PhaseHyperspace                 // Full hyperspace tunnel effect
-	PhaseExit                       // Deceleration back to normal
+	PhaseIdle       Phase = iota
+	PhaseStretch          // The "anticipation" - stars begin stretching
+	PhaseJump             // The "burst" - rapid acceleration into lightspeed
+	PhaseHyperspace       // Full hyperspace tunnel effect
+	PhaseExit             // Deceleration back to normal
 )
 
 // Movement mode constants
 const (
-	hyperspaceModeContinuous = "continuous"
-	hyperspaceModeCycle      = "cycle"
+	modeContinuous = "continuous"
+	modeCycle      = "cycle"
 )
 
 // Star represents a single star in the hyperspace effect
@@ -44,9 +45,9 @@ type Star struct {
 	speed            float64 // Individual speed variation
 }
 
-// HyperspaceWidget displays the Star Wars hyperspace/lightspeed effect
-type HyperspaceWidget struct {
-	*BaseWidget
+// Widget displays the Star Wars hyperspace/lightspeed effect
+type Widget struct {
+	*widget.BaseWidget
 	mu sync.Mutex
 
 	// Configuration
@@ -64,7 +65,7 @@ type HyperspaceWidget struct {
 
 	// State
 	stars         []Star
-	phase         HyperspacePhase
+	phase         Phase
 	phaseStart    time.Time
 	stretchFactor float64 // Current stretch amount (0.0 = dots, 1.0 = full streaks)
 	rng           *rand.Rand
@@ -81,9 +82,9 @@ type HyperspaceWidget struct {
 	height int
 }
 
-// NewHyperspaceWidget creates a new hyperspace effect widget
-func NewHyperspaceWidget(cfg config.WidgetConfig) (*HyperspaceWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new hyperspace effect widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	pos := base.GetPosition()
 
 	// Default configuration
@@ -94,7 +95,7 @@ func NewHyperspaceWidget(cfg config.WidgetConfig) (*HyperspaceWidget, error) {
 	centerX := pos.W / 2
 	centerY := pos.H / 2
 	starColor := uint8(255)
-	mode := hyperspaceModeContinuous
+	mode := modeContinuous
 	idleTime := 5.0
 	travelTime := 3.0
 	starSpeed := 3.0 // Pixels per frame during hyperspace
@@ -136,7 +137,7 @@ func NewHyperspaceWidget(cfg config.WidgetConfig) (*HyperspaceWidget, error) {
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	w := &HyperspaceWidget{
+	w := &Widget{
 		BaseWidget:      base,
 		starCount:       starCount,
 		maxStreakLength: maxStreakLength,
@@ -175,7 +176,7 @@ func NewHyperspaceWidget(cfg config.WidgetConfig) (*HyperspaceWidget, error) {
 }
 
 // randomizeDriftDirection sets a new random drift direction
-func (w *HyperspaceWidget) randomizeDriftDirection() {
+func (w *Widget) randomizeDriftDirection() {
 	angle := w.rng.Float64() * 2 * math.Pi
 	w.driftDirX = math.Cos(angle)
 	w.driftDirY = math.Sin(angle)
@@ -184,7 +185,7 @@ func (w *HyperspaceWidget) randomizeDriftDirection() {
 }
 
 // applyDrift moves all stars slowly in the drift direction (spaceship turning effect)
-func (w *HyperspaceWidget) applyDrift() {
+func (w *Widget) applyDrift() {
 	for i := range w.stars {
 		s := &w.stars[i]
 
@@ -216,7 +217,7 @@ func (w *HyperspaceWidget) applyDrift() {
 }
 
 // initStar initializes a star at a random screen position
-func (w *HyperspaceWidget) initStar(s *Star) {
+func (w *Widget) initStar(s *Star) {
 	// Random position on screen
 	s.screenX = w.rng.Float64() * float64(w.width)
 	s.screenY = w.rng.Float64() * float64(w.height)
@@ -249,7 +250,7 @@ func (w *HyperspaceWidget) initStar(s *Star) {
 }
 
 // respawnStarAtCenter respawns a star near the center for continuous flow
-func (w *HyperspaceWidget) respawnStarAtCenter(s *Star) {
+func (w *Widget) respawnStarAtCenter(s *Star) {
 	// Spawn near center with random direction
 	angle := w.rng.Float64() * 2 * math.Pi
 	s.dirX = math.Cos(angle)
@@ -268,7 +269,7 @@ func (w *HyperspaceWidget) respawnStarAtCenter(s *Star) {
 
 // moveStars moves all stars outward from center (rushing past effect)
 // speedFactor is 0.0 to 1.0, controlling how fast stars move
-func (w *HyperspaceWidget) moveStars(speedFactor float64) {
+func (w *Widget) moveStars(speedFactor float64) {
 	maxDist := math.Sqrt(float64(w.width*w.width+w.height*w.height)) / 2
 
 	for i := range w.stars {
@@ -290,7 +291,7 @@ func (w *HyperspaceWidget) moveStars(speedFactor float64) {
 }
 
 // Update advances the animation
-func (w *HyperspaceWidget) Update() error {
+func (w *Widget) Update() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -312,7 +313,7 @@ func (w *HyperspaceWidget) Update() error {
 			w.randomizeDriftDirection()
 		}
 
-		if w.mode == hyperspaceModeCycle && elapsed >= w.idleTime {
+		if w.mode == modeCycle && elapsed >= w.idleTime {
 			w.phase = PhaseStretch
 			w.phaseStart = now
 		}
@@ -360,7 +361,7 @@ func (w *HyperspaceWidget) Update() error {
 		w.moveStars(1.0)
 
 		// In cycle mode, transition to exit after travel time
-		if w.mode == hyperspaceModeCycle && elapsed >= w.travelTime {
+		if w.mode == modeCycle && elapsed >= w.travelTime {
 			w.phase = PhaseExit
 			w.phaseStart = now
 		}
@@ -385,7 +386,7 @@ func (w *HyperspaceWidget) Update() error {
 }
 
 // Render draws the hyperspace effect
-func (w *HyperspaceWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -405,7 +406,7 @@ func (w *HyperspaceWidget) Render() (image.Image, error) {
 }
 
 // drawStar renders a single star with its streak effect
-func (w *HyperspaceWidget) drawStar(img *image.Gray, s *Star) {
+func (w *Widget) drawStar(img *image.Gray, s *Star) {
 	// Calculate streak length based on:
 	// 1. Current stretch factor (phase-dependent)
 	// 2. Distance from center (edge stars have longer streaks)
@@ -453,7 +454,7 @@ func (w *HyperspaceWidget) drawStar(img *image.Gray, s *Star) {
 }
 
 // drawStreak draws a radial streak with gradient (bright at head, dim at tail)
-func (w *HyperspaceWidget) drawStreak(img *image.Gray, x1, y1, x2, y2 float64, brightness uint8) {
+func (w *Widget) drawStreak(img *image.Gray, x1, y1, x2, y2 float64, brightness uint8) {
 	// Calculate line parameters
 	dx := x2 - x1
 	dy := y2 - y1
