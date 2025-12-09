@@ -285,9 +285,9 @@ func TestTextWrapper_MeasureLineHeight(t *testing.T) {
 	}
 }
 
+//goland:noinspection GoBoolExpressions
 func TestWrapModeConstants(t *testing.T) {
-	if //goland:noinspection GoBoolExpressions
-	WrapModeNormal != "normal" {
+	if WrapModeNormal != "normal" {
 		t.Errorf("WrapModeNormal = %q, want 'normal'", WrapModeNormal)
 	}
 	if WrapModeBreakAll != "break-all" {

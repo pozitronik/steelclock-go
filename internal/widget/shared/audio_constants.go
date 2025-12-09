@@ -15,6 +15,8 @@ const (
 )
 
 // Audio visualizer bar style constants (for spectrum mode)
+//
+//goland:noinspection GoUnusedConst
 const (
 	AudioBarStyleBars = "bars"
 	AudioBarStyleLine = "line"
