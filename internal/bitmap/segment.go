@@ -18,7 +18,7 @@ const (
 )
 
 // SegmentPatterns contains the bit patterns for digits 0-9
-// Bit order: gfedcba (bit 0 = segment a, bit 6 = segment g)
+// Bit order: gfedcba (bit 0 = segment `a`, bit 6 = segment `g`)
 //
 //	Segment layout:
 //	 aaa
