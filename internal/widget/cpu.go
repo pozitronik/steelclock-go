@@ -3,7 +3,6 @@ package widget
 import (
 	"fmt"
 	"image"
-	"math"
 	"sync"
 	"time"
 
@@ -31,7 +30,11 @@ type CPUWidget struct {
 	fillColor   int // -1 = no fill, 0-255 = fill color (used for per-core border color)
 	historyLen  int
 
-	// MetricRenderer for single-value (non-perCore) rendering
+	// Strategy pattern for single-value mode rendering
+	strategy shared.MetricDisplayStrategy
+	// Strategy pattern for per-core (grid) mode rendering
+	gridStrategy shared.GridMetricDisplayStrategy
+	// MetricRenderer for rendering
 	renderer *shared.MetricRenderer
 
 	// Metrics provider (abstraction over gopsutil)
@@ -121,6 +124,8 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 		coreMargin:     coreMargin,
 		fillColor:      graphSettings.FillColor,
 		historyLen:     graphSettings.HistoryLen,
+		strategy:       shared.GetMetricStrategy(displayMode),
+		gridStrategy:   shared.GetGridMetricStrategy(displayMode),
 		renderer:       renderer,
 		cpuProvider:    cpuProvider,
 		historySingle:  shared.NewRingBuffer[float64](graphSettings.HistoryLen),
@@ -210,186 +215,54 @@ func (w *CPUWidget) Render() (image.Image, error) {
 		return img, nil
 	}
 
-	// For perCore mode, use specialized grid renderers
+	// For perCore mode, use grid strategy
 	if w.perCore {
-		switch w.displayMode {
-		case shared.DisplayModeText:
-			w.renderTextGrid(img, w.currentUsagePerCore)
-		case shared.DisplayModeBar:
-			w.renderBarGrid(img, content.X, content.Y, content.Width, content.Height)
-		case shared.DisplayModeGraph:
-			w.renderGraphGrid(img, content.X, content.Y, content.Width, content.Height)
-		case shared.DisplayModeGauge:
-			w.renderGaugeGrid(img, pos)
+		// Determine border color
+		borderColor := uint8(255)
+		if w.fillColor >= 0 && w.fillColor <= 255 {
+			borderColor = uint8(w.fillColor)
 		}
+
+		// Prepare grid data
+		gridData := shared.GridMetricData{
+			Values:      w.currentUsagePerCore,
+			ContentArea: image.Rect(content.X, content.Y, content.X+content.Width, content.Y+content.Height),
+			Position:    pos,
+			CoreBorder:  w.coreBorder,
+			CoreMargin:  w.coreMargin,
+			BorderColor: borderColor,
+			FontFace:    w.fontFace,
+			FontName:    w.fontName,
+		}
+
+		// For graph mode, transpose history from [time][core] to [core][time]
+		if w.displayMode == shared.DisplayModeGraph && w.historyPerCore.Len() >= 2 {
+			historySlice := w.historyPerCore.ToSlice()
+			numCores := len(historySlice[0])
+			coreHistories := make([][]float64, numCores)
+			for i := 0; i < numCores; i++ {
+				coreHistories[i] = make([]float64, len(historySlice))
+				for t, cores := range historySlice {
+					if i < len(cores) {
+						coreHistories[i][t] = cores[i]
+					}
+				}
+			}
+			gridData.History = coreHistories
+		}
+
+		w.gridStrategy.Render(img, gridData, w.renderer)
 		return img, nil
 	}
 
-	// For single-value mode, use MetricRenderer
-	switch w.displayMode {
-	case shared.DisplayModeText:
-		text := fmt.Sprintf("%.0f", w.currentUsageSingle)
-		w.renderer.RenderText(img, text)
-	case shared.DisplayModeBar:
-		w.renderer.RenderBar(img, content.X, content.Y, content.Width, content.Height, w.currentUsageSingle)
-	case shared.DisplayModeGraph:
-		w.renderer.RenderGraph(img, content.X, content.Y, content.Width, content.Height, w.historySingle.ToSlice())
-	case shared.DisplayModeGauge:
-		w.renderer.RenderGauge(img, 0, 0, pos.W, pos.H, w.currentUsageSingle)
-	}
+	// For single-value mode, use strategy pattern
+	w.strategy.Render(img, shared.MetricData{
+		Value:       w.currentUsageSingle,
+		History:     w.historySingle.ToSlice(),
+		TextFormat:  "%.0f",
+		ContentArea: image.Rect(content.X, content.Y, content.X+content.Width, content.Y+content.Height),
+		GaugeArea:   image.Rect(0, 0, pos.W, pos.H),
+	}, w.renderer)
 
 	return img, nil
-}
-
-// renderTextGrid renders CPU usage for each core in a grid layout
-func (w *CPUWidget) renderTextGrid(img *image.Gray, cores []float64) {
-	pos := w.GetPosition()
-	numCores := len(cores)
-	if numCores == 0 {
-		return
-	}
-
-	// Calculate grid dimensions
-	// Try to make it roughly square, preferring more columns than rows
-	cols := int(math.Ceil(math.Sqrt(float64(numCores))))
-	rows := int(math.Ceil(float64(numCores) / float64(cols)))
-
-	// Calculate cell dimensions with margins
-	totalMarginWidth := (cols - 1) * w.coreMargin
-	totalMarginHeight := (rows - 1) * w.coreMargin
-	cellWidth := (pos.W - totalMarginWidth) / cols
-	cellHeight := (pos.H - totalMarginHeight) / rows
-
-	borderColor := uint8(255)
-	if w.fillColor >= 0 && w.fillColor <= 255 {
-		borderColor = uint8(w.fillColor)
-	}
-
-	// Draw each core value in its grid cell
-	for i, usage := range cores {
-		row := i / cols
-		col := i % cols
-
-		cellX := col * (cellWidth + w.coreMargin)
-		cellY := row * (cellHeight + w.coreMargin)
-
-		// Draw border if enabled
-		if w.coreBorder {
-			bitmap.DrawRectangle(img, cellX, cellY, cellWidth, cellHeight, borderColor)
-		}
-
-		// Format: just the percentage value
-		text := fmt.Sprintf("%.0f", usage)
-
-		// Draw text centered in the cell using explicit coordinates
-		bitmap.SmartDrawTextInRect(img, text, w.fontFace, w.fontName, cellX, cellY, cellWidth, cellHeight, "center", "center", 0)
-	}
-}
-
-// renderBarGrid renders CPU usage bars for each core
-func (w *CPUWidget) renderBarGrid(img *image.Gray, x, y, width, height int) {
-	cores := w.currentUsagePerCore
-	barColor := w.renderer.Bar.Color
-	border := w.renderer.Bar.Border || w.coreBorder
-
-	if w.renderer.Bar.Direction == config.DirectionVertical {
-		coreWidth := (width - (len(cores)-1)*w.coreMargin) / len(cores)
-		for i, usage := range cores {
-			coreX := x + i*(coreWidth+w.coreMargin)
-			bitmap.DrawVerticalBar(img, coreX, y, coreWidth, height, usage, barColor, border)
-		}
-	} else {
-		coreHeight := (height - (len(cores)-1)*w.coreMargin) / len(cores)
-		for i, usage := range cores {
-			coreY := y + i*(coreHeight+w.coreMargin)
-			bitmap.DrawHorizontalBar(img, x, coreY, width, coreHeight, usage, barColor, border)
-		}
-	}
-}
-
-// renderGraphGrid renders CPU usage graphs for each core in a grid layout
-func (w *CPUWidget) renderGraphGrid(img *image.Gray, x, y, width, height int) {
-	if w.historyPerCore.Len() < 2 {
-		return
-	}
-
-	// Get core count from first history entry
-	firstEntry := w.historyPerCore.Get(0)
-	numCores := len(firstEntry)
-
-	// Calculate grid dimensions
-	cols := int(math.Ceil(math.Sqrt(float64(numCores))))
-	rows := int(math.Ceil(float64(numCores) / float64(cols)))
-
-	// Calculate cell dimensions with margins
-	totalMarginWidth := (cols - 1) * w.coreMargin
-	totalMarginHeight := (rows - 1) * w.coreMargin
-	cellWidth := (width - totalMarginWidth) / cols
-	cellHeight := (height - totalMarginHeight) / rows
-
-	// Transpose history: convert from [time][core] to [core][time]
-	historySlice := w.historyPerCore.ToSlice()
-	coreHistories := make([][]float64, numCores)
-	for i := 0; i < numCores; i++ {
-		coreHistories[i] = make([]float64, len(historySlice))
-		for t, cores := range historySlice {
-			if i < len(cores) {
-				coreHistories[i][t] = cores[i]
-			}
-		}
-	}
-
-	// Draw a graph for each core
-	borderColor := w.renderer.Bar.Color
-	for i := 0; i < numCores; i++ {
-		row := i / cols
-		col := i % cols
-
-		cellX := x + col*(cellWidth+w.coreMargin)
-		cellY := y + row*(cellHeight+w.coreMargin)
-
-		// Draw border if enabled
-		if w.coreBorder {
-			bitmap.DrawRectangle(img, cellX, cellY, cellWidth, cellHeight, borderColor)
-		}
-
-		bitmap.DrawGraph(img, cellX, cellY, cellWidth, cellHeight, coreHistories[i],
-			w.renderer.Graph.HistoryLen, w.renderer.Graph.FillColor, w.renderer.Graph.LineColor)
-	}
-}
-
-// renderGaugeGrid renders CPU usage gauges for each core in a grid layout
-func (w *CPUWidget) renderGaugeGrid(img *image.Gray, pos config.PositionConfig) {
-	cores := w.currentUsagePerCore
-	numCores := len(cores)
-
-	// Calculate grid dimensions
-	cols := int(math.Ceil(math.Sqrt(float64(numCores))))
-	rows := int(math.Ceil(float64(numCores) / float64(cols)))
-
-	// Calculate cell dimensions with margins
-	totalMarginWidth := (cols - 1) * w.coreMargin
-	totalMarginHeight := (rows - 1) * w.coreMargin
-	cellWidth := (pos.W - totalMarginWidth) / cols
-	cellHeight := (pos.H - totalMarginHeight) / rows
-
-	borderColor := w.renderer.Bar.Color
-
-	// Draw a gauge for each core
-	for i, usage := range cores {
-		row := i / cols
-		col := i % cols
-
-		cellX := col * (cellWidth + w.coreMargin)
-		cellY := row * (cellHeight + w.coreMargin)
-
-		// Draw border if enabled
-		if w.coreBorder {
-			bitmap.DrawRectangle(img, cellX, cellY, cellWidth, cellHeight, borderColor)
-		}
-
-		bitmap.DrawGauge(img, cellX, cellY, cellWidth, cellHeight, usage,
-			w.renderer.Gauge.ArcColor, w.renderer.Gauge.NeedleColor,
-			w.renderer.Gauge.ShowTicks, w.renderer.Gauge.TicksColor)
-	}
 }

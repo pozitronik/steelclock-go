@@ -37,6 +37,7 @@ type BaseDualIOWidget struct {
 	TextConfig    DualIOTextConfig
 	Converter     *ByteRateConverter
 	Renderer      *DualMetricRenderer
+	Strategy      DualMetricDisplayStrategy
 
 	// Runtime state - current values in bytes per second
 	PrimaryValue   float64
@@ -77,6 +78,7 @@ func NewBaseDualIOWidget(cfg BaseDualIOConfig) *BaseDualIOWidget {
 		TextConfig:       cfg.TextConfig,
 		Converter:        cfg.Converter,
 		Renderer:         cfg.Renderer,
+		Strategy:         GetDualMetricStrategy(cfg.DisplayMode),
 		PrimaryHistory:   NewRingBuffer[float64](cfg.HistoryLen),
 		SecondaryHistory: NewRingBuffer[float64](cfg.HistoryLen),
 	}
@@ -135,22 +137,24 @@ func (w *BaseDualIOWidget) Render() (image.Image, error) {
 	w.Mu.RLock()
 	defer w.Mu.RUnlock()
 
-	switch w.DisplayMode {
-	case DisplayModeText:
-		text := w.formatText()
-		w.Renderer.RenderText(img, text)
-	case DisplayModeBar:
-		primaryPct, secondaryPct := w.calculatePercentages()
-		w.Renderer.RenderBar(img, contentX, contentY, contentW, contentH, primaryPct, secondaryPct)
-	case DisplayModeGraph:
-		primaryPct, secondaryPct := w.normalizeHistory()
-		w.Renderer.RenderGraph(img, contentX, contentY, contentW, contentH, primaryPct, secondaryPct)
-	case DisplayModeGauge:
-		if w.SupportsGauge {
-			primaryPct, secondaryPct := w.calculatePercentages()
-			w.Renderer.RenderGauge(img, pos, primaryPct, secondaryPct)
-		}
+	// Prepare data based on display mode
+	primaryPct, secondaryPct := w.calculatePercentages()
+	primaryHist, secondaryHist := w.normalizeHistory()
+
+	data := DualMetricData{
+		PrimaryValue:     primaryPct,
+		SecondaryValue:   secondaryPct,
+		PrimaryHistory:   primaryHist,
+		SecondaryHistory: secondaryHist,
+		FormattedText:    w.formatText(),
+		ContentArea:      image.Rect(contentX, contentY, contentX+contentW, contentY+contentH),
+		GaugeArea:        image.Rect(0, 0, pos.W, pos.H),
+		WidgetWidth:      pos.W,
+		WidgetHeight:     pos.H,
+		SupportsGauge:    w.SupportsGauge,
 	}
+
+	w.Strategy.Render(img, data, w.Renderer)
 
 	return img, nil
 }

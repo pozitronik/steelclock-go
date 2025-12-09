@@ -20,13 +20,14 @@ func init() {
 // MemoryWidget displays RAM usage
 type MemoryWidget struct {
 	*BaseWidget
-	displayMode    shared.DisplayMode
-	padding        int
-	renderer       *shared.MetricRenderer
-	memoryProvider metrics.MemoryProvider
-	currentUsage   float64
-	history        *shared.RingBuffer[float64]
 	mu             sync.RWMutex
+	strategy       shared.MetricDisplayStrategy
+	Renderer       *shared.MetricRenderer
+	displayMode    shared.DisplayMode
+	currentValue   float64
+	history        *shared.RingBuffer[float64]
+	textFormat     string
+	memoryProvider metrics.MemoryProvider
 }
 
 // NewMemoryWidget creates a new memory widget
@@ -83,11 +84,12 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 
 	return &MemoryWidget{
 		BaseWidget:     base,
+		strategy:       shared.GetMetricStrategy(displayMode),
+		Renderer:       renderer,
 		displayMode:    displayMode,
-		padding:        padding,
-		renderer:       renderer,
-		memoryProvider: metrics.DefaultMemory,
 		history:        shared.NewRingBuffer[float64](graphSettings.HistoryLen),
+		textFormat:     "%.0f",
+		memoryProvider: metrics.DefaultMemory,
 	}, nil
 }
 
@@ -98,24 +100,30 @@ func (w *MemoryWidget) Update() error {
 		return err
 	}
 
-	w.mu.Lock()
-	w.currentUsage = percent
-
 	// Clamp to 0-100
-	if w.currentUsage < 0 {
-		w.currentUsage = 0
+	if percent < 0 {
+		percent = 0
 	}
-	if w.currentUsage > 100 {
-		w.currentUsage = 100
+	if percent > 100 {
+		percent = 100
 	}
 
-	// Add to history for graph mode (ring buffer handles capacity automatically)
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	w.currentValue = percent
 	if w.displayMode == shared.DisplayModeGraph {
-		w.history.Push(w.currentUsage)
+		w.history.Push(percent)
 	}
-	w.mu.Unlock()
 
 	return nil
+}
+
+// GetValue returns the current memory usage percentage (thread-safe)
+func (w *MemoryWidget) GetValue() float64 {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	return w.currentValue
 }
 
 // Render creates an image of the memory widget
@@ -124,25 +132,21 @@ func (w *MemoryWidget) Render() (image.Image, error) {
 	img := w.CreateCanvas()
 	w.ApplyBorder(img)
 
-	// Get content area (adjusted for padding)
+	// Get content area (adjusted for padding) and full bounds for gauge
 	content := w.GetContentArea()
 	pos := w.GetPosition()
 
-	// Render based on display mode
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	switch w.displayMode {
-	case shared.DisplayModeText:
-		text := fmt.Sprintf("%.0f", w.currentUsage)
-		w.renderer.RenderText(img, text)
-	case shared.DisplayModeBar:
-		w.renderer.RenderBar(img, content.X, content.Y, content.Width, content.Height, w.currentUsage)
-	case shared.DisplayModeGraph:
-		w.renderer.RenderGraph(img, content.X, content.Y, content.Width, content.Height, w.history.ToSlice())
-	case shared.DisplayModeGauge:
-		w.renderer.RenderGauge(img, 0, 0, pos.W, pos.H, w.currentUsage)
-	}
+	// Delegate rendering to strategy
+	w.strategy.Render(img, shared.MetricData{
+		Value:       w.currentValue,
+		History:     w.history.ToSlice(),
+		TextFormat:  w.textFormat,
+		ContentArea: image.Rect(content.X, content.Y, content.X+content.Width, content.Y+content.Height),
+		GaugeArea:   image.Rect(0, 0, pos.W, pos.H),
+	}, w.Renderer)
 
 	return img, nil
 }

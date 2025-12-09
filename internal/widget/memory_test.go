@@ -95,8 +95,9 @@ func TestMemoryWidgetUpdate(t *testing.T) {
 	}
 
 	// Usage should be between 0 and 100
-	if widget.currentUsage < 0 || widget.currentUsage > 100 {
-		t.Errorf("currentUsage = %.2f, want 0-100", widget.currentUsage)
+	usage := widget.GetValue()
+	if usage < 0 || usage > 100 {
+		t.Errorf("currentUsage = %.2f, want 0-100", usage)
 	}
 }
 
@@ -192,12 +193,12 @@ func TestMemoryWidget_GaugeDefaults(t *testing.T) {
 	}
 
 	// Verify gauge defaults are applied by checking renderer config
-	if widget.renderer.Gauge.ArcColor != 200 {
-		t.Errorf("default Gauge.ArcColor = %d, want 200", widget.renderer.Gauge.ArcColor)
+	if widget.Renderer.Gauge.ArcColor != 200 {
+		t.Errorf("default Gauge.ArcColor = %d, want 200", widget.Renderer.Gauge.ArcColor)
 	}
 
-	if widget.renderer.Gauge.NeedleColor != 255 {
-		t.Errorf("default Gauge.NeedleColor = %d, want 255", widget.renderer.Gauge.NeedleColor)
+	if widget.Renderer.Gauge.NeedleColor != 255 {
+		t.Errorf("default Gauge.NeedleColor = %d, want 255", widget.Renderer.Gauge.NeedleColor)
 	}
 
 	err = widget.Update()
