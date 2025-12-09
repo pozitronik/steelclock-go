@@ -1072,7 +1072,7 @@ func TestDrawDualGraph(t *testing.T) {
 			}
 
 			// If at least one graph should be drawn, check for pixels
-			hasGraph := (tt.fill1 >= 0 || tt.line1 >= 0 || tt.fill2 >= 0 || tt.line2 >= 0)
+			hasGraph := tt.fill1 >= 0 || tt.line1 >= 0 || tt.fill2 >= 0 || tt.line2 >= 0
 			if hasGraph && !hasPixels {
 				t.Error("DrawDualGraph did not draw any pixels when graphs should be visible")
 			}
