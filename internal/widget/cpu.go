@@ -53,7 +53,7 @@ func NewCPUWidget(cfg config.WidgetConfig) (*CPUWidget, error) {
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
-	displayMode := shared.DisplayMode(helper.GetDisplayMode("text"))
+	displayMode := shared.DisplayMode(helper.GetDisplayMode(config.ModeText))
 	textSettings := helper.GetTextSettings()
 	padding := helper.GetPadding()
 	barSettings := helper.GetBarSettings()
@@ -285,7 +285,7 @@ func (w *CPUWidget) renderBarGrid(img *image.Gray, x, y, width, height int) {
 	barColor := w.renderer.Bar.Color
 	border := w.renderer.Bar.Border || w.coreBorder
 
-	if w.renderer.Bar.Direction == "vertical" {
+	if w.renderer.Bar.Direction == config.DirectionVertical {
 		coreWidth := (width - (len(cores)-1)*w.coreMargin) / len(cores)
 		for i, usage := range cores {
 			coreX := x + i*(coreWidth+w.coreMargin)

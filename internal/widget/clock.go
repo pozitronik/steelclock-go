@@ -32,7 +32,7 @@ func NewClockWidget(cfg config.WidgetConfig) (*ClockWidget, error) {
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract display mode
-	modeStr := helper.GetDisplayMode("text")
+	modeStr := helper.GetDisplayMode(config.ModeText)
 	displayMode := ClockDisplayMode(modeStr)
 	// Map "clock_face" alias to "analog"
 	if displayMode == "clock_face" {

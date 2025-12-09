@@ -120,23 +120,23 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	gaugeSettings := helper.GetGaugeSettings()
 
 	// Display mode - translate schema mode to internal mode
-	displayMode := helper.GetDisplayMode("bar")
+	displayMode := helper.GetDisplayMode(config.ModeBar)
 
 	// Handle "bar" mode by checking bar.direction
-	if displayMode == "bar" {
-		if barSettings.Direction == "vertical" {
-			displayMode = "bar_vertical"
+	if displayMode == config.ModeBar {
+		if barSettings.Direction == config.DirectionVertical {
+			displayMode = config.ModeBarVertical
 		} else {
-			displayMode = "bar_horizontal"
+			displayMode = config.ModeBarHorizontal
 		}
 	}
 
 	// Validate display mode (internal modes)
 	validModes := map[string]bool{
-		"text":           true,
-		"bar_horizontal": true,
-		"bar_vertical":   true,
-		"gauge":          true,
+		config.ModeText:          true,
+		config.ModeBarHorizontal: true,
+		config.ModeBarVertical:   true,
+		config.ModeGauge:         true,
 	}
 	if !validModes[displayMode] {
 		return nil, fmt.Errorf("invalid display mode: %s (valid: text, bar, gauge)", displayMode)
@@ -148,7 +148,7 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	peakColor := 180
 
 	// Bar mode colors (for bar_horizontal and bar_vertical)
-	if displayMode == "bar_horizontal" || displayMode == "bar_vertical" {
+	if displayMode == config.ModeBarHorizontal || displayMode == config.ModeBarVertical {
 		if cfg.Bar != nil && cfg.Bar.Colors != nil {
 			if cfg.Bar.Colors.Fill != nil {
 				fillColor = *cfg.Bar.Colors.Fill
@@ -163,7 +163,7 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	}
 
 	// Gauge mode colors
-	if displayMode == "gauge" {
+	if displayMode == config.ModeGauge {
 		if cfg.Gauge != nil && cfg.Gauge.Colors != nil {
 			if cfg.Gauge.Colors.Clipping != nil {
 				clippingColor = *cfg.Gauge.Colors.Clipping
@@ -519,13 +519,13 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 	if w.stereoMode && len(channelPeaks) >= 2 {
 		// Render stereo version of each mode (uses per-channel peak holds)
 		switch w.displayMode {
-		case "text":
+		case config.ModeText:
 			w.renderTextStereo(img, channelPeaks, isClipping)
-		case "bar_horizontal":
+		case config.ModeBarHorizontal:
 			w.renderBarHorizontalStereo(img, channelPeaks, peakHoldValues, isClipping)
-		case "bar_vertical":
+		case config.ModeBarVertical:
 			w.renderBarVerticalStereo(img, channelPeaks, peakHoldValues, isClipping)
-		case "gauge":
+		case config.ModeGauge:
 			w.renderGaugeStereo(img, channelPeaks, peakHoldValues, isClipping)
 		}
 	} else {
@@ -539,13 +539,13 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 			}
 		}
 		switch w.displayMode {
-		case "text":
+		case config.ModeText:
 			w.renderText(img, displayPeak, isClipping)
-		case "bar_horizontal":
+		case config.ModeBarHorizontal:
 			w.renderBarHorizontal(img, displayPeak, monoPeakHold, isClipping)
-		case "bar_vertical":
+		case config.ModeBarVertical:
 			w.renderBarVertical(img, displayPeak, monoPeakHold, isClipping)
-		case "gauge":
+		case config.ModeGauge:
 			w.renderGauge(img, displayPeak, monoPeakHold, isClipping)
 		}
 	}

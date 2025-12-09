@@ -5,6 +5,8 @@ import (
 	"image"
 	"image/color"
 	"time"
+
+	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
 // ClockBinaryRenderer renders clock in binary (BCD or true binary) mode
@@ -79,7 +81,7 @@ func (r *ClockBinaryRenderer) renderBCDClock(img *image.Gray, t time.Time, x, y,
 		hintSpace = 12 // pixels for decimal hint
 	}
 
-	if r.config.Layout == "horizontal" {
+	if r.config.Layout == config.DirectionHorizontal {
 		// Horizontal: bits go left to right, digits stack vertically
 		totalWidth = 4*dotUnit + labelSpace + hintSpace
 		totalHeight = numDigitCols*dotUnit + numColons*colonSpace/2
@@ -95,7 +97,7 @@ func (r *ClockBinaryRenderer) renderBCDClock(img *image.Gray, t time.Time, x, y,
 	onColor := color.Gray{Y: uint8(r.config.OnColor)}
 	offColor := color.Gray{Y: uint8(r.config.OffColor)}
 
-	if r.config.Layout == "horizontal" {
+	if r.config.Layout == config.DirectionHorizontal {
 		r.renderBCDHorizontal(img, pairs, startX, startY, dotUnit, colonSpace, labelSpace, onColor, offColor)
 	} else {
 		r.renderBCDVertical(img, pairs, startX, startY, dotUnit, colonSpace, labelSpace, onColor, offColor)
@@ -261,7 +263,7 @@ func (r *ClockBinaryRenderer) renderTrueBinaryClock(img *image.Gray, t time.Time
 
 	var totalWidth, totalHeight int
 
-	if r.config.Layout == "horizontal" {
+	if r.config.Layout == config.DirectionHorizontal {
 		// Horizontal: each value is a row of bits
 		totalWidth = maxBits*dotUnit + labelSpace + hintSpace
 		totalHeight = len(values) * dotUnit
@@ -277,7 +279,7 @@ func (r *ClockBinaryRenderer) renderTrueBinaryClock(img *image.Gray, t time.Time
 	onColor := color.Gray{Y: uint8(r.config.OnColor)}
 	offColor := color.Gray{Y: uint8(r.config.OffColor)}
 
-	if r.config.Layout == "horizontal" {
+	if r.config.Layout == config.DirectionHorizontal {
 		// Each value on its own row
 		dotStartX := startX
 		if r.config.ShowLabels {

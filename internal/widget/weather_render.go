@@ -9,6 +9,7 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
+	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
 // renderTokens renders all tokens to the image
@@ -53,9 +54,9 @@ func (w *WeatherWidget) renderTokens(img *image.Gray, tokens []Token, weather *W
 	x := w.padding
 	if !hasLargeToken {
 		switch w.horizAlign {
-		case "left":
+		case config.AlignLeft:
 			x = w.padding
-		case "right":
+		case config.AlignRight:
 			x = pos.W - totalWidth - w.padding
 			if x < w.padding {
 				x = w.padding
@@ -121,9 +122,9 @@ func (w *WeatherWidget) renderMultiLine(img *image.Gray, tokens []Token, weather
 	totalHeight := len(lines) * lineHeight
 	startY := 0
 	switch w.vertAlign {
-	case "top":
+	case config.AlignTop:
 		startY = w.padding
-	case "bottom":
+	case config.AlignBottom:
 		startY = pos.H - totalHeight - w.padding
 		if startY < w.padding {
 			startY = w.padding
@@ -165,9 +166,9 @@ func (w *WeatherWidget) renderLine(img *image.Gray, tokens []Token, y, height in
 	x := w.padding
 	if !hasLargeToken {
 		switch w.horizAlign {
-		case "left":
+		case config.AlignLeft:
 			x = w.padding
-		case "right":
+		case config.AlignRight:
 			x = pos.W - totalWidth - w.padding
 			if x < w.padding {
 				x = w.padding
@@ -197,7 +198,7 @@ func (w *WeatherWidget) renderLine(img *image.Gray, tokens []Token, y, height in
 			w.renderLargeTokenInRect(img, t, x, y, availableWidth, actualHeight, weather, forecast, scrollOffset)
 			x += availableWidth
 		} else if t.Type != TokenLarge {
-			width := w.renderTokenInRectWithAlign(img, t, x, y, actualHeight, "center", weather, forecast, aqi, uv)
+			width := w.renderTokenInRectWithAlign(img, t, x, y, actualHeight, config.AlignCenter, weather, forecast, aqi, uv)
 			x += width
 		}
 	}
@@ -244,7 +245,7 @@ func (w *WeatherWidget) renderTokenInRectWithAlign(img *image.Gray, t *Token, x,
 	switch t.Type {
 	case TokenLiteral:
 		width, _ := bitmap.SmartMeasureText(t.Literal, w.fontFace, w.fontName)
-		bitmap.SmartDrawTextInRect(img, t.Literal, w.fontFace, w.fontName, x, y, width+10, height, "left", vAlign, 0)
+		bitmap.SmartDrawTextInRect(img, t.Literal, w.fontFace, w.fontName, x, y, width+10, height, config.AlignLeft, vAlign, 0)
 		return width
 
 	case TokenIcon:
@@ -253,7 +254,7 @@ func (w *WeatherWidget) renderTokenInRectWithAlign(img *image.Gray, t *Token, x,
 	case TokenText:
 		text := getWeatherTokenText(t, weather, forecast, aqi, uv, w.units)
 		width, _ := bitmap.SmartMeasureText(text, w.fontFace, w.fontName)
-		bitmap.SmartDrawTextInRect(img, text, w.fontFace, w.fontName, x, y, width+10, height, "left", vAlign, 0)
+		bitmap.SmartDrawTextInRect(img, text, w.fontFace, w.fontName, x, y, width+10, height, config.AlignLeft, vAlign, 0)
 		return width
 
 	case TokenLarge:
@@ -313,9 +314,9 @@ func (w *WeatherWidget) renderIconTokenWithAlign(img *image.Gray, t *Token, x, y
 	if icon != nil {
 		var iconY int
 		switch vAlign {
-		case "top":
+		case config.AlignTop:
 			iconY = y + w.padding
-		case "bottom":
+		case config.AlignBottom:
 			iconY = y + height - icon.Height - w.padding
 		default: // center
 			iconY = y + (height-icon.Height)/2
@@ -504,7 +505,7 @@ func (w *WeatherWidget) renderForecastIcons(img *image.Gray, x, y, width, height
 			tempStr := fmt.Sprintf("%.0f%s", day.Temperature, unit)
 			tempY := iconY + icon.Height + 1
 			if tempY < y+height-smallFontSize {
-				bitmap.SmartDrawTextInRect(img, tempStr, smallFont, w.fontName, startX, tempY, dayWidth, height-tempY, "center", "top", 0)
+				bitmap.SmartDrawTextInRect(img, tempStr, smallFont, w.fontName, startX, tempY, dayWidth, height-tempY, config.AlignCenter, config.AlignTop, 0)
 			}
 		}
 	}
@@ -544,9 +545,9 @@ func (w *WeatherWidget) renderForecastScroll(img *image.Gray, x, y, width, heigh
 	offset := int(scrollOffset) % (textWidth + width)
 
 	drawX := x + width - offset
-	bitmap.SmartDrawTextInRect(img, text, w.fontFace, w.fontName, drawX, y, textWidth+width, height, "left", "center", 0)
+	bitmap.SmartDrawTextInRect(img, text, w.fontFace, w.fontName, drawX, y, textWidth+width, height, config.AlignLeft, config.AlignCenter, 0)
 
 	if drawX+textWidth < x+width {
-		bitmap.SmartDrawTextInRect(img, text, w.fontFace, w.fontName, drawX+textWidth, y, textWidth, height, "left", "center", 0)
+		bitmap.SmartDrawTextInRect(img, text, w.fontFace, w.fontName, drawX+textWidth, y, textWidth, height, config.AlignLeft, config.AlignCenter, 0)
 	}
 }

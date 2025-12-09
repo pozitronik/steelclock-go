@@ -12,10 +12,10 @@ import (
 type DisplayMode string
 
 const (
-	DisplayModeText  DisplayMode = "text"
-	DisplayModeBar   DisplayMode = "bar"
-	DisplayModeGraph DisplayMode = "graph"
-	DisplayModeGauge DisplayMode = "gauge"
+	DisplayModeText  DisplayMode = DisplayMode(config.ModeText)
+	DisplayModeBar   DisplayMode = DisplayMode(config.ModeBar)
+	DisplayModeGraph DisplayMode = DisplayMode(config.ModeGraph)
+	DisplayModeGauge DisplayMode = DisplayMode(config.ModeGauge)
 )
 
 // BarConfig holds configuration for bar rendering
@@ -69,7 +69,7 @@ func NewMetricRenderer(bar BarConfig, graph GraphConfig, gauge GaugeConfig, text
 
 // RenderBar renders a single-value bar (horizontal or vertical)
 func (r *MetricRenderer) RenderBar(img *image.Gray, x, y, w, h int, value float64) {
-	if r.Bar.Direction == "vertical" {
+	if r.Bar.Direction == config.DirectionVertical {
 		bitmap.DrawVerticalBar(img, x, y, w, h, value, r.Bar.Color, r.Bar.Border)
 	} else {
 		bitmap.DrawHorizontalBar(img, x, y, w, h, value, r.Bar.Color, r.Bar.Border)
@@ -150,7 +150,7 @@ func NewDualMetricRenderer(bar DualBarConfig, graph DualGraphConfig, gauge DualG
 
 // RenderBar renders a dual-value bar
 func (r *DualMetricRenderer) RenderBar(img *image.Gray, x, y, w, h int, primary, secondary float64) {
-	if r.Bar.Direction == "vertical" {
+	if r.Bar.Direction == config.DirectionVertical {
 		bitmap.DrawDualVerticalBar(img, x, y, w, h, primary, secondary, r.Bar.PrimaryColor, r.Bar.SecondaryColor, r.Bar.Border)
 	} else {
 		bitmap.DrawDualHorizontalBar(img, x, y, w, h, primary, secondary, r.Bar.PrimaryColor, r.Bar.SecondaryColor, r.Bar.Border)

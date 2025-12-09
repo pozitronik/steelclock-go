@@ -299,15 +299,15 @@ func (w *VolumeWidget) Render() (image.Image, error) {
 
 	// Render based on display mode
 	switch w.displayMode {
-	case "text":
+	case config.ModeText:
 		w.renderText(img)
-	case "bar":
-		if w.barDirection == "vertical" {
+	case config.ModeBar:
+		if w.barDirection == config.DirectionVertical {
 			w.renderBarVertical(img, pos, style)
 		} else {
 			w.renderBarHorizontal(img, pos, style)
 		}
-	case "gauge":
+	case config.ModeGauge:
 		w.renderGauge(img, pos)
 	default:
 		w.renderBarHorizontal(img, pos, style)

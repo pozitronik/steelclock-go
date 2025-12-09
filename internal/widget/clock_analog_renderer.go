@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
+	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
 // ClockAnalogRenderer renders clock in analog (clock face) mode
@@ -41,9 +42,9 @@ func (r *ClockAnalogRenderer) Render(img *image.Gray, t time.Time, x, y, w, h in
 
 	// Horizontal alignment
 	switch r.config.HorizAlign {
-	case "left":
+	case config.AlignLeft:
 		centerX = x + radius + r.config.Padding + 2
-	case "right":
+	case config.AlignRight:
 		centerX = x + w - radius - r.config.Padding - 2
 	default: // "center"
 		centerX = x + w/2
@@ -51,9 +52,9 @@ func (r *ClockAnalogRenderer) Render(img *image.Gray, t time.Time, x, y, w, h in
 
 	// Vertical alignment
 	switch r.config.VertAlign {
-	case "top":
+	case config.AlignTop:
 		centerY = y + radius + r.config.Padding + 2
-	case "bottom":
+	case config.AlignBottom:
 		centerY = y + h - radius - r.config.Padding - 2
 	default: // "center"
 		centerY = y + h/2

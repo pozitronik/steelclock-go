@@ -1,6 +1,9 @@
 package widget
 
-import "golang.org/x/image/font"
+import (
+	"github.com/pozitronik/steelclock-go/internal/config"
+	"golang.org/x/image/font"
+)
 
 // ClockDisplayMode represents available display modes for clock widgets
 type ClockDisplayMode string
@@ -68,7 +71,7 @@ type ClockSegmentConfig struct {
 func NewClockBinaryConfig() ClockBinaryConfig {
 	return ClockBinaryConfig{
 		Style:      "bcd",
-		Layout:     "vertical",
+		Layout:     config.DirectionVertical,
 		Format:     "%H:%M:%S",
 		ShowLabels: false,
 		ShowHint:   false,

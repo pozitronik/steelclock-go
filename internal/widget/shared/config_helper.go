@@ -59,8 +59,8 @@ func (h *ConfigHelper) GetTextSettings() TextSettings {
 	settings := TextSettings{
 		FontSize:   10,
 		FontName:   "",
-		HorizAlign: "center",
-		VertAlign:  "center",
+		HorizAlign: config.AlignCenter,
+		VertAlign:  config.AlignCenter,
 	}
 
 	if h.cfg.Text != nil {
@@ -92,7 +92,7 @@ func (h *ConfigHelper) GetPadding() int {
 // GetBarSettings extracts bar configuration with defaults
 func (h *ConfigHelper) GetBarSettings() BarSettings {
 	settings := BarSettings{
-		Direction: "horizontal",
+		Direction: config.DirectionHorizontal,
 		Border:    false,
 		FillColor: 255,
 	}
@@ -178,13 +178,13 @@ func (h *ConfigHelper) GetFillColorForMode(mode string) int {
 	fillColor := 255
 
 	switch mode {
-	case "bar":
+	case config.ModeBar:
 		bar := h.GetBarSettings()
 		fillColor = bar.FillColor
-	case "graph":
+	case config.ModeGraph:
 		graph := h.GetGraphSettings()
 		fillColor = graph.FillColor
-	case "gauge":
+	case config.ModeGauge:
 		if h.cfg.Gauge != nil && h.cfg.Gauge.Colors != nil && h.cfg.Gauge.Colors.Fill != nil {
 			fillColor = *h.cfg.Gauge.Colors.Fill
 		}

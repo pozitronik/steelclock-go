@@ -152,7 +152,7 @@ func NewBatteryWidget(cfg config.WidgetConfig) (*BatteryWidget, error) {
 	economyState := indicatorState{mode: economyMode, notifyDuration: notifyDuration}
 
 	// Orientation from battery config
-	orientation := "horizontal"
+	orientation := config.DirectionHorizontal
 	if cfg.Battery != nil && cfg.Battery.Orientation != "" {
 		orientation = cfg.Battery.Orientation
 	}
@@ -226,7 +226,7 @@ func NewBatteryWidget(cfg config.WidgetConfig) (*BatteryWidget, error) {
 	// Select icon set based on widget dimensions
 	// For vertical orientation, width is the limiting factor; for horizontal, height is
 	iconDimension := cfg.Position.H
-	if orientation == "vertical" {
+	if orientation == config.DirectionVertical {
 		iconDimension = cfg.Position.W
 	}
 	iconSet := selectBatteryIconSet(iconDimension)
@@ -325,23 +325,23 @@ func (w *BatteryWidget) Render() (image.Image, error) {
 	w.mu.RUnlock()
 
 	if !hasData {
-		bitmap.SmartDrawAlignedText(img, "...", w.fontFace, w.fontName, "center", "center", w.padding)
+		bitmap.SmartDrawAlignedText(img, "...", w.fontFace, w.fontName, config.AlignCenter, config.AlignCenter, w.padding)
 		return img, nil
 	}
 
 	if !status.HasBattery {
-		bitmap.SmartDrawAlignedText(img, "No Battery", w.fontFace, w.fontName, "center", "center", w.padding)
+		bitmap.SmartDrawAlignedText(img, "No Battery", w.fontFace, w.fontName, config.AlignCenter, config.AlignCenter, w.padding)
 		return img, nil
 	}
 
 	switch w.displayMode {
-	case "text":
+	case config.ModeText:
 		w.renderText(img, status)
-	case "bar":
+	case config.ModeBar:
 		w.renderBar(img, status)
-	case "gauge":
+	case config.ModeGauge:
 		w.renderGauge(img, status)
-	case "graph":
+	case config.ModeGraph:
 		w.renderGraph(img, status)
 	default: // "battery" - progressbar in battery shape
 		w.renderBattery(img, status)
@@ -579,7 +579,7 @@ func (w *BatteryWidget) renderBar(img *image.Gray, status BatteryStatus) {
 	// Calculate fill
 	fillAmount := float64(status.Percentage) / 100.0
 
-	if w.orientation == "vertical" || w.barDirection == "up" || w.barDirection == "down" {
+	if w.orientation == config.DirectionVertical || w.barDirection == "up" || w.barDirection == "down" {
 		fillH := int(float64(barH) * fillAmount)
 		if w.barDirection == "down" {
 			bitmap.DrawFilledRectangle(img, barX, barY, barW, fillH, fillColor)
@@ -598,7 +598,7 @@ func (w *BatteryWidget) renderBar(img *image.Gray, status BatteryStatus) {
 	// Draw percentage text if enabled
 	if w.showPercentage {
 		text := fmt.Sprintf("%d%%", status.Percentage)
-		bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, "center", "center", 0)
+		bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, config.AlignCenter, config.AlignCenter, 0)
 	}
 
 	// Draw status icon (charging, economy, or AC) in top-left corner
@@ -616,7 +616,7 @@ func (w *BatteryWidget) renderGauge(img *image.Gray, status BatteryStatus) {
 	// Draw percentage text
 	if w.showPercentage {
 		text := fmt.Sprintf("%d%%", status.Percentage)
-		bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, "center", "top", w.padding)
+		bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, config.AlignCenter, config.AlignTop, w.padding)
 	}
 
 	// Draw status icon (charging, economy, or AC) in top-left corner
@@ -649,7 +649,7 @@ func (w *BatteryWidget) renderGraph(img *image.Gray, status BatteryStatus) {
 	// Draw current percentage
 	if w.showPercentage {
 		text := fmt.Sprintf("%d%%", status.Percentage)
-		bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, "right", "top", w.padding+2)
+		bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, config.AlignRight, config.AlignTop, w.padding+2)
 	}
 
 	// Draw status icon (charging, economy, or AC) in top-left corner
@@ -660,7 +660,7 @@ func (w *BatteryWidget) renderGraph(img *image.Gray, status BatteryStatus) {
 func (w *BatteryWidget) renderBattery(img *image.Gray, status BatteryStatus) {
 	pos := w.GetPosition()
 
-	if w.orientation == "vertical" {
+	if w.orientation == config.DirectionVertical {
 		w.renderBatteryVertical(img, status, pos)
 	} else {
 		w.renderBatteryHorizontal(img, status, pos)
