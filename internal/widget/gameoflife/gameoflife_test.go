@@ -1,4 +1,4 @@
-package widget
+package gameoflife
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-func TestNewGameOfLifeWidget(t *testing.T) {
+func TestNew(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "game_of_life",
 		ID:      "test-gol",
@@ -16,13 +16,13 @@ func TestNewGameOfLifeWidget(t *testing.T) {
 		},
 	}
 
-	w, err := NewGameOfLifeWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewGameOfLifeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if w == nil {
-		t.Fatal("NewGameOfLifeWidget() returned nil")
+		t.Fatal("New() returned nil")
 	}
 
 	if w.gridWidth != 128 {
@@ -34,7 +34,7 @@ func TestNewGameOfLifeWidget(t *testing.T) {
 	}
 }
 
-func TestNewGameOfLifeWidget_WithConfig(t *testing.T) {
+func TestNew_WithConfig(t *testing.T) {
 	wrapEdges := false
 	trailEffect := false
 
@@ -56,9 +56,9 @@ func TestNewGameOfLifeWidget_WithConfig(t *testing.T) {
 		},
 	}
 
-	w, err := NewGameOfLifeWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewGameOfLifeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// With cell size 2, grid should be half the display size
@@ -83,16 +83,16 @@ func TestNewGameOfLifeWidget_WithConfig(t *testing.T) {
 	}
 
 	// Check HighLife rules (B36/S23)
-	if !contains(w.birthRules, 3) || !contains(w.birthRules, 6) {
+	if !containsInt(w.birthRules, 3) || !containsInt(w.birthRules, 6) {
 		t.Errorf("birthRules = %v, want [3, 6]", w.birthRules)
 	}
 
-	if !contains(w.survivalRules, 2) || !contains(w.survivalRules, 3) {
+	if !containsInt(w.survivalRules, 2) || !containsInt(w.survivalRules, 3) {
 		t.Errorf("survivalRules = %v, want [2, 3]", w.survivalRules)
 	}
 }
 
-func TestGameOfLifeWidget_Update(t *testing.T) {
+func TestWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "game_of_life",
 		ID:      "test-gol",
@@ -105,9 +105,9 @@ func TestGameOfLifeWidget_Update(t *testing.T) {
 		},
 	}
 
-	w, err := NewGameOfLifeWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewGameOfLifeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Manually set a blinker pattern (period 2 oscillator)
@@ -147,7 +147,7 @@ func TestGameOfLifeWidget_Update(t *testing.T) {
 	}
 }
 
-func TestGameOfLifeWidget_Render(t *testing.T) {
+func TestWidget_Render(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "game_of_life",
 		ID:      "test-gol",
@@ -160,9 +160,9 @@ func TestGameOfLifeWidget_Render(t *testing.T) {
 		},
 	}
 
-	w, err := NewGameOfLifeWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewGameOfLifeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	img, err := w.Render()
@@ -198,13 +198,13 @@ func TestParseRules(t *testing.T) {
 			birth, survival := parseRules(tt.rules)
 
 			for _, b := range tt.wantBirth {
-				if !contains(birth, b) {
+				if !containsInt(birth, b) {
 					t.Errorf("parseRules(%q) birth missing %d, got %v", tt.rules, b, birth)
 				}
 			}
 
 			for _, s := range tt.wantSurvival {
-				if !contains(survival, s) {
+				if !containsInt(survival, s) {
 					t.Errorf("parseRules(%q) survival missing %d, got %v", tt.rules, s, survival)
 				}
 			}
@@ -212,10 +212,10 @@ func TestParseRules(t *testing.T) {
 	}
 }
 
-func TestGameOfLifeWidget_Patterns(t *testing.T) {
-	patterns := []string{"glider", "r_pentomino", "acorn", "diehard", "lwss", "pulsar", "glider_gun", "random", "clear"}
+func TestWidget_Patterns(t *testing.T) {
+	patternNames := []string{"glider", "r_pentomino", "acorn", "diehard", "lwss", "pulsar", "glider_gun", "random", "clear"}
 
-	for _, pattern := range patterns {
+	for _, pattern := range patternNames {
 		t.Run(pattern, func(t *testing.T) {
 			cfg := config.WidgetConfig{
 				Type:    "game_of_life",
@@ -229,9 +229,9 @@ func TestGameOfLifeWidget_Patterns(t *testing.T) {
 				},
 			}
 
-			w, err := NewGameOfLifeWidget(cfg)
+			w, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewGameOfLifeWidget() with pattern %q error = %v", pattern, err)
+				t.Fatalf("New() with pattern %q error = %v", pattern, err)
 			}
 
 			// Should be able to update and render without error
@@ -246,7 +246,7 @@ func TestGameOfLifeWidget_Patterns(t *testing.T) {
 	}
 }
 
-func TestGameOfLifeWidget_WrapEdges(t *testing.T) {
+func TestWidget_WrapEdges(t *testing.T) {
 	wrapEdges := true
 
 	cfg := config.WidgetConfig{
@@ -262,9 +262,9 @@ func TestGameOfLifeWidget_WrapEdges(t *testing.T) {
 		},
 	}
 
-	w, err := NewGameOfLifeWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewGameOfLifeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Set cells at edges that should wrap
@@ -286,7 +286,7 @@ func TestGameOfLifeWidget_WrapEdges(t *testing.T) {
 	}
 }
 
-func TestGameOfLifeWidget_RestartOnEmpty(t *testing.T) {
+func TestWidget_RestartOnEmpty(t *testing.T) {
 	restartTimeout := 0.0 // Immediate restart
 	trailEffect := false
 
@@ -305,9 +305,9 @@ func TestGameOfLifeWidget_RestartOnEmpty(t *testing.T) {
 		},
 	}
 
-	w, err := NewGameOfLifeWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewGameOfLifeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Store initial hash
@@ -341,7 +341,7 @@ func TestGameOfLifeWidget_RestartOnEmpty(t *testing.T) {
 	t.Logf("Initial hash: %d, new hash: %d, alive cells: %d", initialHash, newHash, aliveCells)
 }
 
-func TestGameOfLifeWidget_NoRestartWhenDisabled(t *testing.T) {
+func TestWidget_NoRestartWhenDisabled(t *testing.T) {
 	restartTimeout := -1.0 // Disabled
 	trailEffect := false
 
@@ -359,9 +359,9 @@ func TestGameOfLifeWidget_NoRestartWhenDisabled(t *testing.T) {
 		},
 	}
 
-	w, err := NewGameOfLifeWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewGameOfLifeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Run several updates
@@ -377,7 +377,7 @@ func TestGameOfLifeWidget_NoRestartWhenDisabled(t *testing.T) {
 	}
 }
 
-func TestGameOfLifeWidget_RestartOnStable(t *testing.T) {
+func TestWidget_RestartOnStable(t *testing.T) {
 	restartTimeout := 0.0 // Immediate restart
 	trailEffect := false
 
@@ -396,9 +396,9 @@ func TestGameOfLifeWidget_RestartOnStable(t *testing.T) {
 		},
 	}
 
-	w, err := NewGameOfLifeWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewGameOfLifeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Create a stable 2x2 block (still life)
@@ -436,7 +436,7 @@ func TestGameOfLifeWidget_RestartOnStable(t *testing.T) {
 	}
 }
 
-func TestGameOfLifeWidget_RestartTimeoutConfig(t *testing.T) {
+func TestWidget_RestartTimeoutConfig(t *testing.T) {
 	restartTimeout := 5.0
 
 	cfg := config.WidgetConfig{
@@ -451,9 +451,9 @@ func TestGameOfLifeWidget_RestartTimeoutConfig(t *testing.T) {
 		},
 	}
 
-	w, err := NewGameOfLifeWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewGameOfLifeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if w.restartTimeout != 5.0 {
@@ -461,7 +461,7 @@ func TestGameOfLifeWidget_RestartTimeoutConfig(t *testing.T) {
 	}
 }
 
-func TestGameOfLifeWidget_InjectMode(t *testing.T) {
+func TestWidget_InjectMode(t *testing.T) {
 	restartTimeout := 0.0 // Immediate
 	trailEffect := false
 
@@ -481,9 +481,9 @@ func TestGameOfLifeWidget_InjectMode(t *testing.T) {
 		},
 	}
 
-	w, err := NewGameOfLifeWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewGameOfLifeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if w.restartMode != "inject" {
@@ -508,7 +508,7 @@ func TestGameOfLifeWidget_InjectMode(t *testing.T) {
 	}
 }
 
-func TestGameOfLifeWidget_RandomMode(t *testing.T) {
+func TestWidget_RandomMode(t *testing.T) {
 	restartTimeout := 0.0 // Immediate
 	trailEffect := false
 
@@ -528,9 +528,9 @@ func TestGameOfLifeWidget_RandomMode(t *testing.T) {
 		},
 	}
 
-	w, err := NewGameOfLifeWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewGameOfLifeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Glider has 5 cells

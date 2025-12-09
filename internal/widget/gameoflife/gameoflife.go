@@ -1,4 +1,4 @@
-package widget
+package gameoflife
 
 import (
 	"image"
@@ -10,11 +10,12 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 )
 
 func init() {
-	Register("game_of_life", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewGameOfLifeWidget(cfg)
+	widget.Register("game_of_life", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
@@ -25,9 +26,9 @@ const (
 	restartModeRandom = "random"
 )
 
-// GameOfLifeWidget implements Conway's Game of Life cellular automaton
-type GameOfLifeWidget struct {
-	*BaseWidget
+// Widget implements Conway's Game of Life cellular automaton
+type Widget struct {
+	*widget.BaseWidget
 	mu sync.Mutex
 
 	// Configuration
@@ -58,7 +59,7 @@ type GameOfLifeWidget struct {
 }
 
 // Predefined patterns (relative coordinates)
-var gameOfLifePatterns = map[string][][2]int{
+var patterns = map[string][][2]int{
 	"glider": {
 		{1, 0}, {2, 1}, {0, 2}, {1, 2}, {2, 2},
 	},
@@ -101,9 +102,9 @@ var gameOfLifePatterns = map[string][][2]int{
 	},
 }
 
-// NewGameOfLifeWidget creates a new Game of Life widget
-func NewGameOfLifeWidget(cfg config.WidgetConfig) (*GameOfLifeWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new Game of Life widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	pos := base.GetPosition()
 
 	// Default configuration
@@ -161,7 +162,7 @@ func NewGameOfLifeWidget(cfg config.WidgetConfig) (*GameOfLifeWidget, error) {
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	w := &GameOfLifeWidget{
+	w := &Widget{
 		BaseWidget:     base,
 		birthRules:     birthRules,
 		survivalRules:  survivalRules,
@@ -226,8 +227,18 @@ func parseDigits(s string) []int {
 	return result
 }
 
+// containsInt checks if a slice contains a value
+func containsInt(slice []int, val int) bool {
+	for _, v := range slice {
+		if v == val {
+			return true
+		}
+	}
+	return false
+}
+
 // injectRandomCells adds random cells to the existing grid without clearing it
-func (w *GameOfLifeWidget) injectRandomCells() {
+func (w *Widget) injectRandomCells() {
 	for y := 0; y < w.gridHeight; y++ {
 		for x := 0; x < w.gridWidth; x++ {
 			// Only add to empty cells
@@ -239,7 +250,7 @@ func (w *GameOfLifeWidget) injectRandomCells() {
 }
 
 // performRestart handles restart based on restart_mode
-func (w *GameOfLifeWidget) performRestart() {
+func (w *Widget) performRestart() {
 	switch w.restartMode {
 	case restartModeInject:
 		// Add new cells to existing grid
@@ -254,7 +265,7 @@ func (w *GameOfLifeWidget) performRestart() {
 }
 
 // setPattern initializes the grid with a pattern
-func (w *GameOfLifeWidget) setPattern(pattern string) {
+func (w *Widget) setPattern(pattern string) {
 	// Clear grid
 	for y := 0; y < w.gridHeight; y++ {
 		for x := 0; x < w.gridWidth; x++ {
@@ -279,7 +290,7 @@ func (w *GameOfLifeWidget) setPattern(pattern string) {
 	}
 
 	// Try predefined patterns
-	coords, ok := gameOfLifePatterns[pattern]
+	coords, ok := patterns[pattern]
 	if !ok {
 		// Default to random if pattern not found
 		w.setPattern(restartModeRandom)
@@ -315,7 +326,7 @@ func (w *GameOfLifeWidget) setPattern(pattern string) {
 }
 
 // countNeighbors counts alive neighbors for a cell
-func (w *GameOfLifeWidget) countNeighbors(x, y int) int {
+func (w *Widget) countNeighbors(x, y int) int {
 	count := 0
 
 	for dy := -1; dy <= 1; dy++ {
@@ -355,18 +366,8 @@ func (w *GameOfLifeWidget) countNeighbors(x, y int) int {
 	return count
 }
 
-// contains checks if a slice contains a value
-func contains(slice []int, val int) bool {
-	for _, v := range slice {
-		if v == val {
-			return true
-		}
-	}
-	return false
-}
-
 // computeHash computes a simple hash of the grid state (only alive cells)
-func (w *GameOfLifeWidget) computeHash() uint64 {
+func (w *Widget) computeHash() uint64 {
 	var hash uint64 = 5381
 	for y := 0; y < w.gridHeight; y++ {
 		for x := 0; x < w.gridWidth; x++ {
@@ -380,7 +381,7 @@ func (w *GameOfLifeWidget) computeHash() uint64 {
 }
 
 // countAliveCells returns the number of fully alive cells
-func (w *GameOfLifeWidget) countAliveCells() int {
+func (w *Widget) countAliveCells() int {
 	count := 0
 	for y := 0; y < w.gridHeight; y++ {
 		for x := 0; x < w.gridWidth; x++ {
@@ -393,7 +394,7 @@ func (w *GameOfLifeWidget) countAliveCells() int {
 }
 
 // isGridEmpty returns true if all cells are dead (including fading)
-func (w *GameOfLifeWidget) isGridEmpty() bool {
+func (w *Widget) isGridEmpty() bool {
 	for y := 0; y < w.gridHeight; y++ {
 		for x := 0; x < w.gridWidth; x++ {
 			if w.current[y][x] > 0 {
@@ -405,7 +406,7 @@ func (w *GameOfLifeWidget) isGridEmpty() bool {
 }
 
 // Update advances the simulation one generation
-func (w *GameOfLifeWidget) Update() error {
+func (w *Widget) Update() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -431,7 +432,7 @@ func (w *GameOfLifeWidget) Update() error {
 
 			if isAlive {
 				// Currently alive
-				if contains(w.survivalRules, neighbors) {
+				if containsInt(w.survivalRules, neighbors) {
 					w.next[y][x] = w.cellColor // Survives
 				} else {
 					// Dies - start fading or go to 0
@@ -450,7 +451,7 @@ func (w *GameOfLifeWidget) Update() error {
 				}
 			} else {
 				// Currently dead
-				if contains(w.birthRules, neighbors) {
+				if containsInt(w.birthRules, neighbors) {
 					w.next[y][x] = w.cellColor // Birth
 				} else {
 					w.next[y][x] = 0
@@ -505,7 +506,7 @@ func (w *GameOfLifeWidget) Update() error {
 }
 
 // Render draws the current state
-func (w *GameOfLifeWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
