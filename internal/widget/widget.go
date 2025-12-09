@@ -28,3 +28,24 @@ type Widget interface {
 	// GetStyle returns the widget's style configuration
 	GetStyle() config.StyleConfig
 }
+
+// Stoppable is an optional interface for widgets that need cleanup on shutdown.
+// Widgets with goroutines, file watchers, or subscriptions should implement this.
+type Stoppable interface {
+	Stop()
+}
+
+// StopWidget calls Stop() on the widget if it implements Stoppable.
+// Safe to call on any widget - does nothing if widget doesn't implement Stoppable.
+func StopWidget(w Widget) {
+	if s, ok := w.(Stoppable); ok {
+		s.Stop()
+	}
+}
+
+// StopWidgets calls Stop() on all widgets that implement Stoppable.
+func StopWidgets(widgets []Widget) {
+	for _, w := range widgets {
+		StopWidget(w)
+	}
+}

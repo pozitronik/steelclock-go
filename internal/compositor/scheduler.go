@@ -48,6 +48,7 @@ func (s *WidgetScheduler) Start() {
 }
 
 // Stop signals all widget update loops to terminate and waits for completion.
+// Also calls Stop() on any widgets that implement the Stoppable interface.
 func (s *WidgetScheduler) Stop() {
 	s.mu.Lock()
 	if !s.running {
@@ -58,7 +59,12 @@ func (s *WidgetScheduler) Stop() {
 	close(s.stopChan)
 	s.mu.Unlock()
 
+	// Wait for all update loops to finish
 	s.wg.Wait()
+
+	// Stop any widgets that need cleanup (goroutines, subscriptions, etc.)
+	widget.StopWidgets(s.widgets)
+
 	log.Println("Widget scheduler stopped")
 }
 
