@@ -336,6 +336,7 @@ func TestDrawInternalTextClipped_UnknownCharacter(t *testing.T) {
 	}
 }
 
+//goland:noinspection GoBoolExpressions
 func TestInternalFontConstants(t *testing.T) {
 	if FontNamePixel3x5 != "pixel3x5" {
 		t.Errorf("FontNamePixel3x5 = %q, want %q", FontNamePixel3x5, "pixel3x5")
