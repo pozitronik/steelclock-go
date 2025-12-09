@@ -1,4 +1,4 @@
-package widget
+package clock
 
 import (
 	"image"
@@ -8,10 +8,10 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 )
 
-// ClockSegmentRenderer renders clock in 7-segment display mode
+// SegmentRenderer renders clock in 7-segment display mode
 // This renderer is stateful - it owns the animation state for digit transitions
-type ClockSegmentRenderer struct {
-	config ClockSegmentConfig
+type SegmentRenderer struct {
+	config SegmentConfig
 
 	// Animation state - owned by this renderer
 	lastDigits     [8]int // Support up to 8 digits
@@ -20,16 +20,16 @@ type ClockSegmentRenderer struct {
 	mu             sync.RWMutex
 }
 
-// NewClockSegmentRenderer creates a new segment mode clock renderer
-func NewClockSegmentRenderer(cfg ClockSegmentConfig) *ClockSegmentRenderer {
-	return &ClockSegmentRenderer{
+// NewSegmentRenderer creates a new segment mode clock renderer
+func NewSegmentRenderer(cfg SegmentConfig) *SegmentRenderer {
+	return &SegmentRenderer{
 		config:     cfg,
 		lastDigits: [8]int{-1, -1, -1, -1, -1, -1, -1, -1}, // Initialize to invalid
 	}
 }
 
 // Render draws the clock as a 7-segment display
-func (r *ClockSegmentRenderer) Render(img *image.Gray, t time.Time, x, y, w, h int) error {
+func (r *SegmentRenderer) Render(img *image.Gray, t time.Time, x, y, w, h int) error {
 	hour := t.Hour()
 	minute := t.Minute()
 	second := t.Second()
@@ -153,7 +153,7 @@ func (r *ClockSegmentRenderer) Render(img *image.Gray, t time.Time, x, y, w, h i
 }
 
 // NeedsUpdate returns true if any digit is currently animating
-func (r *ClockSegmentRenderer) NeedsUpdate() bool {
+func (r *SegmentRenderer) NeedsUpdate() bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -166,7 +166,7 @@ func (r *ClockSegmentRenderer) NeedsUpdate() bool {
 }
 
 // drawSegmentDigit draws a single seven-segment digit
-func (r *ClockSegmentRenderer) drawSegmentDigit(img *image.Gray, x, y, width, height int, digit int, animProgress float64) {
+func (r *SegmentRenderer) drawSegmentDigit(img *image.Gray, x, y, width, height int, digit int, animProgress float64) {
 	style := bitmap.SegmentStyleRectangle
 	switch r.config.SegmentStyle {
 	case segmentStyleHexagon:
@@ -180,7 +180,7 @@ func (r *ClockSegmentRenderer) drawSegmentDigit(img *image.Gray, x, y, width, he
 }
 
 // drawColon draws the colon separator between digit pairs
-func (r *ClockSegmentRenderer) drawColon(img *image.Gray, x, y, width, height int, t time.Time) {
+func (r *SegmentRenderer) drawColon(img *image.Gray, x, y, width, height int, t time.Time) {
 	// Determine if colon should be visible (blinking)
 	visible := true
 	if r.config.ColonBlink {

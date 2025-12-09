@@ -1,4 +1,4 @@
-package widget
+package clock
 
 import (
 	"image"
@@ -7,7 +7,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-func TestNewClockWidget(t *testing.T) {
+func TestNew(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "clock",
 		ID:      "test_clock",
@@ -29,13 +29,13 @@ func TestNewClockWidget(t *testing.T) {
 		},
 	}
 
-	widget, err := NewClockWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewClockWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget == nil {
-		t.Fatal("NewClockWidget() returned nil")
+		t.Fatal("New() returned nil")
 	}
 
 	if widget.Name() != "test_clock" {
@@ -43,7 +43,7 @@ func TestNewClockWidget(t *testing.T) {
 	}
 }
 
-func TestClockWidgetUpdate(t *testing.T) {
+func TestWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "clock",
 		ID:      "test_clock",
@@ -65,9 +65,9 @@ func TestClockWidgetUpdate(t *testing.T) {
 		},
 	}
 
-	widget, err := NewClockWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewClockWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update should populate currentTime
@@ -81,7 +81,7 @@ func TestClockWidgetUpdate(t *testing.T) {
 	}
 }
 
-func TestClockWidgetRender(t *testing.T) {
+func TestWidget_Render(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "clock",
 		ID:      "test_clock",
@@ -103,9 +103,9 @@ func TestClockWidgetRender(t *testing.T) {
 		},
 	}
 
-	widget, err := NewClockWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewClockWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update before render
@@ -133,7 +133,7 @@ func TestClockWidgetRender(t *testing.T) {
 	}
 }
 
-func TestClockWidgetRender_ClockFace(t *testing.T) {
+func TestWidget_Render_ClockFace(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "clock",
 		ID:      "test_clock_face",
@@ -151,13 +151,13 @@ func TestClockWidgetRender_ClockFace(t *testing.T) {
 		Mode: "clock_face",
 	}
 
-	widget, err := NewClockWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewClockWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget == nil {
-		t.Fatal("NewClockWidget() returned nil")
+		t.Fatal("New() returned nil")
 	}
 
 	// "clock_face" is mapped to "analog" internally
@@ -209,7 +209,7 @@ func TestClockWidgetRender_ClockFace(t *testing.T) {
 	}
 }
 
-func TestClockWidget_DefaultDisplayMode(t *testing.T) {
+func TestWidget_DefaultDisplayMode(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "clock",
 		ID:      "test_default_mode",
@@ -230,9 +230,9 @@ func TestClockWidget_DefaultDisplayMode(t *testing.T) {
 		},
 	}
 
-	widget, err := NewClockWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewClockWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Should default to "text" mode
@@ -241,7 +241,7 @@ func TestClockWidget_DefaultDisplayMode(t *testing.T) {
 	}
 }
 
-func TestClockWidgetRender_ClockFaceAlignment(t *testing.T) {
+func TestWidget_Render_ClockFaceAlignment(t *testing.T) {
 	tests := []struct {
 		name          string
 		horizAlign    config.HAlign
@@ -345,9 +345,9 @@ func TestClockWidgetRender_ClockFaceAlignment(t *testing.T) {
 				},
 			}
 
-			widget, err := NewClockWidget(cfg)
+			widget, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewClockWidget() error = %v", err)
+				t.Fatalf("New() error = %v", err)
 			}
 
 			// Render
@@ -366,7 +366,7 @@ func TestClockWidgetRender_ClockFaceAlignment(t *testing.T) {
 	}
 }
 
-func TestClockWidget_BinaryMode(t *testing.T) {
+func TestWidget_BinaryMode(t *testing.T) {
 	tests := []struct {
 		name         string
 		binaryConfig *config.BinaryClockConfig
@@ -417,9 +417,9 @@ func TestClockWidget_BinaryMode(t *testing.T) {
 				Binary: tt.binaryConfig,
 			}
 
-			widget, err := NewClockWidget(cfg)
+			widget, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewClockWidget() error = %v", err)
+				t.Fatalf("New() error = %v", err)
 			}
 
 			if widget.displayMode != "binary" {
@@ -444,7 +444,7 @@ func TestClockWidget_BinaryMode(t *testing.T) {
 	}
 }
 
-func TestClockWidget_SegmentMode(t *testing.T) {
+func TestWidget_SegmentMode(t *testing.T) {
 	tests := []struct {
 		name          string
 		segmentConfig *config.SegmentClockConfig
@@ -505,9 +505,9 @@ func TestClockWidget_SegmentMode(t *testing.T) {
 				Segment: tt.segmentConfig,
 			}
 
-			widget, err := NewClockWidget(cfg)
+			widget, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewClockWidget() error = %v", err)
+				t.Fatalf("New() error = %v", err)
 			}
 
 			if widget.displayMode != "segment" {
@@ -532,7 +532,7 @@ func TestClockWidget_SegmentMode(t *testing.T) {
 	}
 }
 
-func TestClockWidget_NeedsUpdate(t *testing.T) {
+func TestWidget_NeedsUpdate(t *testing.T) {
 	// Text mode clock should return false for NeedsUpdate
 	cfg := config.WidgetConfig{
 		Type:    "clock",
@@ -548,9 +548,9 @@ func TestClockWidget_NeedsUpdate(t *testing.T) {
 		},
 	}
 
-	widget, err := NewClockWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewClockWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// NeedsUpdate should return a boolean without error
@@ -572,19 +572,19 @@ func TestClockWidget_NeedsUpdate(t *testing.T) {
 		},
 	}
 
-	segmentWidget, err := NewClockWidget(segmentCfg)
+	segmentWidget, err := New(segmentCfg)
 	if err != nil {
-		t.Fatalf("NewClockWidget(segment) error = %v", err)
+		t.Fatalf("New(segment) error = %v", err)
 	}
 
 	segmentNeedsUpdate := segmentWidget.NeedsUpdate()
 	t.Logf("Segment mode NeedsUpdate() = %v", segmentNeedsUpdate)
 }
 
-// TestClockWidget_ConcurrentAccess tests that concurrent calls to Update() and Render()
+// TestWidget_ConcurrentAccess tests that concurrent calls to Update() and Render()
 // do not cause data races on the currentTime string field.
 // This test should be run with -race flag to detect concurrent access violations.
-func TestClockWidget_ConcurrentAccess(t *testing.T) {
+func TestWidget_ConcurrentAccess(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "clock",
 		ID:      "test_clock_concurrent",
@@ -606,9 +606,9 @@ func TestClockWidget_ConcurrentAccess(t *testing.T) {
 		},
 	}
 
-	widget, err := NewClockWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewClockWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Number of concurrent goroutines
@@ -664,4 +664,9 @@ func TestClockWidget_ConcurrentAccess(t *testing.T) {
 	// Note: The race detector will catch concurrent string access
 	// even if no errors are returned. Run with: go test -race
 	t.Log("Concurrent access test completed. Run with -race flag to detect data races.")
+}
+
+// Helper function for tests
+func intPtr(i int) *int {
+	return &i
 }

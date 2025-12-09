@@ -1,4 +1,4 @@
-package widget
+package clock
 
 import (
 	"image"
@@ -7,20 +7,20 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 )
 
-// ClockTextRenderer renders clock in text mode
-type ClockTextRenderer struct {
-	config ClockTextConfig
+// TextRenderer renders clock in text mode
+type TextRenderer struct {
+	config TextConfig
 }
 
-// NewClockTextRenderer creates a new text mode clock renderer
-func NewClockTextRenderer(cfg ClockTextConfig) *ClockTextRenderer {
-	return &ClockTextRenderer{
+// NewTextRenderer creates a new text mode clock renderer
+func NewTextRenderer(cfg TextConfig) *TextRenderer {
+	return &TextRenderer{
 		config: cfg,
 	}
 }
 
 // Render draws the clock as formatted text
-func (r *ClockTextRenderer) Render(img *image.Gray, t time.Time, _, _, _, _ int) error {
+func (r *TextRenderer) Render(img *image.Gray, t time.Time, _, _, _, _ int) error {
 	timeStr := t.Format(r.config.Format)
 	bitmap.SmartDrawAlignedText(img, timeStr, r.config.FontFace, r.config.FontName,
 		r.config.HorizAlign, r.config.VertAlign, r.config.Padding)
@@ -28,6 +28,6 @@ func (r *ClockTextRenderer) Render(img *image.Gray, t time.Time, _, _, _, _ int)
 }
 
 // NeedsUpdate returns false as text mode has no animations
-func (r *ClockTextRenderer) NeedsUpdate() bool {
+func (r *TextRenderer) NeedsUpdate() bool {
 	return false
 }

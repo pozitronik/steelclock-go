@@ -1,4 +1,4 @@
-package widget
+package clock
 
 import (
 	"image"

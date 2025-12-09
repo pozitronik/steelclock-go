@@ -1,12 +1,12 @@
-package widget
+package clock
 
 import (
 	"image"
 	"time"
 )
 
-// ClockRenderer defines the interface for clock display mode renderers
-type ClockRenderer interface {
+// Renderer defines the interface for clock display mode renderers
+type Renderer interface {
 	// Render draws the clock to the image at the specified position
 	// t is the current time to display
 	// x, y are the top-left coordinates of the rendering area

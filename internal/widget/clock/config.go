@@ -1,18 +1,18 @@
-package widget
+package clock
 
 import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"golang.org/x/image/font"
 )
 
-// ClockDisplayMode represents available display modes for clock widgets
-type ClockDisplayMode string
+// DisplayMode represents available display modes for clock widgets
+type DisplayMode string
 
 const (
-	ClockModeText    ClockDisplayMode = "text"
-	ClockModeAnalog  ClockDisplayMode = "analog"
-	ClockModeBinary  ClockDisplayMode = "binary"
-	ClockModeSegment ClockDisplayMode = "segment"
+	ModeText    DisplayMode = "text"
+	ModeAnalog  DisplayMode = "analog"
+	ModeBinary  DisplayMode = "binary"
+	ModeSegment DisplayMode = "segment"
 )
 
 // Binary clock styles
@@ -46,8 +46,8 @@ const (
 	flipStyleNone = "none"
 )
 
-// ClockTextConfig holds configuration for text mode clock rendering
-type ClockTextConfig struct {
+// TextConfig holds configuration for text mode clock rendering
+type TextConfig struct {
 	FontFace   font.Face
 	FontName   string
 	HorizAlign config.HAlign
@@ -56,8 +56,8 @@ type ClockTextConfig struct {
 	Format     string // Go time format string (e.g., "15:04:05")
 }
 
-// ClockAnalogConfig holds configuration for analog clock rendering
-type ClockAnalogConfig struct {
+// AnalogConfig holds configuration for analog clock rendering
+type AnalogConfig struct {
 	HorizAlign  config.HAlign
 	VertAlign   config.VAlign
 	Padding     int
@@ -69,8 +69,8 @@ type ClockAnalogConfig struct {
 	SecondColor int // -1 = transparent, 0-255 = color
 }
 
-// ClockBinaryConfig holds configuration for binary clock rendering
-type ClockBinaryConfig struct {
+// BinaryConfig holds configuration for binary clock rendering
+type BinaryConfig struct {
 	Style      string // "bcd" or "true"
 	Layout     string // "vertical" or "horizontal"
 	Format     string // "%H:%M:%S" style format string
@@ -83,8 +83,8 @@ type ClockBinaryConfig struct {
 	OffColor   int    // 0-255
 }
 
-// ClockSegmentConfig holds configuration for 7-segment clock rendering
-type ClockSegmentConfig struct {
+// SegmentConfig holds configuration for 7-segment clock rendering
+type SegmentConfig struct {
 	Format           string // "%H:%M:%S" style format string
 	DigitHeight      int    // 0 = auto-fit
 	SegmentThickness int
@@ -98,9 +98,9 @@ type ClockSegmentConfig struct {
 	FlipSpeed        float64
 }
 
-// NewClockBinaryConfig creates a ClockBinaryConfig with default values
-func NewClockBinaryConfig() ClockBinaryConfig {
-	return ClockBinaryConfig{
+// NewBinaryConfig creates a BinaryConfig with default values
+func NewBinaryConfig() BinaryConfig {
+	return BinaryConfig{
 		Style:      binaryStyleBCD,
 		Layout:     config.DirectionVertical,
 		Format:     "%H:%M:%S",
@@ -114,9 +114,9 @@ func NewClockBinaryConfig() ClockBinaryConfig {
 	}
 }
 
-// NewClockSegmentConfig creates a ClockSegmentConfig with default values
-func NewClockSegmentConfig() ClockSegmentConfig {
-	return ClockSegmentConfig{
+// NewSegmentConfig creates a SegmentConfig with default values
+func NewSegmentConfig() SegmentConfig {
+	return SegmentConfig{
 		Format:           "%H:%M:%S",
 		DigitHeight:      0, // auto-fit
 		SegmentThickness: 2,

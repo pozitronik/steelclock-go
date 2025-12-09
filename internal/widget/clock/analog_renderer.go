@@ -1,4 +1,4 @@
-package widget
+package clock
 
 import (
 	"image"
@@ -10,14 +10,14 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-// ClockAnalogRenderer renders clock in analog (clock face) mode
-type ClockAnalogRenderer struct {
-	config ClockAnalogConfig
+// AnalogRenderer renders clock in analog (clock face) mode
+type AnalogRenderer struct {
+	config AnalogConfig
 }
 
-// NewClockAnalogRenderer creates a new analog mode clock renderer
-func NewClockAnalogRenderer(cfg ClockAnalogConfig) *ClockAnalogRenderer {
-	return &ClockAnalogRenderer{
+// NewAnalogRenderer creates a new analog mode clock renderer
+func NewAnalogRenderer(cfg AnalogConfig) *AnalogRenderer {
+	return &AnalogRenderer{
 		config: cfg,
 	}
 }
@@ -25,7 +25,7 @@ func NewClockAnalogRenderer(cfg ClockAnalogConfig) *ClockAnalogRenderer {
 // Render draws the clock as an analog clock face with hands
 //
 //nolint:gocyclo // Complex geometric calculations for clock face rendering
-func (r *ClockAnalogRenderer) Render(img *image.Gray, t time.Time, x, y, w, h int) error {
+func (r *AnalogRenderer) Render(img *image.Gray, t time.Time, x, y, w, h int) error {
 	// Calculate maximum radius that fits within bounds
 	maxRadius := h / 2
 	if w/2 < maxRadius {
@@ -139,6 +139,6 @@ func (r *ClockAnalogRenderer) Render(img *image.Gray, t time.Time, x, y, w, h in
 }
 
 // NeedsUpdate returns false as analog mode has no animations
-func (r *ClockAnalogRenderer) NeedsUpdate() bool {
+func (r *AnalogRenderer) NeedsUpdate() bool {
 	return false
 }

@@ -1,4 +1,4 @@
-package widget
+package clock
 
 import (
 	"fmt"
@@ -8,60 +8,61 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 func init() {
-	Register("clock", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewClockWidget(cfg)
+	widget.Register("clock", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
-// ClockWidget displays current time using various display modes
-type ClockWidget struct {
-	*BaseWidget
-	displayMode ClockDisplayMode
-	renderer    ClockRenderer
+// Widget displays current time using various display modes
+type Widget struct {
+	*widget.BaseWidget
+	displayMode DisplayMode
+	renderer    Renderer
 	currentTime time.Time
 	mu          sync.RWMutex // Protects currentTime field
 }
 
-// NewClockWidget creates a new clock widget
-func NewClockWidget(cfg config.WidgetConfig) (*ClockWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new clock widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract display mode
 	modeStr := helper.GetDisplayMode(config.ModeText)
-	displayMode := ClockDisplayMode(modeStr)
+	displayMode := DisplayMode(modeStr)
 	// Map "clock_face" alias to "analog"
 	if displayMode == "clock_face" {
-		displayMode = ClockModeAnalog
+		displayMode = ModeAnalog
 	}
 
 	// Create the appropriate renderer based on display mode
-	renderer, err := createClockRenderer(cfg, displayMode, helper)
+	renderer, err := createRenderer(cfg, displayMode, helper)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ClockWidget{
+	return &Widget{
 		BaseWidget:  base,
 		displayMode: displayMode,
 		renderer:    renderer,
 	}, nil
 }
 
-// createClockRenderer creates the appropriate renderer based on display mode
-func createClockRenderer(cfg config.WidgetConfig, mode ClockDisplayMode, helper *shared.ConfigHelper) (ClockRenderer, error) {
+// createRenderer creates the appropriate renderer based on display mode
+func createRenderer(cfg config.WidgetConfig, mode DisplayMode, helper *shared.ConfigHelper) (Renderer, error) {
 	switch mode {
-	case ClockModeText:
+	case ModeText:
 		return createTextRenderer(cfg, helper)
-	case ClockModeAnalog:
+	case ModeAnalog:
 		return createAnalogRenderer(cfg, helper)
-	case ClockModeBinary:
+	case ModeBinary:
 		return createBinaryRenderer(cfg), nil
-	case ClockModeSegment:
+	case ModeSegment:
 		return createSegmentRenderer(cfg), nil
 	default:
 		return createTextRenderer(cfg, helper)
@@ -69,7 +70,7 @@ func createClockRenderer(cfg config.WidgetConfig, mode ClockDisplayMode, helper 
 }
 
 // createTextRenderer creates a text mode clock renderer
-func createTextRenderer(cfg config.WidgetConfig, helper *shared.ConfigHelper) (*ClockTextRenderer, error) {
+func createTextRenderer(cfg config.WidgetConfig, helper *shared.ConfigHelper) (*TextRenderer, error) {
 	textSettings := helper.GetTextSettings()
 	padding := helper.GetPadding()
 
@@ -92,7 +93,7 @@ func createTextRenderer(cfg config.WidgetConfig, helper *shared.ConfigHelper) (*
 		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
 
-	return NewClockTextRenderer(ClockTextConfig{
+	return NewTextRenderer(TextConfig{
 		FontFace:   fontFace,
 		FontName:   fontName,
 		HorizAlign: textSettings.HorizAlign,
@@ -103,7 +104,7 @@ func createTextRenderer(cfg config.WidgetConfig, helper *shared.ConfigHelper) (*
 }
 
 // createAnalogRenderer creates an analog mode clock renderer
-func createAnalogRenderer(cfg config.WidgetConfig, helper *shared.ConfigHelper) (*ClockAnalogRenderer, error) {
+func createAnalogRenderer(cfg config.WidgetConfig, helper *shared.ConfigHelper) (*AnalogRenderer, error) {
 	textSettings := helper.GetTextSettings()
 	padding := helper.GetPadding()
 
@@ -135,7 +136,7 @@ func createAnalogRenderer(cfg config.WidgetConfig, helper *shared.ConfigHelper) 
 		}
 	}
 
-	return NewClockAnalogRenderer(ClockAnalogConfig{
+	return NewAnalogRenderer(AnalogConfig{
 		HorizAlign:  textSettings.HorizAlign,
 		VertAlign:   textSettings.VertAlign,
 		Padding:     padding,
@@ -149,9 +150,9 @@ func createAnalogRenderer(cfg config.WidgetConfig, helper *shared.ConfigHelper) 
 }
 
 // createBinaryRenderer creates a binary mode clock renderer
-func createBinaryRenderer(cfg config.WidgetConfig) *ClockBinaryRenderer {
+func createBinaryRenderer(cfg config.WidgetConfig) *BinaryRenderer {
 	// Binary mode settings (defaults)
-	binaryConfig := NewClockBinaryConfig()
+	binaryConfig := NewBinaryConfig()
 
 	if cfg.Binary != nil {
 		if cfg.Binary.Format != "" {
@@ -182,13 +183,13 @@ func createBinaryRenderer(cfg config.WidgetConfig) *ClockBinaryRenderer {
 		}
 	}
 
-	return NewClockBinaryRenderer(binaryConfig)
+	return NewBinaryRenderer(binaryConfig)
 }
 
 // createSegmentRenderer creates a segment mode clock renderer
-func createSegmentRenderer(cfg config.WidgetConfig) *ClockSegmentRenderer {
+func createSegmentRenderer(cfg config.WidgetConfig) *SegmentRenderer {
 	// Segment mode settings (defaults)
-	segmentConfig := NewClockSegmentConfig()
+	segmentConfig := NewSegmentConfig()
 
 	if cfg.Segment != nil {
 		if cfg.Segment.Format != "" {
@@ -228,11 +229,11 @@ func createSegmentRenderer(cfg config.WidgetConfig) *ClockSegmentRenderer {
 		}
 	}
 
-	return NewClockSegmentRenderer(segmentConfig)
+	return NewSegmentRenderer(segmentConfig)
 }
 
 // Update updates the current time
-func (w *ClockWidget) Update() error {
+func (w *Widget) Update() error {
 	w.mu.Lock()
 	w.currentTime = time.Now()
 	w.mu.Unlock()
@@ -240,7 +241,7 @@ func (w *ClockWidget) Update() error {
 }
 
 // Render creates an image of the clock
-func (w *ClockWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	// Check if time needs to be updated
 	w.mu.RLock()
 	isEmpty := w.currentTime.IsZero()
@@ -271,6 +272,6 @@ func (w *ClockWidget) Render() (image.Image, error) {
 }
 
 // NeedsUpdate returns true if the renderer needs faster refresh (e.g., during animations)
-func (w *ClockWidget) NeedsUpdate() bool {
+func (w *Widget) NeedsUpdate() bool {
 	return w.renderer.NeedsUpdate()
 }

@@ -1,4 +1,4 @@
-package widget
+package clock
 
 import (
 	"fmt"
@@ -9,20 +9,20 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-// ClockBinaryRenderer renders clock in binary (BCD or true binary) mode
-type ClockBinaryRenderer struct {
-	config ClockBinaryConfig
+// BinaryRenderer renders clock in binary (BCD or true binary) mode
+type BinaryRenderer struct {
+	config BinaryConfig
 }
 
-// NewClockBinaryRenderer creates a new binary mode clock renderer
-func NewClockBinaryRenderer(cfg ClockBinaryConfig) *ClockBinaryRenderer {
-	return &ClockBinaryRenderer{
+// NewBinaryRenderer creates a new binary mode clock renderer
+func NewBinaryRenderer(cfg BinaryConfig) *BinaryRenderer {
+	return &BinaryRenderer{
 		config: cfg,
 	}
 }
 
 // Render draws the clock as binary dots (BCD or true binary style)
-func (r *ClockBinaryRenderer) Render(img *image.Gray, t time.Time, x, y, w, h int) error {
+func (r *BinaryRenderer) Render(img *image.Gray, t time.Time, x, y, w, h int) error {
 	components := parseBinaryFormat(r.config.Format)
 
 	if r.config.Style == binaryStyleTrue {
@@ -34,12 +34,12 @@ func (r *ClockBinaryRenderer) Render(img *image.Gray, t time.Time, x, y, w, h in
 }
 
 // NeedsUpdate returns false as binary mode has no animations
-func (r *ClockBinaryRenderer) NeedsUpdate() bool {
+func (r *BinaryRenderer) NeedsUpdate() bool {
 	return false
 }
 
 // renderBCDClock renders Binary-Coded Decimal clock
-func (r *ClockBinaryRenderer) renderBCDClock(img *image.Gray, t time.Time, x, y, w, h int, components binaryTimeComponents) {
+func (r *BinaryRenderer) renderBCDClock(img *image.Gray, t time.Time, x, y, w, h int, components binaryTimeComponents) {
 	hour := t.Hour()
 	minute := t.Minute()
 	second := t.Second()
@@ -105,7 +105,7 @@ func (r *ClockBinaryRenderer) renderBCDClock(img *image.Gray, t time.Time, x, y,
 }
 
 // renderBCDVertical renders BCD clock with bits stacked vertically (columns for digits)
-func (r *ClockBinaryRenderer) renderBCDVertical(img *image.Gray, pairs []digitPair, startX, startY, dotUnit, colonSpace, labelSpace int, onColor, offColor color.Gray) {
+func (r *BinaryRenderer) renderBCDVertical(img *image.Gray, pairs []digitPair, startX, startY, dotUnit, colonSpace, labelSpace int, onColor, offColor color.Gray) {
 	xPos := startX
 
 	// Draw labels at top if enabled
@@ -166,7 +166,7 @@ func (r *ClockBinaryRenderer) renderBCDVertical(img *image.Gray, pairs []digitPa
 }
 
 // renderBCDHorizontal renders BCD clock with bits arranged horizontally
-func (r *ClockBinaryRenderer) renderBCDHorizontal(img *image.Gray, pairs []digitPair, startX, startY, dotUnit, colonSpace, labelSpace int, onColor, offColor color.Gray) {
+func (r *BinaryRenderer) renderBCDHorizontal(img *image.Gray, pairs []digitPair, startX, startY, dotUnit, colonSpace, labelSpace int, onColor, offColor color.Gray) {
 	yPos := startY
 
 	// Adjust starting X for labels
@@ -221,7 +221,7 @@ func (r *ClockBinaryRenderer) renderBCDHorizontal(img *image.Gray, pairs []digit
 }
 
 // renderTrueBinaryClock renders true binary clock (rows for H, M, S as binary numbers)
-func (r *ClockBinaryRenderer) renderTrueBinaryClock(img *image.Gray, t time.Time, x, y, w, h int, components binaryTimeComponents) {
+func (r *BinaryRenderer) renderTrueBinaryClock(img *image.Gray, t time.Time, x, y, w, h int, components binaryTimeComponents) {
 	hour := t.Hour()
 	minute := t.Minute()
 	second := t.Second()
