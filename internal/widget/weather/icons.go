@@ -5,21 +5,21 @@ import "strings"
 // getWeatherIconName maps weather condition to icon name
 func getWeatherIconName(condition string) string {
 	switch condition {
-	case WeatherClear:
+	case Clear:
 		return "sun"
-	case WeatherPartlyCloudy:
+	case PartlyCloudy:
 		return "partly_cloudy"
-	case WeatherCloudy:
+	case Cloudy:
 		return "cloud"
-	case WeatherRain:
+	case Rain:
 		return "rain"
-	case WeatherDrizzle:
+	case Drizzle:
 		return "drizzle"
-	case WeatherSnow:
+	case Snow:
 		return "snow"
-	case WeatherStorm:
+	case Storm:
 		return "storm"
-	case WeatherFog:
+	case Fog:
 		return "fog"
 	default:
 		return "sun"

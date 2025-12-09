@@ -198,10 +198,10 @@ func TestWidget_Render_WithData(t *testing.T) {
 
 	// Manually set weather data to avoid network call
 	widget.mu.Lock()
-	widget.weather = &WeatherData{
+	widget.weather = &Data{
 		Temperature: 15.5,
 		FeelsLike:   14.0,
-		Condition:   WeatherClear,
+		Condition:   Clear,
 		Description: "Clear sky",
 		Humidity:    65,
 		WindSpeed:   5.2,
@@ -258,9 +258,9 @@ func TestWidget_TextFormat(t *testing.T) {
 
 	// Set weather data
 	widget.mu.Lock()
-	widget.weather = &WeatherData{
+	widget.weather = &Data{
 		Temperature: 20.0,
-		Condition:   WeatherRain,
+		Condition:   Rain,
 		Description: "Light rain",
 	}
 	widget.mu.Unlock()
@@ -307,16 +307,16 @@ func TestMapOpenWeatherMapCondition(t *testing.T) {
 		id       int
 		expected string
 	}{
-		{200, WeatherStorm},   // Thunderstorm
-		{300, WeatherDrizzle}, // Drizzle
-		{500, WeatherRain},    // Rain
-		{600, WeatherSnow},    // Snow
-		{700, WeatherFog},     // Fog
-		{800, WeatherClear},   // Clear
-		{801, WeatherPartlyCloudy},
-		{802, WeatherCloudy},
-		{803, WeatherCloudy},
-		{999, WeatherCloudy}, // Falls into >= 802 range
+		{200, Storm},   // Thunderstorm
+		{300, Drizzle}, // Drizzle
+		{500, Rain},    // Rain
+		{600, Snow},    // Snow
+		{700, Fog},     // Fog
+		{800, Clear},   // Clear
+		{801, PartlyCloudy},
+		{802, Cloudy},
+		{803, Cloudy},
+		{999, Cloudy}, // Falls into >= 802 range
 	}
 
 	for _, tt := range tests {
@@ -334,16 +334,16 @@ func TestMapOpenMeteoWeatherCode(t *testing.T) {
 		code     int
 		expected string
 	}{
-		{0, WeatherClear},
-		{1, WeatherPartlyCloudy},
-		{2, WeatherPartlyCloudy},
-		{3, WeatherCloudy},
-		{45, WeatherFog},
-		{51, WeatherDrizzle},
-		{61, WeatherRain},
-		{71, WeatherSnow},
-		{95, WeatherStorm},
-		{999, WeatherClear}, // Unknown defaults to clear
+		{0, Clear},
+		{1, PartlyCloudy},
+		{2, PartlyCloudy},
+		{3, Cloudy},
+		{45, Fog},
+		{51, Drizzle},
+		{61, Rain},
+		{71, Snow},
+		{95, Storm},
+		{999, Clear}, // Unknown defaults to clear
 	}
 
 	for _, tt := range tests {
@@ -361,14 +361,14 @@ func TestGetWeatherDescription(t *testing.T) {
 		condition string
 		expected  string
 	}{
-		{WeatherClear, "Clear"},
-		{WeatherPartlyCloudy, "Partly cloudy"},
-		{WeatherCloudy, "Cloudy"},
-		{WeatherRain, "Rain"},
-		{WeatherDrizzle, "Drizzle"},
-		{WeatherSnow, "Snow"},
-		{WeatherStorm, "Storm"},
-		{WeatherFog, "Fog"},
+		{Clear, "Clear"},
+		{PartlyCloudy, "Partly cloudy"},
+		{Cloudy, "Cloudy"},
+		{Rain, "Rain"},
+		{Drizzle, "Drizzle"},
+		{Snow, "Snow"},
+		{Storm, "Storm"},
+		{Fog, "Fog"},
 		{"unknown", "Unknown"},
 	}
 
@@ -387,14 +387,14 @@ func TestGetWeatherIconName(t *testing.T) {
 		condition string
 		expected  string
 	}{
-		{WeatherClear, "sun"},
-		{WeatherPartlyCloudy, "partly_cloudy"},
-		{WeatherCloudy, "cloud"},
-		{WeatherRain, "rain"},
-		{WeatherDrizzle, "drizzle"},
-		{WeatherSnow, "snow"},
-		{WeatherStorm, "storm"},
-		{WeatherFog, "fog"},
+		{Clear, "sun"},
+		{PartlyCloudy, "partly_cloudy"},
+		{Cloudy, "cloud"},
+		{Rain, "rain"},
+		{Drizzle, "drizzle"},
+		{Snow, "snow"},
+		{Storm, "storm"},
+		{Fog, "fog"},
 		{"unknown", "sun"}, // Default to sun
 	}
 
@@ -440,18 +440,18 @@ func TestWidget_ForecastGraphFormat(t *testing.T) {
 
 	// Set weather and forecast data
 	widget.mu.Lock()
-	widget.weather = &WeatherData{
+	widget.weather = &Data{
 		Temperature: 15.0,
-		Condition:   WeatherClear,
+		Condition:   Clear,
 		Description: "Clear",
 	}
 	widget.forecast = &ForecastData{
 		Hourly: []ForecastPoint{
-			{Temperature: 15.0, Condition: WeatherClear},
-			{Temperature: 16.0, Condition: WeatherClear},
-			{Temperature: 18.0, Condition: WeatherPartlyCloudy},
-			{Temperature: 17.0, Condition: WeatherCloudy},
-			{Temperature: 14.0, Condition: WeatherRain},
+			{Temperature: 15.0, Condition: Clear},
+			{Temperature: 16.0, Condition: Clear},
+			{Temperature: 18.0, Condition: PartlyCloudy},
+			{Temperature: 17.0, Condition: Cloudy},
+			{Temperature: 14.0, Condition: Rain},
 		},
 	}
 	widget.mu.Unlock()
@@ -502,16 +502,16 @@ func TestWidget_ForecastIconsFormat(t *testing.T) {
 
 	// Set weather and daily forecast data
 	widget.mu.Lock()
-	widget.weather = &WeatherData{
+	widget.weather = &Data{
 		Temperature: 15.0,
-		Condition:   WeatherClear,
+		Condition:   Clear,
 		Description: "Clear",
 	}
 	widget.forecast = &ForecastData{
 		Daily: []ForecastPoint{
-			{Time: time.Now(), Temperature: 15.0, Condition: WeatherClear},
-			{Time: time.Now().Add(24 * time.Hour), Temperature: 18.0, Condition: WeatherPartlyCloudy},
-			{Time: time.Now().Add(48 * time.Hour), Temperature: 12.0, Condition: WeatherRain},
+			{Time: time.Now(), Temperature: 15.0, Condition: Clear},
+			{Time: time.Now().Add(24 * time.Hour), Temperature: 18.0, Condition: PartlyCloudy},
+			{Time: time.Now().Add(48 * time.Hour), Temperature: 12.0, Condition: Rain},
 		},
 	}
 	widget.mu.Unlock()
@@ -562,19 +562,19 @@ func TestWidget_ScrollFormat(t *testing.T) {
 
 	// Set weather and forecast data
 	widget.mu.Lock()
-	widget.weather = &WeatherData{
+	widget.weather = &Data{
 		Temperature: 15.0,
-		Condition:   WeatherClear,
+		Condition:   Clear,
 		Description: "Clear sky",
 	}
 	widget.forecast = &ForecastData{
 		Hourly: []ForecastPoint{
-			{Time: time.Now().Add(time.Hour), Temperature: 16.0, Condition: WeatherClear},
-			{Time: time.Now().Add(2 * time.Hour), Temperature: 18.0, Condition: WeatherPartlyCloudy},
+			{Time: time.Now().Add(time.Hour), Temperature: 16.0, Condition: Clear},
+			{Time: time.Now().Add(2 * time.Hour), Temperature: 18.0, Condition: PartlyCloudy},
 		},
 		Daily: []ForecastPoint{
-			{Time: time.Now(), Temperature: 15.0, Condition: WeatherClear},
-			{Time: time.Now().Add(24 * time.Hour), Temperature: 18.0, Condition: WeatherRain},
+			{Time: time.Now(), Temperature: 15.0, Condition: Clear},
+			{Time: time.Now().Add(24 * time.Hour), Temperature: 18.0, Condition: Rain},
 		},
 	}
 	widget.scrollOffset = 100 // Simulate some scroll progress
@@ -630,9 +630,9 @@ func TestWidget_FormatCycle(t *testing.T) {
 
 	// Set weather data
 	widget.mu.Lock()
-	widget.weather = &WeatherData{
+	widget.weather = &Data{
 		Temperature:   15.0,
-		Condition:     WeatherClear,
+		Condition:     Clear,
 		Description:   "Clear",
 		Humidity:      65,
 		WindSpeed:     5.2,
@@ -723,9 +723,9 @@ func TestWidget_AQIFormat(t *testing.T) {
 
 	// Set weather and AQI data
 	widget.mu.Lock()
-	widget.weather = &WeatherData{
+	widget.weather = &Data{
 		Temperature: 15.0,
-		Condition:   WeatherClear,
+		Condition:   Clear,
 		Description: "Clear",
 	}
 	widget.airQuality = &AirQualityData{
@@ -770,9 +770,9 @@ func TestWidget_MultilineFormat(t *testing.T) {
 
 	// Set weather data
 	widget.mu.Lock()
-	widget.weather = &WeatherData{
+	widget.weather = &Data{
 		Temperature:   15.0,
-		Condition:     WeatherClear,
+		Condition:     Clear,
 		Description:   "Clear",
 		Humidity:      65,
 		WindSpeed:     5.2,

@@ -3,7 +3,7 @@ package weather
 // WeatherProvider defines the interface for weather data providers
 type WeatherProvider interface {
 	// FetchWeather fetches current weather and optionally forecast
-	FetchWeather(needForecast bool) (*WeatherData, *ForecastData, error)
+	FetchWeather(needForecast bool) (*Data, *ForecastData, error)
 
 	// FetchAirQuality fetches air quality data (may return nil, nil if not supported)
 	FetchAirQuality() (*AirQualityData, error)

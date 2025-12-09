@@ -31,7 +31,7 @@ func (p *OpenWeatherMapProvider) Name() string {
 }
 
 // FetchWeather fetches weather data from OpenWeatherMap API
-func (p *OpenWeatherMapProvider) FetchWeather(needForecast bool) (*WeatherData, *ForecastData, error) {
+func (p *OpenWeatherMapProvider) FetchWeather(needForecast bool) (*Data, *ForecastData, error) {
 	baseURL := "https://api.openweathermap.org/data/2.5/weather"
 	params := url.Values{}
 	params.Set("appid", p.apiKey)
@@ -81,14 +81,14 @@ func (p *OpenWeatherMapProvider) FetchWeather(needForecast bool) (*WeatherData, 
 		return nil, nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	condition := WeatherClear
+	condition := Clear
 	description := ""
 	if len(result.Weather) > 0 {
 		condition = mapOpenWeatherMapCondition(result.Weather[0].ID)
 		description = result.Weather[0].Description
 	}
 
-	weatherData := &WeatherData{
+	weatherData := &Data{
 		Temperature:   result.Main.Temp,
 		FeelsLike:     result.Main.FeelsLike,
 		Condition:     condition,
@@ -159,7 +159,7 @@ func (p *OpenWeatherMapProvider) fetchForecast() (*ForecastData, error) {
 	dailyMap := make(map[string]ForecastPoint)
 	for i, item := range result.List {
 		t := time.Unix(item.Dt, 0)
-		condition := WeatherClear
+		condition := Clear
 		description := ""
 		if len(item.Weather) > 0 {
 			condition = mapOpenWeatherMapCondition(item.Weather[0].ID)
@@ -265,22 +265,22 @@ func (p *OpenWeatherMapProvider) FetchUVIndex() (*UVIndexData, error) {
 func mapOpenWeatherMapCondition(id int) string {
 	switch {
 	case id >= 200 && id < 300:
-		return WeatherStorm
+		return Storm
 	case id >= 300 && id < 400:
-		return WeatherDrizzle
+		return Drizzle
 	case id >= 500 && id < 600:
-		return WeatherRain
+		return Rain
 	case id >= 600 && id < 700:
-		return WeatherSnow
+		return Snow
 	case id >= 700 && id < 800:
-		return WeatherFog
+		return Fog
 	case id == 800:
-		return WeatherClear
+		return Clear
 	case id == 801:
-		return WeatherPartlyCloudy
+		return PartlyCloudy
 	case id >= 802:
-		return WeatherCloudy
+		return Cloudy
 	default:
-		return WeatherClear
+		return Clear
 	}
 }

@@ -69,7 +69,7 @@ type Widget struct {
 	scrollOffset float64
 	lastUpdate   time.Time
 	// Weather data
-	weather    *WeatherData
+	weather    *Data
 	forecast   *ForecastData
 	airQuality *AirQualityData
 	uvIndex    *UVIndexData

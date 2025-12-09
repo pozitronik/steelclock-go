@@ -9,21 +9,21 @@ import (
 // getWeatherDescription returns a human-readable description for a condition
 func getWeatherDescription(condition string) string {
 	switch condition {
-	case WeatherClear:
+	case Clear:
 		return "Clear"
-	case WeatherPartlyCloudy:
+	case PartlyCloudy:
 		return "Partly cloudy"
-	case WeatherCloudy:
+	case Cloudy:
 		return "Cloudy"
-	case WeatherRain:
+	case Rain:
 		return "Rain"
-	case WeatherDrizzle:
+	case Drizzle:
 		return "Drizzle"
-	case WeatherSnow:
+	case Snow:
 		return "Snow"
-	case WeatherStorm:
+	case Storm:
 		return "Storm"
-	case WeatherFog:
+	case Fog:
 		return "Fog"
 	default:
 		return "Unknown"

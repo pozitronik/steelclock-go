@@ -29,7 +29,7 @@ func (p *OpenMeteoProvider) Name() string {
 }
 
 // FetchWeather fetches weather data from Open-Meteo API
-func (p *OpenMeteoProvider) FetchWeather(needForecast bool) (*WeatherData, *ForecastData, error) {
+func (p *OpenMeteoProvider) FetchWeather(needForecast bool) (*Data, *ForecastData, error) {
 	baseURL := "https://api.open-meteo.com/v1/forecast"
 	params := url.Values{}
 	params.Set("latitude", fmt.Sprintf("%f", p.config.Lat))
@@ -99,7 +99,7 @@ func (p *OpenMeteoProvider) FetchWeather(needForecast bool) (*WeatherData, *Fore
 		sunset, _ = time.Parse("2006-01-02T15:04", result.Daily.Sunset[0])
 	}
 
-	weatherData := &WeatherData{
+	weatherData := &Data{
 		Temperature:   result.Current.Temperature,
 		FeelsLike:     result.Current.Temperature, // Open-Meteo doesn't provide feels_like in free tier
 		Condition:     condition,
@@ -236,26 +236,26 @@ func (p *OpenMeteoProvider) FetchUVIndex() (*UVIndexData, error) {
 func mapOpenMeteoWeatherCode(code int) string {
 	switch {
 	case code == 0:
-		return WeatherClear
+		return Clear
 	case code == 1 || code == 2:
-		return WeatherPartlyCloudy
+		return PartlyCloudy
 	case code == 3:
-		return WeatherCloudy
+		return Cloudy
 	case code >= 45 && code <= 48:
-		return WeatherFog
+		return Fog
 	case code >= 51 && code <= 57:
-		return WeatherDrizzle
+		return Drizzle
 	case code >= 61 && code <= 67:
-		return WeatherRain
+		return Rain
 	case code >= 71 && code <= 77:
-		return WeatherSnow
+		return Snow
 	case code >= 80 && code <= 82:
-		return WeatherRain
+		return Rain
 	case code >= 85 && code <= 86:
-		return WeatherSnow
+		return Snow
 	case code >= 95 && code <= 99:
-		return WeatherStorm
+		return Storm
 	default:
-		return WeatherClear
+		return Clear
 	}
 }

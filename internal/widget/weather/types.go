@@ -4,14 +4,14 @@ import "time"
 
 // Weather condition codes for icon mapping
 const (
-	WeatherClear        = "clear"
-	WeatherPartlyCloudy = "partly_cloudy"
-	WeatherCloudy       = "cloud"
-	WeatherRain         = "rain"
-	WeatherDrizzle      = "drizzle"
-	WeatherSnow         = "snow"
-	WeatherStorm        = "storm"
-	WeatherFog          = "fog"
+	Clear        = "clear"
+	PartlyCloudy = "partly_cloudy"
+	Cloudy       = "cloud"
+	Rain         = "rain"
+	Drizzle      = "drizzle"
+	Snow         = "snow"
+	Storm        = "storm"
+	Fog          = "fog"
 )
 
 // AQI levels
@@ -52,7 +52,7 @@ type Token struct {
 }
 
 // WeatherData holds the current weather information
-type WeatherData struct {
+type Data struct {
 	Temperature   float64
 	FeelsLike     float64
 	Condition     string // One of the Weather* constants
