@@ -21,6 +21,15 @@ func init() {
 	})
 }
 
+// Indicator display modes for power status
+const (
+	indicatorModeAlways      = "always"
+	indicatorModeNever       = "never"
+	indicatorModeNotify      = "notify"
+	indicatorModeBlink       = "blink"
+	indicatorModeNotifyBlink = "notify_blink"
+)
+
 // BatteryStatus represents the current battery state
 type BatteryStatus struct {
 	Percentage    int  // 0-100
@@ -128,9 +137,9 @@ func NewBatteryWidget(cfg config.WidgetConfig) (*BatteryWidget, error) {
 
 	// Power status indicator settings with defaults
 	notifyDuration := 60 * time.Second
-	chargingMode := "always"
-	pluggedMode := "always"
-	economyMode := "blink"
+	chargingMode := indicatorModeAlways
+	pluggedMode := indicatorModeAlways
+	economyMode := indicatorModeBlink
 
 	if cfg.PowerStatus != nil {
 		if cfg.PowerStatus.NotifyDuration > 0 {
@@ -283,7 +292,7 @@ func (w *BatteryWidget) Update() error {
 
 	// Charging status changed to active
 	if status.IsCharging && !w.prevCharging {
-		if w.chargingState.mode == "notify" || w.chargingState.mode == "notify_blink" {
+		if w.chargingState.mode == indicatorModeNotify || w.chargingState.mode == indicatorModeNotifyBlink {
 			w.chargingState.notifyUntil = now.Add(w.chargingState.notifyDuration)
 		}
 	}
@@ -291,7 +300,7 @@ func (w *BatteryWidget) Update() error {
 
 	// Plugged status changed to active
 	if status.IsPluggedIn && !w.prevPlugged {
-		if w.pluggedState.mode == "notify" || w.pluggedState.mode == "notify_blink" {
+		if w.pluggedState.mode == indicatorModeNotify || w.pluggedState.mode == indicatorModeNotifyBlink {
 			w.pluggedState.notifyUntil = now.Add(w.pluggedState.notifyDuration)
 		}
 	}
@@ -299,7 +308,7 @@ func (w *BatteryWidget) Update() error {
 
 	// Economy status changed to active
 	if status.IsEconomyMode && !w.prevEconomy {
-		if w.economyState.mode == "notify" || w.economyState.mode == "notify_blink" {
+		if w.economyState.mode == indicatorModeNotify || w.economyState.mode == indicatorModeNotifyBlink {
 			w.economyState.notifyUntil = now.Add(w.economyState.notifyDuration)
 		}
 	}
@@ -367,11 +376,11 @@ func (w *BatteryWidget) shouldShowIndicator(state *indicatorState, isActive bool
 		return false
 	}
 	switch state.mode {
-	case "always", "blink":
+	case indicatorModeAlways, indicatorModeBlink:
 		return true
-	case "never":
+	case indicatorModeNever:
 		return false
-	case "notify", "notify_blink":
+	case indicatorModeNotify, indicatorModeNotifyBlink:
 		return time.Now().Before(state.notifyUntil)
 	default:
 		return true // fallback to always
@@ -380,7 +389,7 @@ func (w *BatteryWidget) shouldShowIndicator(state *indicatorState, isActive bool
 
 // shouldBlinkIndicator returns whether the indicator should blink (be hidden this frame)
 func (w *BatteryWidget) shouldBlinkIndicator(state *indicatorState) bool {
-	if state.mode == "blink" || state.mode == "notify_blink" {
+	if state.mode == indicatorModeBlink || state.mode == indicatorModeNotifyBlink {
 		return time.Now().Second()%2 != 0
 	}
 	return false
