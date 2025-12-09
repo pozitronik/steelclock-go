@@ -109,7 +109,7 @@ type BatteryWidget struct {
 // NewBatteryWidget creates a new battery widget
 func NewBatteryWidget(cfg config.WidgetConfig) (*BatteryWidget, error) {
 	base := NewBaseWidget(cfg)
-	helper := NewConfigHelper(cfg)
+	helper := shared.NewConfigHelper(cfg)
 
 	// Display mode from widget-level Mode (like CPU widget)
 	displayMode := "icon"
@@ -218,7 +218,7 @@ func NewBatteryWidget(cfg config.WidgetConfig) (*BatteryWidget, error) {
 	}
 
 	// Load font for text mode
-	fontFace, err := helper.LoadFontForTextMode(displayMode)
+	fontFace, err := bitmap.LoadFontForTextMode(displayMode, textSettings.FontName, textSettings.FontSize)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load font: %w", err)
 	}

@@ -217,3 +217,13 @@ func MeasureText(text string, face font.Face) (int, int) {
 
 	return measureTextUnsafe(text, face)
 }
+
+// LoadFontForTextMode loads font if display mode is "text".
+// Returns nil face (not error) if mode is not text.
+// This is a convenience function for widgets that only need fonts in text mode.
+func LoadFontForTextMode(mode, fontName string, fontSize int) (font.Face, error) {
+	if mode != "text" {
+		return nil, nil
+	}
+	return LoadFont(fontName, fontSize)
+}

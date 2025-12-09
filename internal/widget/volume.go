@@ -10,6 +10,7 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
@@ -77,7 +78,7 @@ type VolumeWidget struct {
 // NewVolumeWidget creates a new volume widget
 func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 	base := NewBaseWidget(cfg)
-	helper := NewConfigHelper(cfg)
+	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
 	displayMode := helper.GetDisplayMode("bar")
@@ -88,7 +89,7 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 	fillColor := helper.GetFillColorForMode(displayMode)
 
 	// Load font for text mode (ignore error - volume widget degrades gracefully)
-	fontFace, _ := helper.LoadFontForTextMode(displayMode)
+	fontFace, _ := bitmap.LoadFontForTextMode(displayMode, textSettings.FontName, textSettings.FontSize)
 
 	// Get poll interval from config, fall back to default
 	pollInterval := time.Duration(config.DefaultPollInterval * float64(time.Second))

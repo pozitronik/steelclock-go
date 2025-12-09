@@ -1,4 +1,4 @@
-package widget
+package shared
 
 import (
 	"testing"
@@ -377,36 +377,4 @@ func TestConfigHelper_GetFillColorForMode(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestConfigHelper_LoadFontForTextMode(t *testing.T) {
-	t.Run("non-text mode returns nil", func(t *testing.T) {
-		cfg := config.WidgetConfig{}
-		h := NewConfigHelper(cfg)
-
-		face, err := h.LoadFontForTextMode("bar")
-		if err != nil {
-			t.Errorf("LoadFontForTextMode(bar) returned error: %v", err)
-		}
-		if face != nil {
-			t.Error("LoadFontForTextMode(bar) should return nil face")
-		}
-	})
-
-	t.Run("text mode loads default font", func(t *testing.T) {
-		cfg := config.WidgetConfig{
-			Text: &config.TextConfig{
-				Size: 10,
-			},
-		}
-		h := NewConfigHelper(cfg)
-
-		face, err := h.LoadFontForTextMode("text")
-		if err != nil {
-			t.Errorf("LoadFontForTextMode(text) returned error: %v", err)
-		}
-		if face == nil {
-			t.Error("LoadFontForTextMode(text) should return a font face")
-		}
-	})
 }

@@ -5,6 +5,7 @@ import (
 	"image"
 	"sync"
 
+	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"github.com/shirou/gopsutil/v4/mem"
@@ -30,7 +31,7 @@ type MemoryWidget struct {
 // NewMemoryWidget creates a new memory widget
 func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 	base := NewBaseWidget(cfg)
-	helper := NewConfigHelper(cfg)
+	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
 	displayMode := shared.DisplayMode(helper.GetDisplayMode("text"))
@@ -41,7 +42,7 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 	gaugeSettings := helper.GetGaugeSettings()
 
 	// Load font for text mode
-	fontFace, err := helper.LoadFontForTextMode(string(displayMode))
+	fontFace, err := bitmap.LoadFontForTextMode(string(displayMode), textSettings.FontName, textSettings.FontSize)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load font: %w", err)
 	}

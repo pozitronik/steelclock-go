@@ -304,3 +304,46 @@ func TestFontCacheConcurrentAccess(t *testing.T) {
 	// Without proper synchronization, this will fail with:
 	// "WARNING: DATA RACE - concurrent map read and map write"
 }
+
+// TestLoadFontForTextMode tests the LoadFontForTextMode convenience function
+func TestLoadFontForTextMode(t *testing.T) {
+	t.Run("non-text mode returns nil", func(t *testing.T) {
+		face, err := LoadFontForTextMode("bar", "", 10)
+		if err != nil {
+			t.Errorf("LoadFontForTextMode(bar) returned error: %v", err)
+		}
+		if face != nil {
+			t.Error("LoadFontForTextMode(bar) should return nil face")
+		}
+	})
+
+	t.Run("text mode loads default font", func(t *testing.T) {
+		face, err := LoadFontForTextMode("text", "", 10)
+		if err != nil {
+			t.Errorf("LoadFontForTextMode(text) returned error: %v", err)
+		}
+		if face == nil {
+			t.Error("LoadFontForTextMode(text) should return a font face")
+		}
+	})
+
+	t.Run("gauge mode returns nil", func(t *testing.T) {
+		face, err := LoadFontForTextMode("gauge", "", 12)
+		if err != nil {
+			t.Errorf("LoadFontForTextMode(gauge) returned error: %v", err)
+		}
+		if face != nil {
+			t.Error("LoadFontForTextMode(gauge) should return nil face")
+		}
+	})
+
+	t.Run("graph mode returns nil", func(t *testing.T) {
+		face, err := LoadFontForTextMode("graph", "", 12)
+		if err != nil {
+			t.Errorf("LoadFontForTextMode(graph) returned error: %v", err)
+		}
+		if face != nil {
+			t.Error("LoadFontForTextMode(graph) should return nil face")
+		}
+	})
+}

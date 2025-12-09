@@ -67,7 +67,7 @@ type WeatherWidget struct {
 // NewWeatherWidget creates a new weather widget
 func NewWeatherWidget(cfg config.WidgetConfig) (*WeatherWidget, error) {
 	base := NewBaseWidget(cfg)
-	helper := NewConfigHelper(cfg)
+	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings
 	textSettings := helper.GetTextSettings()

@@ -1,9 +1,7 @@
-package widget
+package shared
 
 import (
-	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
-	"golang.org/x/image/font"
 )
 
 // TextSettings holds extracted text configuration with defaults
@@ -193,15 +191,4 @@ func (h *ConfigHelper) GetFillColorForMode(mode string) int {
 	}
 
 	return fillColor
-}
-
-// LoadFontForTextMode loads font if display mode is "text"
-// Returns nil face (not error) if mode is not text
-func (h *ConfigHelper) LoadFontForTextMode(mode string) (font.Face, error) {
-	if mode != "text" {
-		return nil, nil
-	}
-
-	text := h.GetTextSettings()
-	return bitmap.LoadFont(text.FontName, text.FontSize)
 }

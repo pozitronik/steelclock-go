@@ -8,6 +8,7 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 func init() {
@@ -28,7 +29,7 @@ type ClockWidget struct {
 // NewClockWidget creates a new clock widget
 func NewClockWidget(cfg config.WidgetConfig) (*ClockWidget, error) {
 	base := NewBaseWidget(cfg)
-	helper := NewConfigHelper(cfg)
+	helper := shared.NewConfigHelper(cfg)
 
 	// Extract display mode
 	modeStr := helper.GetDisplayMode("text")
@@ -52,7 +53,7 @@ func NewClockWidget(cfg config.WidgetConfig) (*ClockWidget, error) {
 }
 
 // createClockRenderer creates the appropriate renderer based on display mode
-func createClockRenderer(cfg config.WidgetConfig, mode ClockDisplayMode, helper *ConfigHelper) (ClockRenderer, error) {
+func createClockRenderer(cfg config.WidgetConfig, mode ClockDisplayMode, helper *shared.ConfigHelper) (ClockRenderer, error) {
 	switch mode {
 	case ClockModeText:
 		return createTextRenderer(cfg, helper)
@@ -68,7 +69,7 @@ func createClockRenderer(cfg config.WidgetConfig, mode ClockDisplayMode, helper 
 }
 
 // createTextRenderer creates a text mode clock renderer
-func createTextRenderer(cfg config.WidgetConfig, helper *ConfigHelper) (*ClockTextRenderer, error) {
+func createTextRenderer(cfg config.WidgetConfig, helper *shared.ConfigHelper) (*ClockTextRenderer, error) {
 	textSettings := helper.GetTextSettings()
 	padding := helper.GetPadding()
 
@@ -102,7 +103,7 @@ func createTextRenderer(cfg config.WidgetConfig, helper *ConfigHelper) (*ClockTe
 }
 
 // createAnalogRenderer creates an analog mode clock renderer
-func createAnalogRenderer(cfg config.WidgetConfig, helper *ConfigHelper) (*ClockAnalogRenderer, error) {
+func createAnalogRenderer(cfg config.WidgetConfig, helper *shared.ConfigHelper) (*ClockAnalogRenderer, error) {
 	textSettings := helper.GetTextSettings()
 	padding := helper.GetPadding()
 

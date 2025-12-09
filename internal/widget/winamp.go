@@ -62,7 +62,7 @@ type WinampWidget struct {
 // NewWinampWidget creates a new Winamp widget
 func NewWinampWidget(cfg config.WidgetConfig) (*WinampWidget, error) {
 	base := NewBaseWidget(cfg)
-	helper := NewConfigHelper(cfg)
+	helper := shared.NewConfigHelper(cfg)
 
 	// Extract text settings using helper
 	textSettings := helper.GetTextSettings()

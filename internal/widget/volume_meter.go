@@ -11,6 +11,7 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
@@ -110,7 +111,7 @@ type VolumeMeterWidget struct {
 //nolint:gocyclo // Complex initialization logic for different display modes
 func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	base := NewBaseWidget(cfg)
-	helper := NewConfigHelper(cfg)
+	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
 	textSettings := helper.GetTextSettings()
@@ -241,7 +242,7 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	}
 
 	// Load font for text mode (ignore error - degrades gracefully)
-	fontFace, _ := helper.LoadFontForTextMode(displayMode)
+	fontFace, _ := bitmap.LoadFontForTextMode(displayMode, textSettings.FontName, textSettings.FontSize)
 
 	w := &VolumeMeterWidget{
 		BaseWidget:          base,

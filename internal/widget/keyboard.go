@@ -11,6 +11,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
 )
@@ -52,7 +53,7 @@ type KeyboardWidget struct {
 // NewKeyboardWidget creates a new keyboard widget
 func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
 	base := NewBaseWidget(cfg)
-	helper := NewConfigHelper(cfg)
+	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
 	textSettings := helper.GetTextSettings()
