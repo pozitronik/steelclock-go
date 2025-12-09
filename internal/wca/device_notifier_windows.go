@@ -1,6 +1,6 @@
 //go:build windows
 
-package widget
+package wca
 
 import (
 	"log"
@@ -12,25 +12,25 @@ import (
 	"github.com/moutend/go-wca/pkg/wca"
 )
 
-// IidImmnotificationclient is the interface ID for IMMNotificationClient
-var IidImmnotificationclient = ole.NewGUID("{7991EEC9-7E89-4D85-8390-6C703CEC60C0}")
+// IIDIMMNotificationClient is the interface ID for IMMNotificationClient
+var IIDIMMNotificationClient = ole.NewGUID("{7991EEC9-7E89-4D85-8390-6C703CEC60C0}")
 
 // EDataFlow values for audio endpoint direction
 //
 //goland:noinspection ALL
 const (
-	eRender  = 0 // Audio rendering (playback)
-	eCapture = 1 // Audio capture (recording)
-	eAll     = 2 // Both render and capture
+	ERender  = 0 // Audio rendering (playback)
+	ECapture = 1 // Audio capture (recording)
+	EAll     = 2 // Both render and capture
 )
 
 // ERole values for audio endpoint role
 //
 //goland:noinspection ALL
 const (
-	eConsole       = 0 // Games, system sounds, voice commands
-	eMultimedia    = 1 // Music, movies, narration
-	eCommunication = 2 // Voice communications
+	EConsole       = 0 // Games, system sounds, voice commands
+	EMultimedia    = 1 // Music, movies, narration
+	ECommunication = 2 // Voice communications
 )
 
 // DeviceNotifier manages audio device change notifications using IMMNotificationClient
@@ -194,7 +194,7 @@ func newNotificationClient(notifier *DeviceNotifier) *notificationClient {
 // COM interface implementations
 
 func queryInterface(this *notificationClient, riid *ole.GUID, ppvObject *unsafe.Pointer) uintptr {
-	if ole.IsEqualGUID(riid, ole.IID_IUnknown) || ole.IsEqualGUID(riid, IidImmnotificationclient) {
+	if ole.IsEqualGUID(riid, ole.IID_IUnknown) || ole.IsEqualGUID(riid, IIDIMMNotificationClient) {
 		*ppvObject = unsafe.Pointer(this)
 		this.refCount++
 		return 0 // S_OK
@@ -240,7 +240,7 @@ func onDefaultDeviceChanged(this *notificationClient, flow uint32, role uint32, 
 	// Default device changed - this is the main event we care about
 	if this.notifier != nil {
 		// Only care about render devices (playback)
-		if flow == eRender || flow == eAll {
+		if flow == ERender || flow == EAll {
 			log.Printf("[DEVICE-NOTIFIER] Default audio device changed (flow: %d, role: %d)", flow, role)
 			this.notifier.notifySubscribers()
 		}

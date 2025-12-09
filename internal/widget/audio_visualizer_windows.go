@@ -19,6 +19,7 @@ import (
 	"github.com/moutend/go-wca/pkg/wca"
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	wcautil "github.com/pozitronik/steelclock-go/internal/wca"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
@@ -114,7 +115,7 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 
 	// Subscribe to device change notifications
 	var deviceNotifyChan <-chan struct{}
-	if notifier, err := GetDeviceNotifier(); err == nil {
+	if notifier, err := wcautil.GetDeviceNotifier(); err == nil {
 		deviceNotifyChan = notifier.Subscribe()
 	}
 
@@ -981,7 +982,7 @@ func (ac *AudioCaptureWCA) initialize() error {
 	defer ac.mu.Unlock()
 
 	// Ensure COM is initialized on this thread
-	err := EnsureCOMInitialized()
+	err := wcautil.EnsureCOMInitialized()
 	if err != nil {
 		return fmt.Errorf("failed to initialize COM: %w", err)
 	}
@@ -989,14 +990,14 @@ func (ac *AudioCaptureWCA) initialize() error {
 	// Note: We don't own COM cleanup - it's managed per-thread by EnsureCOMInitialized
 
 	// Create device enumerator
-	mmde, err := CreateDeviceEnumerator()
+	mmde, err := wcautil.CreateDeviceEnumerator()
 	if err != nil {
 		return err
 	}
 	ac.mmde = mmde
 
 	// Get default audio endpoint (render for loopback)
-	mmd, err := GetDefaultRenderDevice(mmde)
+	mmd, err := wcautil.GetDefaultRenderDevice(mmde)
 	if err != nil {
 		ac.cleanup()
 		return err
@@ -1137,10 +1138,10 @@ func (ac *AudioCaptureWCA) cleanup() {
 		_ = ac.audioClient.Stop()
 	}
 
-	SafeReleaseAudioClient(&ac.audioClient)
-	SafeReleaseAudioCaptureClient(&ac.captureClient)
-	SafeReleaseMMDevice(&ac.mmd)
-	SafeReleaseMMDeviceEnumerator(&ac.mmde)
+	wcautil.SafeReleaseAudioClient(&ac.audioClient)
+	wcautil.SafeReleaseAudioCaptureClient(&ac.captureClient)
+	wcautil.SafeReleaseMMDevice(&ac.mmd)
+	wcautil.SafeReleaseMMDeviceEnumerator(&ac.mmde)
 }
 
 // Close releases resources

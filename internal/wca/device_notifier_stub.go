@@ -1,6 +1,6 @@
 //go:build !windows
 
-package widget
+package wca
 
 import "fmt"
 
@@ -19,7 +19,7 @@ func (dn *DeviceNotifier) Subscribe() <-chan struct{} {
 }
 
 // Unsubscribe is a no-op on non-Windows platforms
-func (dn *DeviceNotifier) Unsubscribe(ch <-chan struct{}) {}
+func (dn *DeviceNotifier) Unsubscribe(_ <-chan struct{}) {}
 
 // Stop is a no-op on non-Windows platforms
 func (dn *DeviceNotifier) Stop() {}

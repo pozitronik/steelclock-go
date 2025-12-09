@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-ole/go-ole"
 	"github.com/moutend/go-wca/pkg/wca"
+	wcautil "github.com/pozitronik/steelclock-go/internal/wca"
 )
 
 // Direct COM calls for IAudioMeterInformation methods not implemented in go-wca
@@ -94,7 +95,7 @@ func (mr *MeterReaderWCA) initialize() error {
 	log.Printf("[METER-WCA] Ensuring COM is initialized")
 
 	// Ensure COM is initialized on this thread
-	err := EnsureCOMInitialized()
+	err := wcautil.EnsureCOMInitialized()
 	if err != nil {
 		return fmt.Errorf("failed to initialize COM: %w", err)
 	}
@@ -104,7 +105,7 @@ func (mr *MeterReaderWCA) initialize() error {
 	// Note: We don't own COM cleanup - it's managed per-thread by EnsureCOMInitialized
 
 	// Create device enumerator
-	mmde, err := CreateDeviceEnumerator()
+	mmde, err := wcautil.CreateDeviceEnumerator()
 	if err != nil {
 		return err
 	}
@@ -113,7 +114,7 @@ func (mr *MeterReaderWCA) initialize() error {
 	log.Printf("[METER-WCA] Device enumerator created")
 
 	// Get default audio endpoint
-	mmd, err := GetDefaultRenderDevice(mmde)
+	mmd, err := wcautil.GetDefaultRenderDevice(mmde)
 	if err != nil {
 		mr.cleanup()
 		return err
@@ -150,20 +151,20 @@ func (mr *MeterReaderWCA) Reinitialize() error {
 	log.Printf("[METER-WCA] Reinitializing after device change...")
 
 	// Reinitialize COM and get new device
-	err := EnsureCOMInitialized()
+	err := wcautil.EnsureCOMInitialized()
 	if err != nil {
 		return fmt.Errorf("failed to reinitialize COM: %w", err)
 	}
 
 	// Create device enumerator
-	mmde, err := CreateDeviceEnumerator()
+	mmde, err := wcautil.CreateDeviceEnumerator()
 	if err != nil {
 		return err
 	}
 	mr.mmde = mmde
 
 	// Get default audio endpoint
-	mmd, err := GetDefaultRenderDevice(mmde)
+	mmd, err := wcautil.GetDefaultRenderDevice(mmde)
 	if err != nil {
 		mr.cleanup()
 		return err
@@ -249,9 +250,9 @@ func (mr *MeterReaderWCA) GetMeterData(clippingThreshold, silenceThreshold float
 
 // cleanup releases all COM objects
 func (mr *MeterReaderWCA) cleanup() {
-	SafeReleaseAudioMeterInformation(&mr.ami)
-	SafeReleaseMMDevice(&mr.mmd)
-	SafeReleaseMMDeviceEnumerator(&mr.mmde)
+	wcautil.SafeReleaseAudioMeterInformation(&mr.ami)
+	wcautil.SafeReleaseMMDevice(&mr.mmd)
+	wcautil.SafeReleaseMMDeviceEnumerator(&mr.mmde)
 }
 
 // Close releases all COM resources and uninitializes COM

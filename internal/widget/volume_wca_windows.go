@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/moutend/go-wca/pkg/wca"
+	wcautil "github.com/pozitronik/steelclock-go/internal/wca"
 )
 
 // Shared volume reader instance (recreatable singleton)
@@ -69,7 +70,7 @@ func (vr *VolumeReaderWCA) initialize() error {
 	log.Printf("[VOLUME-WCA] Ensuring COM is initialized")
 
 	// Ensure COM is initialized on this thread
-	err := EnsureCOMInitialized()
+	err := wcautil.EnsureCOMInitialized()
 	if err != nil {
 		return fmt.Errorf("failed to initialize COM: %w", err)
 	}
@@ -79,7 +80,7 @@ func (vr *VolumeReaderWCA) initialize() error {
 	// Note: We don't own COM cleanup - it's managed per-thread by EnsureCOMInitialized
 
 	// Create device enumerator
-	mmde, err := CreateDeviceEnumerator()
+	mmde, err := wcautil.CreateDeviceEnumerator()
 	if err != nil {
 		return err
 	}
@@ -88,7 +89,7 @@ func (vr *VolumeReaderWCA) initialize() error {
 	log.Printf("[VOLUME-WCA] Device enumerator created")
 
 	// Get default audio endpoint
-	mmd, err := GetDefaultRenderDevice(mmde)
+	mmd, err := wcautil.GetDefaultRenderDevice(mmde)
 	if err != nil {
 		vr.cleanup()
 		return err
@@ -125,20 +126,20 @@ func (vr *VolumeReaderWCA) Reinitialize() error {
 	log.Printf("[VOLUME-WCA] Reinitializing after device change...")
 
 	// Reinitialize COM and get new device
-	err := EnsureCOMInitialized()
+	err := wcautil.EnsureCOMInitialized()
 	if err != nil {
 		return fmt.Errorf("failed to reinitialize COM: %w", err)
 	}
 
 	// Create device enumerator
-	mmde, err := CreateDeviceEnumerator()
+	mmde, err := wcautil.CreateDeviceEnumerator()
 	if err != nil {
 		return err
 	}
 	vr.mmde = mmde
 
 	// Get default audio endpoint
-	mmd, err := GetDefaultRenderDevice(mmde)
+	mmd, err := wcautil.GetDefaultRenderDevice(mmde)
 	if err != nil {
 		vr.cleanup()
 		return err
@@ -196,9 +197,9 @@ func (vr *VolumeReaderWCA) GetVolume() (volume float64, muted bool, err error) {
 
 // cleanup releases all COM objects
 func (vr *VolumeReaderWCA) cleanup() {
-	SafeReleaseAudioEndpointVolume(&vr.aev)
-	SafeReleaseMMDevice(&vr.mmd)
-	SafeReleaseMMDeviceEnumerator(&vr.mmde)
+	wcautil.SafeReleaseAudioEndpointVolume(&vr.aev)
+	wcautil.SafeReleaseMMDevice(&vr.mmd)
+	wcautil.SafeReleaseMMDeviceEnumerator(&vr.mmde)
 }
 
 // Close releases all COM resources and uninitializes COM

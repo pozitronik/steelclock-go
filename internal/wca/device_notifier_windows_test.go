@@ -1,6 +1,6 @@
 //go:build windows
 
-package widget
+package wca
 
 import (
 	"sync"
@@ -293,7 +293,7 @@ func TestQueryInterface(t *testing.T) {
 
 	// Query for IMMNotificationClient - should succeed
 	ppvObject = nil
-	hr = queryInterface(client, IidImmnotificationclient, &ppvObject)
+	hr = queryInterface(client, IIDIMMNotificationClient, &ppvObject)
 	if hr != 0 {
 		t.Errorf("QueryInterface for IMMNotificationClient failed with hr=0x%08X", hr)
 	}
@@ -378,11 +378,11 @@ func TestOnDefaultDeviceChanged(t *testing.T) {
 		role         uint32
 		shouldNotify bool
 	}{
-		{"eRender eConsole", eRender, eConsole, true},
-		{"eRender eMultimedia", eRender, eMultimedia, true},
-		{"eRender eCommunication", eRender, eCommunication, true},
-		{"eAll eConsole", eAll, eConsole, true},
-		{"eCapture eConsole", eCapture, eConsole, false}, // Capture devices are ignored
+		{"ERender EConsole", ERender, EConsole, true},
+		{"ERender EMultimedia", ERender, EMultimedia, true},
+		{"ERender ECommunication", ERender, ECommunication, true},
+		{"EAll EConsole", EAll, EConsole, true},
+		{"ECapture EConsole", ECapture, EConsole, false}, // Capture devices are ignored
 	}
 
 	for _, tt := range tests {
@@ -477,7 +477,7 @@ func TestCallbacksWithNilNotifier(t *testing.T) {
 		t.Errorf("onDeviceRemoved with nil notifier returned non-zero hr: 0x%08X", hr)
 	}
 
-	hr = onDefaultDeviceChanged(client, eRender, eConsole, nil)
+	hr = onDefaultDeviceChanged(client, ERender, EConsole, nil)
 	if hr != 0 {
 		t.Errorf("onDefaultDeviceChanged with nil notifier returned non-zero hr: 0x%08X", hr)
 	}
@@ -503,14 +503,14 @@ func TestDeviceNotifierStopWithoutStart(t *testing.T) {
 //goland:noinspection GoBoolExpressions
 func TestEDataFlowConstants(t *testing.T) {
 	// These values are defined by Windows and must not change
-	if eRender != 0 {
-		t.Errorf("eRender should be 0, got %d", eRender)
+	if ERender != 0 {
+		t.Errorf("ERender should be 0, got %d", ERender)
 	}
-	if eCapture != 1 {
-		t.Errorf("eCapture should be 1, got %d", eCapture)
+	if ECapture != 1 {
+		t.Errorf("ECapture should be 1, got %d", ECapture)
 	}
-	if eAll != 2 {
-		t.Errorf("eAll should be 2, got %d", eAll)
+	if EAll != 2 {
+		t.Errorf("EAll should be 2, got %d", EAll)
 	}
 }
 
@@ -519,13 +519,13 @@ func TestEDataFlowConstants(t *testing.T) {
 //goland:noinspection GoBoolExpressions
 func TestERoleConstants(t *testing.T) {
 	// These values are defined by Windows and must not change
-	if eConsole != 0 {
-		t.Errorf("eConsole should be 0, got %d", eConsole)
+	if EConsole != 0 {
+		t.Errorf("EConsole should be 0, got %d", EConsole)
 	}
-	if eMultimedia != 1 {
-		t.Errorf("eMultimedia should be 1, got %d", eMultimedia)
+	if EMultimedia != 1 {
+		t.Errorf("EMultimedia should be 1, got %d", EMultimedia)
 	}
-	if eCommunication != 2 {
-		t.Errorf("eCommunication should be 2, got %d", eCommunication)
+	if ECommunication != 2 {
+		t.Errorf("ECommunication should be 2, got %d", ECommunication)
 	}
 }

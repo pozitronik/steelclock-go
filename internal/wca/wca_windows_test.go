@@ -1,6 +1,6 @@
 //go:build windows
 
-package widget
+package wca
 
 import (
 	"strings"
@@ -9,8 +9,8 @@ import (
 	"github.com/moutend/go-wca/pkg/wca"
 )
 
-// skipIfNoAudioDeviceWCATests skips the test if no audio device is available
-func skipIfNoAudioDeviceWCATests(t *testing.T) {
+// skipIfNoAudioDevice skips the test if no audio device is available
+func skipIfNoAudioDevice(t *testing.T) {
 	t.Helper()
 
 	err := EnsureCOMInitialized()
@@ -81,7 +81,7 @@ func TestCreateDeviceEnumerator(t *testing.T) {
 
 // TestGetDefaultRenderDevice verifies default audio device retrieval
 func TestGetDefaultRenderDevice(t *testing.T) {
-	skipIfNoAudioDeviceWCATests(t)
+	skipIfNoAudioDevice(t)
 
 	// Ensure COM is initialized first
 	err := EnsureCOMInitialized()
@@ -143,7 +143,7 @@ func TestSafeReleaseMMDeviceEnumerator(t *testing.T) {
 
 // TestSafeReleaseMMDevice verifies safe release of MM device
 func TestSafeReleaseMMDevice(t *testing.T) {
-	skipIfNoAudioDeviceWCATests(t)
+	skipIfNoAudioDevice(t)
 
 	// Ensure COM is initialized
 	err := EnsureCOMInitialized()
@@ -179,7 +179,7 @@ func TestSafeReleaseMMDevice(t *testing.T) {
 
 // TestSafeReleaseAudioEndpointVolume verifies safe release of audio endpoint volume
 func TestSafeReleaseAudioEndpointVolume(t *testing.T) {
-	skipIfNoAudioDeviceWCATests(t)
+	skipIfNoAudioDevice(t)
 
 	// Ensure COM is initialized
 	err := EnsureCOMInitialized()
@@ -222,7 +222,7 @@ func TestSafeReleaseAudioEndpointVolume(t *testing.T) {
 
 // TestSafeReleaseAudioMeterInformation verifies safe release of audio meter information
 func TestSafeReleaseAudioMeterInformation(t *testing.T) {
-	skipIfNoAudioDeviceWCATests(t)
+	skipIfNoAudioDevice(t)
 
 	// Ensure COM is initialized
 	err := EnsureCOMInitialized()
@@ -265,7 +265,7 @@ func TestSafeReleaseAudioMeterInformation(t *testing.T) {
 
 // TestSafeReleaseAudioClient verifies safe release of audio client
 func TestSafeReleaseAudioClient(t *testing.T) {
-	skipIfNoAudioDeviceWCATests(t)
+	skipIfNoAudioDevice(t)
 
 	// Ensure COM is initialized
 	err := EnsureCOMInitialized()
@@ -306,7 +306,7 @@ func TestSafeReleaseAudioClient(t *testing.T) {
 	SafeReleaseAudioClient(&nilPtr)
 }
 
-// TestSafeReleaseAudioCaptureClient verifies safe release behavior with nil pointer
+// TestSafeReleaseAudioCaptureClient_NilSafety verifies safe release behavior with nil pointer
 // Note: We can't easily test with a real IAudioCaptureClient without full audio setup
 func TestSafeReleaseAudioCaptureClient_NilSafety(t *testing.T) {
 	// Should not panic on nil pointer

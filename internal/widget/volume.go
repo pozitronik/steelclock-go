@@ -10,6 +10,7 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	wcautil "github.com/pozitronik/steelclock-go/internal/wca"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
@@ -158,7 +159,7 @@ func (w *VolumeWidget) pollVolumeBackground() {
 
 	// Subscribe to device change notifications (if available)
 	var deviceNotifyChan <-chan struct{}
-	deviceNotifier, err := GetDeviceNotifier()
+	deviceNotifier, err := wcautil.GetDeviceNotifier()
 	if err != nil {
 		log.Printf("[VOLUME] Device notifier not available: %v (will rely on polling)", err)
 	} else {
