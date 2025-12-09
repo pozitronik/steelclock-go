@@ -1,4 +1,4 @@
-package widget
+package network
 
 import (
 	"testing"
@@ -7,8 +7,8 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
-// TestNewNetworkWidget tests successful network widget creation
-func TestNewNetworkWidget(t *testing.T) {
+// TestNew tests successful network widget creation
+func TestNew(t *testing.T) {
 	iface := "eth0"
 	cfg := config.WidgetConfig{
 		Type:    "network",
@@ -32,13 +32,13 @@ func TestNewNetworkWidget(t *testing.T) {
 		},
 	}
 
-	widget, err := NewNetworkWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewNetworkWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget == nil {
-		t.Fatal("NewNetworkWidget() returned nil")
+		t.Fatal("New() returned nil")
 	}
 
 	if widget.Name() != "test_network" {
@@ -46,8 +46,8 @@ func TestNewNetworkWidget(t *testing.T) {
 	}
 }
 
-// TestNewNetworkWidget_Defaults tests default values
-func TestNewNetworkWidget_Defaults(t *testing.T) {
+// TestNew_Defaults tests default values
+func TestNew_Defaults(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_defaults",
@@ -58,9 +58,9 @@ func TestNewNetworkWidget_Defaults(t *testing.T) {
 		// Interface intentionally nil to test all interfaces mode
 	}
 
-	widget, err := NewNetworkWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewNetworkWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Check defaults
@@ -81,8 +81,8 @@ func TestNewNetworkWidget_Defaults(t *testing.T) {
 	}
 }
 
-// TestNetworkWidget_Update tests network stat collection
-func TestNetworkWidget_Update(t *testing.T) {
+// TestWidget_Update tests network stat collection
+func TestWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_update",
@@ -93,9 +93,9 @@ func TestNetworkWidget_Update(t *testing.T) {
 		Mode: "text",
 	}
 
-	widget, err := NewNetworkWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewNetworkWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// First update initializes baseline
@@ -120,8 +120,8 @@ func TestNetworkWidget_Update(t *testing.T) {
 	}
 }
 
-// TestNetworkWidget_RenderText tests text mode rendering
-func TestNetworkWidget_RenderText(t *testing.T) {
+// TestWidget_RenderText tests text mode rendering
+func TestWidget_RenderText(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_text",
@@ -135,9 +135,9 @@ func TestNetworkWidget_RenderText(t *testing.T) {
 		},
 	}
 
-	widget, err := NewNetworkWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewNetworkWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update to collect stats
@@ -153,8 +153,8 @@ func TestNetworkWidget_RenderText(t *testing.T) {
 	}
 }
 
-// TestNetworkWidget_RenderBarHorizontal tests horizontal bar rendering
-func TestNetworkWidget_RenderBarHorizontal(t *testing.T) {
+// TestWidget_RenderBarHorizontal tests horizontal bar rendering
+func TestWidget_RenderBarHorizontal(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_bar_h",
@@ -170,9 +170,9 @@ func TestNetworkWidget_RenderBarHorizontal(t *testing.T) {
 		},
 	}
 
-	widget, err := NewNetworkWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewNetworkWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	_ = widget.Update()
@@ -187,8 +187,8 @@ func TestNetworkWidget_RenderBarHorizontal(t *testing.T) {
 	}
 }
 
-// TestNetworkWidget_RenderBarVertical tests vertical bar rendering
-func TestNetworkWidget_RenderBarVertical(t *testing.T) {
+// TestWidget_RenderBarVertical tests vertical bar rendering
+func TestWidget_RenderBarVertical(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_bar_v",
@@ -203,9 +203,9 @@ func TestNetworkWidget_RenderBarVertical(t *testing.T) {
 		},
 	}
 
-	widget, err := NewNetworkWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewNetworkWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	_ = widget.Update()
@@ -220,8 +220,8 @@ func TestNetworkWidget_RenderBarVertical(t *testing.T) {
 	}
 }
 
-// TestNetworkWidget_RenderGraph tests graph mode rendering
-func TestNetworkWidget_RenderGraph(t *testing.T) {
+// TestWidget_RenderGraph tests graph mode rendering
+func TestWidget_RenderGraph(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_graph",
@@ -239,9 +239,9 @@ func TestNetworkWidget_RenderGraph(t *testing.T) {
 		},
 	}
 
-	widget, err := NewNetworkWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewNetworkWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Build history
@@ -259,8 +259,8 @@ func TestNetworkWidget_RenderGraph(t *testing.T) {
 	}
 }
 
-// TestNetworkWidget_AutoScale tests auto-scaling when maxSpeedMbps is -1
-func TestNetworkWidget_AutoScale(t *testing.T) {
+// TestWidget_AutoScale tests auto-scaling when maxSpeedMbps is -1
+func TestWidget_AutoScale(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_autoscale",
@@ -272,9 +272,9 @@ func TestNetworkWidget_AutoScale(t *testing.T) {
 		MaxSpeedMbps: -1, // Auto-scale
 	}
 
-	widget, err := NewNetworkWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewNetworkWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	_ = widget.Update()
@@ -290,8 +290,8 @@ func TestNetworkWidget_AutoScale(t *testing.T) {
 	}
 }
 
-// TestNetworkWidget_SpecificInterface tests monitoring specific interface
-func TestNetworkWidget_SpecificInterface(t *testing.T) {
+// TestWidget_SpecificInterface tests monitoring specific interface
+func TestWidget_SpecificInterface(t *testing.T) {
 	// Use a likely non-existent interface to test error handling
 	iface := "nonexistent_interface_xyz123"
 	cfg := config.WidgetConfig{
@@ -305,9 +305,9 @@ func TestNetworkWidget_SpecificInterface(t *testing.T) {
 		Interface: &iface,
 	}
 
-	widget, err := NewNetworkWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewNetworkWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update should work even if interface doesn't exist (returns 0 stats)
@@ -317,8 +317,8 @@ func TestNetworkWidget_SpecificInterface(t *testing.T) {
 	}
 }
 
-// TestNetworkWidget_RenderGauge tests dual gauge mode rendering
-func TestNetworkWidget_RenderGauge(t *testing.T) {
+// TestWidget_RenderGauge tests dual gauge mode rendering
+func TestWidget_RenderGauge(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_gauge",
@@ -336,9 +336,9 @@ func TestNetworkWidget_RenderGauge(t *testing.T) {
 		},
 	}
 
-	widget, err := NewNetworkWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewNetworkWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	_ = widget.Update()
@@ -353,8 +353,8 @@ func TestNetworkWidget_RenderGauge(t *testing.T) {
 	}
 }
 
-// TestNetworkWidget_GaugeDefaults tests gauge mode with default needle colors
-func TestNetworkWidget_GaugeDefaults(t *testing.T) {
+// TestWidget_GaugeDefaults tests gauge mode with default needle colors
+func TestWidget_GaugeDefaults(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_gauge_defaults",
@@ -367,9 +367,9 @@ func TestNetworkWidget_GaugeDefaults(t *testing.T) {
 		// Don't specify needle colors to test defaults
 	}
 
-	widget, err := NewNetworkWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewNetworkWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Verify defaults via renderer config
@@ -393,8 +393,8 @@ func TestNetworkWidget_GaugeDefaults(t *testing.T) {
 	}
 }
 
-// TestNetworkWidget_GaugeAutoScale tests gauge mode with auto-scaling
-func TestNetworkWidget_GaugeAutoScale(t *testing.T) {
+// TestWidget_GaugeAutoScale tests gauge mode with auto-scaling
+func TestWidget_GaugeAutoScale(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_gauge_autoscale",
@@ -410,9 +410,9 @@ func TestNetworkWidget_GaugeAutoScale(t *testing.T) {
 		},
 	}
 
-	widget, err := NewNetworkWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewNetworkWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	_ = widget.Update()
@@ -428,8 +428,8 @@ func TestNetworkWidget_GaugeAutoScale(t *testing.T) {
 	}
 }
 
-// TestNetworkWidget_ConcurrentAccess tests thread safety
-func TestNetworkWidget_ConcurrentAccess(t *testing.T) {
+// TestWidget_ConcurrentAccess tests thread safety
+func TestWidget_ConcurrentAccess(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "network",
 		ID:      "test_network_concurrent",
@@ -440,9 +440,9 @@ func TestNetworkWidget_ConcurrentAccess(t *testing.T) {
 		Mode: "text",
 	}
 
-	widget, err := NewNetworkWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewNetworkWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	done := make(chan bool)

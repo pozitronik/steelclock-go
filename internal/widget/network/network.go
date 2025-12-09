@@ -1,4 +1,4 @@
-package widget
+package network
 
 import (
 	"fmt"
@@ -7,19 +7,20 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/metrics"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 func init() {
-	Register("network", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewNetworkWidget(cfg)
+	widget.Register("network", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
-// NetworkWidget displays network I/O (RX/TX)
-type NetworkWidget struct {
+// Widget displays network I/O (RX/TX)
+type Widget struct {
 	*shared.BaseDualIOWidget
-	base            *BaseWidget
+	base            *widget.BaseWidget
 	interfaceName   *string
 	networkProvider metrics.NetworkProvider
 
@@ -29,9 +30,9 @@ type NetworkWidget struct {
 	lastTime time.Time
 }
 
-// NewNetworkWidget creates a new network widget
-func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new network widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
@@ -164,7 +165,7 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 		HistoryLen: graphSettings.HistoryLen,
 	})
 
-	return &NetworkWidget{
+	return &Widget{
 		BaseDualIOWidget: baseDualIO,
 		base:             base,
 		interfaceName:    cfg.Interface,
@@ -173,27 +174,27 @@ func NewNetworkWidget(cfg config.WidgetConfig) (*NetworkWidget, error) {
 }
 
 // Name returns the widget's ID
-func (w *NetworkWidget) Name() string {
+func (w *Widget) Name() string {
 	return w.base.Name()
 }
 
 // GetUpdateInterval returns the update interval
-func (w *NetworkWidget) GetUpdateInterval() time.Duration {
+func (w *Widget) GetUpdateInterval() time.Duration {
 	return w.base.GetUpdateInterval()
 }
 
 // GetPosition returns the widget's position
-func (w *NetworkWidget) GetPosition() config.PositionConfig {
+func (w *Widget) GetPosition() config.PositionConfig {
 	return w.base.GetPosition()
 }
 
 // GetStyle returns the widget's style
-func (w *NetworkWidget) GetStyle() config.StyleConfig {
+func (w *Widget) GetStyle() config.StyleConfig {
 	return w.base.GetStyle()
 }
 
 // Update updates the network stats
-func (w *NetworkWidget) Update() error {
+func (w *Widget) Update() error {
 	stats, err := w.networkProvider.IOCounters()
 	if err != nil {
 		return err
