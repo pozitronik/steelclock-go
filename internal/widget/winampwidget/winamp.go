@@ -1,4 +1,4 @@
-package widget
+package winampwidget
 
 import (
 	"fmt"
@@ -9,26 +9,27 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"github.com/pozitronik/steelclock-go/internal/winamp"
 	"golang.org/x/image/font"
 )
 
 func init() {
-	Register("winamp", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewWinampWidget(cfg)
+	widget.Register("winamp", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
 // Placeholder mode constants
 const (
-	winampPlaceholderModeIcon = "icon"
-	winampPlaceholderModeText = "text"
+	placeholderModeIcon = "icon"
+	placeholderModeText = "text"
 )
 
-// WinampWidget displays information from Winamp media player
-type WinampWidget struct {
-	*BaseWidget
+// Widget displays information from Winamp media player
+type Widget struct {
+	*widget.BaseWidget
 
 	// Configuration
 	format          string
@@ -64,9 +65,9 @@ type WinampWidget struct {
 	scroller *shared.TextScroller
 }
 
-// NewWinampWidget creates a new Winamp widget
-func NewWinampWidget(cfg config.WidgetConfig) (*WinampWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new Winamp widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract text settings using helper
@@ -86,7 +87,7 @@ func NewWinampWidget(cfg config.WidgetConfig) (*WinampWidget, error) {
 	}
 
 	// Extract Winamp-specific settings (placeholder)
-	placeholderMode := winampPlaceholderModeIcon
+	placeholderMode := placeholderModeIcon
 	placeholderText := "No Winamp"
 
 	if cfg.Winamp != nil {
@@ -160,7 +161,7 @@ func NewWinampWidget(cfg config.WidgetConfig) (*WinampWidget, error) {
 		PauseMs:   scrollPauseMs,
 	})
 
-	return &WinampWidget{
+	return &Widget{
 		BaseWidget:            base,
 		format:                format,
 		fontSize:              fontSize,
@@ -186,7 +187,7 @@ func NewWinampWidget(cfg config.WidgetConfig) (*WinampWidget, error) {
 }
 
 // Update fetches current track information from Winamp
-func (w *WinampWidget) Update() error {
+func (w *Widget) Update() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -279,7 +280,7 @@ func (w *WinampWidget) Update() error {
 }
 
 // formatOutput replaces placeholders with actual values
-func (w *WinampWidget) formatOutput(info *winamp.TrackInfo) string {
+func (w *Widget) formatOutput(info *winamp.TrackInfo) string {
 	if info == nil {
 		return ""
 	}
@@ -327,7 +328,7 @@ func formatTime(seconds int) string {
 }
 
 // Render creates an image of the widget
-func (w *WinampWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	// Check auto-hide
 	if w.ShouldHide() {
 		return nil, nil
@@ -359,11 +360,11 @@ func (w *WinampWidget) Render() (image.Image, error) {
 }
 
 // renderPlaceholder renders the placeholder when Winamp is not playing
-func (w *WinampWidget) renderPlaceholder(img *image.Gray) {
+func (w *Widget) renderPlaceholder(img *image.Gray) {
 	pos := w.GetPosition()
 
 	switch w.placeholderMode {
-	case winampPlaceholderModeIcon:
+	case placeholderModeIcon:
 		// Draw Winamp icon centered
 		iconSet := glyphs.WinampIcons8x8
 		icon := glyphs.GetIcon(iconSet, "winamp")
@@ -373,13 +374,13 @@ func (w *WinampWidget) renderPlaceholder(img *image.Gray) {
 			y := (pos.H - icon.Height) / 2
 			glyphs.DrawGlyph(img, icon, x, y, color.Gray{Y: 255})
 		}
-	case winampPlaceholderModeText:
+	case placeholderModeText:
 		bitmap.SmartDrawAlignedText(img, w.placeholderText, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 	}
 }
 
 // renderScrollingText renders text with scroll offset
-func (w *WinampWidget) renderScrollingText(img *image.Gray, text string, offset float64) {
+func (w *Widget) renderScrollingText(img *image.Gray, text string, offset float64) {
 	pos := w.GetPosition()
 	contentX := w.padding
 	contentY := w.padding

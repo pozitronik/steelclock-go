@@ -1,4 +1,4 @@
-package widget
+package winampwidget
 
 import (
 	"testing"
@@ -7,8 +7,8 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
-// TestNewWinampWidget tests basic widget creation
-func TestNewWinampWidget(t *testing.T) {
+// TestNew tests basic widget creation
+func TestNew(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "winamp",
 		Position: config.PositionConfig{
@@ -17,17 +17,17 @@ func TestNewWinampWidget(t *testing.T) {
 		UpdateInterval: 0.2,
 	}
 
-	widget, err := NewWinampWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWinampWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
-	if widget == nil {
-		t.Fatal("NewWinampWidget() returned nil")
+	if w == nil {
+		t.Fatal("New() returned nil")
 	}
 }
 
-// TestNewWinampWidget_WithTextConfig tests widget creation with text configuration
-func TestNewWinampWidget_WithTextConfig(t *testing.T) {
+// TestNew_WithTextConfig tests widget creation with text configuration
+func TestNew_WithTextConfig(t *testing.T) {
 	h := config.AlignLeft
 	v := config.AlignTop
 	cfg := config.WidgetConfig{
@@ -45,27 +45,27 @@ func TestNewWinampWidget_WithTextConfig(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWinampWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWinampWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
-	if widget.fontSize != 14 {
-		t.Errorf("widget.fontSize = %d, want 14", widget.fontSize)
+	if w.fontSize != 14 {
+		t.Errorf("widget.fontSize = %d, want 14", w.fontSize)
 	}
-	if widget.format != "{title} - {status}" {
-		t.Errorf("widget.format = %q, want {title} - {status}", widget.format)
+	if w.format != "{title} - {status}" {
+		t.Errorf("widget.format = %q, want {title} - {status}", w.format)
 	}
-	if widget.horizAlign != config.AlignLeft {
-		t.Errorf("widget.horizAlign = %q, want left", widget.horizAlign)
+	if w.horizAlign != config.AlignLeft {
+		t.Errorf("widget.horizAlign = %q, want left", w.horizAlign)
 	}
-	if widget.vertAlign != config.AlignTop {
-		t.Errorf("widget.vertAlign = %q, want top", widget.vertAlign)
+	if w.vertAlign != config.AlignTop {
+		t.Errorf("widget.vertAlign = %q, want top", w.vertAlign)
 	}
 }
 
-// TestNewWinampWidget_WithScrollConfig tests widget creation with scroll configuration
-func TestNewWinampWidget_WithScrollConfig(t *testing.T) {
+// TestNew_WithScrollConfig tests widget creation with scroll configuration
+func TestNew_WithScrollConfig(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "winamp",
 		Position: config.PositionConfig{
@@ -81,15 +81,15 @@ func TestNewWinampWidget_WithScrollConfig(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWinampWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWinampWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
-	if !widget.scrollEnabled {
+	if !w.scrollEnabled {
 		t.Error("widget.scrollEnabled = false, want true")
 	}
-	scrollCfg := widget.scroller.GetConfig()
+	scrollCfg := w.scroller.GetConfig()
 	if scrollCfg.Direction != shared.ScrollRight {
 		t.Errorf("scrollCfg.Direction = %q, want right", scrollCfg.Direction)
 	}
@@ -102,13 +102,13 @@ func TestNewWinampWidget_WithScrollConfig(t *testing.T) {
 	if scrollCfg.PauseMs != 2000 {
 		t.Errorf("scrollCfg.PauseMs = %d, want 2000", scrollCfg.PauseMs)
 	}
-	if widget.scrollGap != 30 {
-		t.Errorf("widget.scrollGap = %d, want 30", widget.scrollGap)
+	if w.scrollGap != 30 {
+		t.Errorf("widget.scrollGap = %d, want 30", w.scrollGap)
 	}
 }
 
-// TestNewWinampWidget_WithAutoShowConfig tests widget creation with auto-show configuration
-func TestNewWinampWidget_WithAutoShowConfig(t *testing.T) {
+// TestNew_WithAutoShowConfig tests widget creation with auto-show configuration
+func TestNew_WithAutoShowConfig(t *testing.T) {
 	onTrackChange := false
 	cfg := config.WidgetConfig{
 		Type: "winamp",
@@ -124,30 +124,30 @@ func TestNewWinampWidget_WithAutoShowConfig(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWinampWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWinampWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
-	if widget.autoShowOnTrackChange {
+	if w.autoShowOnTrackChange {
 		t.Error("widget.autoShowOnTrackChange = true, want false")
 	}
-	if !widget.autoShowOnPlay {
+	if !w.autoShowOnPlay {
 		t.Error("widget.autoShowOnPlay = false, want true")
 	}
-	if !widget.autoShowOnPause {
+	if !w.autoShowOnPause {
 		t.Error("widget.autoShowOnPause = false, want true")
 	}
-	if !widget.autoShowOnStop {
+	if !w.autoShowOnStop {
 		t.Error("widget.autoShowOnStop = false, want true")
 	}
-	if !widget.autoShowOnSeek {
+	if !w.autoShowOnSeek {
 		t.Error("widget.autoShowOnSeek = false, want true")
 	}
 }
 
-// TestNewWinampWidget_WithPlaceholderConfig tests widget creation with placeholder configuration
-func TestNewWinampWidget_WithPlaceholderConfig(t *testing.T) {
+// TestNew_WithPlaceholderConfig tests widget creation with placeholder configuration
+func TestNew_WithPlaceholderConfig(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "winamp",
 		Position: config.PositionConfig{
@@ -161,21 +161,21 @@ func TestNewWinampWidget_WithPlaceholderConfig(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWinampWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWinampWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
-	if widget.placeholderMode != "text" {
-		t.Errorf("widget.placeholderMode = %q, want text", widget.placeholderMode)
+	if w.placeholderMode != "text" {
+		t.Errorf("widget.placeholderMode = %q, want text", w.placeholderMode)
 	}
-	if widget.placeholderText != "Custom Placeholder" {
-		t.Errorf("widget.placeholderText = %q, want Custom Placeholder", widget.placeholderText)
+	if w.placeholderText != "Custom Placeholder" {
+		t.Errorf("widget.placeholderText = %q, want Custom Placeholder", w.placeholderText)
 	}
 }
 
-// TestWinampWidget_Defaults tests default values
-func TestWinampWidget_Defaults(t *testing.T) {
+// TestWidget_Defaults tests default values
+func TestWidget_Defaults(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "winamp",
 		Position: config.PositionConfig{
@@ -183,34 +183,34 @@ func TestWinampWidget_Defaults(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWinampWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWinampWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Check default values
-	if widget.format != "{title}" {
-		t.Errorf("default format = %q, want {title}", widget.format)
+	if w.format != "{title}" {
+		t.Errorf("default format = %q, want {title}", w.format)
 	}
-	if widget.fontSize != 12 {
-		t.Errorf("default fontSize = %d, want 12", widget.fontSize)
+	if w.fontSize != 12 {
+		t.Errorf("default fontSize = %d, want 12", w.fontSize)
 	}
-	if widget.horizAlign != "center" {
-		t.Errorf("default horizAlign = %q, want center", widget.horizAlign)
+	if w.horizAlign != "center" {
+		t.Errorf("default horizAlign = %q, want center", w.horizAlign)
 	}
-	if widget.vertAlign != "center" {
-		t.Errorf("default vertAlign = %q, want center", widget.vertAlign)
+	if w.vertAlign != "center" {
+		t.Errorf("default vertAlign = %q, want center", w.vertAlign)
 	}
-	if widget.placeholderMode != "icon" {
-		t.Errorf("default placeholderMode = %q, want icon", widget.placeholderMode)
+	if w.placeholderMode != "icon" {
+		t.Errorf("default placeholderMode = %q, want icon", w.placeholderMode)
 	}
-	if widget.placeholderText != "No Winamp" {
-		t.Errorf("default placeholderText = %q, want No Winamp", widget.placeholderText)
+	if w.placeholderText != "No Winamp" {
+		t.Errorf("default placeholderText = %q, want No Winamp", w.placeholderText)
 	}
-	if widget.scrollEnabled {
+	if w.scrollEnabled {
 		t.Error("default scrollEnabled = true, want false")
 	}
-	defaultScrollCfg := widget.scroller.GetConfig()
+	defaultScrollCfg := w.scroller.GetConfig()
 	if defaultScrollCfg.Direction != shared.ScrollLeft {
 		t.Errorf("default scrollDirection = %q, want left", defaultScrollCfg.Direction)
 	}
@@ -220,16 +220,16 @@ func TestWinampWidget_Defaults(t *testing.T) {
 	if defaultScrollCfg.Mode != shared.ScrollContinuous {
 		t.Errorf("default scrollMode = %q, want continuous", defaultScrollCfg.Mode)
 	}
-	if !widget.autoShowOnTrackChange {
+	if !w.autoShowOnTrackChange {
 		t.Error("default autoShowOnTrackChange = false, want true")
 	}
-	if widget.autoShowOnPlay {
+	if w.autoShowOnPlay {
 		t.Error("default autoShowOnPlay = true, want false")
 	}
 }
 
-// TestWinampWidget_Update tests the Update method
-func TestWinampWidget_Update(t *testing.T) {
+// TestWidget_Update tests the Update method
+func TestWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "winamp",
 		Position: config.PositionConfig{
@@ -237,19 +237,19 @@ func TestWinampWidget_Update(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWinampWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWinampWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update should not return error
-	if err := widget.Update(); err != nil {
+	if err := w.Update(); err != nil {
 		t.Errorf("Update() error = %v, want nil", err)
 	}
 }
 
-// TestWinampWidget_Render tests the Render method
-func TestWinampWidget_Render(t *testing.T) {
+// TestWidget_Render tests the Render method
+func TestWidget_Render(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "winamp",
 		Position: config.PositionConfig{
@@ -257,13 +257,13 @@ func TestWinampWidget_Render(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWinampWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWinampWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Render should return an image (placeholder when no Winamp)
-	img, err := widget.Render()
+	img, err := w.Render()
 	if err != nil {
 		t.Errorf("Render() error = %v, want nil", err)
 	}
@@ -277,8 +277,8 @@ func TestWinampWidget_Render(t *testing.T) {
 	}
 }
 
-// TestWinampWidget_Render_TextPlaceholder tests rendering with text placeholder
-func TestWinampWidget_Render_TextPlaceholder(t *testing.T) {
+// TestWidget_Render_TextPlaceholder tests rendering with text placeholder
+func TestWidget_Render_TextPlaceholder(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "winamp",
 		Position: config.PositionConfig{
@@ -292,12 +292,12 @@ func TestWinampWidget_Render_TextPlaceholder(t *testing.T) {
 		},
 	}
 
-	widget, err := NewWinampWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewWinampWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
-	img, err := widget.Render()
+	img, err := w.Render()
 	if err != nil {
 		t.Errorf("Render() error = %v, want nil", err)
 	}
