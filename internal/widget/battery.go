@@ -89,8 +89,8 @@ type BatteryWidget struct {
 	// Font for text rendering
 	fontSize   int
 	fontName   string
-	horizAlign string
-	vertAlign  string
+	horizAlign config.HAlign
+	vertAlign  config.VAlign
 	fontFace   font.Face
 	padding    int
 	textFormat string // Format string with tokens like {percent}, {status}, etc.
@@ -334,12 +334,12 @@ func (w *BatteryWidget) Render() (image.Image, error) {
 	w.mu.RUnlock()
 
 	if !hasData {
-		bitmap.SmartDrawAlignedText(img, "...", w.fontFace, w.fontName, config.AlignCenter, config.AlignCenter, w.padding)
+		bitmap.SmartDrawAlignedText(img, "...", w.fontFace, w.fontName, config.AlignCenter, config.AlignMiddle, w.padding)
 		return img, nil
 	}
 
 	if !status.HasBattery {
-		bitmap.SmartDrawAlignedText(img, "No Battery", w.fontFace, w.fontName, config.AlignCenter, config.AlignCenter, w.padding)
+		bitmap.SmartDrawAlignedText(img, "No Battery", w.fontFace, w.fontName, config.AlignCenter, config.AlignMiddle, w.padding)
 		return img, nil
 	}
 
@@ -607,7 +607,7 @@ func (w *BatteryWidget) renderBar(img *image.Gray, status BatteryStatus) {
 	// Draw percentage text if enabled
 	if w.showPercentage {
 		text := fmt.Sprintf("%d%%", status.Percentage)
-		bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, config.AlignCenter, config.AlignCenter, 0)
+		bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, config.AlignCenter, config.AlignMiddle, 0)
 	}
 
 	// Draw status icon (charging, economy, or AC) in top-left corner

@@ -417,18 +417,18 @@ func TestStyle_GaugeColors(t *testing.T) {
 func TestStyle_TextAlignment(t *testing.T) {
 	alignments := []struct {
 		name string
-		h    string
-		v    string
+		h    config.HAlign
+		v    config.VAlign
 	}{
-		{"TopLeft", "left", "top"},
-		{"TopCenter", "center", "top"},
-		{"TopRight", "right", "top"},
-		{"CenterLeft", "left", "center"},
-		{"Center", "center", "center"},
-		{"CenterRight", "right", "center"},
-		{"BottomLeft", "left", "bottom"},
-		{"BottomCenter", "center", "bottom"},
-		{"BottomRight", "right", "bottom"},
+		{"TopLeft", config.AlignLeft, config.AlignTop},
+		{"TopCenter", config.AlignCenter, config.AlignTop},
+		{"TopRight", config.AlignRight, config.AlignTop},
+		{"CenterLeft", config.AlignLeft, config.AlignMiddle},
+		{"Center", config.AlignCenter, config.AlignMiddle},
+		{"CenterRight", config.AlignRight, config.AlignMiddle},
+		{"BottomLeft", config.AlignLeft, config.AlignBottom},
+		{"BottomCenter", config.AlignCenter, config.AlignBottom},
+		{"BottomRight", config.AlignRight, config.AlignBottom},
 	}
 
 	for _, a := range alignments {

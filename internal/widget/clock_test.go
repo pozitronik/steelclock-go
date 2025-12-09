@@ -244,8 +244,8 @@ func TestClockWidget_DefaultDisplayMode(t *testing.T) {
 func TestClockWidgetRender_ClockFaceAlignment(t *testing.T) {
 	tests := []struct {
 		name          string
-		horizAlign    string
-		vertAlign     string
+		horizAlign    config.HAlign
+		vertAlign     config.VAlign
 		width         int
 		height        int
 		padding       int
@@ -253,8 +253,8 @@ func TestClockWidgetRender_ClockFaceAlignment(t *testing.T) {
 	}{
 		{
 			name:       "left-top alignment",
-			horizAlign: "left",
-			vertAlign:  "top",
+			horizAlign: config.AlignLeft,
+			vertAlign:  config.AlignTop,
 			width:      100,
 			height:     80,
 			padding:    5,
@@ -275,8 +275,8 @@ func TestClockWidgetRender_ClockFaceAlignment(t *testing.T) {
 		},
 		{
 			name:       "right-bottom alignment",
-			horizAlign: "right",
-			vertAlign:  "bottom",
+			horizAlign: config.AlignRight,
+			vertAlign:  config.AlignBottom,
 			width:      100,
 			height:     80,
 			padding:    5,
@@ -297,8 +297,8 @@ func TestClockWidgetRender_ClockFaceAlignment(t *testing.T) {
 		},
 		{
 			name:       "center alignment",
-			horizAlign: "center",
-			vertAlign:  "center",
+			horizAlign: config.AlignCenter,
+			vertAlign:  config.AlignMiddle,
 			width:      80,
 			height:     80,
 			padding:    0,

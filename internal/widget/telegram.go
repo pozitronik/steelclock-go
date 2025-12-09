@@ -33,8 +33,8 @@ type ElementAppearance struct {
 	FontFace   font.Face
 	FontName   string
 	FontSize   int
-	HorizAlign string
-	VertAlign  string
+	HorizAlign config.HAlign
+	VertAlign  config.VAlign
 	// Format string with tokens: {sender}, {chat}, {type}, {time}, {date}, {forwarded}
 	Format string
 	// Scroll settings
@@ -285,13 +285,13 @@ func parseAppearance(appCfg *config.TelegramAppearanceConfig) (ChatAppearance, e
 		if app.Header.Scroll != nil {
 			appearance.Header.ScrollEnabled = app.Header.Scroll.Enabled
 			if app.Header.Scroll.Direction != "" {
-				appearance.Header.ScrollDirection = shared.ScrollDirection(app.Header.Scroll.Direction)
+				appearance.Header.ScrollDirection = app.Header.Scroll.Direction
 			}
 			if app.Header.Scroll.Speed > 0 {
 				appearance.Header.ScrollSpeed = app.Header.Scroll.Speed
 			}
 			if app.Header.Scroll.Mode != "" {
-				appearance.Header.ScrollMode = shared.ScrollMode(app.Header.Scroll.Mode)
+				appearance.Header.ScrollMode = app.Header.Scroll.Mode
 			}
 			if app.Header.Scroll.Gap > 0 {
 				appearance.Header.ScrollGap = app.Header.Scroll.Gap
@@ -330,13 +330,13 @@ func parseAppearance(appCfg *config.TelegramAppearanceConfig) (ChatAppearance, e
 		if app.Message.Scroll != nil {
 			appearance.Message.ScrollEnabled = app.Message.Scroll.Enabled
 			if app.Message.Scroll.Direction != "" {
-				appearance.Message.ScrollDirection = shared.ScrollDirection(app.Message.Scroll.Direction)
+				appearance.Message.ScrollDirection = app.Message.Scroll.Direction
 			}
 			if app.Message.Scroll.Speed > 0 {
 				appearance.Message.ScrollSpeed = app.Message.Scroll.Speed
 			}
 			if app.Message.Scroll.Mode != "" {
-				appearance.Message.ScrollMode = shared.ScrollMode(app.Message.Scroll.Mode)
+				appearance.Message.ScrollMode = app.Message.Scroll.Mode
 			}
 			if app.Message.Scroll.Gap > 0 {
 				appearance.Message.ScrollGap = app.Message.Scroll.Gap

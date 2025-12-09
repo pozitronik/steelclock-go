@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
+	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
 func TestGetInternalFontByName(t *testing.T) {
@@ -61,21 +62,23 @@ func TestMeasureInternalText(t *testing.T) {
 func TestDrawAlignedInternalText(t *testing.T) {
 	// Test all alignment combinations
 	alignments := []struct {
-		horiz, vert string
+		horiz config.HAlign
+		vert  config.VAlign
+		name  string
 	}{
-		{"left", "top"},
-		{"left", "center"},
-		{"left", "bottom"},
-		{"center", "top"},
-		{"center", "center"},
-		{"center", "bottom"},
-		{"right", "top"},
-		{"right", "center"},
-		{"right", "bottom"},
+		{config.AlignLeft, config.AlignTop, "left_top"},
+		{config.AlignLeft, config.AlignMiddle, "left_center"},
+		{config.AlignLeft, config.AlignBottom, "left_bottom"},
+		{config.AlignCenter, config.AlignTop, "center_top"},
+		{config.AlignCenter, config.AlignMiddle, "center_center"},
+		{config.AlignCenter, config.AlignBottom, "center_bottom"},
+		{config.AlignRight, config.AlignTop, "right_top"},
+		{config.AlignRight, config.AlignMiddle, "right_center"},
+		{config.AlignRight, config.AlignBottom, "right_bottom"},
 	}
 
 	for _, align := range alignments {
-		t.Run(align.horiz+"_"+align.vert, func(t *testing.T) {
+		t.Run(align.name, func(t *testing.T) {
 			img := image.NewGray(image.Rect(0, 0, 50, 20))
 
 			// Clear image
@@ -143,15 +146,17 @@ func TestDrawAlignedInternalText_NilGlyphSet(t *testing.T) {
 func TestDrawInternalTextInRect(t *testing.T) {
 	// Test various alignments within a rectangle
 	alignments := []struct {
-		horiz, vert string
+		horiz config.HAlign
+		vert  config.VAlign
+		name  string
 	}{
-		{"left", "top"},
-		{"center", "center"},
-		{"right", "bottom"},
+		{config.AlignLeft, config.AlignTop, "left_top"},
+		{config.AlignCenter, config.AlignMiddle, "center_center"},
+		{config.AlignRight, config.AlignBottom, "right_bottom"},
 	}
 
 	for _, align := range alignments {
-		t.Run(align.horiz+"_"+align.vert, func(t *testing.T) {
+		t.Run(align.name, func(t *testing.T) {
 			img := image.NewGray(image.Rect(0, 0, 100, 50))
 
 			// Clear image

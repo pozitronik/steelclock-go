@@ -8,8 +8,8 @@ import (
 type TextSettings struct {
 	FontSize   int
 	FontName   string
-	HorizAlign string
-	VertAlign  string
+	HorizAlign config.HAlign
+	VertAlign  config.VAlign
 }
 
 // BarSettings holds extracted bar configuration with defaults
@@ -60,7 +60,7 @@ func (h *ConfigHelper) GetTextSettings() TextSettings {
 		FontSize:   10,
 		FontName:   "",
 		HorizAlign: config.AlignCenter,
-		VertAlign:  config.AlignCenter,
+		VertAlign:  config.AlignMiddle,
 	}
 
 	if h.cfg.Text != nil {

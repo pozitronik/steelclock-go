@@ -198,7 +198,7 @@ func (w *WeatherWidget) renderLine(img *image.Gray, tokens []Token, y, height in
 			w.renderLargeTokenInRect(img, t, x, y, availableWidth, actualHeight, weather, forecast, scrollOffset)
 			x += availableWidth
 		} else if t.Type != TokenLarge {
-			width := w.renderTokenInRectWithAlign(img, t, x, y, actualHeight, config.AlignCenter, weather, forecast, aqi, uv)
+			width := w.renderTokenInRectWithAlign(img, t, x, y, actualHeight, config.AlignMiddle, weather, forecast, aqi, uv)
 			x += width
 		}
 	}
@@ -241,7 +241,7 @@ func (w *WeatherWidget) renderTokenInRect(img *image.Gray, t *Token, x, y, heigh
 }
 
 // renderTokenInRectWithAlign renders a token within a rectangle with explicit vertical alignment
-func (w *WeatherWidget) renderTokenInRectWithAlign(img *image.Gray, t *Token, x, y, height int, vAlign string, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
+func (w *WeatherWidget) renderTokenInRectWithAlign(img *image.Gray, t *Token, x, y, height int, vAlign config.VAlign, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
 	switch t.Type {
 	case TokenLiteral:
 		width, _ := bitmap.SmartMeasureText(t.Literal, w.fontFace, w.fontName)
@@ -265,7 +265,7 @@ func (w *WeatherWidget) renderTokenInRectWithAlign(img *image.Gray, t *Token, x,
 }
 
 // renderIconTokenWithAlign renders an icon token with explicit vertical alignment
-func (w *WeatherWidget) renderIconTokenWithAlign(img *image.Gray, t *Token, x, y, height int, vAlign string, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
+func (w *WeatherWidget) renderIconTokenWithAlign(img *image.Gray, t *Token, x, y, height int, vAlign config.VAlign, weather *WeatherData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
 	iconSize := w.getIconSize(t)
 
 	var iconSet *glyphs.GlyphSet
@@ -545,9 +545,9 @@ func (w *WeatherWidget) renderForecastScroll(img *image.Gray, x, y, width, heigh
 	offset := int(scrollOffset) % (textWidth + width)
 
 	drawX := x + width - offset
-	bitmap.SmartDrawTextInRect(img, text, w.fontFace, w.fontName, drawX, y, textWidth+width, height, config.AlignLeft, config.AlignCenter, 0)
+	bitmap.SmartDrawTextInRect(img, text, w.fontFace, w.fontName, drawX, y, textWidth+width, height, config.AlignLeft, config.AlignMiddle, 0)
 
 	if drawX+textWidth < x+width {
-		bitmap.SmartDrawTextInRect(img, text, w.fontFace, w.fontName, drawX+textWidth, y, textWidth, height, config.AlignLeft, config.AlignCenter, 0)
+		bitmap.SmartDrawTextInRect(img, text, w.fontFace, w.fontName, drawX+textWidth, y, textWidth, height, config.AlignLeft, config.AlignMiddle, 0)
 	}
 }

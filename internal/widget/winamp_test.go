@@ -28,8 +28,8 @@ func TestNewWinampWidget(t *testing.T) {
 
 // TestNewWinampWidget_WithTextConfig tests widget creation with text configuration
 func TestNewWinampWidget_WithTextConfig(t *testing.T) {
-	h := "left"
-	v := "top"
+	h := config.AlignLeft
+	v := config.AlignTop
 	cfg := config.WidgetConfig{
 		Type: "winamp",
 		Position: config.PositionConfig{
@@ -56,10 +56,10 @@ func TestNewWinampWidget_WithTextConfig(t *testing.T) {
 	if widget.format != "{title} - {status}" {
 		t.Errorf("widget.format = %q, want {title} - {status}", widget.format)
 	}
-	if widget.horizAlign != "left" {
+	if widget.horizAlign != config.AlignLeft {
 		t.Errorf("widget.horizAlign = %q, want left", widget.horizAlign)
 	}
-	if widget.vertAlign != "top" {
+	if widget.vertAlign != config.AlignTop {
 		t.Errorf("widget.vertAlign = %q, want top", widget.vertAlign)
 	}
 }

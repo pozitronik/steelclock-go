@@ -27,8 +27,8 @@ type KeyboardWidget struct {
 	*BaseWidget
 	fontSize      int
 	fontName      string
-	horizAlign    string
-	vertAlign     string
+	horizAlign    config.HAlign
+	vertAlign     config.VAlign
 	padding       int
 	spacing       int
 	separator     string

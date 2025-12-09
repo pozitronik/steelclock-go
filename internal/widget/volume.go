@@ -45,8 +45,8 @@ type VolumeWidget struct {
 	gaugeShowTicks   bool
 	gaugeTicksColor  uint8
 	fontName         string
-	horizAlign       string
-	vertAlign        string
+	horizAlign       config.HAlign
+	vertAlign        config.VAlign
 	padding          int
 	pollInterval     time.Duration // Configurable internal polling rate
 

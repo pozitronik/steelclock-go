@@ -91,8 +91,8 @@ type KeyboardLayoutWidget struct {
 	*BaseWidget
 	fontSize      int
 	fontName      string
-	horizAlign    string
-	vertAlign     string
+	horizAlign    config.HAlign
+	vertAlign     config.VAlign
 	padding       int
 	displayFormat string // "iso639-1", "iso639-2", "full"
 	currentLayout string
@@ -108,8 +108,8 @@ func NewKeyboardLayoutWidget(cfg config.WidgetConfig) (*KeyboardLayoutWidget, er
 	// Extract text settings
 	fontSize := 10
 	fontName := ""
-	horizAlign := "center"
-	vertAlign := "center"
+	horizAlign := config.AlignCenter
+	vertAlign := config.AlignMiddle
 	padding := 0
 
 	if cfg.Text != nil {

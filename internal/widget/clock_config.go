@@ -50,16 +50,16 @@ const (
 type ClockTextConfig struct {
 	FontFace   font.Face
 	FontName   string
-	HorizAlign string
-	VertAlign  string
+	HorizAlign config.HAlign
+	VertAlign  config.VAlign
 	Padding    int
 	Format     string // Go time format string (e.g., "15:04:05")
 }
 
 // ClockAnalogConfig holds configuration for analog clock rendering
 type ClockAnalogConfig struct {
-	HorizAlign  string
-	VertAlign   string
+	HorizAlign  config.HAlign
+	VertAlign   config.VAlign
 	Padding     int
 	ShowSeconds bool
 	ShowTicks   bool

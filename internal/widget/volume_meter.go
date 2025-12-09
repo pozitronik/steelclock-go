@@ -55,8 +55,8 @@ type VolumeMeterWidget struct {
 	gaugeShowTicks   bool
 	gaugeTicksColor  uint8
 	fontName         string
-	horizontalAlign  string
-	verticalAlign    string
+	horizontalAlign  config.HAlign
+	verticalAlign    config.VAlign
 	padding          int
 
 	// Meter configuration

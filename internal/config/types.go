@@ -212,8 +212,8 @@ type TextConfig struct {
 
 // AlignConfig represents text alignment
 type AlignConfig struct {
-	H string `json:"h,omitempty"` // "left", "center", "right"
-	V string `json:"v,omitempty"` // "top", "center", "bottom"
+	H HAlign `json:"h,omitempty"` // "left", "center", "right"
+	V VAlign `json:"v,omitempty"` // "top", "center", "bottom"
 }
 
 // ColorsConfig represents widget colors (keys vary by widget type)
@@ -491,11 +491,11 @@ type ScrollConfig struct {
 	// Enabled explicitly enables/disables scrolling
 	Enabled bool `json:"enabled,omitempty"`
 	// Direction: "left", "right", "up", "down"
-	Direction string `json:"direction,omitempty"`
+	Direction ScrollDirection `json:"direction,omitempty"`
 	// Speed in pixels per second
 	Speed float64 `json:"speed,omitempty"`
 	// Mode: "continuous" (loop), "bounce" (reverse at edges), "pause_ends" (pause at start/end)
-	Mode string `json:"mode,omitempty"`
+	Mode ScrollMode `json:"mode,omitempty"`
 	// PauseMs - pause duration in milliseconds at ends (for bounce/pause_ends modes)
 	PauseMs int `json:"pause_ms,omitempty"`
 	// Gap - pixels between end and start of text in continuous mode

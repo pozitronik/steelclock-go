@@ -1,27 +1,30 @@
 package shared
 
-import "time"
+import (
+	"time"
 
-// ScrollMode defines the scrolling behavior
-type ScrollMode string
-
-const (
-	// ScrollContinuous scrolls continuously in one direction (marquee style)
-	ScrollContinuous ScrollMode = "continuous"
-	// ScrollBounce bounces between ends
-	ScrollBounce ScrollMode = "bounce"
-	// ScrollPauseEnds pauses at the end before resetting
-	ScrollPauseEnds ScrollMode = "pause_ends"
+	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-// ScrollDirection defines the scroll direction
-type ScrollDirection string
+// ScrollMode type alias for convenience
+type ScrollMode = config.ScrollMode
 
+// ScrollMode constants for convenience
 const (
-	ScrollLeft  ScrollDirection = "left"
-	ScrollRight ScrollDirection = "right"
-	ScrollUp    ScrollDirection = "up"
-	ScrollDown  ScrollDirection = "down"
+	ScrollContinuous = config.ScrollContinuous
+	ScrollBounce     = config.ScrollBounce
+	ScrollPauseEnds  = config.ScrollPauseEnds
+)
+
+// ScrollDirection type alias for convenience
+type ScrollDirection = config.ScrollDirection
+
+// ScrollDirection constants for convenience
+const (
+	ScrollLeft  = config.ScrollLeft
+	ScrollRight = config.ScrollRight
+	ScrollUp    = config.ScrollUp
+	ScrollDown  = config.ScrollDown
 )
 
 // ScrollerConfig holds scroll behavior configuration

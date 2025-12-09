@@ -41,8 +41,8 @@ type WeatherWidget struct {
 	// Display settings
 	fontSize   int
 	fontName   string
-	horizAlign string
-	vertAlign  string
+	horizAlign config.HAlign
+	vertAlign  config.VAlign
 	padding    int
 	fontFace   font.Face
 	// Parsed tokens (cached)

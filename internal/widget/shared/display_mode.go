@@ -44,8 +44,8 @@ type GaugeConfig struct {
 type TextConfig struct {
 	FontFace   font.Face
 	FontName   string
-	HorizAlign string
-	VertAlign  string
+	HorizAlign config.HAlign
+	VertAlign  config.VAlign
 	Padding    int
 }
 

@@ -29,8 +29,8 @@ type WinampWidget struct {
 	format          string
 	fontSize        int
 	fontName        string
-	horizAlign      string
-	vertAlign       string
+	horizAlign      config.HAlign
+	vertAlign       config.VAlign
 	padding         int
 	placeholderMode string // "text" or "icon"
 	placeholderText string
@@ -124,13 +124,13 @@ func NewWinampWidget(cfg config.WidgetConfig) (*WinampWidget, error) {
 	if cfg.Scroll != nil {
 		scrollEnabled = cfg.Scroll.Enabled
 		if cfg.Scroll.Direction != "" {
-			scrollDirection = shared.ScrollDirection(cfg.Scroll.Direction)
+			scrollDirection = cfg.Scroll.Direction
 		}
 		if cfg.Scroll.Speed > 0 {
 			scrollSpeed = cfg.Scroll.Speed
 		}
 		if cfg.Scroll.Mode != "" {
-			scrollMode = shared.ScrollMode(cfg.Scroll.Mode)
+			scrollMode = cfg.Scroll.Mode
 		}
 		if cfg.Scroll.PauseMs > 0 {
 			scrollPauseMs = cfg.Scroll.PauseMs

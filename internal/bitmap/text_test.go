@@ -2,6 +2,8 @@ package bitmap
 
 import (
 	"testing"
+
+	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
 // TestDrawAlignedText tests text drawing with various alignments
@@ -15,58 +17,58 @@ func TestDrawAlignedText(t *testing.T) {
 	tests := []struct {
 		name        string
 		text        string
-		horizAlign  string
-		vertAlign   string
+		horizAlign  config.HAlign
+		vertAlign   config.VAlign
 		padding     int
 		shouldPanic bool
 	}{
 		{
 			name:       "center-center alignment",
 			text:       "Hello",
-			horizAlign: "center",
-			vertAlign:  "center",
+			horizAlign: config.AlignCenter,
+			vertAlign:  config.AlignMiddle,
 			padding:    0,
 		},
 		{
 			name:       "left-top alignment",
 			text:       "Test",
-			horizAlign: "left",
-			vertAlign:  "top",
+			horizAlign: config.AlignLeft,
+			vertAlign:  config.AlignTop,
 			padding:    0,
 		},
 		{
 			name:       "right-bottom alignment",
 			text:       "Right",
-			horizAlign: "right",
-			vertAlign:  "bottom",
+			horizAlign: config.AlignRight,
+			vertAlign:  config.AlignBottom,
 			padding:    0,
 		},
 		{
 			name:       "center-top alignment",
 			text:       "Top",
-			horizAlign: "center",
-			vertAlign:  "top",
+			horizAlign: config.AlignCenter,
+			vertAlign:  config.AlignTop,
 			padding:    5,
 		},
 		{
 			name:       "left-center alignment",
 			text:       "Left",
-			horizAlign: "left",
-			vertAlign:  "center",
+			horizAlign: config.AlignLeft,
+			vertAlign:  config.AlignMiddle,
 			padding:    10,
 		},
 		{
 			name:       "empty text",
 			text:       "",
-			horizAlign: "center",
-			vertAlign:  "center",
+			horizAlign: config.AlignCenter,
+			vertAlign:  config.AlignMiddle,
 			padding:    0,
 		},
 		{
 			name:       "long text",
 			text:       "This is a longer piece of text",
-			horizAlign: "center",
-			vertAlign:  "center",
+			horizAlign: config.AlignCenter,
+			vertAlign:  config.AlignMiddle,
 			padding:    0,
 		},
 	}
@@ -102,13 +104,13 @@ func TestDrawAlignedText_InvalidAlignment(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		horizAlign string
-		vertAlign  string
+		horizAlign config.HAlign
+		vertAlign  config.VAlign
 	}{
-		{"invalid horizontal", "invalid", "center"},
-		{"invalid vertical", "center", "invalid"},
-		{"both invalid", "invalid", "invalid"},
-		{"empty alignment", "", ""},
+		{"invalid horizontal", config.HAlign("invalid"), config.AlignMiddle},
+		{"invalid vertical", config.AlignCenter, config.VAlign("invalid")},
+		{"both invalid", config.HAlign("invalid"), config.VAlign("invalid")},
+		{"empty alignment", config.HAlign(""), config.VAlign("")},
 	}
 
 	for _, tt := range tests {
@@ -138,7 +140,7 @@ func TestDrawAlignedText_NilFace(t *testing.T) {
 		}
 	}()
 
-	DrawAlignedText(testImg, "Test", nil, "center", "center", 0)
+	DrawAlignedText(testImg, "Test", nil, config.AlignCenter, config.AlignMiddle, 0)
 }
 
 // TestDrawAlignedText_LargePadding tests behavior with large padding values
@@ -369,12 +371,12 @@ func TestDrawAlignedText_AllAlignmentCombinations(t *testing.T) {
 		t.Skipf("Skipping test, cannot load font: %v", err)
 	}
 
-	horizontalAligns := []string{"left", "center", "right"}
-	verticalAligns := []string{"top", "center", "bottom"}
+	horizontalAligns := []config.HAlign{config.AlignLeft, config.AlignCenter, config.AlignRight}
+	verticalAligns := []config.VAlign{config.AlignTop, config.AlignMiddle, config.AlignBottom}
 
 	for _, hAlign := range horizontalAligns {
 		for _, vAlign := range verticalAligns {
-			t.Run(hAlign+"_"+vAlign, func(t *testing.T) {
+			t.Run(string(hAlign)+"_"+string(vAlign), func(t *testing.T) {
 				img := NewGrayscaleImage(128, 40, 0)
 
 				defer func() {
@@ -457,19 +459,19 @@ func TestDrawTextInRect(t *testing.T) {
 		y          int
 		width      int
 		height     int
-		horizAlign string
-		vertAlign  string
+		horizAlign config.HAlign
+		vertAlign  config.VAlign
 		padding    int
 	}{
-		{"center-center", "Test", 10, 10, 60, 20, "center", "center", 2},
-		{"left-top", "Left", 10, 10, 60, 20, "left", "top", 0},
-		{"right-bottom", "Right", 10, 10, 60, 20, "right", "bottom", 5},
-		{"center-top", "Top", 10, 10, 60, 20, "center", "top", 0},
-		{"left-center", "Mid", 10, 10, 60, 20, "left", "center", 0},
-		{"right-center", "Right", 10, 10, 60, 20, "right", "center", 0},
-		{"center-bottom", "Bottom", 10, 10, 60, 20, "center", "bottom", 0},
-		{"small rect", "X", 0, 0, 10, 10, "center", "center", 1},
-		{"large rect", "Large Rectangle Text", 0, 0, 128, 40, "center", "center", 5},
+		{"center-center", "Test", 10, 10, 60, 20, config.AlignCenter, config.AlignMiddle, 2},
+		{"left-top", "Left", 10, 10, 60, 20, config.AlignLeft, config.AlignTop, 0},
+		{"right-bottom", "Right", 10, 10, 60, 20, config.AlignRight, config.AlignBottom, 5},
+		{"center-top", "Top", 10, 10, 60, 20, config.AlignCenter, config.AlignTop, 0},
+		{"left-center", "Mid", 10, 10, 60, 20, config.AlignLeft, config.AlignMiddle, 0},
+		{"right-center", "Right", 10, 10, 60, 20, config.AlignRight, config.AlignMiddle, 0},
+		{"center-bottom", "Bottom", 10, 10, 60, 20, config.AlignCenter, config.AlignBottom, 0},
+		{"small rect", "X", 0, 0, 10, 10, config.AlignCenter, config.AlignMiddle, 1},
+		{"large rect", "Large Rectangle Text", 0, 0, 128, 40, config.AlignCenter, config.AlignMiddle, 5},
 	}
 
 	for _, tt := range tests {
@@ -534,12 +536,12 @@ func TestDrawTextInRect_AllAlignments(t *testing.T) {
 		t.Skipf("Skipping test, cannot load font: %v", err)
 	}
 
-	horizontalAligns := []string{"left", "center", "right"}
-	verticalAligns := []string{"top", "center", "bottom"}
+	horizontalAligns := []config.HAlign{config.AlignLeft, config.AlignCenter, config.AlignRight}
+	verticalAligns := []config.VAlign{config.AlignTop, config.AlignMiddle, config.AlignBottom}
 
 	for _, hAlign := range horizontalAligns {
 		for _, vAlign := range verticalAligns {
-			t.Run(hAlign+"_"+vAlign, func(t *testing.T) {
+			t.Run(string(hAlign)+"_"+string(vAlign), func(t *testing.T) {
 				img := NewGrayscaleImage(128, 40, 0)
 
 				defer func() {
@@ -596,13 +598,13 @@ func TestDrawTextInRect_InvalidAlignment(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		horizAlign string
-		vertAlign  string
+		horizAlign config.HAlign
+		vertAlign  config.VAlign
 	}{
-		{"invalid horizontal", "invalid", "center"},
-		{"invalid vertical", "center", "invalid"},
-		{"both invalid", "wrong", "bad"},
-		{"empty strings", "", ""},
+		{"invalid horizontal", config.HAlign("invalid"), config.AlignMiddle},
+		{"invalid vertical", config.AlignCenter, config.VAlign("invalid")},
+		{"both invalid", config.HAlign("wrong"), config.VAlign("bad")},
+		{"empty strings", config.HAlign(""), config.VAlign("")},
 	}
 
 	for _, tt := range tests {
@@ -857,17 +859,17 @@ func TestCalculateTextPosition(t *testing.T) {
 		contentY   int
 		contentW   int
 		contentH   int
-		horizAlign string
-		vertAlign  string
+		horizAlign config.HAlign
+		vertAlign  config.VAlign
 	}{
-		{"center-center", "Test", 10, 10, 100, 30, "center", "center"},
-		{"left-top", "Test", 10, 10, 100, 30, "left", "top"},
-		{"right-bottom", "Test", 10, 10, 100, 30, "right", "bottom"},
-		{"left-center", "Test", 10, 10, 100, 30, "left", "center"},
-		{"right-top", "Test", 10, 10, 100, 30, "right", "top"},
-		{"center-bottom", "Test", 10, 10, 100, 30, "center", "bottom"},
-		{"empty text", "", 10, 10, 100, 30, "center", "center"},
-		{"long text", "This is a very long text", 10, 10, 50, 30, "center", "center"},
+		{"center-center", "Test", 10, 10, 100, 30, config.AlignCenter, config.AlignMiddle},
+		{"left-top", "Test", 10, 10, 100, 30, config.AlignLeft, config.AlignTop},
+		{"right-bottom", "Test", 10, 10, 100, 30, config.AlignRight, config.AlignBottom},
+		{"left-center", "Test", 10, 10, 100, 30, config.AlignLeft, config.AlignMiddle},
+		{"right-top", "Test", 10, 10, 100, 30, config.AlignRight, config.AlignTop},
+		{"center-bottom", "Test", 10, 10, 100, 30, config.AlignCenter, config.AlignBottom},
+		{"empty text", "", 10, 10, 100, 30, config.AlignCenter, config.AlignMiddle},
+		{"long text", "This is a very long text", 10, 10, 50, 30, config.AlignCenter, config.AlignMiddle},
 	}
 
 	for _, tt := range tests {
@@ -899,9 +901,9 @@ func TestCalculateTextPosition_HorizontalAlignment(t *testing.T) {
 	contentX := 10
 	contentW := 100
 
-	leftX, _ := CalculateTextPosition("Test", face, contentX, 10, contentW, 30, "left", "center")
-	centerX, _ := CalculateTextPosition("Test", face, contentX, 10, contentW, 30, "center", "center")
-	rightX, _ := CalculateTextPosition("Test", face, contentX, 10, contentW, 30, "right", "center")
+	leftX, _ := CalculateTextPosition("Test", face, contentX, 10, contentW, 30, config.AlignLeft, config.AlignMiddle)
+	centerX, _ := CalculateTextPosition("Test", face, contentX, 10, contentW, 30, config.AlignCenter, config.AlignMiddle)
+	rightX, _ := CalculateTextPosition("Test", face, contentX, 10, contentW, 30, config.AlignRight, config.AlignMiddle)
 
 	// Left should be at or near contentX
 	if leftX != contentX {
@@ -929,9 +931,9 @@ func TestCalculateTextPosition_VerticalAlignment(t *testing.T) {
 	contentY := 10
 	contentH := 50
 
-	_, topY := CalculateTextPosition("Test", face, 10, contentY, 100, contentH, "center", "top")
-	_, centerY := CalculateTextPosition("Test", face, 10, contentY, 100, contentH, "center", "center")
-	_, bottomY := CalculateTextPosition("Test", face, 10, contentY, 100, contentH, "center", "bottom")
+	_, topY := CalculateTextPosition("Test", face, 10, contentY, 100, contentH, config.AlignCenter, config.AlignTop)
+	_, centerY := CalculateTextPosition("Test", face, 10, contentY, 100, contentH, config.AlignCenter, config.AlignMiddle)
+	_, bottomY := CalculateTextPosition("Test", face, 10, contentY, 100, contentH, config.AlignCenter, config.AlignBottom)
 
 	// Top should be smallest Y (closest to top)
 	if topY >= centerY {
@@ -1156,15 +1158,17 @@ func TestSmartMeasureText_NoFont(t *testing.T) {
 
 func TestSmartCalculateTextPosition_InternalFont(t *testing.T) {
 	tests := []struct {
-		horiz, vert string
+		horiz config.HAlign
+		vert  config.VAlign
+		name  string
 	}{
-		{"left", "top"},
-		{"center", "center"},
-		{"right", "bottom"},
+		{config.AlignLeft, config.AlignTop, "left_top"},
+		{config.AlignCenter, config.AlignMiddle, "center_center"},
+		{config.AlignRight, config.AlignBottom, "right_bottom"},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.horiz+"_"+tc.vert, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			x, y := SmartCalculateTextPosition("Hi", nil, FontNamePixel5x7, 10, 10, 100, 30, tc.horiz, tc.vert)
 			if x < 10 || y < 10 {
 				t.Errorf("Position (%d, %d) is outside content area", x, y)
@@ -1179,7 +1183,7 @@ func TestSmartCalculateTextPosition_TTFFont(t *testing.T) {
 		t.Skipf("Skipping test, cannot load font: %v", err)
 	}
 
-	x, y := SmartCalculateTextPosition("Hi", face, "", 10, 10, 100, 30, "center", "center")
+	x, y := SmartCalculateTextPosition("Hi", face, "", 10, 10, 100, 30, config.AlignCenter, config.AlignMiddle)
 	if x < 10 {
 		t.Errorf("TTF position x = %d, expected >= 10", x)
 	}

@@ -78,7 +78,7 @@ func CreateDefault() *Config {
 					Size:   DefaultFontSize,
 					Align: &AlignConfig{
 						H: AlignCenter,
-						V: AlignCenter,
+						V: AlignMiddle,
 					},
 				},
 				UpdateInterval: DefaultUpdateInterval,
@@ -181,7 +181,7 @@ func applyCommonWidgetDefaults(w *WidgetConfig) {
 	}
 
 	if w.Text.Align.V == "" {
-		w.Text.Align.V = AlignCenter
+		w.Text.Align.V = AlignMiddle
 	}
 }
 

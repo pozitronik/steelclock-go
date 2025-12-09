@@ -20,18 +20,24 @@ const (
 	DirectionVertical   = "vertical"
 )
 
+// HAlign defines horizontal alignment
+type HAlign string
+
 // Horizontal alignments
 const (
-	AlignLeft   = "left"
-	AlignCenter = "center"
-	AlignRight  = "right"
+	AlignLeft   HAlign = "left"
+	AlignCenter HAlign = "center"
+	AlignRight  HAlign = "right"
 )
+
+// VAlign defines vertical alignment
+type VAlign string
 
 // Vertical alignments
 const (
-	AlignTop    = "top"
-	AlignBottom = "bottom"
-	// AlignCenter is shared with horizontal alignment
+	AlignTop    VAlign = "top"
+	AlignMiddle VAlign = "center" // same value as AlignCenter for compatibility
+	AlignBottom VAlign = "bottom"
 )
 
 // BlinkMode defines how blinking behaves
@@ -44,4 +50,26 @@ const (
 	BlinkAlways BlinkMode = "always"
 	// BlinkProgressive scales blink speed based on intensity (e.g., message count)
 	BlinkProgressive BlinkMode = "progressive"
+)
+
+// ScrollMode defines the scrolling behavior
+type ScrollMode string
+
+const (
+	// ScrollContinuous scrolls continuously in one direction (marquee style)
+	ScrollContinuous ScrollMode = "continuous"
+	// ScrollBounce bounces between ends
+	ScrollBounce ScrollMode = "bounce"
+	// ScrollPauseEnds pauses at the end before resetting
+	ScrollPauseEnds ScrollMode = "pause_ends"
+)
+
+// ScrollDirection defines the scroll direction
+type ScrollDirection string
+
+const (
+	ScrollLeft  ScrollDirection = "left"
+	ScrollRight ScrollDirection = "right"
+	ScrollUp    ScrollDirection = "up"
+	ScrollDown  ScrollDirection = "down"
 )
