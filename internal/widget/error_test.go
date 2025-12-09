@@ -315,7 +315,7 @@ func TestErrorWidget_GetStyle(t *testing.T) {
 // TestErrorWidget_TinySize tests with dimensions too small for any text layout
 // This should trigger the renderIconOnly fallback path
 func TestErrorWidget_TinySize(t *testing.T) {
-	// Test with dimensions that are too small for any text layout but can fit smallest icon
+	// Test with dimensions that are too small for any text layout but can fit the smallest icon
 	sizes := []struct {
 		width  int
 		height int
