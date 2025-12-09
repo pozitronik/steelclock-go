@@ -1,4 +1,4 @@
-package widget
+package memory
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-func TestNewMemoryWidget(t *testing.T) {
+func TestNew(t *testing.T) {
 	tests := []struct {
 		name        string
 		displayMode string
@@ -46,19 +46,19 @@ func TestNewMemoryWidget(t *testing.T) {
 				},
 			}
 
-			widget, err := NewMemoryWidget(cfg)
+			widget, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewMemoryWidget() error = %v", err)
+				t.Fatalf("New() error = %v", err)
 			}
 
 			if widget == nil {
-				t.Fatal("NewMemoryWidget() returned nil")
+				t.Fatal("New() returned nil")
 			}
 		})
 	}
 }
 
-func TestMemoryWidgetUpdate(t *testing.T) {
+func TestWidgetUpdate(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "memory",
 		ID:      "test_memory",
@@ -83,9 +83,9 @@ func TestMemoryWidgetUpdate(t *testing.T) {
 		},
 	}
 
-	widget, err := NewMemoryWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewMemoryWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update should work without error
@@ -101,7 +101,7 @@ func TestMemoryWidgetUpdate(t *testing.T) {
 	}
 }
 
-func TestMemoryWidgetRenderAllModes(t *testing.T) {
+func TestWidgetRenderAllModes(t *testing.T) {
 	modes := []string{"text", "bar_horizontal", "bar_vertical", "graph", "gauge"}
 
 	for _, mode := range modes {
@@ -135,9 +135,9 @@ func TestMemoryWidgetRenderAllModes(t *testing.T) {
 				},
 			}
 
-			widget, err := NewMemoryWidget(cfg)
+			widget, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewMemoryWidget() error = %v", err)
+				t.Fatalf("New() error = %v", err)
 			}
 
 			// Update to populate data
@@ -168,7 +168,7 @@ func TestMemoryWidgetRenderAllModes(t *testing.T) {
 	}
 }
 
-func TestMemoryWidget_GaugeDefaults(t *testing.T) {
+func TestWidget_GaugeDefaults(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:    "memory",
 		ID:      "test_memory_gauge_defaults",
@@ -187,9 +187,9 @@ func TestMemoryWidget_GaugeDefaults(t *testing.T) {
 		// Don't specify colors to test defaults
 	}
 
-	widget, err := NewMemoryWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewMemoryWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Verify gauge defaults are applied by checking renderer config

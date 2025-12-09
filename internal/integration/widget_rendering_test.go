@@ -11,6 +11,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/layout"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/memory"
 )
 
 // createTestConfig creates a minimal config for testing
@@ -185,7 +186,7 @@ func TestMemoryWidget_Rendering(t *testing.T) {
 		},
 	}
 
-	memWidget, err := widget.NewMemoryWidget(widgetCfg)
+	memWidget, err := memory.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create memory widget: %v", err)
 	}
@@ -280,7 +281,7 @@ func TestMultipleWidgets_Composition(t *testing.T) {
 		t.Fatalf("Failed to create clock widget: %v", err)
 	}
 
-	memWidget, err := widget.NewMemoryWidget(memCfg)
+	memWidget, err := memory.New(memCfg)
 	if err != nil {
 		t.Fatalf("Failed to create memory widget: %v", err)
 	}
@@ -412,7 +413,7 @@ func TestFrameConsistency(t *testing.T) {
 		Mode:     "bar",
 	}
 
-	memWidget, err := widget.NewMemoryWidget(widgetCfg)
+	memWidget, err := memory.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create memory widget: %v", err)
 	}

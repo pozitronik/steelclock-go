@@ -8,6 +8,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/memory"
 )
 
 // =============================================================================
@@ -26,7 +27,7 @@ func TestStyle_BackgroundBlack(t *testing.T) {
 		Style:    &config.StyleConfig{Background: 0},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -107,7 +108,7 @@ func TestStyle_BackgroundTransparent(t *testing.T) {
 		Style:    &config.StyleConfig{Background: -1}, // Transparent
 	}
 
-	bgWidget, _ := widget.NewMemoryWidget(bgCfg)
+	bgWidget, _ := memory.New(bgCfg)
 	fgWidget, _ := widget.NewClockWidget(fgCfg)
 
 	cfg := createTestConfig()
@@ -178,7 +179,7 @@ func TestStyle_BorderEnabled(t *testing.T) {
 		},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -214,7 +215,7 @@ func TestStyle_BorderDisabled(t *testing.T) {
 		},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -247,7 +248,7 @@ func TestStyle_BorderComparison(t *testing.T) {
 		},
 	}
 
-	withBorderWidget, _ := widget.NewMemoryWidget(withBorderCfg)
+	withBorderWidget, _ := memory.New(withBorderCfg)
 	cfg := createTestConfig()
 	client1, comp1 := createTestSetup([]widget.Widget{withBorderWidget}, cfg)
 
@@ -274,7 +275,7 @@ func TestStyle_BorderComparison(t *testing.T) {
 		},
 	}
 
-	withoutBorderWidget, _ := widget.NewMemoryWidget(withoutBorderCfg)
+	withoutBorderWidget, _ := memory.New(withoutBorderCfg)
 	client2, comp2 := createTestSetup([]widget.Widget{withoutBorderWidget}, cfg)
 
 	_ = comp2.Start()
@@ -316,7 +317,7 @@ func TestStyle_BarFillColor(t *testing.T) {
 		},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -353,7 +354,7 @@ func TestStyle_GraphColors(t *testing.T) {
 		},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -583,7 +584,7 @@ func TestStyle_ComplexStyling(t *testing.T) {
 		},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)

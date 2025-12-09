@@ -1,4 +1,4 @@
-package widget
+package memory
 
 import (
 	"fmt"
@@ -8,18 +8,19 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/metrics"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 func init() {
-	Register("memory", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewMemoryWidget(cfg)
+	widget.Register("memory", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
-// MemoryWidget displays RAM usage
-type MemoryWidget struct {
-	*BaseWidget
+// Widget displays RAM usage
+type Widget struct {
+	*widget.BaseWidget
 	mu             sync.RWMutex
 	strategy       shared.MetricDisplayStrategy
 	Renderer       *shared.MetricRenderer
@@ -30,9 +31,9 @@ type MemoryWidget struct {
 	memoryProvider metrics.MemoryProvider
 }
 
-// NewMemoryWidget creates a new memory widget
-func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new memory widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
@@ -82,7 +83,7 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 		},
 	)
 
-	return &MemoryWidget{
+	return &Widget{
 		BaseWidget:     base,
 		strategy:       shared.GetMetricStrategy(displayMode),
 		Renderer:       renderer,
@@ -94,7 +95,7 @@ func NewMemoryWidget(cfg config.WidgetConfig) (*MemoryWidget, error) {
 }
 
 // Update updates the memory usage
-func (w *MemoryWidget) Update() error {
+func (w *Widget) Update() error {
 	percent, err := w.memoryProvider.UsedPercent()
 	if err != nil {
 		return err
@@ -120,14 +121,14 @@ func (w *MemoryWidget) Update() error {
 }
 
 // GetValue returns the current memory usage percentage (thread-safe)
-func (w *MemoryWidget) GetValue() float64 {
+func (w *Widget) GetValue() float64 {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 	return w.currentValue
 }
 
 // Render creates an image of the memory widget
-func (w *MemoryWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	// Create canvas with background and border
 	img := w.CreateCanvas()
 	w.ApplyBorder(img)

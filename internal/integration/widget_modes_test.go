@@ -9,6 +9,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/memory"
 )
 
 // =============================================================================
@@ -162,7 +163,7 @@ func TestMemoryWidget_BarMode(t *testing.T) {
 				},
 			}
 
-			memWidget, err := widget.NewMemoryWidget(widgetCfg)
+			memWidget, err := memory.New(widgetCfg)
 			if err != nil {
 				t.Fatalf("Failed to create memory widget: %v", err)
 			}
@@ -222,7 +223,7 @@ func TestMemoryWidget_GraphMode(t *testing.T) {
 				},
 			}
 
-			memWidget, err := widget.NewMemoryWidget(widgetCfg)
+			memWidget, err := memory.New(widgetCfg)
 			if err != nil {
 				t.Fatalf("Failed to create memory widget: %v", err)
 			}
@@ -265,7 +266,7 @@ func TestMemoryWidget_TextMode(t *testing.T) {
 		},
 	}
 
-	memWidget, err := widget.NewMemoryWidget(widgetCfg)
+	memWidget, err := memory.New(widgetCfg)
 	if err != nil {
 		t.Fatalf("Failed to create memory widget: %v", err)
 	}

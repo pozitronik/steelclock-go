@@ -8,6 +8,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"github.com/pozitronik/steelclock-go/internal/widget/memory"
 )
 
 // =============================================================================
@@ -158,7 +159,7 @@ func TestLayout_ZOrderBasic(t *testing.T) {
 		Style:    &config.StyleConfig{Background: -1}, // Transparent
 	}
 
-	bgWidget, _ := widget.NewMemoryWidget(bgCfg)
+	bgWidget, _ := memory.New(bgCfg)
 	fgWidget, _ := widget.NewClockWidget(fgCfg)
 
 	cfg := createTestConfig()
@@ -250,7 +251,7 @@ func TestLayout_MultipleZLevels(t *testing.T) {
 		Style:    &config.StyleConfig{Background: -1},
 	}
 
-	bottomWidget, _ := widget.NewMemoryWidget(bottomCfg)
+	bottomWidget, _ := memory.New(bottomCfg)
 	middleWidget, _ := widget.NewClockWidget(middleCfg)
 	topWidget, _ := widget.NewClockWidget(topCfg)
 
@@ -300,7 +301,7 @@ func TestLayout_TransparentBackground(t *testing.T) {
 		Style:    &config.StyleConfig{Background: -1}, // Transparent
 	}
 
-	bgWidget, _ := widget.NewMemoryWidget(bgCfg)
+	bgWidget, _ := memory.New(bgCfg)
 	fgWidget, _ := widget.NewClockWidget(fgCfg)
 
 	cfg := createTestConfig()
@@ -342,7 +343,7 @@ func TestLayout_OpaqueBackground(t *testing.T) {
 		Style:    &config.StyleConfig{Background: 0}, // Opaque black
 	}
 
-	bgWidget, _ := widget.NewMemoryWidget(bgCfg)
+	bgWidget, _ := memory.New(bgCfg)
 	fgWidget, _ := widget.NewClockWidget(fgCfg)
 
 	cfg := createTestConfig()
@@ -438,7 +439,7 @@ func TestLayout_ClippingBottom(t *testing.T) {
 		Bar:      &config.BarConfig{Direction: "horizontal"},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -483,7 +484,7 @@ func TestLayout_2x2Grid(t *testing.T) {
 			Mode:     "bar",
 			Bar:      &config.BarConfig{Direction: "horizontal"},
 		}
-		w, err := widget.NewMemoryWidget(widgetCfg)
+		w, err := memory.New(widgetCfg)
 		if err != nil {
 			t.Fatalf("Failed to create widget: %v", err)
 		}
@@ -538,7 +539,7 @@ func TestLayout_HorizontalStrip(t *testing.T) {
 			Mode:     "bar",
 			Bar:      &config.BarConfig{Direction: "vertical"},
 		}
-		w, _ := widget.NewMemoryWidget(widgetCfg)
+		w, _ := memory.New(widgetCfg)
 		widgets = append(widgets, w)
 	}
 
@@ -577,7 +578,7 @@ func TestLayout_FullScreen(t *testing.T) {
 		Bar:      &config.BarConfig{Direction: "horizontal"},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -612,7 +613,7 @@ func TestLayout_OversizedWidget(t *testing.T) {
 		Bar:      &config.BarConfig{Direction: "horizontal"},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -646,7 +647,7 @@ func TestLayout_StaticStability(t *testing.T) {
 		Bar:      &config.BarConfig{Direction: "horizontal"},
 	}
 
-	memWidget, _ := widget.NewMemoryWidget(widgetCfg)
+	memWidget, _ := memory.New(widgetCfg)
 
 	cfg := createTestConfig()
 	client, comp := createTestSetup([]widget.Widget{memWidget}, cfg)
@@ -686,7 +687,7 @@ func TestLayout_MultiWidgetStability(t *testing.T) {
 			Mode:     "bar",
 			Bar:      &config.BarConfig{Direction: "vertical"},
 		}
-		w, _ := widget.NewMemoryWidget(widgetCfg)
+		w, _ := memory.New(widgetCfg)
 		widgets = append(widgets, w)
 	}
 
@@ -790,7 +791,7 @@ func TestLayout_ManyWidgets(t *testing.T) {
 				Mode:     "bar",
 				Bar:      &config.BarConfig{Direction: "vertical"},
 			}
-			w, _ := widget.NewMemoryWidget(widgetCfg)
+			w, _ := memory.New(widgetCfg)
 			widgets = append(widgets, w)
 		}
 	}

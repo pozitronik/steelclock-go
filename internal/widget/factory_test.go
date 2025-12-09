@@ -25,11 +25,6 @@ func TestCreateWidget_AllTypes(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name:       "create memory widget",
-			widgetType: "memory",
-			wantErr:    false,
-		},
-		{
 			name:       "create network widget",
 			widgetType: "network",
 			wantErr:    false,
@@ -98,7 +93,7 @@ func TestCreateWidget_InvalidType(t *testing.T) {
 func TestCreateWidgets_MultipleWidgets(t *testing.T) {
 	configs := []config.WidgetConfig{
 		createDefaultConfig("clock"),
-		createDefaultConfig("memory"),
+		createDefaultConfig("battery"),
 		createDefaultConfig("cpu"),
 	}
 
@@ -129,7 +124,7 @@ func TestCreateWidgets_DisabledWidget(t *testing.T) {
 	configs := []config.WidgetConfig{
 		createDefaultConfig("clock"),
 		{
-			Type:    "memory",
+			Type:    "battery",
 			ID:      "disabled_widget",
 			Enabled: config.BoolPtr(false), // This widget is disabled
 			Position: config.PositionConfig{
@@ -392,7 +387,7 @@ func TestCreateWidgets_MixedEnabledDisabled(t *testing.T) {
 	configs := []config.WidgetConfig{
 		createDefaultConfig("clock"),
 		{
-			Type:    "memory",
+			Type:    "battery",
 			ID:      "disabled1",
 			Enabled: config.BoolPtr(false),
 			Position: config.PositionConfig{
@@ -434,7 +429,7 @@ func TestCreateWidgets_AllDisabled(t *testing.T) {
 			},
 		},
 		{
-			Type:    "memory",
+			Type:    "battery",
 			ID:      "disabled2",
 			Enabled: config.BoolPtr(false),
 			Position: config.PositionConfig{
@@ -635,8 +630,8 @@ func TestRegisteredTypes(t *testing.T) {
 		}
 	}
 
-	// Should contain known types
-	knownTypes := []string{"clock", "cpu", "memory", "matrix"}
+	// Should contain known types (note: memory is in subpackage, not registered here)
+	knownTypes := []string{"clock", "cpu", "matrix", "battery"}
 	for _, known := range knownTypes {
 		found := false
 		for _, t := range types {
