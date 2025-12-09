@@ -1,4 +1,4 @@
-package widget
+package volumemeter
 
 import (
 	"runtime"
@@ -33,8 +33,8 @@ func skipIfNoAudioDeviceMeter(t *testing.T) {
 	}
 }
 
-// TestNewVolumeMeterWidget tests widget creation
-func TestNewVolumeMeterWidget(t *testing.T) {
+// TestNew tests widget creation
+func TestNew(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -47,21 +47,21 @@ func TestNewVolumeMeterWidget(t *testing.T) {
 		Mode: "bar_horizontal",
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget == nil {
-		t.Fatal("NewVolumeMeterWidget() returned nil widget")
+		t.Fatal("New() returned nil widget")
 	}
 
 	// Cleanup
 	widget.Stop()
 }
 
-// TestVolumeMeterWidget_InvalidDisplayMode tests error handling for invalid display modes
-func TestVolumeMeterWidget_InvalidDisplayMode(t *testing.T) {
+// TestWidget_InvalidDisplayMode tests error handling for invalid display modes
+func TestWidget_InvalidDisplayMode(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -74,16 +74,16 @@ func TestVolumeMeterWidget_InvalidDisplayMode(t *testing.T) {
 		Mode: "invalid_mode",
 	}
 
-	_, err := NewVolumeMeterWidget(cfg)
+	_, err := New(cfg)
 	if err == nil {
-		t.Error("NewVolumeMeterWidget() should return error for invalid display mode")
+		t.Error("New() should return error for invalid display mode")
 	} else if !strings.Contains(err.Error(), "invalid display mode") {
 		t.Errorf("Error should mention invalid display mode, got: %v", err)
 	}
 }
 
-// TestVolumeMeterWidget_AllDisplayModes tests all valid display modes
-func TestVolumeMeterWidget_AllDisplayModes(t *testing.T) {
+// TestWidget_AllDisplayModes tests all valid display modes
+func TestWidget_AllDisplayModes(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	displayModes := []string{
@@ -108,13 +108,13 @@ func TestVolumeMeterWidget_AllDisplayModes(t *testing.T) {
 				},
 			}
 
-			widget, err := NewVolumeMeterWidget(cfg)
+			widget, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewVolumeMeterWidget(%s) error = %v", mode, err)
+				t.Fatalf("New(%s) error = %v", mode, err)
 			}
 
 			if widget == nil {
-				t.Fatalf("NewVolumeMeterWidget(%s) returned nil", mode)
+				t.Fatalf("New(%s) returned nil", mode)
 			}
 
 			// Let it run briefly
@@ -134,8 +134,8 @@ func TestVolumeMeterWidget_AllDisplayModes(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_DBScale tests dB scale conversion
-func TestVolumeMeterWidget_DBScale(t *testing.T) {
+// TestWidget_DBScale tests dB scale conversion
+func TestWidget_DBScale(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -151,9 +151,9 @@ func TestVolumeMeterWidget_DBScale(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -183,8 +183,8 @@ func TestVolumeMeterWidget_DBScale(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_ClippingDetection tests clipping detection
-func TestVolumeMeterWidget_ClippingDetection(t *testing.T) {
+// TestWidget_ClippingDetection tests clipping detection
+func TestWidget_ClippingDetection(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -201,9 +201,9 @@ func TestVolumeMeterWidget_ClippingDetection(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -216,8 +216,8 @@ func TestVolumeMeterWidget_ClippingDetection(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_DecayBehavior tests peak decay
-func TestVolumeMeterWidget_DecayBehavior(t *testing.T) {
+// TestWidget_DecayBehavior tests peak decay
+func TestWidget_DecayBehavior(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -233,9 +233,9 @@ func TestVolumeMeterWidget_DecayBehavior(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -256,8 +256,8 @@ func TestVolumeMeterWidget_DecayBehavior(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_PeakHold tests peak hold functionality
-func TestVolumeMeterWidget_PeakHold(t *testing.T) {
+// TestWidget_PeakHold tests peak hold functionality
+func TestWidget_PeakHold(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -274,9 +274,9 @@ func TestVolumeMeterWidget_PeakHold(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -303,8 +303,8 @@ func TestVolumeMeterWidget_PeakHold(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_AutoHideConfig tests auto-hide configuration
-func TestVolumeMeterWidget_AutoHideConfig(t *testing.T) {
+// TestWidget_AutoHideConfig tests auto-hide configuration
+func TestWidget_AutoHideConfig(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -325,9 +325,9 @@ func TestVolumeMeterWidget_AutoHideConfig(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -340,8 +340,8 @@ func TestVolumeMeterWidget_AutoHideConfig(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_Stop tests proper cleanup
-func TestVolumeMeterWidget_Stop(t *testing.T) {
+// TestWidget_Stop tests proper cleanup
+func TestWidget_Stop(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -354,9 +354,9 @@ func TestVolumeMeterWidget_Stop(t *testing.T) {
 		Mode: "bar_horizontal",
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Let it run briefly
@@ -387,8 +387,8 @@ func TestVolumeMeterWidget_Stop(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_Render tests rendering
-func TestVolumeMeterWidget_Render(t *testing.T) {
+// TestWidget_Render tests rendering
+func TestWidget_Render(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -404,9 +404,9 @@ func TestVolumeMeterWidget_Render(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -428,8 +428,8 @@ func TestVolumeMeterWidget_Render(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_HealthMetrics tests diagnostic metrics
-func TestVolumeMeterWidget_HealthMetrics(t *testing.T) {
+// TestWidget_HealthMetrics tests diagnostic metrics
+func TestWidget_HealthMetrics(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -442,9 +442,9 @@ func TestVolumeMeterWidget_HealthMetrics(t *testing.T) {
 		Mode: "bar_horizontal",
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -487,8 +487,8 @@ func TestVolumeMeterWidget_HealthMetrics(t *testing.T) {
 		totalCalls, successfulCalls, failedCalls, maxCallDuration)
 }
 
-// TestVolumeMeterWidget_StereoMode tests stereo mode configuration
-func TestVolumeMeterWidget_StereoMode(t *testing.T) {
+// TestWidget_StereoMode tests stereo mode configuration
+func TestWidget_StereoMode(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -504,9 +504,9 @@ func TestVolumeMeterWidget_StereoMode(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -535,8 +535,8 @@ func TestVolumeMeterWidget_StereoMode(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_StereoWithPeakHold tests per-channel peak hold
-func TestVolumeMeterWidget_StereoWithPeakHold(t *testing.T) {
+// TestWidget_StereoWithPeakHold tests per-channel peak hold
+func TestWidget_StereoWithPeakHold(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -556,9 +556,9 @@ func TestVolumeMeterWidget_StereoWithPeakHold(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -596,8 +596,8 @@ func TestVolumeMeterWidget_StereoWithPeakHold(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_StereoDivider tests stereo divider configuration
-func TestVolumeMeterWidget_StereoDivider(t *testing.T) {
+// TestWidget_StereoDivider tests stereo divider configuration
+func TestWidget_StereoDivider(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	dividerColor := 128
@@ -615,9 +615,9 @@ func TestVolumeMeterWidget_StereoDivider(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -630,8 +630,8 @@ func TestVolumeMeterWidget_StereoDivider(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_GaugeWithPeakHold tests gauge mode with peak hold marks
-func TestVolumeMeterWidget_GaugeWithPeakHold(t *testing.T) {
+// TestWidget_GaugeWithPeakHold tests gauge mode with peak hold marks
+func TestWidget_GaugeWithPeakHold(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -648,9 +648,9 @@ func TestVolumeMeterWidget_GaugeWithPeakHold(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -675,8 +675,8 @@ func TestVolumeMeterWidget_GaugeWithPeakHold(t *testing.T) {
 	_ = img
 }
 
-// TestVolumeMeterWidget_StereoGauge tests stereo gauge mode
-func TestVolumeMeterWidget_StereoGauge(t *testing.T) {
+// TestWidget_StereoGauge tests stereo gauge mode
+func TestWidget_StereoGauge(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -696,9 +696,9 @@ func TestVolumeMeterWidget_StereoGauge(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -728,8 +728,8 @@ func TestVolumeMeterWidget_StereoGauge(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_Ballistics tests rise and fall ballistics
-func TestVolumeMeterWidget_Ballistics(t *testing.T) {
+// TestWidget_Ballistics tests rise and fall ballistics
+func TestWidget_Ballistics(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -745,9 +745,9 @@ func TestVolumeMeterWidget_Ballistics(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 

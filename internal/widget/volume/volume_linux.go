@@ -1,6 +1,6 @@
 //go:build linux
 
-package widget
+package volume
 
 import (
 	"fmt"
@@ -12,32 +12,32 @@ import (
 	"sync"
 )
 
-// VolumeReaderWCA is a stub for Linux (uses LinuxVolumeReader internally)
-type VolumeReaderWCA struct {
-	reader *LinuxVolumeReader
+// ReaderWCA is a stub for Linux (uses LinuxReader internally)
+type ReaderWCA struct {
+	reader *LinuxReader
 }
 
 // GetSharedVolumeReader returns a volume reader for Linux
-func GetSharedVolumeReader() (*VolumeReaderWCA, error) {
-	reader, err := NewLinuxVolumeReader()
+func GetSharedVolumeReader() (*ReaderWCA, error) {
+	reader, err := NewLinuxReader()
 	if err != nil {
 		return nil, err
 	}
-	return &VolumeReaderWCA{reader: reader}, nil
+	return &ReaderWCA{reader: reader}, nil
 }
 
-// LinuxVolumeReader reads system volume using available Linux audio tools
+// LinuxReader reads system volume using available Linux audio tools
 // Supports: wpctl (PipeWire), pactl (PulseAudio), amixer (ALSA)
-type LinuxVolumeReader struct {
+type LinuxReader struct {
 	mu         sync.Mutex
 	audioTool  string // "wpctl", "pactl", or "amixer"
 	lastVolume float64
 	lastMuted  bool
 }
 
-// NewLinuxVolumeReader creates a new Linux volume reader
-func NewLinuxVolumeReader() (*LinuxVolumeReader, error) {
-	reader := &LinuxVolumeReader{}
+// NewLinuxReader creates a new Linux volume reader
+func NewLinuxReader() (*LinuxReader, error) {
+	reader := &LinuxReader{}
 
 	// Detect which audio tool is available
 	// Priority: wpctl (PipeWire) > pactl (PulseAudio) > amixer (ALSA)
@@ -72,7 +72,7 @@ func NewLinuxVolumeReader() (*LinuxVolumeReader, error) {
 }
 
 // GetVolume reads the current master volume level (0-100) and mute status
-func (r *LinuxVolumeReader) GetVolume() (volume float64, muted bool, err error) {
+func (r *LinuxReader) GetVolume() (volume float64, muted bool, err error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -89,7 +89,7 @@ func (r *LinuxVolumeReader) GetVolume() (volume float64, muted bool, err error) 
 }
 
 // getVolumeWpctl reads volume using wpctl (PipeWire)
-func (r *LinuxVolumeReader) getVolumeWpctl() (float64, bool, error) {
+func (r *LinuxReader) getVolumeWpctl() (float64, bool, error) {
 	// wpctl get-volume @DEFAULT_AUDIO_SINK@
 	// Output: "Volume: 0.40" or "Volume: 0.40 [MUTED]"
 	out, err := exec.Command("wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@").Output()
@@ -123,7 +123,7 @@ func (r *LinuxVolumeReader) getVolumeWpctl() (float64, bool, error) {
 }
 
 // getVolumePactl reads volume using pactl (PulseAudio)
-func (r *LinuxVolumeReader) getVolumePactl() (float64, bool, error) {
+func (r *LinuxReader) getVolumePactl() (float64, bool, error) {
 	// pactl get-sink-volume @DEFAULT_SINK@
 	// Output: "Volume: front-left: 26214 /  40% / -23.81 dB,   front-right: 26214 /  40% / -23.81 dB"
 	out, err := exec.Command("pactl", "get-sink-volume", "@DEFAULT_SINK@").Output()
@@ -157,7 +157,7 @@ func (r *LinuxVolumeReader) getVolumePactl() (float64, bool, error) {
 }
 
 // getVolumeAmixer reads volume using amixer (ALSA)
-func (r *LinuxVolumeReader) getVolumeAmixer() (float64, bool, error) {
+func (r *LinuxReader) getVolumeAmixer() (float64, bool, error) {
 	// amixer get Master
 	// Output includes: "  Front Left: Playback 26214 [40%] [on]"
 	out, err := exec.Command("amixer", "get", "Master").Output()
@@ -189,12 +189,12 @@ func (r *LinuxVolumeReader) getVolumeAmixer() (float64, bool, error) {
 }
 
 // Close releases resources (no-op for Linux)
-func (r *LinuxVolumeReader) Close() {
+func (r *LinuxReader) Close() {
 	// No cleanup needed - we use command-line tools
 }
 
 // Reinitialize re-detects the audio tool
-func (r *LinuxVolumeReader) Reinitialize() error {
+func (r *LinuxReader) Reinitialize() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -227,11 +227,11 @@ func (r *LinuxVolumeReader) Reinitialize() error {
 }
 
 // NeedsReinitialize returns false - Linux reader doesn't need reinitialization
-func (r *LinuxVolumeReader) NeedsReinitialize() bool {
+func (r *LinuxReader) NeedsReinitialize() bool {
 	return false
 }
 
 // newVolumeReader creates a platform-specific volume reader (Linux implementation)
-func newVolumeReader() (volumeReader, error) {
-	return NewLinuxVolumeReader()
+func newVolumeReader() (Reader, error) {
+	return NewLinuxReader()
 }

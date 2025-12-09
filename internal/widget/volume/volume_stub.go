@@ -1,31 +1,31 @@
 //go:build !windows && !linux
 
-package widget
+package volume
 
 import (
 	"fmt"
 )
 
-// VolumeReaderWCA stub for unsupported platforms
-type VolumeReaderWCA struct{}
+// ReaderWCA stub for unsupported platforms
+type ReaderWCA struct{}
 
 // GetSharedVolumeReader returns an error on unsupported platforms
-func GetSharedVolumeReader() (*VolumeReaderWCA, error) {
+func GetSharedVolumeReader() (*ReaderWCA, error) {
 	return nil, fmt.Errorf("volume reader is not supported on this platform")
 }
 
-// stubVolumeReader is a stub implementation for unsupported platforms
-type stubVolumeReader struct{}
+// stubReader is a stub implementation for unsupported platforms
+type stubReader struct{}
 
 // GetVolume returns an error indicating volume reading is not supported
-func (r *stubVolumeReader) GetVolume() (vol float64, muted bool, err error) {
+func (r *stubReader) GetVolume() (vol float64, muted bool, err error) {
 	return 0, false, fmt.Errorf("volume widget is not supported on this platform")
 }
 
 // Close does nothing (no resources to clean up)
-func (r *stubVolumeReader) Close() {}
+func (r *stubReader) Close() {}
 
 // newVolumeReader creates a stub volume reader for unsupported platforms
-func newVolumeReader() (volumeReader, error) {
-	return &stubVolumeReader{}, nil
+func newVolumeReader() (Reader, error) {
+	return &stubReader{}, nil
 }

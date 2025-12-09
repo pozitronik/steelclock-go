@@ -1,6 +1,6 @@
 //go:build windows
 
-package widget
+package volumemeter
 
 import (
 	"strings"

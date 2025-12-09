@@ -1,6 +1,6 @@
 //go:build !windows && !linux
 
-package widget
+package volumemeter
 
 import (
 	"fmt"
@@ -18,6 +18,6 @@ func (r *stubMeterReader) GetMeterData(clippingThreshold, silenceThreshold float
 func (r *stubMeterReader) Close() {}
 
 // newMeterReader creates a stub meter reader for unsupported platforms
-func newMeterReader() (meterReader, error) {
+func newMeterReader() (Reader, error) {
 	return &stubMeterReader{}, nil
 }

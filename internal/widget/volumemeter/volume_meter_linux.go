@@ -1,6 +1,6 @@
 //go:build linux
 
-package widget
+package volumemeter
 
 import (
 	"fmt"
@@ -263,6 +263,6 @@ func (r *LinuxMeterReader) NeedsReinitialize() bool {
 }
 
 // newMeterReader creates a platform-specific meter reader (Linux implementation)
-func newMeterReader() (meterReader, error) {
+func newMeterReader() (Reader, error) {
 	return NewLinuxMeterReader()
 }

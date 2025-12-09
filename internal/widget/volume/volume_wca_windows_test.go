@@ -1,19 +1,21 @@
 //go:build windows
 
-package widget
+package volume
 
 import (
 	"strings"
 	"testing"
 	"time"
+
+	wcautil "github.com/pozitronik/steelclock-go/internal/wca"
 )
 
-// skipIfNoAudioDevice skips the test if no audio device is available (CI environments)
+// skipIfNoAudioDeviceWCA skips the test if no audio device is available (CI environments)
 func skipIfNoAudioDeviceWCA(t *testing.T) {
 	t.Helper()
 
 	// Try to create a volume reader to see if audio devices are available
-	reader, err := NewVolumeReaderWCA()
+	reader, err := wcautil.NewVolumeReaderWCA()
 	if err != nil {
 		// Check if error is "Element not found" (no audio device)
 		if strings.Contains(err.Error(), "Element not found") {
@@ -29,38 +31,26 @@ func skipIfNoAudioDeviceWCA(t *testing.T) {
 	}
 }
 
-// TestVolumeReaderWCA_Initialize tests COM initialization
-func TestVolumeReaderWCA_Initialize(t *testing.T) {
+// TestReaderWCA_Initialize tests COM initialization
+func TestReaderWCA_Initialize(t *testing.T) {
 	skipIfNoAudioDeviceWCA(t)
 
-	reader, err := NewVolumeReaderWCA()
+	reader, err := wcautil.NewVolumeReaderWCA()
 	if err != nil {
 		t.Fatalf("Failed to create volume reader: %v", err)
 	}
 	defer reader.Close()
 
-	if !reader.initialized {
+	if !reader.IsInitialized() {
 		t.Error("Expected reader to be initialized")
-	}
-
-	if reader.aev == nil {
-		t.Error("Expected IAudioEndpointVolume interface to be initialized")
-	}
-
-	if reader.mmd == nil {
-		t.Error("Expected IMMDevice interface to be initialized")
-	}
-
-	if reader.mmde == nil {
-		t.Error("Expected IMMDeviceEnumerator interface to be initialized")
 	}
 }
 
-// TestVolumeReaderWCA_GetVolume tests volume reading
-func TestVolumeReaderWCA_GetVolume(t *testing.T) {
+// TestReaderWCA_GetVolume tests volume reading
+func TestReaderWCA_GetVolume(t *testing.T) {
 	skipIfNoAudioDeviceWCA(t)
 
-	reader, err := NewVolumeReaderWCA()
+	reader, err := wcautil.NewVolumeReaderWCA()
 	if err != nil {
 		t.Fatalf("Failed to create volume reader: %v", err)
 	}
@@ -80,11 +70,11 @@ func TestVolumeReaderWCA_GetVolume(t *testing.T) {
 	t.Logf("Current volume: %.2f%%, muted: %v", volume, muted)
 }
 
-// TestVolumeReaderWCA_MultipleReads tests repeated volume reads
-func TestVolumeReaderWCA_MultipleReads(t *testing.T) {
+// TestReaderWCA_MultipleReads tests repeated volume reads
+func TestReaderWCA_MultipleReads(t *testing.T) {
 	skipIfNoAudioDeviceWCA(t)
 
-	reader, err := NewVolumeReaderWCA()
+	reader, err := wcautil.NewVolumeReaderWCA()
 	if err != nil {
 		t.Fatalf("Failed to create volume reader: %v", err)
 	}
@@ -108,11 +98,11 @@ func TestVolumeReaderWCA_MultipleReads(t *testing.T) {
 	}
 }
 
-// TestVolumeReaderWCA_ConcurrentReads tests thread safety
-func TestVolumeReaderWCA_ConcurrentReads(t *testing.T) {
+// TestReaderWCA_ConcurrentReads tests thread safety
+func TestReaderWCA_ConcurrentReads(t *testing.T) {
 	skipIfNoAudioDeviceWCA(t)
 
-	reader, err := NewVolumeReaderWCA()
+	reader, err := wcautil.NewVolumeReaderWCA()
 	if err != nil {
 		t.Fatalf("Failed to create volume reader: %v", err)
 	}
@@ -156,11 +146,11 @@ func TestVolumeReaderWCA_ConcurrentReads(t *testing.T) {
 	}
 }
 
-// TestVolumeReaderWCA_PerformanceStability tests performance over time
-func TestVolumeReaderWCA_PerformanceStability(t *testing.T) {
+// TestReaderWCA_PerformanceStability tests performance over time
+func TestReaderWCA_PerformanceStability(t *testing.T) {
 	skipIfNoAudioDeviceWCA(t)
 
-	reader, err := NewVolumeReaderWCA()
+	reader, err := wcautil.NewVolumeReaderWCA()
 	if err != nil {
 		t.Fatalf("Failed to create volume reader: %v", err)
 	}
@@ -203,17 +193,17 @@ func TestVolumeReaderWCA_PerformanceStability(t *testing.T) {
 	}
 }
 
-// TestVolumeReaderWCA_CloseCleanup tests proper cleanup
-func TestVolumeReaderWCA_CloseCleanup(t *testing.T) {
+// TestReaderWCA_CloseCleanup tests proper cleanup
+func TestReaderWCA_CloseCleanup(t *testing.T) {
 	skipIfNoAudioDeviceWCA(t)
 
-	reader, err := NewVolumeReaderWCA()
+	reader, err := wcautil.NewVolumeReaderWCA()
 	if err != nil {
 		t.Fatalf("Failed to create volume reader: %v", err)
 	}
 
 	// Verify initialized
-	if !reader.initialized {
+	if !reader.IsInitialized() {
 		t.Fatal("Reader not initialized")
 	}
 
@@ -221,28 +211,16 @@ func TestVolumeReaderWCA_CloseCleanup(t *testing.T) {
 	reader.Close()
 
 	// Verify cleanup
-	if reader.initialized {
+	if reader.IsInitialized() {
 		t.Error("Reader still marked as initialized after Close()")
-	}
-
-	if reader.aev != nil {
-		t.Error("IAudioEndpointVolume not cleaned up")
-	}
-
-	if reader.mmd != nil {
-		t.Error("IMMDevice not cleaned up")
-	}
-
-	if reader.mmde != nil {
-		t.Error("IMMDeviceEnumerator not cleaned up")
 	}
 }
 
-// TestVolumeReaderWCA_GetVolumeAfterClose tests error handling after close
-func TestVolumeReaderWCA_GetVolumeAfterClose(t *testing.T) {
+// TestReaderWCA_GetVolumeAfterClose tests error handling after close
+func TestReaderWCA_GetVolumeAfterClose(t *testing.T) {
 	skipIfNoAudioDeviceWCA(t)
 
-	reader, err := NewVolumeReaderWCA()
+	reader, err := wcautil.NewVolumeReaderWCA()
 	if err != nil {
 		t.Fatalf("Failed to create volume reader: %v", err)
 	}
@@ -256,11 +234,11 @@ func TestVolumeReaderWCA_GetVolumeAfterClose(t *testing.T) {
 	}
 }
 
-// TestVolumeReaderWCA_DoubleClose tests double close safety
-func TestVolumeReaderWCA_DoubleClose(t *testing.T) {
+// TestReaderWCA_DoubleClose tests double close safety
+func TestReaderWCA_DoubleClose(t *testing.T) {
 	skipIfNoAudioDeviceWCA(t)
 
-	reader, err := NewVolumeReaderWCA()
+	reader, err := wcautil.NewVolumeReaderWCA()
 	if err != nil {
 		t.Fatalf("Failed to create volume reader: %v", err)
 	}
@@ -281,12 +259,12 @@ func TestNewVolumeReader_Factory(t *testing.T) {
 	defer reader.Close()
 
 	// Verify it returns VolumeReaderWCA
-	wcaReader, ok := reader.(*VolumeReaderWCA)
+	wcaReader, ok := reader.(*wcautil.VolumeReaderWCA)
 	if !ok {
-		t.Fatalf("Expected *VolumeReaderWCA, got %T", reader)
+		t.Fatalf("Expected *wcautil.VolumeReaderWCA, got %T", reader)
 	}
 
-	if !wcaReader.initialized {
+	if !wcaReader.IsInitialized() {
 		t.Error("Factory-created reader not initialized")
 	}
 }
@@ -296,12 +274,12 @@ func TestGetSharedVolumeReader_Singleton(t *testing.T) {
 	skipIfNoAudioDeviceWCA(t)
 
 	// Get shared instance twice
-	reader1, err1 := GetSharedVolumeReader()
+	reader1, err1 := wcautil.GetSharedVolumeReader()
 	if err1 != nil {
 		t.Fatalf("First GetSharedVolumeReader() failed: %v", err1)
 	}
 
-	reader2, err2 := GetSharedVolumeReader()
+	reader2, err2 := wcautil.GetSharedVolumeReader()
 	if err2 != nil {
 		t.Fatalf("Second GetSharedVolumeReader() failed: %v", err2)
 	}
@@ -312,7 +290,7 @@ func TestGetSharedVolumeReader_Singleton(t *testing.T) {
 	}
 
 	// Verify it's initialized
-	if !reader1.initialized {
+	if !reader1.IsInitialized() {
 		t.Error("Shared reader not initialized")
 	}
 }
@@ -325,12 +303,12 @@ func TestGetSharedVolumeReader_ConcurrentCreation(t *testing.T) {
 	// In practice, the first test will create it, but sync.Once guarantees thread safety
 
 	// Start 100 goroutines trying to get the shared instance concurrently
-	done := make(chan *VolumeReaderWCA, 100)
+	done := make(chan *wcautil.VolumeReaderWCA, 100)
 	errors := make(chan error, 100)
 
 	for i := 0; i < 100; i++ {
 		go func() {
-			reader, err := GetSharedVolumeReader()
+			reader, err := wcautil.GetSharedVolumeReader()
 			if err != nil {
 				errors <- err
 				return
@@ -340,7 +318,7 @@ func TestGetSharedVolumeReader_ConcurrentCreation(t *testing.T) {
 	}
 
 	// Collect all results
-	var readers []*VolumeReaderWCA
+	var readers []*wcautil.VolumeReaderWCA
 	for i := 0; i < 100; i++ {
 		select {
 		case reader := <-done:

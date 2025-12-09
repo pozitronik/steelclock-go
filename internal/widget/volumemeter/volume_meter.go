@@ -1,4 +1,4 @@
-package widget
+package volumemeter
 
 import (
 	"fmt"
@@ -12,13 +12,14 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	wcautil "github.com/pozitronik/steelclock-go/internal/wca"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
 func init() {
-	Register("volume_meter", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewVolumeMeterWidget(cfg)
+	widget.Register("volume_meter", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
@@ -31,22 +32,22 @@ type MeterData struct {
 	HasAudio     bool      // True if peak > silence threshold
 }
 
-// meterReader interface abstracts platform-specific audio meter reading
-type meterReader interface {
+// Reader interface abstracts platform-specific audio meter reading
+type Reader interface {
 	GetMeterData(clippingThreshold, silenceThreshold float64) (*MeterData, error)
 	Close()
 }
 
-// reinitializableMeterReader extends meterReader with reinitialize capability
-type reinitializableMeterReader interface {
-	meterReader
+// ReinitializableReader extends Reader with reinitialize capability
+type ReinitializableReader interface {
+	Reader
 	Reinitialize() error
 	NeedsReinitialize() bool
 }
 
-// VolumeMeterWidget displays realtime audio output levels
-type VolumeMeterWidget struct {
-	*BaseWidget
+// Widget displays realtime audio output levels
+type Widget struct {
+	*widget.BaseWidget
 	displayMode      string
 	fillColor        uint8
 	clippingColor    uint8
@@ -101,17 +102,17 @@ type VolumeMeterWidget struct {
 	errorThreshold    int // Threshold before entering error state
 
 	// Error state
-	errorWidget *ErrorWidget // Error widget proxy (nil = normal operation)
+	errorWidget *widget.ErrorWidget // Error widget proxy (nil = normal operation)
 
 	// Platform-specific meter reader
-	reader meterReader
+	reader Reader
 }
 
-// NewVolumeMeterWidget creates a new volume meter widget
+// New creates a new volume meter widget
 //
 //nolint:gocyclo // Complex initialization logic for different display modes
-func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
-	base := NewBaseWidget(cfg)
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
@@ -245,7 +246,7 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 	// Load font for text mode (ignore error - degrades gracefully)
 	fontFace, _ := bitmap.LoadFontForTextMode(displayMode, textSettings.FontName, textSettings.FontSize)
 
-	w := &VolumeMeterWidget{
+	w := &Widget{
 		BaseWidget:          base,
 		displayMode:         displayMode,
 		fillColor:           uint8(fillColor),
@@ -288,7 +289,7 @@ func NewVolumeMeterWidget(cfg config.WidgetConfig) (*VolumeMeterWidget, error) {
 }
 
 // pollMeterBackground continuously polls audio meter in a single background goroutine
-func (w *VolumeMeterWidget) pollMeterBackground() {
+func (w *Widget) pollMeterBackground() {
 	defer w.wg.Done()
 
 	// Panic recovery
@@ -339,7 +340,7 @@ func (w *VolumeMeterWidget) pollMeterBackground() {
 
 		case <-deviceNotifyChan:
 			// Device change detected - reinitialize reader
-			if reinitReader, ok := w.reader.(reinitializableMeterReader); ok {
+			if reinitReader, ok := w.reader.(ReinitializableReader); ok {
 				log.Printf("[VOLUME-METER] Device change notification received, reinitializing...")
 				if err := reinitReader.Reinitialize(); err != nil {
 					log.Printf("[VOLUME-METER] Failed to reinitialize after device change: %v", err)
@@ -362,14 +363,14 @@ func (w *VolumeMeterWidget) pollMeterBackground() {
 // updateMeter reads meter data and updates widget state
 //
 //nolint:gocyclo // Complex state management for stereo/mono channels
-func (w *VolumeMeterWidget) updateMeter() {
+func (w *Widget) updateMeter() {
 	startTime := time.Now()
 	w.mu.Lock()
 	w.totalCalls++
 	w.mu.Unlock()
 
 	// Check if reader needs reinitialization (device may have changed)
-	if reinitReader, ok := w.reader.(reinitializableMeterReader); ok {
+	if reinitReader, ok := w.reader.(ReinitializableReader); ok {
 		if reinitReader.NeedsReinitialize() {
 			log.Printf("[VOLUME-METER] Reader needs reinitialization, attempting...")
 			if err := reinitReader.Reinitialize(); err != nil {
@@ -402,7 +403,7 @@ func (w *VolumeMeterWidget) updateMeter() {
 		// Enter error state if threshold reached
 		if w.consecutiveErrors >= w.errorThreshold && w.errorWidget == nil {
 			pos := w.GetPosition()
-			w.errorWidget = NewErrorWidget(pos.W, pos.H, "METER ERROR")
+			w.errorWidget = widget.NewErrorWidget(pos.W, pos.H, "METER ERROR")
 			log.Printf("[VOLUME-METER] Entered error state after %d consecutive errors", w.consecutiveErrors)
 		}
 		return
@@ -478,7 +479,7 @@ func (w *VolumeMeterWidget) updateMeter() {
 // Render renders the volume meter widget
 //
 //nolint:gocyclo // Multiple display modes require branching logic
-func (w *VolumeMeterWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	// Delegate to error widget if in error state
 	w.mu.RLock()
 	errorWidget := w.errorWidget
@@ -556,7 +557,7 @@ func (w *VolumeMeterWidget) Render() (image.Image, error) {
 
 // linearToDBNormalized converts linear value (0.0-1.0) to dB scale normalized to 0.0-1.0
 // -60dB to 0dB mapped to 0.0 to 1.0
-func (w *VolumeMeterWidget) linearToDBNormalized(linear float64) float64 {
+func (w *Widget) linearToDBNormalized(linear float64) float64 {
 	if linear <= 0.0 {
 		return 0.0
 	}
@@ -576,7 +577,7 @@ func (w *VolumeMeterWidget) linearToDBNormalized(linear float64) float64 {
 }
 
 // renderText renders text display mode
-func (w *VolumeMeterWidget) renderText(img *image.Gray, peak float64, isClipping bool) {
+func (w *Widget) renderText(img *image.Gray, peak float64, isClipping bool) {
 	if w.face == nil {
 		return
 	}
@@ -598,7 +599,7 @@ func (w *VolumeMeterWidget) renderText(img *image.Gray, peak float64, isClipping
 }
 
 // renderBarHorizontal renders horizontal bar display
-func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, displayPeak, peakHold float64, isClipping bool) {
+func (w *Widget) renderBarHorizontal(img *image.Gray, displayPeak, peakHold float64, isClipping bool) {
 	pos := w.GetPosition()
 	barWidth := int(float64(pos.W) * displayPeak)
 
@@ -622,7 +623,7 @@ func (w *VolumeMeterWidget) renderBarHorizontal(img *image.Gray, displayPeak, pe
 }
 
 // renderBarVertical renders vertical bar display
-func (w *VolumeMeterWidget) renderBarVertical(img *image.Gray, displayPeak, peakHold float64, isClipping bool) {
+func (w *Widget) renderBarVertical(img *image.Gray, displayPeak, peakHold float64, isClipping bool) {
 	pos := w.GetPosition()
 	barHeight := int(float64(pos.H) * displayPeak)
 	startY := pos.H - barHeight
@@ -647,7 +648,7 @@ func (w *VolumeMeterWidget) renderBarVertical(img *image.Gray, displayPeak, peak
 }
 
 // renderGauge renders gauge display
-func (w *VolumeMeterWidget) renderGauge(img *image.Gray, peak, peakHold float64, isClipping bool) {
+func (w *Widget) renderGauge(img *image.Gray, peak, peakHold float64, isClipping bool) {
 	pos := w.GetPosition()
 
 	needleColor := w.gaugeNeedleColor
@@ -668,7 +669,7 @@ func (w *VolumeMeterWidget) renderGauge(img *image.Gray, peak, peakHold float64,
 // renderBarHorizontalStereo renders horizontal bars in stereo mode (left/right channels)
 //
 //nolint:gocyclo // Geometric calculations for stereo bar rendering
-func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPeaks []float64, peakHoldValues []float64, isClipping bool) {
+func (w *Widget) renderBarHorizontalStereo(img *image.Gray, channelPeaks []float64, peakHoldValues []float64, isClipping bool) {
 	pos := w.GetPosition()
 
 	if len(channelPeaks) < 2 {
@@ -731,7 +732,7 @@ func (w *VolumeMeterWidget) renderBarHorizontalStereo(img *image.Gray, channelPe
 }
 
 // renderTextStereo renders text display in stereo mode showing L/R channel values
-func (w *VolumeMeterWidget) renderTextStereo(img *image.Gray, channelPeaks []float64, isClipping bool) {
+func (w *Widget) renderTextStereo(img *image.Gray, channelPeaks []float64, isClipping bool) {
 	if w.face == nil {
 		return
 	}
@@ -773,7 +774,7 @@ func (w *VolumeMeterWidget) renderTextStereo(img *image.Gray, channelPeaks []flo
 // renderBarVerticalStereo renders vertical bars in stereo mode (left/right channels)
 //
 //nolint:gocyclo // Geometric calculations for stereo bar rendering
-func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeaks []float64, peakHoldValues []float64, isClipping bool) {
+func (w *Widget) renderBarVerticalStereo(img *image.Gray, channelPeaks []float64, peakHoldValues []float64, isClipping bool) {
 	pos := w.GetPosition()
 
 	if len(channelPeaks) < 2 {
@@ -838,7 +839,7 @@ func (w *VolumeMeterWidget) renderBarVerticalStereo(img *image.Gray, channelPeak
 // renderGaugeStereo renders gauges in stereo mode (left/right channels)
 //
 //nolint:gocyclo // Geometric calculations for stereo gauge rendering
-func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []float64, peakHoldValues []float64, isClipping bool) {
+func (w *Widget) renderGaugeStereo(img *image.Gray, channelPeaks []float64, peakHoldValues []float64, isClipping bool) {
 	pos := w.GetPosition()
 
 	if len(channelPeaks) < 2 {
@@ -919,7 +920,7 @@ func (w *VolumeMeterWidget) renderGaugeStereo(img *image.Gray, channelPeaks []fl
 }
 
 // drawGaugePeakHoldMark draws a small mark on the gauge arc at the peak hold position
-func (w *VolumeMeterWidget) drawGaugePeakHoldMark(img *image.Gray, pos config.PositionConfig, peakHold float64) {
+func (w *Widget) drawGaugePeakHoldMark(img *image.Gray, pos config.PositionConfig, peakHold float64) {
 	centerX := pos.W / 2
 	centerY := pos.H - 3
 
@@ -934,7 +935,7 @@ func (w *VolumeMeterWidget) drawGaugePeakHoldMark(img *image.Gray, pos config.Po
 
 // Update is called periodically but just returns immediately
 // All meter polling happens in the background goroutine
-func (w *VolumeMeterWidget) Update() error {
+func (w *Widget) Update() error {
 	w.mu.RLock()
 	errorWidget := w.errorWidget
 	w.mu.RUnlock()
@@ -947,7 +948,7 @@ func (w *VolumeMeterWidget) Update() error {
 }
 
 // Stop stops the background polling goroutine
-func (w *VolumeMeterWidget) Stop() {
+func (w *Widget) Stop() {
 	close(w.stopChan)
 	w.wg.Wait()
 }

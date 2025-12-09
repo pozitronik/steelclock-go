@@ -1,6 +1,6 @@
 //go:build windows
 
-package widget
+package volumemeter
 
 import (
 	"fmt"
@@ -273,6 +273,6 @@ func (mr *MeterReaderWCA) Close() {
 }
 
 // newMeterReader creates a platform-specific meter reader (Windows implementation using go-wca)
-func newMeterReader() (meterReader, error) {
+func newMeterReader() (Reader, error) {
 	return NewMeterReaderWCA()
 }

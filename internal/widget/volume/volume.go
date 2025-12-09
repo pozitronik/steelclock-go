@@ -1,4 +1,4 @@
-package widget
+package volume
 
 import (
 	"fmt"
@@ -11,32 +11,33 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	wcautil "github.com/pozitronik/steelclock-go/internal/wca"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
 func init() {
-	Register("volume", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewVolumeWidget(cfg)
+	widget.Register("volume", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
-// volumeReader interface abstracts platform-specific volume reading
-type volumeReader interface {
+// Reader interface abstracts platform-specific volume reading
+type Reader interface {
 	GetVolume() (volume float64, muted bool, err error)
 	Close()
 }
 
-// reinitializableVolumeReader extends volumeReader with reinitialize capability
-type reinitializableVolumeReader interface {
-	volumeReader
+// ReinitializableReader extends Reader with reinitialize capability
+type ReinitializableReader interface {
+	Reader
 	Reinitialize() error
 	NeedsReinitialize() bool
 }
 
-// VolumeWidget displays system volume level
-type VolumeWidget struct {
-	*BaseWidget
+// Widget displays system volume level
+type Widget struct {
+	*widget.BaseWidget
 	displayMode      string
 	fillColor        uint8
 	barDirection     string
@@ -70,15 +71,15 @@ type VolumeWidget struct {
 	errorThreshold    int // Threshold before entering error state
 
 	// Error state
-	errorWidget *ErrorWidget // Error widget proxy (nil = normal operation)
+	errorWidget *widget.ErrorWidget // Error widget proxy (nil = normal operation)
 
 	// Platform-specific volume reader (managed by polling goroutine)
-	reader volumeReader
+	reader Reader
 }
 
-// NewVolumeWidget creates a new volume widget
-func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new volume widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
@@ -98,7 +99,7 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 		pollInterval = time.Duration(cfg.PollInterval * float64(time.Second))
 	}
 
-	w := &VolumeWidget{
+	w := &Widget{
 		BaseWidget:       base,
 		displayMode:      displayMode,
 		fillColor:        uint8(fillColor),
@@ -130,7 +131,7 @@ func NewVolumeWidget(cfg config.WidgetConfig) (*VolumeWidget, error) {
 
 // pollVolumeBackground continuously polls system volume in a single background goroutine
 // This prevents goroutine accumulation - only ONE goroutine ever exists for polling
-func (w *VolumeWidget) pollVolumeBackground() {
+func (w *Widget) pollVolumeBackground() {
 	defer w.wg.Done()
 
 	// Panic recovery to prevent app crash
@@ -181,7 +182,7 @@ func (w *VolumeWidget) pollVolumeBackground() {
 
 		case <-deviceNotifyChan:
 			// Device change detected - reinitialize reader
-			if reinitReader, ok := w.reader.(reinitializableVolumeReader); ok {
+			if reinitReader, ok := w.reader.(ReinitializableReader); ok {
 				log.Printf("[VOLUME] Device change notification received, reinitializing...")
 				if err := reinitReader.Reinitialize(); err != nil {
 					log.Printf("[VOLUME] Failed to reinitialize after device change: %v", err)
@@ -202,9 +203,9 @@ func (w *VolumeWidget) pollVolumeBackground() {
 }
 
 // pollOnce performs a single volume poll and updates the widget state
-func (w *VolumeWidget) pollOnce() {
+func (w *Widget) pollOnce() {
 	// Check if reader needs reinitialization (device may have changed)
-	if reinitReader, ok := w.reader.(reinitializableVolumeReader); ok {
+	if reinitReader, ok := w.reader.(ReinitializableReader); ok {
 		if reinitReader.NeedsReinitialize() {
 			log.Printf("[VOLUME] Reader needs reinitialization, attempting...")
 			if err := reinitReader.Reinitialize(); err != nil {
@@ -233,7 +234,7 @@ func (w *VolumeWidget) pollOnce() {
 		// Enter error state if threshold reached
 		if w.consecutiveErrors >= w.errorThreshold && w.errorWidget == nil {
 			pos := w.GetPosition()
-			w.errorWidget = NewErrorWidget(pos.W, pos.H, "VOLUME ERROR")
+			w.errorWidget = widget.NewErrorWidget(pos.W, pos.H, "VOLUME ERROR")
 			log.Printf("[VOLUME] Entered error state after %d consecutive errors", w.consecutiveErrors)
 		}
 		return
@@ -257,7 +258,7 @@ func (w *VolumeWidget) pollOnce() {
 
 // Update is called periodically but just returns immediately
 // All volume polling happens in the background goroutine
-func (w *VolumeWidget) Update() error {
+func (w *Widget) Update() error {
 	w.mu.RLock()
 	errorWidget := w.errorWidget
 	w.mu.RUnlock()
@@ -270,13 +271,13 @@ func (w *VolumeWidget) Update() error {
 }
 
 // Stop stops the background polling goroutine
-func (w *VolumeWidget) Stop() {
+func (w *Widget) Stop() {
 	close(w.stopChan)
 	w.wg.Wait()
 }
 
 // Render renders the volume widget
-func (w *VolumeWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
@@ -318,7 +319,7 @@ func (w *VolumeWidget) Render() (image.Image, error) {
 }
 
 // renderText renders volume as text
-func (w *VolumeWidget) renderText(img *image.Gray) {
+func (w *Widget) renderText(img *image.Gray) {
 	// Skip rendering if no font available (neither TTF nor internal)
 	if w.face == nil && !bitmap.IsInternalFont(w.fontName) {
 		return
@@ -334,7 +335,7 @@ func (w *VolumeWidget) renderText(img *image.Gray) {
 }
 
 // renderBarHorizontal renders volume as horizontal bar
-func (w *VolumeWidget) renderBarHorizontal(img *image.Gray, pos config.PositionConfig, style config.StyleConfig) {
+func (w *Widget) renderBarHorizontal(img *image.Gray, pos config.PositionConfig, style config.StyleConfig) {
 	padding := 2
 	if style.Border >= 0 {
 		padding = 3
@@ -373,7 +374,7 @@ func (w *VolumeWidget) renderBarHorizontal(img *image.Gray, pos config.PositionC
 }
 
 // renderBarVertical renders volume as vertical bar
-func (w *VolumeWidget) renderBarVertical(img *image.Gray, pos config.PositionConfig, style config.StyleConfig) {
+func (w *Widget) renderBarVertical(img *image.Gray, pos config.PositionConfig, style config.StyleConfig) {
 	padding := 2
 	if style.Border >= 0 {
 		padding = 3
@@ -414,7 +415,7 @@ func (w *VolumeWidget) renderBarVertical(img *image.Gray, pos config.PositionCon
 }
 
 // renderGauge renders volume as an old-fashioned gauge with needle
-func (w *VolumeWidget) renderGauge(img *image.Gray, pos config.PositionConfig) {
+func (w *Widget) renderGauge(img *image.Gray, pos config.PositionConfig) {
 	// Use shared gauge drawing function
 	bitmap.DrawGauge(img, 0, 0, pos.W, pos.H, w.volume, w.gaugeColor, w.gaugeNeedleColor, w.gaugeShowTicks, w.gaugeTicksColor)
 

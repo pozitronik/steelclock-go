@@ -1,6 +1,6 @@
 //go:build windows
 
-package widget
+package volumemeter
 
 import (
 	"testing"
@@ -9,8 +9,8 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-// TestVolumeMeterWidget_BackgroundPolling tests that the background goroutine works
-func TestVolumeMeterWidget_BackgroundPolling(t *testing.T) {
+// TestWidget_BackgroundPolling tests that the background goroutine works
+func TestWidget_BackgroundPolling(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -24,9 +24,9 @@ func TestVolumeMeterWidget_BackgroundPolling(t *testing.T) {
 		Bar:  &config.BarConfig{Direction: "horizontal"},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Give the background goroutine time to initialize and read meter
@@ -61,8 +61,8 @@ func TestVolumeMeterWidget_BackgroundPolling(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 }
 
-// TestVolumeMeterWidget_StopCleanup tests proper cleanup on Stop
-func TestVolumeMeterWidget_StopCleanup(t *testing.T) {
+// TestWidget_StopCleanup tests proper cleanup on Stop
+func TestWidget_StopCleanup(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -75,9 +75,9 @@ func TestVolumeMeterWidget_StopCleanup(t *testing.T) {
 		Mode: "gauge",
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Let it run briefly
@@ -92,8 +92,8 @@ func TestVolumeMeterWidget_StopCleanup(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_LongRunning tests stability over extended period
-func TestVolumeMeterWidget_LongRunning(t *testing.T) {
+// TestWidget_LongRunning tests stability over extended period
+func TestWidget_LongRunning(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping long-running test in short mode")
 	}
@@ -109,9 +109,9 @@ func TestVolumeMeterWidget_LongRunning(t *testing.T) {
 		Mode: "bar",
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -167,8 +167,8 @@ func TestVolumeMeterWidget_LongRunning(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_StereoChannels tests stereo channel handling
-func TestVolumeMeterWidget_StereoChannels(t *testing.T) {
+// TestWidget_StereoChannels tests stereo channel handling
+func TestWidget_StereoChannels(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -182,9 +182,9 @@ func TestVolumeMeterWidget_StereoChannels(t *testing.T) {
 		Stereo: &config.StereoConfig{Enabled: true},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -224,8 +224,8 @@ func TestVolumeMeterWidget_StereoChannels(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_ClippingIndicator tests clipping detection
-func TestVolumeMeterWidget_ClippingIndicator(t *testing.T) {
+// TestWidget_ClippingIndicator tests clipping detection
+func TestWidget_ClippingIndicator(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -243,9 +243,9 @@ func TestVolumeMeterWidget_ClippingIndicator(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -269,8 +269,8 @@ func TestVolumeMeterWidget_ClippingIndicator(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_DBScaleDisplay tests dB scale display
-func TestVolumeMeterWidget_DBScaleDisplay(t *testing.T) {
+// TestWidget_DBScaleDisplay tests dB scale display
+func TestWidget_DBScaleDisplay(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -285,9 +285,9 @@ func TestVolumeMeterWidget_DBScaleDisplay(t *testing.T) {
 		Text:     &config.TextConfig{Size: 10},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -311,8 +311,8 @@ func TestVolumeMeterWidget_DBScaleDisplay(t *testing.T) {
 	}
 }
 
-// TestVolumeMeterWidget_NoMemoryLeak tests that repeated creation/destruction doesn't leak
-func TestVolumeMeterWidget_NoMemoryLeak(t *testing.T) {
+// TestWidget_NoMemoryLeak tests that repeated creation/destruction doesn't leak
+func TestWidget_NoMemoryLeak(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping memory leak test in short mode")
 	}
@@ -331,9 +331,9 @@ func TestVolumeMeterWidget_NoMemoryLeak(t *testing.T) {
 
 	// Create and destroy 100 widgets
 	for i := 0; i < 100; i++ {
-		widget, err := NewVolumeMeterWidget(cfg)
+		widget, err := New(cfg)
 		if err != nil {
-			t.Fatalf("NewVolumeMeterWidget() iteration %d error = %v", i, err)
+			t.Fatalf("New() iteration %d error = %v", i, err)
 		}
 
 		// Let it run briefly
@@ -350,8 +350,8 @@ func TestVolumeMeterWidget_NoMemoryLeak(t *testing.T) {
 	t.Log("Created and destroyed 100 widgets without issues")
 }
 
-// TestVolumeMeterWidget_AutoHideOnSilence tests auto-hide when no audio
-func TestVolumeMeterWidget_AutoHideOnSilence(t *testing.T) {
+// TestWidget_AutoHideOnSilence tests auto-hide when no audio
+func TestWidget_AutoHideOnSilence(t *testing.T) {
 	skipIfNoAudioDeviceMeter(t)
 
 	cfg := config.WidgetConfig{
@@ -373,9 +373,9 @@ func TestVolumeMeterWidget_AutoHideOnSilence(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeMeterWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeMeterWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 

@@ -1,4 +1,4 @@
-package widget
+package volume
 
 import (
 	"runtime"
@@ -37,8 +37,8 @@ func skipIfNoAudioDevice(t *testing.T) {
 	}
 }
 
-// TestNewVolumeWidget tests volume widget creation
-func TestNewVolumeWidget(t *testing.T) {
+// TestNew tests volume widget creation
+func TestNew(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	tests := []struct {
@@ -65,9 +65,9 @@ func TestNewVolumeWidget(t *testing.T) {
 				Mode: tt.displayMode,
 			}
 
-			widget, err := NewVolumeWidget(cfg)
+			widget, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewVolumeWidget() error = %v", err)
+				t.Fatalf("New() error = %v", err)
 			}
 
 			if widget.Name() != "test_volume" {
@@ -81,8 +81,8 @@ func TestNewVolumeWidget(t *testing.T) {
 	}
 }
 
-// TestNewVolumeWidget_Defaults tests default values
-func TestNewVolumeWidget_Defaults(t *testing.T) {
+// TestNew_Defaults tests default values
+func TestNew_Defaults(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -96,9 +96,9 @@ func TestNewVolumeWidget_Defaults(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if widget.displayMode != "bar" {
@@ -122,8 +122,8 @@ func TestNewVolumeWidget_Defaults(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_Update tests volume updates
-func TestVolumeWidget_Update(t *testing.T) {
+// TestWidget_Update tests volume updates
+func TestWidget_Update(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -138,9 +138,9 @@ func TestVolumeWidget_Update(t *testing.T) {
 		Mode: "bar_horizontal",
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update volume
@@ -159,8 +159,8 @@ func TestVolumeWidget_Update(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_RenderText tests text mode rendering
-func TestVolumeWidget_RenderText(t *testing.T) {
+// TestWidget_RenderText tests text mode rendering
+func TestWidget_RenderText(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -178,9 +178,9 @@ func TestVolumeWidget_RenderText(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update first
@@ -201,8 +201,8 @@ func TestVolumeWidget_RenderText(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_RenderBarHorizontal tests horizontal bar rendering
-func TestVolumeWidget_RenderBarHorizontal(t *testing.T) {
+// TestWidget_RenderBarHorizontal tests horizontal bar rendering
+func TestWidget_RenderBarHorizontal(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -220,9 +220,9 @@ func TestVolumeWidget_RenderBarHorizontal(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	_ = widget.Update()
@@ -237,8 +237,8 @@ func TestVolumeWidget_RenderBarHorizontal(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_RenderBarVertical tests vertical bar rendering
-func TestVolumeWidget_RenderBarVertical(t *testing.T) {
+// TestWidget_RenderBarVertical tests vertical bar rendering
+func TestWidget_RenderBarVertical(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -256,9 +256,9 @@ func TestVolumeWidget_RenderBarVertical(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	_ = widget.Update()
@@ -273,8 +273,8 @@ func TestVolumeWidget_RenderBarVertical(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_RenderGauge tests gauge rendering
-func TestVolumeWidget_RenderGauge(t *testing.T) {
+// TestWidget_RenderGauge tests gauge rendering
+func TestWidget_RenderGauge(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -293,9 +293,9 @@ func TestVolumeWidget_RenderGauge(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	_ = widget.Update()
@@ -310,8 +310,8 @@ func TestVolumeWidget_RenderGauge(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_AutoHide tests auto-hide functionality
-func TestVolumeWidget_AutoHide(t *testing.T) {
+// TestWidget_AutoHide tests auto-hide functionality
+func TestWidget_AutoHide(t *testing.T) {
 	// Skip on non-Windows platforms - volume reading is Windows-only
 	if runtime.GOOS != "windows" {
 		t.Skip("Volume widget auto-hide test requires Windows (volume reading not supported on this platform)")
@@ -334,9 +334,9 @@ func TestVolumeWidget_AutoHide(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -375,8 +375,8 @@ func TestVolumeWidget_AutoHide(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_AllModes tests all display modes
-func TestVolumeWidget_AllModes(t *testing.T) {
+// TestWidget_AllModes tests all display modes
+func TestWidget_AllModes(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	// Volume widget supports: text, bar, gauge (bar direction is controlled via separate config)
@@ -399,9 +399,9 @@ func TestVolumeWidget_AllModes(t *testing.T) {
 				},
 			}
 
-			widget, err := NewVolumeWidget(cfg)
+			widget, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewVolumeWidget() error = %v", err)
+				t.Fatalf("New() error = %v", err)
 			}
 
 			_ = widget.Update()
@@ -417,8 +417,8 @@ func TestVolumeWidget_AllModes(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_SmallSize tests rendering with very small size
-func TestVolumeWidget_SmallSize(t *testing.T) {
+// TestWidget_SmallSize tests rendering with very small size
+func TestWidget_SmallSize(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -433,9 +433,9 @@ func TestVolumeWidget_SmallSize(t *testing.T) {
 		Mode: "bar_horizontal",
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	_ = widget.Update()
@@ -450,8 +450,8 @@ func TestVolumeWidget_SmallSize(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_WithBorder tests rendering with border
-func TestVolumeWidget_WithBorder(t *testing.T) {
+// TestWidget_WithBorder tests rendering with border
+func TestWidget_WithBorder(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -469,9 +469,9 @@ func TestVolumeWidget_WithBorder(t *testing.T) {
 		Mode: "bar_horizontal",
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	_ = widget.Update()
@@ -485,8 +485,8 @@ func TestVolumeWidget_WithBorder(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_ConcurrentAccess tests concurrent access safety
-func TestVolumeWidget_ConcurrentAccess(t *testing.T) {
+// TestWidget_ConcurrentAccess tests concurrent access safety
+func TestWidget_ConcurrentAccess(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -501,9 +501,9 @@ func TestVolumeWidget_ConcurrentAccess(t *testing.T) {
 		Mode: "bar_horizontal",
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Run concurrent updates and renders
@@ -529,8 +529,8 @@ func TestVolumeWidget_ConcurrentAccess(t *testing.T) {
 	// Should not crash or race
 }
 
-// TestVolumeWidget_Stop tests proper Stop() functionality
-func TestVolumeWidget_Stop(t *testing.T) {
+// TestWidget_Stop tests proper Stop() functionality
+func TestWidget_Stop(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -545,9 +545,9 @@ func TestVolumeWidget_Stop(t *testing.T) {
 		Mode: "bar_horizontal",
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Let it run briefly to accumulate some metrics
@@ -583,8 +583,8 @@ func TestVolumeWidget_Stop(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_RenderMuted tests rendering with muted state
-func TestVolumeWidget_RenderMuted(t *testing.T) {
+// TestWidget_RenderMuted tests rendering with muted state
+func TestWidget_RenderMuted(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -599,9 +599,9 @@ func TestVolumeWidget_RenderMuted(t *testing.T) {
 		Mode: "bar_horizontal",
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -628,8 +628,8 @@ func TestVolumeWidget_RenderMuted(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_UpdateInterval tests GetUpdateInterval
-func TestVolumeWidget_UpdateInterval(t *testing.T) {
+// TestWidget_UpdateInterval tests GetUpdateInterval
+func TestWidget_UpdateInterval(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -645,9 +645,9 @@ func TestVolumeWidget_UpdateInterval(t *testing.T) {
 		UpdateInterval: 0.5, // 500ms
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 

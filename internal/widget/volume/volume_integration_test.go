@@ -1,6 +1,6 @@
 //go:build windows
 
-package widget
+package volume
 
 import (
 	"testing"
@@ -9,8 +9,8 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-// TestVolumeWidget_BackgroundPolling tests that the background goroutine works
-func TestVolumeWidget_BackgroundPolling(t *testing.T) {
+// TestWidget_BackgroundPolling tests that the background goroutine works
+func TestWidget_BackgroundPolling(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -24,9 +24,9 @@ func TestVolumeWidget_BackgroundPolling(t *testing.T) {
 		Bar:  &config.BarConfig{Direction: "horizontal"},
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Give the background goroutine time to initialize and read volume
@@ -55,8 +55,8 @@ func TestVolumeWidget_BackgroundPolling(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 }
 
-// TestVolumeWidget_StopCleanup tests proper cleanup on Stop
-func TestVolumeWidget_StopCleanup(t *testing.T) {
+// TestWidget_StopCleanup tests proper cleanup on Stop
+func TestWidget_StopCleanup(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -69,9 +69,9 @@ func TestVolumeWidget_StopCleanup(t *testing.T) {
 		Mode: "gauge",
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Let it run briefly
@@ -86,8 +86,8 @@ func TestVolumeWidget_StopCleanup(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_LongRunning tests stability over extended period
-func TestVolumeWidget_LongRunning(t *testing.T) {
+// TestWidget_LongRunning tests stability over extended period
+func TestWidget_LongRunning(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping long-running test in short mode")
 	}
@@ -104,9 +104,9 @@ func TestVolumeWidget_LongRunning(t *testing.T) {
 		Bar:  &config.BarConfig{Direction: "horizontal"},
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -160,8 +160,8 @@ func TestVolumeWidget_LongRunning(t *testing.T) {
 	}
 }
 
-// TestVolumeWidget_HealthMetrics tests health tracking
-func TestVolumeWidget_HealthMetrics(t *testing.T) {
+// TestWidget_HealthMetrics tests health tracking
+func TestWidget_HealthMetrics(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -174,9 +174,9 @@ func TestVolumeWidget_HealthMetrics(t *testing.T) {
 		Mode: "gauge",
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
@@ -215,8 +215,8 @@ func TestVolumeWidget_HealthMetrics(t *testing.T) {
 	t.Logf("  Failed: %d", failedCalls)
 }
 
-// TestVolumeWidget_NoMemoryLeak tests that repeated creation/destruction doesn't leak
-func TestVolumeWidget_NoMemoryLeak(t *testing.T) {
+// TestWidget_NoMemoryLeak tests that repeated creation/destruction doesn't leak
+func TestWidget_NoMemoryLeak(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping memory leak test in short mode")
 	}
@@ -235,9 +235,9 @@ func TestVolumeWidget_NoMemoryLeak(t *testing.T) {
 
 	// Create and destroy 100 widgets
 	for i := 0; i < 100; i++ {
-		widget, err := NewVolumeWidget(cfg)
+		widget, err := New(cfg)
 		if err != nil {
-			t.Fatalf("NewVolumeWidget() iteration %d error = %v", i, err)
+			t.Fatalf("New() iteration %d error = %v", i, err)
 		}
 
 		// Let it run briefly
@@ -254,8 +254,8 @@ func TestVolumeWidget_NoMemoryLeak(t *testing.T) {
 	t.Log("Created and destroyed 100 widgets without issues")
 }
 
-// TestVolumeWidget_VolumeChange tests volume change detection and auto-hide trigger
-func TestVolumeWidget_VolumeChange(t *testing.T) {
+// TestWidget_VolumeChange tests volume change detection and auto-hide trigger
+func TestWidget_VolumeChange(t *testing.T) {
 	skipIfNoAudioDevice(t)
 
 	cfg := config.WidgetConfig{
@@ -273,9 +273,9 @@ func TestVolumeWidget_VolumeChange(t *testing.T) {
 		},
 	}
 
-	widget, err := NewVolumeWidget(cfg)
+	widget, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewVolumeWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	defer widget.Stop()
 
