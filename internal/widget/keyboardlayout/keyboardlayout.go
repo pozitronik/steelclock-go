@@ -1,21 +1,23 @@
 //go:build windows
 
-package widget
+package keyboardlayout
 
 import (
 	"fmt"
 	"image"
 	"sync"
+	"syscall"
 	"unsafe"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 	"golang.org/x/image/font"
 )
 
 func init() {
-	Register("keyboard_layout", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewKeyboardLayoutWidget(cfg)
+	widget.Register("keyboard_layout", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
@@ -27,6 +29,7 @@ const (
 )
 
 var (
+	user32                   = syscall.NewLazyDLL("user32.dll")
 	getKeyboardLayout        = user32.NewProc("GetKeyboardLayout")
 	getForegroundWindow      = user32.NewProc("GetForegroundWindow")
 	getWindowThreadProcessId = user32.NewProc("GetWindowThreadProcessId")
@@ -93,9 +96,9 @@ var lcidToLanguage = map[uint16]languageInfo{
 	0x042D: {"EU", "EUS", "Euskara"},
 }
 
-// KeyboardLayoutWidget displays current keyboard layout
-type KeyboardLayoutWidget struct {
-	*BaseWidget
+// Widget displays current keyboard layout
+type Widget struct {
+	*widget.BaseWidget
 	fontSize      int
 	fontName      string
 	horizAlign    config.HAlign
@@ -108,9 +111,9 @@ type KeyboardLayoutWidget struct {
 	mu            sync.RWMutex
 }
 
-// NewKeyboardLayoutWidget creates a new keyboard layout widget
-func NewKeyboardLayoutWidget(cfg config.WidgetConfig) (*KeyboardLayoutWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new keyboard layout widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 
 	// Extract text settings
 	fontSize := 10
@@ -156,7 +159,7 @@ func NewKeyboardLayoutWidget(cfg config.WidgetConfig) (*KeyboardLayoutWidget, er
 		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
 
-	widget := &KeyboardLayoutWidget{
+	w := &Widget{
 		BaseWidget:    base,
 		fontSize:      fontSize,
 		fontName:      fontName,
@@ -169,14 +172,14 @@ func NewKeyboardLayoutWidget(cfg config.WidgetConfig) (*KeyboardLayoutWidget, er
 
 	// Get initial layout
 	layout := getCurrentKeyboardLayout()
-	widget.lastLCID = layout
-	widget.currentLayout = widget.formatLayout(layout)
+	w.lastLCID = layout
+	w.currentLayout = w.formatLayout(layout)
 
-	return widget, nil
+	return w, nil
 }
 
 // Update checks for keyboard layout changes
-func (w *KeyboardLayoutWidget) Update() error {
+func (w *Widget) Update() error {
 	layout := getCurrentKeyboardLayout()
 
 	// Only update if layout actually changed
@@ -191,7 +194,7 @@ func (w *KeyboardLayoutWidget) Update() error {
 }
 
 // Render creates an image of the keyboard layout widget
-func (w *KeyboardLayoutWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	// Create canvas with background and border
 	img := w.CreateCanvas()
 	w.ApplyBorder(img)
@@ -233,7 +236,7 @@ func getCurrentKeyboardLayout() uint16 {
 }
 
 // formatLayout formats the layout according to display format
-func (w *KeyboardLayoutWidget) formatLayout(lcid uint16) string {
+func (w *Widget) formatLayout(lcid uint16) string {
 	info, ok := lcidToLanguage[lcid]
 	if !ok {
 		// Unknown layout - show LCID in hex

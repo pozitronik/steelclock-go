@@ -1,6 +1,6 @@
 //go:build windows
 
-package widget
+package keyboardlayout
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-func TestNewKeyboardLayoutWidget(t *testing.T) {
+func TestNew(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
 		ID:   "keyboard_layout",
@@ -24,29 +24,29 @@ func TestNewKeyboardLayoutWidget(t *testing.T) {
 		},
 	}
 
-	widget, err := NewKeyboardLayoutWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewKeyboardLayoutWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
-	if widget == nil {
-		t.Fatal("NewKeyboardLayoutWidget() returned nil")
+	if w == nil {
+		t.Fatal("New() returned nil")
 	}
 
-	if widget.Name() != "keyboard_layout" {
-		t.Errorf("Name() = %s, want keyboard_layout", widget.Name())
+	if w.Name() != "keyboard_layout" {
+		t.Errorf("Name() = %s, want keyboard_layout", w.Name())
 	}
 
-	if widget.displayFormat != "iso639-1" {
-		t.Errorf("displayFormat = %s, want iso639-1", widget.displayFormat)
+	if w.displayFormat != "iso639-1" {
+		t.Errorf("displayFormat = %s, want iso639-1", w.displayFormat)
 	}
 
-	if widget.fontSize != 10 {
-		t.Errorf("fontSize = %d, want 10", widget.fontSize)
+	if w.fontSize != 10 {
+		t.Errorf("fontSize = %d, want 10", w.fontSize)
 	}
 }
 
-func TestNewKeyboardLayoutWidget_WithDisplayFormat(t *testing.T) {
+func TestNew_WithDisplayFormat(t *testing.T) {
 	formats := []string{"iso639-1", "iso639-2", "full"}
 
 	for _, format := range formats {
@@ -64,19 +64,19 @@ func TestNewKeyboardLayoutWidget_WithDisplayFormat(t *testing.T) {
 				Format: format,
 			}
 
-			widget, err := NewKeyboardLayoutWidget(cfg)
+			w, err := New(cfg)
 			if err != nil {
-				t.Fatalf("NewKeyboardLayoutWidget() error = %v", err)
+				t.Fatalf("New() error = %v", err)
 			}
 
-			if widget.displayFormat != format {
-				t.Errorf("displayFormat = %s, want %s", widget.displayFormat, format)
+			if w.displayFormat != format {
+				t.Errorf("displayFormat = %s, want %s", w.displayFormat, format)
 			}
 		})
 	}
 }
 
-func TestNewKeyboardLayoutWidget_InvalidFormat(t *testing.T) {
+func TestNew_InvalidFormat(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
 		ID:   "keyboard_layout",
@@ -90,13 +90,13 @@ func TestNewKeyboardLayoutWidget_InvalidFormat(t *testing.T) {
 		Format: "invalid",
 	}
 
-	_, err := NewKeyboardLayoutWidget(cfg)
+	_, err := New(cfg)
 	if err == nil {
-		t.Error("NewKeyboardLayoutWidget() expected error for invalid format, got nil")
+		t.Error("New() expected error for invalid format, got nil")
 	}
 }
 
-func TestKeyboardLayoutWidget_Update(t *testing.T) {
+func TestWidget_Update(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
 		ID:   "keyboard_layout",
@@ -109,23 +109,23 @@ func TestKeyboardLayoutWidget_Update(t *testing.T) {
 		},
 	}
 
-	widget, err := NewKeyboardLayoutWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewKeyboardLayoutWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
-	err = widget.Update()
+	err = w.Update()
 	if err != nil {
 		t.Errorf("Update() error = %v", err)
 	}
 
 	// After update, currentLayout should be set
-	if widget.currentLayout == "" {
+	if w.currentLayout == "" {
 		t.Error("Update() did not set currentLayout")
 	}
 }
 
-func TestKeyboardLayoutWidget_Render(t *testing.T) {
+func TestWidget_Render(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
 		ID:   "keyboard_layout",
@@ -138,15 +138,15 @@ func TestKeyboardLayoutWidget_Render(t *testing.T) {
 		},
 	}
 
-	widget, err := NewKeyboardLayoutWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
-		t.Fatalf("NewKeyboardLayoutWidget() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	// Update first to set layout
-	_ = widget.Update()
+	_ = w.Update()
 
-	img, err := widget.Render()
+	img, err := w.Render()
 	if err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
@@ -161,7 +161,7 @@ func TestKeyboardLayoutWidget_Render(t *testing.T) {
 	}
 }
 
-func TestKeyboardLayoutWidget_FormatLayout_ISO639_1(t *testing.T) {
+func TestWidget_FormatLayout_ISO639_1(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
 		ID:   "keyboard_layout",
@@ -172,7 +172,7 @@ func TestKeyboardLayoutWidget_FormatLayout_ISO639_1(t *testing.T) {
 		Format: "iso639-1",
 	}
 
-	widget, _ := NewKeyboardLayoutWidget(cfg)
+	w, _ := New(cfg)
 
 	tests := []struct {
 		lcid uint16
@@ -187,14 +187,14 @@ func TestKeyboardLayoutWidget_FormatLayout_ISO639_1(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := widget.formatLayout(tt.lcid)
+		got := w.formatLayout(tt.lcid)
 		if got != tt.want {
 			t.Errorf("formatLayout(0x%04X) = %s, want %s", tt.lcid, got, tt.want)
 		}
 	}
 }
 
-func TestKeyboardLayoutWidget_FormatLayout_ISO639_2(t *testing.T) {
+func TestWidget_FormatLayout_ISO639_2(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
 		ID:   "keyboard_layout",
@@ -205,7 +205,7 @@ func TestKeyboardLayoutWidget_FormatLayout_ISO639_2(t *testing.T) {
 		Format: "iso639-2",
 	}
 
-	widget, _ := NewKeyboardLayoutWidget(cfg)
+	w, _ := New(cfg)
 
 	tests := []struct {
 		lcid uint16
@@ -219,14 +219,14 @@ func TestKeyboardLayoutWidget_FormatLayout_ISO639_2(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := widget.formatLayout(tt.lcid)
+		got := w.formatLayout(tt.lcid)
 		if got != tt.want {
 			t.Errorf("formatLayout(0x%04X) = %s, want %s", tt.lcid, got, tt.want)
 		}
 	}
 }
 
-func TestKeyboardLayoutWidget_FormatLayout_Full(t *testing.T) {
+func TestWidget_FormatLayout_Full(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
 		ID:   "keyboard_layout",
@@ -237,7 +237,7 @@ func TestKeyboardLayoutWidget_FormatLayout_Full(t *testing.T) {
 		Format: "full",
 	}
 
-	widget, _ := NewKeyboardLayoutWidget(cfg)
+	w, _ := New(cfg)
 
 	tests := []struct {
 		lcid uint16
@@ -251,14 +251,14 @@ func TestKeyboardLayoutWidget_FormatLayout_Full(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := widget.formatLayout(tt.lcid)
+		got := w.formatLayout(tt.lcid)
 		if got != tt.want {
 			t.Errorf("formatLayout(0x%04X) = %s, want %s", tt.lcid, got, tt.want)
 		}
 	}
 }
 
-func TestKeyboardLayoutWidget_GetUpdateInterval(t *testing.T) {
+func TestWidget_GetUpdateInterval(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
 		ID:   "keyboard_layout",
@@ -268,15 +268,15 @@ func TestKeyboardLayoutWidget_GetUpdateInterval(t *testing.T) {
 		},
 	}
 
-	widget, _ := NewKeyboardLayoutWidget(cfg)
+	w, _ := New(cfg)
 
-	interval := widget.GetUpdateInterval()
+	interval := w.GetUpdateInterval()
 	if interval.Seconds() != 1.0 {
 		t.Errorf("GetUpdateInterval() = %v, want 1s", interval)
 	}
 }
 
-func TestKeyboardLayoutWidget_GetPosition(t *testing.T) {
+func TestWidget_GetPosition(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type: "keyboard_layout",
 		ID:   "keyboard_layout",
@@ -288,9 +288,9 @@ func TestKeyboardLayoutWidget_GetPosition(t *testing.T) {
 		},
 	}
 
-	widget, _ := NewKeyboardLayoutWidget(cfg)
+	w, _ := New(cfg)
 
-	pos := widget.GetPosition()
+	pos := w.GetPosition()
 	if pos.X != 10 || pos.Y != 20 || pos.W != 128 || pos.H != 40 {
 		t.Errorf("GetPosition() = %+v, want X:10 Y:20 W:128 H:40", pos)
 	}
