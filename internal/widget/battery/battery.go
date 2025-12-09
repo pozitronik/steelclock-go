@@ -1,4 +1,4 @@
-package widget
+package battery
 
 import (
 	"fmt"
@@ -10,13 +10,14 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
 func init() {
-	Register("battery", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewBatteryWidget(cfg)
+	widget.Register("battery", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
@@ -29,8 +30,8 @@ const (
 	indicatorModeNotifyBlink = "notify_blink"
 )
 
-// BatteryStatus represents the current battery state
-type BatteryStatus struct {
+// Status represents the current battery state
+type Status struct {
 	Percentage    int  // 0-100
 	IsCharging    bool // Currently charging
 	IsPluggedIn   bool // AC power connected
@@ -47,9 +48,9 @@ type indicatorState struct {
 	notifyUntil    time.Time     // when to stop showing in notify modes
 }
 
-// BatteryWidget displays battery level and power status
-type BatteryWidget struct {
-	*BaseWidget
+// Widget displays battery level and power status
+type Widget struct {
+	*widget.BaseWidget
 
 	// Display settings
 	displayMode    string // "battery", "text", "bar", "gauge", "graph"
@@ -109,14 +110,14 @@ type BatteryWidget struct {
 	lineColor int // 0-255 = line color
 
 	// Current state
-	currentStatus BatteryStatus
+	currentStatus Status
 	hasData       bool
 	mu            sync.RWMutex
 }
 
-// NewBatteryWidget creates a new battery widget
-func NewBatteryWidget(cfg config.WidgetConfig) (*BatteryWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new battery widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	helper := shared.NewConfigHelper(cfg)
 
 	// Display mode from widget-level Mode (like CPU widget)
@@ -239,7 +240,7 @@ func NewBatteryWidget(cfg config.WidgetConfig) (*BatteryWidget, error) {
 	}
 	iconSet := selectBatteryIconSet(iconDimension)
 
-	return &BatteryWidget{
+	return &Widget{
 		BaseWidget:        base,
 		displayMode:       displayMode,
 		showPercentage:    showPercentage,
@@ -277,7 +278,7 @@ func NewBatteryWidget(cfg config.WidgetConfig) (*BatteryWidget, error) {
 }
 
 // Update reads current battery status
-func (w *BatteryWidget) Update() error {
+func (w *Widget) Update() error {
 	status, err := getBatteryStatus()
 	if err != nil {
 		return err
@@ -322,7 +323,7 @@ func (w *BatteryWidget) Update() error {
 }
 
 // Render renders the battery widget
-func (w *BatteryWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	// Create canvas with background and border
 	img := w.CreateCanvas()
 	w.ApplyBorder(img)
@@ -359,7 +360,7 @@ func (w *BatteryWidget) Render() (image.Image, error) {
 }
 
 // getColorForLevel returns the appropriate color based on battery level
-func (w *BatteryWidget) getColorForLevel(percentage int) uint8 {
+func (w *Widget) getColorForLevel(percentage int) uint8 {
 	if percentage <= w.criticalThreshold {
 		return w.colorCritical
 	}
@@ -370,7 +371,7 @@ func (w *BatteryWidget) getColorForLevel(percentage int) uint8 {
 }
 
 // shouldShowIndicator returns whether the given indicator should be visible
-func (w *BatteryWidget) shouldShowIndicator(state *indicatorState, isActive bool) bool {
+func (w *Widget) shouldShowIndicator(state *indicatorState, isActive bool) bool {
 	if !isActive {
 		return false
 	}
@@ -387,7 +388,7 @@ func (w *BatteryWidget) shouldShowIndicator(state *indicatorState, isActive bool
 }
 
 // shouldBlinkIndicator returns whether the indicator should blink (be hidden this frame)
-func (w *BatteryWidget) shouldBlinkIndicator(state *indicatorState) bool {
+func (w *Widget) shouldBlinkIndicator(state *indicatorState) bool {
 	if state.mode == indicatorModeBlink || state.mode == indicatorModeNotifyBlink {
 		return time.Now().Second()%2 != 0
 	}
@@ -407,7 +408,7 @@ func selectBatteryIconSet(height int) *glyphs.GlyphSet {
 // getVisibleStatusIcon returns the icon name and its indicator state if visible
 // Priority: charging > economy > ac_power (only show one icon)
 // Returns empty string and nil if no indicator should be shown
-func (w *BatteryWidget) getVisibleStatusIcon(status BatteryStatus) (string, *indicatorState) {
+func (w *Widget) getVisibleStatusIcon(status Status) (string, *indicatorState) {
 	// Check in priority order: charging > economy > plugged
 	if w.shouldShowIndicator(&w.chargingState, status.IsCharging) {
 		return "charging", &w.chargingState
@@ -422,7 +423,7 @@ func (w *BatteryWidget) getVisibleStatusIcon(status BatteryStatus) (string, *ind
 }
 
 // drawStatusIcon draws a status icon with 1px black border for visibility
-func (w *BatteryWidget) drawStatusIcon(img *image.Gray, x, y int, status BatteryStatus) {
+func (w *Widget) drawStatusIcon(img *image.Gray, x, y int, status Status) {
 	iconName, state := w.getVisibleStatusIcon(status)
 	if iconName == "" || w.iconSet == nil || state == nil {
 		return
@@ -455,7 +456,7 @@ func formatMinutes(minutes int) string {
 }
 
 // buildTokenFormatter creates a TokenFormatter with all battery token values
-func (w *BatteryWidget) buildTokenFormatter(status BatteryStatus) *shared.TokenFormatter {
+func (w *Widget) buildTokenFormatter(status Status) *shared.TokenFormatter {
 	// Calculate status text (respects power_status visibility and blink)
 	statusText := ""
 	if w.shouldShowIndicator(&w.chargingState, status.IsCharging) && !w.shouldBlinkIndicator(&w.chargingState) {
@@ -528,7 +529,7 @@ func (w *BatteryWidget) buildTokenFormatter(status BatteryStatus) *shared.TokenF
 }
 
 // expandFormat expands all tokens in the format string
-func (w *BatteryWidget) expandFormat(format string, status BatteryStatus) string {
+func (w *Widget) expandFormat(format string, status Status) string {
 	formatter := w.buildTokenFormatter(status)
 	result := formatter.Format(format)
 
@@ -539,13 +540,13 @@ func (w *BatteryWidget) expandFormat(format string, status BatteryStatus) string
 }
 
 // renderText renders battery as text using format tokens
-func (w *BatteryWidget) renderText(img *image.Gray, status BatteryStatus) {
+func (w *Widget) renderText(img *image.Gray, status Status) {
 	text := w.expandFormat(w.textFormat, status)
 	bitmap.SmartDrawAlignedText(img, text, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 }
 
 // renderBar renders battery as a progress bar
-func (w *BatteryWidget) renderBar(img *image.Gray, status BatteryStatus) {
+func (w *Widget) renderBar(img *image.Gray, status Status) {
 	pos := w.GetPosition()
 	fillColor := w.getColorForLevel(status.Percentage)
 
@@ -593,7 +594,7 @@ func (w *BatteryWidget) renderBar(img *image.Gray, status BatteryStatus) {
 }
 
 // renderGauge renders battery as a semicircular gauge
-func (w *BatteryWidget) renderGauge(img *image.Gray, status BatteryStatus) {
+func (w *Widget) renderGauge(img *image.Gray, status Status) {
 	pos := w.GetPosition()
 
 	// Use the existing DrawGauge function
@@ -611,7 +612,7 @@ func (w *BatteryWidget) renderGauge(img *image.Gray, status BatteryStatus) {
 }
 
 // renderGraph renders battery history as a graph
-func (w *BatteryWidget) renderGraph(img *image.Gray, status BatteryStatus) {
+func (w *Widget) renderGraph(img *image.Gray, status Status) {
 	pos := w.GetPosition()
 
 	// Get history data and convert to float64
@@ -644,7 +645,7 @@ func (w *BatteryWidget) renderGraph(img *image.Gray, status BatteryStatus) {
 }
 
 // renderBattery renders battery as a large progressbar in battery shape
-func (w *BatteryWidget) renderBattery(img *image.Gray, status BatteryStatus) {
+func (w *Widget) renderBattery(img *image.Gray, status Status) {
 	pos := w.GetPosition()
 
 	if w.orientation == config.DirectionVertical {
@@ -655,7 +656,7 @@ func (w *BatteryWidget) renderBattery(img *image.Gray, status BatteryStatus) {
 }
 
 // renderBatteryHorizontal draws horizontal battery progressbar
-func (w *BatteryWidget) renderBatteryHorizontal(img *image.Gray, status BatteryStatus, pos config.PositionConfig) {
+func (w *Widget) renderBatteryHorizontal(img *image.Gray, status Status, pos config.PositionConfig) {
 	// Battery dimensions - leave room for the positive terminal nub
 	nubW := 4
 	batteryX := w.padding
@@ -701,7 +702,7 @@ func (w *BatteryWidget) renderBatteryHorizontal(img *image.Gray, status BatteryS
 }
 
 // renderBatteryVertical draws vertical battery progressbar
-func (w *BatteryWidget) renderBatteryVertical(img *image.Gray, status BatteryStatus, pos config.PositionConfig) {
+func (w *Widget) renderBatteryVertical(img *image.Gray, status Status, pos config.PositionConfig) {
 	// Battery dimensions - leave room for the positive terminal nub at top
 	nubH := 4
 	batteryX := w.padding
@@ -747,6 +748,6 @@ func (w *BatteryWidget) renderBatteryVertical(img *image.Gray, status BatterySta
 }
 
 // Stop cleans up resources
-func (w *BatteryWidget) Stop() {
+func (w *Widget) Stop() {
 	// Nothing to clean up
 }

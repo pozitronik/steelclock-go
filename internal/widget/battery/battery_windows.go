@@ -1,6 +1,6 @@
 //go:build windows
 
-package widget
+package battery
 
 import (
 	"syscall"
@@ -50,15 +50,15 @@ const (
 )
 
 // getBatteryStatus returns the current battery status on Windows
-func getBatteryStatus() (BatteryStatus, error) {
+func getBatteryStatus() (Status, error) {
 	var status systemPowerStatus
 
 	ret, _, err := procGetSystemPowerStatus.Call(uintptr(unsafe.Pointer(&status)))
 	if ret == 0 {
-		return BatteryStatus{}, err
+		return Status{}, err
 	}
 
-	result := BatteryStatus{
+	result := Status{
 		HasBattery:    status.BatteryFlag != batteryNoBattery && status.BatteryFlag != batteryUnknown,
 		IsPluggedIn:   status.ACLineStatus == acOnline,
 		IsCharging:    status.BatteryFlag&batteryCharging != 0,

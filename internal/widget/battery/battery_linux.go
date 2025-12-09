@@ -1,6 +1,6 @@
 //go:build linux
 
-package widget
+package battery
 
 import (
 	"os"
@@ -15,8 +15,8 @@ const powerSupplyPath = "/sys/class/power_supply"
 const acpiPlatformProfilePath = "/sys/firmware/acpi/platform_profile"
 
 // getBatteryStatus returns the current battery status on Linux
-func getBatteryStatus() (BatteryStatus, error) {
-	result := BatteryStatus{}
+func getBatteryStatus() (Status, error) {
+	result := Status{}
 
 	// Find battery device
 	entries, err := os.ReadDir(powerSupplyPath)
