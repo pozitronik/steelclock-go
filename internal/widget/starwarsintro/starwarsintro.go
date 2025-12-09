@@ -1,4 +1,4 @@
-package widget
+package starwarsintro
 
 import (
 	"image"
@@ -12,11 +12,12 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 )
 
 func init() {
-	Register("starwars_intro", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewStarWarsIntroWidget(cfg)
+	widget.Register("starwars_intro", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
@@ -31,16 +32,16 @@ const (
 	PhasePauseEnd
 )
 
-// BackgroundStar represents a static background star
-type BackgroundStar struct {
+// Star represents a static background star
+type Star struct {
 	x, y       int
 	brightness uint8
 }
 
-// StarWarsIntroWidget displays the iconic Star Wars opening crawl effect
+// Widget displays the iconic Star Wars opening crawl effect
 // with pre-intro text, shrinking logo, and perspective text crawl
-type StarWarsIntroWidget struct {
-	*BaseWidget
+type Widget struct {
+	*widget.BaseWidget
 	mu sync.Mutex
 
 	// Pre-intro configuration
@@ -66,7 +67,7 @@ type StarWarsIntroWidget struct {
 	starsEnabled    bool
 	starsCount      int
 	starsBrightness int
-	stars           []BackgroundStar
+	stars           []Star
 
 	// Crawl configuration
 	lines       []string // Text lines to display
@@ -97,11 +98,11 @@ type StarWarsIntroWidget struct {
 	height int
 }
 
-// NewStarWarsIntroWidget creates a new Star Wars intro widget
+// New creates a new Star Wars intro widget
 //
 //goland:noinspection DuplicatedCode
-func NewStarWarsIntroWidget(cfg config.WidgetConfig) (*StarWarsIntroWidget, error) {
-	base := NewBaseWidget(cfg)
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	pos := base.GetPosition()
 
 	// Default crawl text
@@ -260,9 +261,9 @@ func NewStarWarsIntroWidget(cfg config.WidgetConfig) (*StarWarsIntroWidget, erro
 	preIntroLines := strings.Split(preIntroText, "\n")
 
 	// Initialize background stars
-	stars := make([]BackgroundStar, starsCount)
+	stars := make([]Star, starsCount)
 	for i := range stars {
-		stars[i] = BackgroundStar{
+		stars[i] = Star{
 			x:          rand.Intn(pos.W),
 			y:          rand.Intn(pos.H),
 			brightness: uint8(rand.Intn(starsBrightness/2) + starsBrightness/2),
@@ -279,7 +280,7 @@ func NewStarWarsIntroWidget(cfg config.WidgetConfig) (*StarWarsIntroWidget, erro
 		}
 	}
 
-	w := &StarWarsIntroWidget{
+	w := &Widget{
 		BaseWidget: base,
 
 		preIntroEnabled: preIntroEnabled,
@@ -331,7 +332,7 @@ func NewStarWarsIntroWidget(cfg config.WidgetConfig) (*StarWarsIntroWidget, erro
 }
 
 // Update advances the animation
-func (w *StarWarsIntroWidget) Update() error {
+func (w *Widget) Update() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -411,7 +412,7 @@ func (w *StarWarsIntroWidget) Update() error {
 }
 
 // Render draws the current animation frame
-func (w *StarWarsIntroWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -443,7 +444,7 @@ func (w *StarWarsIntroWidget) Render() (image.Image, error) {
 }
 
 // renderPreIntro draws the pre-intro text with fade effect
-func (w *StarWarsIntroWidget) renderPreIntro(img *image.Gray, elapsed float64) {
+func (w *Widget) renderPreIntro(img *image.Gray, elapsed float64) {
 	var brightness float64
 
 	switch w.phase {
@@ -487,7 +488,7 @@ func (w *StarWarsIntroWidget) renderPreIntro(img *image.Gray, elapsed float64) {
 }
 
 // renderStars draws the background starfield
-func (w *StarWarsIntroWidget) renderStars(img *image.Gray) {
+func (w *Widget) renderStars(img *image.Gray) {
 	if !w.starsEnabled {
 		return
 	}
@@ -500,7 +501,7 @@ func (w *StarWarsIntroWidget) renderStars(img *image.Gray) {
 }
 
 // renderLogo draws the shrinking logo
-func (w *StarWarsIntroWidget) renderLogo(img *image.Gray) {
+func (w *Widget) renderLogo(img *image.Gray) {
 	if w.logoScale < w.logoFinalScale {
 		return
 	}
@@ -571,14 +572,14 @@ func (w *StarWarsIntroWidget) renderLogo(img *image.Gray) {
 }
 
 // renderCrawl draws the text crawl with perspective and slant
-func (w *StarWarsIntroWidget) renderCrawl(img *image.Gray) {
+func (w *Widget) renderCrawl(img *image.Gray) {
 	for i, line := range w.lines {
 		w.drawPerspectiveLine(img, line, i)
 	}
 }
 
 // drawPerspectiveLine draws a single line with perspective, fade, and radial slant effects
-func (w *StarWarsIntroWidget) drawPerspectiveLine(img *image.Gray, text string, lineIndex int) {
+func (w *Widget) drawPerspectiveLine(img *image.Gray, text string, lineIndex int) {
 	// Calculate base Y position for this line
 	// Text starts at bottom of screen and scrolls up
 	baseY := float64(w.height) + float64(lineIndex*w.lineSpacing) - w.scrollOffset
@@ -659,7 +660,7 @@ func (w *StarWarsIntroWidget) drawPerspectiveLine(img *image.Gray, text string, 
 }
 
 // drawTextCompact draws text with half-width spaces and narrow punctuation
-func (w *StarWarsIntroWidget) drawTextCompact(img *image.Gray, text string, x, y int, brightness uint8) {
+func (w *Widget) drawTextCompact(img *image.Gray, text string, x, y int, brightness uint8) {
 	halfWidth := w.charWidth / 2
 	cursorX := x
 	for _, ch := range text {
@@ -677,7 +678,7 @@ func (w *StarWarsIntroWidget) drawTextCompact(img *image.Gray, text string, x, y
 }
 
 // drawTextScaled draws text at a specific scale (for logo)
-func (w *StarWarsIntroWidget) drawTextScaled(img *image.Gray, text string, x, y int, brightness uint8, scale float64) {
+func (w *Widget) drawTextScaled(img *image.Gray, text string, x, y int, brightness uint8, scale float64) {
 	for i, ch := range text {
 		if ch == ' ' {
 			continue
@@ -689,7 +690,7 @@ func (w *StarWarsIntroWidget) drawTextScaled(img *image.Gray, text string, x, y 
 
 // drawChar draws a single character at the specified position with scaling
 // When scale > 1, fills rectangles to avoid gaps
-func (w *StarWarsIntroWidget) drawChar(img *image.Gray, x, y int, ch rune, brightness uint8, scale float64) {
+func (w *Widget) drawChar(img *image.Gray, x, y int, ch rune, brightness uint8, scale float64) {
 	glyph := glyphs.GetGlyph(w.glyphSet, ch)
 	if glyph == nil {
 		return
@@ -719,7 +720,7 @@ func (w *StarWarsIntroWidget) drawChar(img *image.Gray, x, y int, ch rune, brigh
 
 // drawCharSlanted draws a character with italic/slant effect
 // The slant creates a shear transformation where top of character shifts right
-func (w *StarWarsIntroWidget) drawCharSlanted(img *image.Gray, x, y int, ch rune, brightness uint8, scale float64, slantDegrees float64) {
+func (w *Widget) drawCharSlanted(img *image.Gray, x, y int, ch rune, brightness uint8, scale float64, slantDegrees float64) {
 	glyph := glyphs.GetGlyph(w.glyphSet, ch)
 	if glyph == nil {
 		return
@@ -765,7 +766,7 @@ func (w *StarWarsIntroWidget) drawCharSlanted(img *image.Gray, x, y int, ch rune
 }
 
 // getCharWidth returns the width of a character in the internal font
-func (w *StarWarsIntroWidget) getCharWidth(ch rune) int {
+func (w *Widget) getCharWidth(ch rune) int {
 	glyph := glyphs.GetGlyph(w.glyphSet, ch)
 	if glyph == nil {
 		return w.charWidth

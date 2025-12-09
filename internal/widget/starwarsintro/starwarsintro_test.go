@@ -1,4 +1,4 @@
-package widget
+package starwarsintro
 
 import (
 	"testing"
@@ -7,12 +7,12 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
-func TestNewStarWarsIntroWidget(t *testing.T) {
+func TestNew(t *testing.T) {
 	tests := []struct {
 		name        string
 		cfg         config.WidgetConfig
 		wantErr     bool
-		checkValues func(t *testing.T, w *StarWarsIntroWidget)
+		checkValues func(t *testing.T, w *Widget)
 	}{
 		{
 			name: "default configuration",
@@ -21,7 +21,7 @@ func TestNewStarWarsIntroWidget(t *testing.T) {
 				Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 			},
 			wantErr: false,
-			checkValues: func(t *testing.T, w *StarWarsIntroWidget) {
+			checkValues: func(t *testing.T, w *Widget) {
 				// Check default phases enabled
 				if !w.preIntroEnabled {
 					t.Error("preIntroEnabled should be true by default")
@@ -63,7 +63,7 @@ func TestNewStarWarsIntroWidget(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			checkValues: func(t *testing.T, w *StarWarsIntroWidget) {
+			checkValues: func(t *testing.T, w *Widget) {
 				if w.preIntroEnabled {
 					t.Error("preIntroEnabled should be false")
 				}
@@ -87,7 +87,7 @@ func TestNewStarWarsIntroWidget(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			checkValues: func(t *testing.T, w *StarWarsIntroWidget) {
+			checkValues: func(t *testing.T, w *Widget) {
 				if w.phase != PhaseCrawl {
 					t.Errorf("phase = %d, want PhaseCrawl", w.phase)
 				}
@@ -109,7 +109,7 @@ func TestNewStarWarsIntroWidget(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			checkValues: func(t *testing.T, w *StarWarsIntroWidget) {
+			checkValues: func(t *testing.T, w *Widget) {
 				if w.preIntroText != "Custom pre-intro" {
 					t.Errorf("preIntroText = %s, want 'Custom pre-intro'", w.preIntroText)
 				}
@@ -137,7 +137,7 @@ func TestNewStarWarsIntroWidget(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			checkValues: func(t *testing.T, w *StarWarsIntroWidget) {
+			checkValues: func(t *testing.T, w *Widget) {
 				if w.logoText != "CUSTOM\nLOGO" {
 					t.Errorf("logoText = %s, want 'CUSTOM\\nLOGO'", w.logoText)
 				}
@@ -165,7 +165,7 @@ func TestNewStarWarsIntroWidget(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			checkValues: func(t *testing.T, w *StarWarsIntroWidget) {
+			checkValues: func(t *testing.T, w *Widget) {
 				if w.starsCount != 100 {
 					t.Errorf("starsCount = %d, want 100", w.starsCount)
 				}
@@ -189,7 +189,7 @@ func TestNewStarWarsIntroWidget(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			checkValues: func(t *testing.T, w *StarWarsIntroWidget) {
+			checkValues: func(t *testing.T, w *Widget) {
 				if w.starsEnabled {
 					t.Error("starsEnabled should be false")
 				}
@@ -205,7 +205,7 @@ func TestNewStarWarsIntroWidget(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			checkValues: func(t *testing.T, w *StarWarsIntroWidget) {
+			checkValues: func(t *testing.T, w *Widget) {
 				if w.slant != 25.0 {
 					t.Errorf("slant = %f, want 25.0", w.slant)
 				}
@@ -221,7 +221,7 @@ func TestNewStarWarsIntroWidget(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			checkValues: func(t *testing.T, w *StarWarsIntroWidget) {
+			checkValues: func(t *testing.T, w *Widget) {
 				if len(w.lines) != 2 {
 					t.Errorf("lines count = %d, want 2", len(w.lines))
 				}
@@ -240,7 +240,7 @@ func TestNewStarWarsIntroWidget(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			checkValues: func(t *testing.T, w *StarWarsIntroWidget) {
+			checkValues: func(t *testing.T, w *Widget) {
 				if w.loop {
 					t.Error("loop should be false")
 				}
@@ -250,9 +250,9 @@ func TestNewStarWarsIntroWidget(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			w, err := NewStarWarsIntroWidget(tt.cfg)
+			w, err := New(tt.cfg)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewStarWarsIntroWidget() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if err == nil && tt.checkValues != nil {
@@ -267,7 +267,7 @@ func boolPtr(b bool) *bool {
 	return &b
 }
 
-func TestStarWarsIntroWidget_Update_PreIntroPhase(t *testing.T) {
+func TestWidget_Update_PreIntroPhase(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "starwars_intro",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -283,7 +283,7 @@ func TestStarWarsIntroWidget_Update_PreIntroPhase(t *testing.T) {
 		},
 	}
 
-	w, err := NewStarWarsIntroWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -305,7 +305,7 @@ func TestStarWarsIntroWidget_Update_PreIntroPhase(t *testing.T) {
 	}
 }
 
-func TestStarWarsIntroWidget_Update_LogoPhase(t *testing.T) {
+func TestWidget_Update_LogoPhase(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "starwars_intro",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -320,7 +320,7 @@ func TestStarWarsIntroWidget_Update_LogoPhase(t *testing.T) {
 		},
 	}
 
-	w, err := NewStarWarsIntroWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -347,13 +347,13 @@ func TestStarWarsIntroWidget_Update_LogoPhase(t *testing.T) {
 	}
 }
 
-func TestStarWarsIntroWidget_Render(t *testing.T) {
+func TestWidget_Render(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "starwars_intro",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 	}
 
-	w, err := NewStarWarsIntroWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -369,13 +369,13 @@ func TestStarWarsIntroWidget_Render(t *testing.T) {
 	}
 }
 
-func TestStarWarsIntroWidget_RenderAllPhases(t *testing.T) {
+func TestWidget_RenderAllPhases(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "starwars_intro",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 	}
 
-	w, err := NewStarWarsIntroWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -408,7 +408,7 @@ func TestStarWarsIntroWidget_RenderAllPhases(t *testing.T) {
 	}
 }
 
-func TestStarWarsIntroWidget_PhaseProgression(t *testing.T) {
+func TestWidget_PhaseProgression(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "starwars_intro",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -429,7 +429,7 @@ func TestStarWarsIntroWidget_PhaseProgression(t *testing.T) {
 		},
 	}
 
-	w, err := NewStarWarsIntroWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -451,7 +451,7 @@ func TestStarWarsIntroWidget_PhaseProgression(t *testing.T) {
 	}
 }
 
-func TestStarWarsIntroWidget_Stars(t *testing.T) {
+func TestWidget_Stars(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "starwars_intro",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -463,7 +463,7 @@ func TestStarWarsIntroWidget_Stars(t *testing.T) {
 		},
 	}
 
-	w, err := NewStarWarsIntroWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -487,7 +487,7 @@ func TestStarWarsIntroWidget_Stars(t *testing.T) {
 	}
 }
 
-func TestStarWarsIntroWidget_LogoLines(t *testing.T) {
+func TestWidget_LogoLines(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "starwars_intro",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -498,7 +498,7 @@ func TestStarWarsIntroWidget_LogoLines(t *testing.T) {
 		},
 	}
 
-	w, err := NewStarWarsIntroWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -515,7 +515,7 @@ func TestStarWarsIntroWidget_LogoLines(t *testing.T) {
 	}
 }
 
-func TestStarWarsIntroWidget_TotalHeight(t *testing.T) {
+func TestWidget_TotalHeight(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "starwars_intro",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -525,7 +525,7 @@ func TestStarWarsIntroWidget_TotalHeight(t *testing.T) {
 		},
 	}
 
-	w, err := NewStarWarsIntroWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -537,13 +537,13 @@ func TestStarWarsIntroWidget_TotalHeight(t *testing.T) {
 	}
 }
 
-func TestStarWarsIntroWidget_GlyphSetInitialized(t *testing.T) {
+func TestWidget_GlyphSetInitialized(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "starwars_intro",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 	}
 
-	w, err := NewStarWarsIntroWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -553,13 +553,13 @@ func TestStarWarsIntroWidget_GlyphSetInitialized(t *testing.T) {
 	}
 }
 
-func TestStarWarsIntroWidget_GetCharWidth(t *testing.T) {
+func TestWidget_GetCharWidth(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "starwars_intro",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
 	}
 
-	w, err := NewStarWarsIntroWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -577,7 +577,7 @@ func TestStarWarsIntroWidget_GetCharWidth(t *testing.T) {
 	}
 }
 
-func TestStarWarsIntroWidget_NoLoop(t *testing.T) {
+func TestWidget_NoLoop(t *testing.T) {
 	cfg := config.WidgetConfig{
 		Type:     "starwars_intro",
 		Position: config.PositionConfig{X: 0, Y: 0, W: 128, H: 40},
@@ -595,7 +595,7 @@ func TestStarWarsIntroWidget_NoLoop(t *testing.T) {
 		},
 	}
 
-	w, err := NewStarWarsIntroWidget(cfg)
+	w, err := New(cfg)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
