@@ -7,6 +7,8 @@ const (
 )
 
 // Audio visualizer frequency scale constants
+//
+//goland:noinspection GoUnusedConst
 const (
 	AudioFrequencyScaleLogarithmic = "logarithmic"
 	AudioFrequencyScaleLinear      = "linear"
