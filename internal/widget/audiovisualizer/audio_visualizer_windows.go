@@ -102,16 +102,27 @@ type Widget struct {
 
 // New creates a new audio visualizer widget
 func New(cfg config.WidgetConfig) (widget.Widget, error) {
-	// Get shared audio capture instance
-	capture, err := GetSharedAudioCapture()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get shared audio capture: %w", err)
+	// Set default update interval for audio visualizer (33ms = ~30fps)
+	if cfg.UpdateInterval <= 0 {
+		cfg.UpdateInterval = 0.033
 	}
 
-	// Get shared volume reader for volume compensation
-	volumeReader, err := wcautil.GetSharedVolumeReader()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get shared volume reader: %w", err)
+	// Create base widget first (needed for error widget dimensions)
+	base := widget.NewBaseWidget(cfg)
+	pos := base.GetPosition()
+
+	// Try to get shared audio capture instance - don't fail if unavailable
+	capture, captureErr := GetSharedAudioCapture()
+	if captureErr != nil {
+		log.Printf("[AUDIO-VIS-WIN] Audio capture error: %v", captureErr)
+	}
+
+	// Try to get shared volume reader for volume compensation - optional
+	var volumeReader *wcautil.VolumeReaderWCA
+	if reader, err := wcautil.GetSharedVolumeReader(); err == nil {
+		volumeReader = reader
+	} else {
+		log.Printf("[AUDIO-VIS-WIN] Volume reader unavailable (optional): %v", err)
 	}
 
 	// Subscribe to device change notifications
@@ -120,13 +131,12 @@ func New(cfg config.WidgetConfig) (widget.Widget, error) {
 		deviceNotifyChan = notifier.Subscribe()
 	}
 
-	// Set default update interval for audio visualizer (33ms = ~30fps)
-	if cfg.UpdateInterval <= 0 {
-		cfg.UpdateInterval = 0.033
+	// Check if we should enter error state immediately
+	var errorWidget *widget.ErrorWidget
+	if capture == nil || captureErr != nil {
+		errorWidget = widget.NewErrorWidget(pos.W, pos.H, "NO AUDIO")
+		log.Printf("[AUDIO-VIS-WIN] Entering error state: audio capture unavailable")
 	}
-
-	// Create base widget
-	base := widget.NewBaseWidget(cfg)
 
 	// Display mode
 	displayMode := cfg.Mode
@@ -282,6 +292,7 @@ func New(cfg config.WidgetConfig) (widget.Widget, error) {
 		barEnergyWindowSize:    windowSize,
 		audioData:              make([]float32, 0, 4096),
 		errorThreshold:         errorThreshold,
+		errorWidget:            errorWidget,
 		startupTime:            time.Now(),
 		deviceNotifyChan:       deviceNotifyChan,
 	}
