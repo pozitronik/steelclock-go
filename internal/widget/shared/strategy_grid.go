@@ -75,7 +75,7 @@ func calculateGridLayout(numCells, totalWidth, totalHeight, margin int) (cols, r
 // GridTextDisplayStrategy renders per-core metrics as text in a grid.
 type GridTextDisplayStrategy struct{}
 
-func (s *GridTextDisplayStrategy) Render(img *image.Gray, data GridMetricData, renderer *MetricRenderer) {
+func (s *GridTextDisplayStrategy) Render(img *image.Gray, data GridMetricData, _ *MetricRenderer) {
 	numCells := len(data.Values)
 	if numCells == 0 {
 		return
