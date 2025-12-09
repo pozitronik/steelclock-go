@@ -21,6 +21,16 @@ func init() {
 	})
 }
 
+// Render mode constants
+const (
+	renderModeNormal    = "normal"
+	renderModeContrast  = "contrast"
+	renderModePosterize = "posterize"
+	renderModeThreshold = "threshold"
+	renderModeDither    = "dither"
+	renderModeGamma     = "gamma"
+)
+
 // Package-level state to track if DOOM has been run in this process.
 // The gore library uses global state and cannot be safely restarted.
 var (
@@ -86,7 +96,7 @@ func NewDoomWidget(cfg config.WidgetConfig) (*DoomWidget, error) {
 	}
 
 	// Render mode settings with defaults
-	renderMode := "normal"
+	renderMode := renderModeNormal
 	posterizeLevels := 4
 	thresholdValue := 128
 	gamma := 1.5
@@ -313,17 +323,17 @@ func (w *DoomWidget) DrawFrame(img *image.RGBA) {
 			var finalGray uint8
 
 			switch w.renderMode {
-			case "contrast":
+			case renderModeContrast:
 				finalGray = w.applyContrast(gray, minGray, maxGray)
-			case "posterize":
+			case renderModePosterize:
 				finalGray = w.applyPosterize(gray)
-			case "threshold":
+			case renderModeThreshold:
 				finalGray = w.applyThreshold(gray)
-			case "dither":
+			case renderModeDither:
 				finalGray = w.applyDither(gray, x, y)
-			case "gamma":
+			case renderModeGamma:
 				finalGray = w.applyGamma(gray, minGray, maxGray)
-			default: // "normal"
+			default: // renderModeNormal
 				finalGray = gray
 			}
 

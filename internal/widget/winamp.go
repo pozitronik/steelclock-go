@@ -21,6 +21,12 @@ func init() {
 	})
 }
 
+// Placeholder mode constants
+const (
+	winampPlaceholderModeIcon = "icon"
+	winampPlaceholderModeText = "text"
+)
+
 // WinampWidget displays information from Winamp media player
 type WinampWidget struct {
 	*BaseWidget
@@ -81,7 +87,7 @@ func NewWinampWidget(cfg config.WidgetConfig) (*WinampWidget, error) {
 	}
 
 	// Extract Winamp-specific settings (placeholder)
-	placeholderMode := "icon"
+	placeholderMode := winampPlaceholderModeIcon
 	placeholderText := "No Winamp"
 
 	if cfg.Winamp != nil {
@@ -365,7 +371,7 @@ func (w *WinampWidget) renderPlaceholder(img *image.Gray) {
 	pos := w.GetPosition()
 
 	switch w.placeholderMode {
-	case "icon":
+	case winampPlaceholderModeIcon:
 		// Draw Winamp icon centered
 		iconSet := glyphs.WinampIcons8x8
 		icon := glyphs.GetIcon(iconSet, "winamp")
@@ -375,7 +381,7 @@ func (w *WinampWidget) renderPlaceholder(img *image.Gray) {
 			y := (pos.H - icon.Height) / 2
 			glyphs.DrawGlyph(img, icon, x, y, color.Gray{Y: 255})
 		}
-	case "text":
+	case winampPlaceholderModeText:
 		bitmap.SmartDrawAlignedText(img, w.placeholderText, w.fontFace, w.fontName, w.horizAlign, w.vertAlign, w.padding)
 	}
 }

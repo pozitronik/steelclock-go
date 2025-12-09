@@ -18,6 +18,13 @@ func init() {
 	})
 }
 
+// Restart mode constants
+const (
+	restartModeReset  = "reset"
+	restartModeInject = "inject"
+	restartModeRandom = "random"
+)
+
 // GameOfLifeWidget implements Conway's Game of Life cellular automaton
 type GameOfLifeWidget struct {
 	*BaseWidget
@@ -108,9 +115,9 @@ func NewGameOfLifeWidget(cfg config.WidgetConfig) (*GameOfLifeWidget, error) {
 	trailDecay := 30
 	cellColor := uint8(255)
 	randomDensity := 0.3
-	initialPattern := "random"
-	restartTimeout := 3.0  // Default: restart after 3 seconds
-	restartMode := "reset" // Default: reset to initial pattern
+	initialPattern := restartModeRandom
+	restartTimeout := 3.0           // Default: restart after 3 seconds
+	restartMode := restartModeReset // Default: reset to initial pattern
 
 	if cfg.GameOfLife != nil {
 		if cfg.GameOfLife.Rules != "" {
@@ -234,13 +241,13 @@ func (w *GameOfLifeWidget) injectRandomCells() {
 // performRestart handles restart based on restart_mode
 func (w *GameOfLifeWidget) performRestart() {
 	switch w.restartMode {
-	case "inject":
+	case restartModeInject:
 		// Add new cells to existing grid
 		w.injectRandomCells()
-	case "random":
+	case restartModeRandom:
 		// Always use random pattern
-		w.setPattern("random")
-	default: // "reset"
+		w.setPattern(restartModeRandom)
+	default: // restartModeReset
 		// Reset to initial pattern
 		w.setPattern(w.initialPattern)
 	}
@@ -255,7 +262,7 @@ func (w *GameOfLifeWidget) setPattern(pattern string) {
 		}
 	}
 
-	if pattern == "random" {
+	if pattern == restartModeRandom {
 		// Random initialization
 		for y := 0; y < w.gridHeight; y++ {
 			for x := 0; x < w.gridWidth; x++ {
@@ -275,7 +282,7 @@ func (w *GameOfLifeWidget) setPattern(pattern string) {
 	coords, ok := gameOfLifePatterns[pattern]
 	if !ok {
 		// Default to random if pattern not found
-		w.setPattern("random")
+		w.setPattern(restartModeRandom)
 		return
 	}
 

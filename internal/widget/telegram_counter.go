@@ -21,6 +21,12 @@ func init() {
 	})
 }
 
+// Display mode constants
+const (
+	telegramCounterModeBadge = "badge"
+	telegramCounterModeText  = "text"
+)
+
 // TelegramCounterWidget displays unread message count
 type TelegramCounterWidget struct {
 	*BaseWidget
@@ -81,7 +87,7 @@ func NewTelegramCounterWidget(cfg config.WidgetConfig) (*TelegramCounterWidget, 
 	// Parse counter-specific settings from flat config
 	mode := cfg.Mode
 	if mode == "" {
-		mode = "badge" // default mode
+		mode = telegramCounterModeBadge // default mode
 	}
 
 	blinkMode := shared.BlinkNever
@@ -221,13 +227,13 @@ func (w *TelegramCounterWidget) Render() (image.Image, error) {
 // renderUnreadCount renders the unread count in the configured format
 func (w *TelegramCounterWidget) renderUnreadCount(img *image.Gray) {
 	switch w.mode {
-	case "badge":
+	case telegramCounterModeBadge:
 		// Draw Telegram icon (paper airplane) centered
 		w.drawTelegramIcon(img, (w.width-w.getIconSize())/2, (w.height-w.getIconSize())/2)
-	case "text":
+	case telegramCounterModeText:
 		// Formatted text with tokens (may include {icon})
 		w.renderFormattedText(img)
-	default: // badge by default
+	default: // telegramCounterModeBadge by default
 		w.drawTelegramIcon(img, (w.width-w.getIconSize())/2, (w.height-w.getIconSize())/2)
 	}
 }
@@ -261,7 +267,7 @@ func (w *TelegramCounterWidget) formatText() string {
 // getIconSize returns the icon size based on actual text height
 func (w *TelegramCounterWidget) getIconSize() int {
 	// For text mode, measure actual text height
-	if w.mode == "text" {
+	if w.mode == telegramCounterModeText {
 		_, textHeight := bitmap.SmartMeasureText("X", w.fontFace, w.fontName)
 		if textHeight > 0 {
 			return textHeight

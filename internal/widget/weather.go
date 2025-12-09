@@ -21,6 +21,18 @@ func init() {
 	})
 }
 
+// Weather provider constants
+const (
+	weatherProviderOpenWeatherMap = "openweathermap"
+	weatherProviderOpenMeteo      = "open-meteo"
+)
+
+// Weather unit constants
+const (
+	weatherUnitsMetric   = "metric"
+	weatherUnitsImperial = "imperial"
+)
+
 // WeatherWidget displays weather information using a format string
 type WeatherWidget struct {
 	*BaseWidget
@@ -74,12 +86,12 @@ func NewWeatherWidget(cfg config.WidgetConfig) (*WeatherWidget, error) {
 	padding := helper.GetPadding()
 
 	// Weather-specific settings with defaults
-	providerName := "open-meteo"
+	providerName := weatherProviderOpenMeteo
 	apiKey := ""
 	city := ""
 	lat := 0.0
 	lon := 0.0
-	units := "metric"
+	units := weatherUnitsMetric
 	iconSize := 16
 	formatCycle := []string{"{icon} {temp}"}
 	cycleInterval := 10
@@ -149,7 +161,7 @@ func NewWeatherWidget(cfg config.WidgetConfig) (*WeatherWidget, error) {
 	}
 
 	// Validate configuration
-	if providerName == "openweathermap" && apiKey == "" {
+	if providerName == weatherProviderOpenWeatherMap && apiKey == "" {
 		return nil, fmt.Errorf("api_key is required for OpenWeatherMap provider")
 	}
 
@@ -161,7 +173,7 @@ func NewWeatherWidget(cfg config.WidgetConfig) (*WeatherWidget, error) {
 	}
 
 	// Open-Meteo requires coordinates
-	if providerName == "open-meteo" && hasCity && !hasCoords {
+	if providerName == weatherProviderOpenMeteo && hasCity && !hasCoords {
 		return nil, fmt.Errorf("open-meteo provider requires lat/lon coordinates; city name is only supported with openweathermap")
 	}
 
@@ -206,9 +218,9 @@ func NewWeatherWidget(cfg config.WidgetConfig) (*WeatherWidget, error) {
 	// Create the weather provider
 	var weatherProvider WeatherProvider
 	switch providerName {
-	case "openweathermap":
+	case weatherProviderOpenWeatherMap:
 		weatherProvider = NewOpenWeatherMapProvider(providerCfg, apiKey, httpClient)
-	case "open-meteo":
+	case weatherProviderOpenMeteo:
 		weatherProvider = NewOpenMeteoProvider(providerCfg, httpClient)
 	default:
 		return nil, fmt.Errorf("unknown weather provider: %s", providerName)

@@ -14,6 +14,7 @@ import (
 	"github.com/mjibson/go-dsp/fft"
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 func init() {
@@ -144,17 +145,17 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 	// Display mode
 	displayMode := cfg.Mode
 	if displayMode == "" {
-		displayMode = "spectrum"
+		displayMode = shared.AudioDisplayModeSpectrum
 	}
 
 	// Spectrum settings
 	barCount := 32
-	frequencyScale := "logarithmic"
+	frequencyScale := shared.AudioFrequencyScaleLogarithmic
 	frequencyCompensation := true
 	spectrumDynamicScaling := 0.0
 	spectrumDynamicWindow := 0.5
 	smoothing := 0.5
-	barStyle := "bars"
+	barStyle := shared.AudioBarStyleBars
 
 	if cfg.Spectrum != nil {
 		if cfg.Spectrum.Bars > 0 {
@@ -197,8 +198,8 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 
 	// Oscilloscope settings
 	sampleCount := 256
-	channelMode := "mono"
-	waveformStyle := "line"
+	channelMode := shared.AudioChannelModeMono
+	waveformStyle := shared.AudioWaveformStyleLine
 
 	if cfg.Oscilloscope != nil {
 		if cfg.Oscilloscope.Samples > 0 {
@@ -219,7 +220,7 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 	rightChannelColor := 200
 
 	switch displayMode {
-	case "spectrum":
+	case shared.AudioDisplayModeSpectrum:
 		if cfg.Spectrum != nil && cfg.Spectrum.Colors != nil {
 			if cfg.Spectrum.Colors.Fill != nil {
 				fillColor = *cfg.Spectrum.Colors.Fill
@@ -231,7 +232,7 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 				rightChannelColor = *cfg.Spectrum.Colors.Right
 			}
 		}
-	case "oscilloscope":
+	case shared.AudioDisplayModeOscilloscope:
 		if cfg.Oscilloscope != nil && cfg.Oscilloscope.Colors != nil {
 			if cfg.Oscilloscope.Colors.Fill != nil {
 				fillColor = *cfg.Oscilloscope.Colors.Fill
@@ -357,7 +358,7 @@ func (w *AudioVisualizerWidget) Update() error {
 	}
 
 	// Process for spectrum mode
-	if w.displayMode == "spectrum" && len(w.audioData) >= 2048 {
+	if w.displayMode == shared.AudioDisplayModeSpectrum && len(w.audioData) >= 2048 {
 		w.updateSpectrum(w.audioData)
 	}
 
@@ -418,7 +419,7 @@ func (w *AudioVisualizerWidget) updateSpectrum(samples []float32) {
 
 	// Map to bars
 	barCount := len(w.spectrumData)
-	if w.frequencyScale == "logarithmic" {
+	if w.frequencyScale == shared.AudioFrequencyScaleLogarithmic {
 		w.mapFrequenciesLogarithmic(magnitudes, barCount)
 	} else {
 		w.mapFrequenciesLinear(magnitudes, barCount)
@@ -556,9 +557,9 @@ func (w *AudioVisualizerWidget) Render() (image.Image, error) {
 	// Create canvas with background
 	img := w.CreateCanvas()
 
-	if w.displayMode == "spectrum" {
+	if w.displayMode == shared.AudioDisplayModeSpectrum {
 		w.renderSpectrum(img)
-	} else if w.displayMode == "oscilloscope" {
+	} else if w.displayMode == shared.AudioDisplayModeOscilloscope {
 		w.renderOscilloscope(img)
 	}
 
@@ -578,7 +579,7 @@ func (w *AudioVisualizerWidget) renderSpectrum(img *image.Gray) {
 	height := w.position.H
 	barWidth := width / barCount
 	gap := 0
-	if w.barStyle == "bars" && barWidth > 2 {
+	if w.barStyle == shared.AudioBarStyleBars && barWidth > 2 {
 		gap = 1
 	}
 
@@ -599,7 +600,7 @@ func (w *AudioVisualizerWidget) renderSpectrum(img *image.Gray) {
 		x := i * barWidth
 		y := height - barHeight
 
-		if w.barStyle == "bars" {
+		if w.barStyle == shared.AudioBarStyleBars {
 			for py := y; py < height; py++ {
 				for px := x; px < x+barWidth-gap && px < width; px++ {
 					img.SetGray(px, py, color.Gray{Y: w.fillColor})
@@ -670,9 +671,9 @@ func (w *AudioVisualizerWidget) renderOscilloscope(img *image.Gray) {
 			y2 = height - 1
 		}
 
-		if w.waveformStyle == "line" {
+		if w.waveformStyle == shared.AudioWaveformStyleLine {
 			bitmap.DrawLine(img, x1, y1, x2, y2, color.Gray{Y: w.fillColor})
-		} else if w.waveformStyle == "filled" {
+		} else if w.waveformStyle == shared.AudioWaveformStyleFilled {
 			if y1 < centerY {
 				for y := y1; y <= centerY && y < height; y++ {
 					if x1 >= 0 && x1 < width {

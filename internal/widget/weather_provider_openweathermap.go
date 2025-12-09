@@ -27,7 +27,7 @@ func NewOpenWeatherMapProvider(cfg WeatherProviderConfig, apiKey string, client 
 
 // Name returns the provider name
 func (p *OpenWeatherMapProvider) Name() string {
-	return "openweathermap"
+	return weatherProviderOpenWeatherMap
 }
 
 // FetchWeather fetches weather data from OpenWeatherMap API

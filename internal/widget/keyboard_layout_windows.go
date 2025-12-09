@@ -19,6 +19,13 @@ func init() {
 	})
 }
 
+// Display format constants
+const (
+	displayFormatISO6391 = "iso639-1"
+	displayFormatISO6392 = "iso639-2"
+	displayFormatFull    = "full"
+)
+
 var (
 	getKeyboardLayout        = user32.NewProc("GetKeyboardLayout")
 	getForegroundWindow      = user32.NewProc("GetForegroundWindow")
@@ -135,11 +142,11 @@ func NewKeyboardLayoutWidget(cfg config.WidgetConfig) (*KeyboardLayoutWidget, er
 	// Display format from config
 	displayFormat := cfg.Format
 	if displayFormat == "" {
-		displayFormat = "iso639-1"
+		displayFormat = displayFormatISO6391
 	}
 
 	// Validate display format
-	if displayFormat != "iso639-1" && displayFormat != "iso639-2" && displayFormat != "full" {
+	if displayFormat != displayFormatISO6391 && displayFormat != displayFormatISO6392 && displayFormat != displayFormatFull {
 		return nil, fmt.Errorf("invalid format: %s (must be iso639-1, iso639-2, or full)", displayFormat)
 	}
 
@@ -234,11 +241,11 @@ func (w *KeyboardLayoutWidget) formatLayout(lcid uint16) string {
 	}
 
 	switch w.displayFormat {
-	case "iso639-2":
+	case displayFormatISO6392:
 		return info.iso6392
-	case "full":
+	case displayFormatFull:
 		return info.name
-	default: // "iso639-1"
+	default: // displayFormatISO6391
 		return info.iso6391
 	}
 }

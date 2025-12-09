@@ -19,6 +19,7 @@ import (
 	"github.com/moutend/go-wca/pkg/wca"
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 func init() {
@@ -128,17 +129,17 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 	// Display mode
 	displayMode := cfg.Mode
 	if displayMode == "" {
-		displayMode = "spectrum"
+		displayMode = shared.AudioDisplayModeSpectrum
 	}
 
 	// Spectrum settings
 	barCount := 32
-	frequencyScale := "logarithmic"
+	frequencyScale := shared.AudioFrequencyScaleLogarithmic
 	frequencyCompensation := true
 	spectrumDynamicScaling := 0.0
 	spectrumDynamicWindow := 0.5
 	smoothing := 0.5
-	barStyle := "bars"
+	barStyle := shared.AudioBarStyleBars
 
 	if cfg.Spectrum != nil {
 		if cfg.Spectrum.Bars > 0 {
@@ -183,8 +184,8 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 
 	// Oscilloscope settings
 	sampleCount := 256
-	channelMode := "mono"
-	waveformStyle := "line"
+	channelMode := shared.AudioChannelModeMono
+	waveformStyle := shared.AudioWaveformStyleLine
 
 	if cfg.Oscilloscope != nil {
 		if cfg.Oscilloscope.Samples > 0 {
@@ -212,7 +213,7 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 	rightChannelColor := 200
 
 	switch displayMode {
-	case "spectrum":
+	case shared.AudioDisplayModeSpectrum:
 		if cfg.Spectrum != nil && cfg.Spectrum.Colors != nil {
 			if cfg.Spectrum.Colors.Fill != nil {
 				fillColor = *cfg.Spectrum.Colors.Fill
@@ -224,7 +225,7 @@ func NewAudioVisualizerWidget(cfg config.WidgetConfig) (Widget, error) {
 				rightChannelColor = *cfg.Spectrum.Colors.Right
 			}
 		}
-	case "oscilloscope":
+	case shared.AudioDisplayModeOscilloscope:
 		if cfg.Oscilloscope != nil && cfg.Oscilloscope.Colors != nil {
 			if cfg.Oscilloscope.Colors.Fill != nil {
 				fillColor = *cfg.Oscilloscope.Colors.Fill
@@ -408,7 +409,7 @@ func (w *AudioVisualizerWidget) Update() error {
 
 	// Process for spectrum mode (always update, even with silence to decay peaks)
 	// Use accumulated audioData buffer, not just current samples
-	if w.displayMode == "spectrum" {
+	if w.displayMode == shared.AudioDisplayModeSpectrum {
 		w.updateSpectrum(w.audioData)
 	}
 
@@ -480,7 +481,7 @@ func (w *AudioVisualizerWidget) updateSpectrum(samples []float32) {
 	// Map frequencies to bars
 	barCount := len(w.spectrumData)
 
-	if w.frequencyScale == "logarithmic" {
+	if w.frequencyScale == shared.AudioFrequencyScaleLogarithmic {
 		w.mapFrequenciesLogarithmic(magnitudes, barCount)
 	} else {
 		w.mapFrequenciesLinear(magnitudes, barCount)
@@ -751,9 +752,9 @@ func (w *AudioVisualizerWidget) Render() (image.Image, error) {
 	// Create canvas with background
 	img := w.CreateCanvas()
 
-	if w.displayMode == "spectrum" {
+	if w.displayMode == shared.AudioDisplayModeSpectrum {
 		w.renderSpectrum(img)
-	} else if w.displayMode == "oscilloscope" {
+	} else if w.displayMode == shared.AudioDisplayModeOscilloscope {
 		w.renderOscilloscope(img)
 	}
 
@@ -773,7 +774,7 @@ func (w *AudioVisualizerWidget) renderSpectrum(img *image.Gray) {
 	height := w.position.H
 	barWidth := width / barCount
 	gap := 0
-	if w.barStyle == "bars" && barWidth > 2 {
+	if w.barStyle == shared.AudioBarStyleBars && barWidth > 2 {
 		gap = 1
 	}
 
@@ -796,7 +797,7 @@ func (w *AudioVisualizerWidget) renderSpectrum(img *image.Gray) {
 		y := height - barHeight
 
 		// Draw bar
-		if w.barStyle == "bars" {
+		if w.barStyle == shared.AudioBarStyleBars {
 			barW := barWidth - gap
 			if x+barW > width {
 				barW = width - x
@@ -841,7 +842,7 @@ func (w *AudioVisualizerWidget) renderOscilloscope(img *image.Gray) {
 	height := w.position.H
 	sampleCount := w.sampleCount
 
-	if w.channelMode == "mono" || w.channelMode == "stereo_combined" {
+	if w.channelMode == shared.AudioChannelModeMono || w.channelMode == shared.AudioChannelModeStereoCombined {
 		// Use mixed channels for mono/combined modes
 		if len(w.audioData) == 0 {
 			return
@@ -852,7 +853,7 @@ func (w *AudioVisualizerWidget) renderOscilloscope(img *image.Gray) {
 		centerY := height / 2
 		samples := w.audioData[len(w.audioData)-sampleCount:]
 		w.drawWaveform(img, samples, 0, height, centerY, w.fillColor)
-	} else if w.channelMode == "stereo_separated" {
+	} else if w.channelMode == shared.AudioChannelModeStereoSeparated {
 		// Use separate left and right channels for stereo_separated mode
 		if len(w.audioDataLeft) == 0 || len(w.audioDataRight) == 0 {
 			return
@@ -909,9 +910,9 @@ func (w *AudioVisualizerWidget) drawWaveform(img *image.Gray, samples []float32,
 			y2 = yEnd - 1
 		}
 
-		if w.waveformStyle == "line" {
+		if w.waveformStyle == shared.AudioWaveformStyleLine {
 			bitmap.DrawLine(img, x1, y1, x2, y2, color.Gray{Y: fillColor})
-		} else if w.waveformStyle == "filled" {
+		} else if w.waveformStyle == shared.AudioWaveformStyleFilled {
 			// Draw vertical line from center to sample
 			if x1 >= 0 && x1 < width {
 				if y1 < centerY {

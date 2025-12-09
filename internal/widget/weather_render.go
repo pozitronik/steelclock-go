@@ -476,7 +476,7 @@ func (w *WeatherWidget) renderForecastIcons(img *image.Gray, x, y, width, height
 	}
 
 	unit := "C"
-	if w.units == "imperial" {
+	if w.units == weatherUnitsImperial {
 		unit = "F"
 	}
 
@@ -514,7 +514,7 @@ func (w *WeatherWidget) renderForecastIcons(img *image.Gray, x, y, width, height
 // renderForecastScroll renders scrolling forecast text
 func (w *WeatherWidget) renderForecastScroll(img *image.Gray, x, y, width, height int, weather *WeatherData, forecast *ForecastData, scrollOffset float64) {
 	unit := "C"
-	if w.units == "imperial" {
+	if w.units == weatherUnitsImperial {
 		unit = "F"
 	}
 

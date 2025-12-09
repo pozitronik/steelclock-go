@@ -28,6 +28,22 @@ const (
 	densityDelayRange = 60
 )
 
+// Charset name constants
+const (
+	charsetKatakana = "katakana"
+	charsetBinary   = "binary"
+	charsetDigits   = "digits"
+	charsetHex      = "hex"
+	charsetASCII    = "ascii"
+)
+
+// Font size option constants
+const (
+	fontSizeSmall = "small"
+	fontSizeLarge = "large"
+	fontSizeAuto  = "auto"
+)
+
 // MatrixColumn represents a single falling column of characters
 type MatrixColumn struct {
 	x          int     // X position
@@ -95,7 +111,7 @@ func NewMatrixWidget(cfg config.WidgetConfig) (*MatrixWidget, error) {
 	headColor := uint8(255)
 	trailFade := 0.85
 	charChangeRate := 0.02
-	charsetName := "ascii" // Default to ASCII since it's guaranteed to work
+	charsetName := charsetASCII // Default to ASCII since it's guaranteed to work
 
 	if cfg.Matrix != nil {
 		if cfg.Matrix.Density > 0 {
@@ -130,20 +146,20 @@ func NewMatrixWidget(cfg config.WidgetConfig) (*MatrixWidget, error) {
 	// Select character set
 	charset := matrixASCII
 	switch charsetName {
-	case "katakana":
+	case charsetKatakana:
 		charset = matrixKatakana
-	case "binary":
+	case charsetBinary:
 		charset = matrixBinary
-	case "digits":
+	case charsetDigits:
 		charset = matrixDigits
-	case "hex":
+	case charsetHex:
 		charset = matrixHex
-	case "ascii":
+	case charsetASCII:
 		charset = matrixASCII
 	}
 
 	// Determine font size: "small" (3x5), "large" (5x7), or "auto" (default)
-	fontSizeOption := "auto"
+	fontSizeOption := fontSizeAuto
 	if cfg.Matrix != nil && cfg.Matrix.FontSize != "" {
 		fontSizeOption = cfg.Matrix.FontSize
 	}
@@ -153,13 +169,13 @@ func NewMatrixWidget(cfg config.WidgetConfig) (*MatrixWidget, error) {
 	charHeight := 6 // 5 + 1 spacing
 
 	switch fontSizeOption {
-	case "small":
+	case fontSizeSmall:
 		// Use 3x5 font (already set as default)
-	case "large":
+	case fontSizeLarge:
 		glyphSet = glyphs.Font5x7
 		charWidth = 6  // 5 + 1 spacing
 		charHeight = 8 // 7 + 1 spacing
-	default: // "auto" or unrecognized
+	default: // fontSizeAuto or unrecognized
 		// Auto-select based on display height
 		if pos.H >= 30 {
 			glyphSet = glyphs.Font5x7

@@ -28,6 +28,12 @@ const (
 	PhaseExit                       // Deceleration back to normal
 )
 
+// Movement mode constants
+const (
+	hyperspaceModeContinuous = "continuous"
+	hyperspaceModeCycle      = "cycle"
+)
+
 // Star represents a single star in the hyperspace effect
 type Star struct {
 	screenX, screenY float64 // Current screen position
@@ -88,7 +94,7 @@ func NewHyperspaceWidget(cfg config.WidgetConfig) (*HyperspaceWidget, error) {
 	centerX := pos.W / 2
 	centerY := pos.H / 2
 	starColor := uint8(255)
-	mode := "continuous"
+	mode := hyperspaceModeContinuous
 	idleTime := 5.0
 	travelTime := 3.0
 	starSpeed := 3.0 // Pixels per frame during hyperspace
@@ -306,7 +312,7 @@ func (w *HyperspaceWidget) Update() error {
 			w.randomizeDriftDirection()
 		}
 
-		if w.mode == "cycle" && elapsed >= w.idleTime {
+		if w.mode == hyperspaceModeCycle && elapsed >= w.idleTime {
 			w.phase = PhaseStretch
 			w.phaseStart = now
 		}
@@ -354,7 +360,7 @@ func (w *HyperspaceWidget) Update() error {
 		w.moveStars(1.0)
 
 		// In cycle mode, transition to exit after travel time
-		if w.mode == "cycle" && elapsed >= w.travelTime {
+		if w.mode == hyperspaceModeCycle && elapsed >= w.travelTime {
 			w.phase = PhaseExit
 			w.phaseStart = now
 		}
