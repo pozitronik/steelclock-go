@@ -194,10 +194,7 @@ func TestNoWidgetsErrorAsInterface(t *testing.T) {
 	// Test that NoWidgetsError implements the error interface
 	var err error = &NoWidgetsError{}
 
-	if err == nil {
-		t.Error("error should not be nil")
-	}
-
+	// Verify the error message is not empty
 	if err.Error() == "" {
 		t.Error("error message should not be empty")
 	}

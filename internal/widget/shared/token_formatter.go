@@ -6,10 +6,9 @@ import "strings"
 // Tokens in the template are replaced with their values.
 // Default token format is {tokenName}, but can be customized.
 type TokenFormatter struct {
-	tokens    map[string]string
-	prefix    string
-	suffix    string
-	delimiter string
+	tokens map[string]string
+	prefix string
+	suffix string
 }
 
 // NewTokenFormatter creates a new TokenFormatter with default {token} format

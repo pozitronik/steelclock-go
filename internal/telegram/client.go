@@ -1049,14 +1049,13 @@ func getMediaType(media tg.MessageMediaClass) string {
 		if ok {
 			if d, ok := doc.Document.(*tg.Document); ok {
 				for _, attr := range d.Attributes {
-					switch attr.(type) {
+					switch attr := attr.(type) {
 					case *tg.DocumentAttributeSticker:
 						return "Sticker"
 					case *tg.DocumentAttributeVideo:
 						return "Video"
 					case *tg.DocumentAttributeAudio:
-						audio := attr.(*tg.DocumentAttributeAudio)
-						if audio.Voice {
+						if attr.Voice {
 							return "Voice message"
 						}
 						return "Audio"

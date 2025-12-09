@@ -176,9 +176,8 @@ func (w *Widget) Update() error {
 			w.lastFetch = now
 			// Fetch in background to avoid blocking
 			go func() {
-				if err := w.client.FetchUnreadCount(); err != nil {
-					// Log error but don't fail - will retry next interval
-				}
+				// Ignore error - will retry next interval
+				_ = w.client.FetchUnreadCount()
 			}()
 		}
 		w.unreadCount = w.client.GetUnreadCount()
