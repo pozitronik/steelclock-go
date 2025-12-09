@@ -1,6 +1,6 @@
 //go:build windows
 
-package widget
+package keyboard
 
 import (
 	"fmt"
@@ -11,20 +11,21 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/widget"
 	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
 )
 
 func init() {
-	Register("keyboard", func(cfg config.WidgetConfig) (Widget, error) {
-		return NewKeyboardWidget(cfg)
+	widget.Register("keyboard", func(cfg config.WidgetConfig) (widget.Widget, error) {
+		return New(cfg)
 	})
 }
 
-// KeyboardWidget displays lock key status
-type KeyboardWidget struct {
-	*BaseWidget
+// Widget displays lock key status
+type Widget struct {
+	*widget.BaseWidget
 	fontSize      int
 	fontName      string
 	horizAlign    config.HAlign
@@ -50,9 +51,9 @@ type KeyboardWidget struct {
 	fontFace      font.Face
 }
 
-// NewKeyboardWidget creates a new keyboard widget
-func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
-	base := NewBaseWidget(cfg)
+// New creates a new keyboard widget
+func New(cfg config.WidgetConfig) (*Widget, error) {
+	base := widget.NewBaseWidget(cfg)
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
@@ -137,7 +138,7 @@ func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
 		return nil, fmt.Errorf("failed to load font: %w", err)
 	}
 
-	return &KeyboardWidget{
+	return &Widget{
 		BaseWidget:    base,
 		fontSize:      textSettings.FontSize,
 		fontName:      textSettings.FontName,
@@ -162,7 +163,7 @@ func NewKeyboardWidget(cfg config.WidgetConfig) (*KeyboardWidget, error) {
 }
 
 // Render creates an image of the keyboard widget
-func (w *KeyboardWidget) Render() (image.Image, error) {
+func (w *Widget) Render() (image.Image, error) {
 	// Create canvas with background and border
 	img := w.CreateCanvas()
 	w.ApplyBorder(img)
@@ -190,7 +191,7 @@ func (w *KeyboardWidget) Render() (image.Image, error) {
 }
 
 // renderText renders keyboard indicators as text
-func (w *KeyboardWidget) renderText(img *image.Gray, capsState, numState, scrollState bool) {
+func (w *Widget) renderText(img *image.Gray, capsState, numState, scrollState bool) {
 	// Build indicator text
 	indicators := []struct {
 		state bool
@@ -219,7 +220,7 @@ func (w *KeyboardWidget) renderText(img *image.Gray, capsState, numState, scroll
 }
 
 // renderIcons renders keyboard indicators as icons
-func (w *KeyboardWidget) renderIcons(img *image.Gray, capsState, numState, scrollState bool) {
+func (w *Widget) renderIcons(img *image.Gray, capsState, numState, scrollState bool) {
 	// Get image bounds
 	bounds := img.Bounds()
 	imgWidth := bounds.Dx()
@@ -362,7 +363,7 @@ func (w *KeyboardWidget) renderIcons(img *image.Gray, capsState, numState, scrol
 }
 
 // renderMixed renders keyboard indicators in mixed mode (some text, some icons)
-func (w *KeyboardWidget) renderMixed(img *image.Gray, capsState, numState, scrollState bool) {
+func (w *Widget) renderMixed(img *image.Gray, capsState, numState, scrollState bool) {
 	// Get image bounds
 	bounds := img.Bounds()
 	imgWidth := bounds.Dx()

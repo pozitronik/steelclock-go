@@ -1,6 +1,6 @@
 //go:build windows
 
-package widget
+package keyboard
 
 import (
 	"syscall"
@@ -18,7 +18,7 @@ const (
 )
 
 // Update updates the keyboard state
-func (w *KeyboardWidget) Update() error {
+func (w *Widget) Update() error {
 	caps := isKeyToggled(VkCapital)
 	num := isKeyToggled(VkNumlock)
 	scroll := isKeyToggled(VkScroll)
