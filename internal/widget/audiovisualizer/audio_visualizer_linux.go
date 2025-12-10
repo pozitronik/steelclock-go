@@ -15,7 +15,6 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/widget"
-	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 func init() {
@@ -146,17 +145,17 @@ func New(cfg config.WidgetConfig) (widget.Widget, error) {
 	// Display mode
 	displayMode := cfg.Mode
 	if displayMode == "" {
-		displayMode = shared.AudioDisplayModeSpectrum
+		displayMode = AudioDisplayModeSpectrum
 	}
 
 	// Spectrum settings
 	barCount := 32
-	frequencyScale := shared.AudioFrequencyScaleLogarithmic
+	frequencyScale := AudioFrequencyScaleLogarithmic
 	frequencyCompensation := true
 	spectrumDynamicScaling := 0.0
 	spectrumDynamicWindow := 0.5
 	smoothing := 0.5
-	barStyle := shared.AudioBarStyleBars
+	barStyle := AudioBarStyleBars
 
 	if cfg.Spectrum != nil {
 		if cfg.Spectrum.Bars > 0 {
@@ -199,8 +198,8 @@ func New(cfg config.WidgetConfig) (widget.Widget, error) {
 
 	// Oscilloscope settings
 	sampleCount := 256
-	channelMode := shared.AudioChannelModeMono
-	waveformStyle := shared.AudioWaveformStyleLine
+	channelMode := AudioChannelModeMono
+	waveformStyle := AudioWaveformStyleLine
 
 	if cfg.Oscilloscope != nil {
 		if cfg.Oscilloscope.Samples > 0 {
@@ -221,7 +220,7 @@ func New(cfg config.WidgetConfig) (widget.Widget, error) {
 	rightChannelColor := 200
 
 	switch displayMode {
-	case shared.AudioDisplayModeSpectrum:
+	case AudioDisplayModeSpectrum:
 		if cfg.Spectrum != nil && cfg.Spectrum.Colors != nil {
 			if cfg.Spectrum.Colors.Fill != nil {
 				fillColor = *cfg.Spectrum.Colors.Fill
@@ -233,7 +232,7 @@ func New(cfg config.WidgetConfig) (widget.Widget, error) {
 				rightChannelColor = *cfg.Spectrum.Colors.Right
 			}
 		}
-	case shared.AudioDisplayModeOscilloscope:
+	case AudioDisplayModeOscilloscope:
 		if cfg.Oscilloscope != nil && cfg.Oscilloscope.Colors != nil {
 			if cfg.Oscilloscope.Colors.Fill != nil {
 				fillColor = *cfg.Oscilloscope.Colors.Fill
@@ -359,7 +358,7 @@ func (w *Widget) Update() error {
 	}
 
 	// Process for spectrum mode
-	if w.displayMode == shared.AudioDisplayModeSpectrum && len(w.audioData) >= 2048 {
+	if w.displayMode == AudioDisplayModeSpectrum && len(w.audioData) >= 2048 {
 		w.updateSpectrum(w.audioData)
 	}
 
@@ -420,7 +419,7 @@ func (w *Widget) updateSpectrum(samples []float32) {
 
 	// Map to bars
 	barCount := len(w.spectrumData)
-	if w.frequencyScale == shared.AudioFrequencyScaleLogarithmic {
+	if w.frequencyScale == AudioFrequencyScaleLogarithmic {
 		w.mapFrequenciesLogarithmic(magnitudes, barCount)
 	} else {
 		w.mapFrequenciesLinear(magnitudes, barCount)
@@ -558,9 +557,9 @@ func (w *Widget) Render() (image.Image, error) {
 	// Create canvas with background
 	img := w.CreateCanvas()
 
-	if w.displayMode == shared.AudioDisplayModeSpectrum {
+	if w.displayMode == AudioDisplayModeSpectrum {
 		w.renderSpectrum(img)
-	} else if w.displayMode == shared.AudioDisplayModeOscilloscope {
+	} else if w.displayMode == AudioDisplayModeOscilloscope {
 		w.renderOscilloscope(img)
 	}
 
@@ -581,7 +580,7 @@ func (w *Widget) renderSpectrum(img *image.Gray) {
 	height := pos.H
 	barWidth := width / barCount
 	gap := 0
-	if w.barStyle == shared.AudioBarStyleBars && barWidth > 2 {
+	if w.barStyle == AudioBarStyleBars && barWidth > 2 {
 		gap = 1
 	}
 
@@ -602,7 +601,7 @@ func (w *Widget) renderSpectrum(img *image.Gray) {
 		x := i * barWidth
 		y := height - barHeight
 
-		if w.barStyle == shared.AudioBarStyleBars {
+		if w.barStyle == AudioBarStyleBars {
 			for py := y; py < height; py++ {
 				for px := x; px < x+barWidth-gap && px < width; px++ {
 					img.SetGray(px, py, color.Gray{Y: w.fillColor})
@@ -674,9 +673,9 @@ func (w *Widget) renderOscilloscope(img *image.Gray) {
 			y2 = height - 1
 		}
 
-		if w.waveformStyle == shared.AudioWaveformStyleLine {
+		if w.waveformStyle == AudioWaveformStyleLine {
 			bitmap.DrawLine(img, x1, y1, x2, y2, color.Gray{Y: w.fillColor})
-		} else if w.waveformStyle == shared.AudioWaveformStyleFilled {
+		} else if w.waveformStyle == AudioWaveformStyleFilled {
 			if y1 < centerY {
 				for y := y1; y <= centerY && y < height; y++ {
 					if x1 >= 0 && x1 < width {

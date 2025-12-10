@@ -7,8 +7,11 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/metrics"
+	"github.com/pozitronik/steelclock-go/internal/shared"
+	widgetbase "github.com/pozitronik/steelclock-go/internal/shared/base"
+	"github.com/pozitronik/steelclock-go/internal/shared/render"
+	"github.com/pozitronik/steelclock-go/internal/shared/util"
 	"github.com/pozitronik/steelclock-go/internal/widget"
-	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 func init() {
@@ -19,7 +22,7 @@ func init() {
 
 // Widget displays disk I/O (Read/Write)
 type Widget struct {
-	*shared.BaseDualIOWidget
+	*widgetbase.BaseDualIOWidget
 	base         *widget.BaseWidget
 	diskName     *string
 	diskProvider metrics.DiskProvider
@@ -36,7 +39,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
-	displayMode := shared.DisplayMode(helper.GetDisplayMode(config.ModeText))
+	displayMode := render.DisplayMode(helper.GetDisplayMode(config.ModeText))
 	textSettings := helper.GetTextSettings()
 	padding := helper.GetPadding()
 	barSettings := helper.GetBarSettings()
@@ -47,7 +50,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	writeColor := 255
 
 	switch displayMode {
-	case shared.DisplayModeBar:
+	case render.DisplayModeBar:
 		if cfg.Bar != nil && cfg.Bar.Colors != nil {
 			if cfg.Bar.Colors.Read != nil {
 				readColor = *cfg.Bar.Colors.Read
@@ -56,7 +59,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 				writeColor = *cfg.Bar.Colors.Write
 			}
 		}
-	case shared.DisplayModeGraph:
+	case render.DisplayModeGraph:
 		if cfg.Graph != nil && cfg.Graph.Colors != nil {
 			if cfg.Graph.Colors.Read != nil {
 				readColor = *cfg.Graph.Colors.Read
@@ -79,12 +82,12 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		unit = "MB/s"
 	}
 	// Validate unit
-	if unit != "auto" && !shared.IsValidUnit(unit) {
+	if unit != "auto" && !util.IsValidUnit(unit) {
 		unit = "MB/s" // Fallback to default
 	}
 
 	// Create byte rate converter
-	converter := shared.NewByteRateConverter(unit)
+	converter := util.NewByteRateConverter(unit)
 
 	// Show unit suffix in text mode
 	showUnit := false
@@ -99,22 +102,22 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	}
 
 	// Create dual metric renderer (disk doesn't use gauge mode)
-	renderer := shared.NewDualMetricRenderer(
-		shared.DualBarConfig{
+	renderer := render.NewDualMetricRenderer(
+		render.DualBarConfig{
 			Direction:      barSettings.Direction,
 			Border:         barSettings.Border,
 			PrimaryColor:   readColor,
 			SecondaryColor: writeColor,
 		},
-		shared.DualGraphConfig{
+		render.DualGraphConfig{
 			HistoryLen:    graphSettings.HistoryLen,
 			PrimaryFill:   readColor,
 			PrimaryLine:   readColor,
 			SecondaryFill: writeColor,
 			SecondaryLine: writeColor,
 		},
-		shared.DualGaugeConfig{}, // Not used for disk
-		shared.TextConfig{
+		render.DualGaugeConfig{}, // Not used for disk
+		render.TextConfig{
 			FontFace:   fontFace,
 			FontName:   textSettings.FontName,
 			HorizAlign: textSettings.HorizAlign,
@@ -124,7 +127,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	)
 
 	// Create base dual I/O widget
-	baseDualIO := shared.NewBaseDualIOWidget(shared.BaseDualIOConfig{
+	baseDualIO := widgetbase.NewBaseDualIOWidget(widgetbase.BaseDualIOConfig{
 		Base:          base,
 		DisplayMode:   displayMode,
 		Padding:       padding,
@@ -132,7 +135,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		Unit:          unit,
 		ShowUnit:      showUnit,
 		SupportsGauge: false, // Disk doesn't support gauge mode
-		TextConfig: shared.DualIOTextConfig{
+		TextConfig: widgetbase.DualIOTextConfig{
 			PrimaryPrefix:   "R",
 			SecondaryPrefix: "W",
 		},

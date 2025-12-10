@@ -11,8 +11,9 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/shared"
+	"github.com/pozitronik/steelclock-go/internal/shared/anim"
 	"github.com/pozitronik/steelclock-go/internal/widget"
-	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
@@ -63,7 +64,7 @@ type Widget struct {
 	currentFormat int // Index into formatCycle
 	lastCycleTime time.Time
 	// Transition state
-	transition    *shared.TransitionManager
+	transition    *anim.TransitionManager
 	pendingFormat int // Format index to transition to
 	// Scroll state
 	scrollOffset float64
@@ -250,7 +251,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		fontFace:        fontFace,
 		lastCycleTime:   time.Now(),
 		lastUpdate:      time.Now(),
-		transition:      shared.NewTransitionManager(pos.W, pos.H),
+		transition:      anim.NewTransitionManager(pos.W, pos.H),
 	}
 
 	// Parse initial format (first format in cycle)
@@ -329,7 +330,7 @@ func (w *Widget) Render() (image.Image, error) {
 
 			// Set up transition
 			w.pendingFormat = (w.currentFormat + 1) % len(w.formatCycle)
-			w.transition.Start(shared.TransitionType(w.transitionType), w.transitionSpeed, oldFrame)
+			w.transition.Start(anim.TransitionType(w.transitionType), w.transitionSpeed, oldFrame)
 			w.lastCycleTime = now
 		}
 	}

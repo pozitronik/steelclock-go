@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
-	"github.com/pozitronik/steelclock-go/internal/widget/shared"
+	"github.com/pozitronik/steelclock-go/internal/shared/anim"
 )
 
 // TestNew tests basic widget creation
@@ -90,13 +90,13 @@ func TestNew_WithScrollConfig(t *testing.T) {
 		t.Error("widget.scrollEnabled = false, want true")
 	}
 	scrollCfg := w.scroller.GetConfig()
-	if scrollCfg.Direction != shared.ScrollRight {
+	if scrollCfg.Direction != anim.ScrollRight {
 		t.Errorf("scrollCfg.Direction = %q, want right", scrollCfg.Direction)
 	}
 	if scrollCfg.Speed != 50.0 {
 		t.Errorf("scrollCfg.Speed = %f, want 50.0", scrollCfg.Speed)
 	}
-	if scrollCfg.Mode != shared.ScrollBounce {
+	if scrollCfg.Mode != anim.ScrollBounce {
 		t.Errorf("scrollCfg.Mode = %q, want bounce", scrollCfg.Mode)
 	}
 	if scrollCfg.PauseMs != 2000 {
@@ -211,13 +211,13 @@ func TestWidget_Defaults(t *testing.T) {
 		t.Error("default scrollEnabled = true, want false")
 	}
 	defaultScrollCfg := w.scroller.GetConfig()
-	if defaultScrollCfg.Direction != shared.ScrollLeft {
+	if defaultScrollCfg.Direction != anim.ScrollLeft {
 		t.Errorf("default scrollDirection = %q, want left", defaultScrollCfg.Direction)
 	}
 	if defaultScrollCfg.Speed != 30.0 {
 		t.Errorf("default scrollSpeed = %f, want 30.0", defaultScrollCfg.Speed)
 	}
-	if defaultScrollCfg.Mode != shared.ScrollContinuous {
+	if defaultScrollCfg.Mode != anim.ScrollContinuous {
 		t.Errorf("default scrollMode = %q, want continuous", defaultScrollCfg.Mode)
 	}
 	if !w.autoShowOnTrackChange {

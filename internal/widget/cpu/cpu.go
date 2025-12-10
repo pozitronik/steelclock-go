@@ -9,8 +9,10 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/metrics"
+	"github.com/pozitronik/steelclock-go/internal/shared"
+	"github.com/pozitronik/steelclock-go/internal/shared/render"
+	"github.com/pozitronik/steelclock-go/internal/shared/util"
 	"github.com/pozitronik/steelclock-go/internal/widget"
-	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
@@ -23,7 +25,7 @@ func init() {
 // Widget displays CPU usage
 type Widget struct {
 	*widget.BaseWidget
-	displayMode shared.DisplayMode
+	displayMode render.DisplayMode
 	perCore     bool
 	padding     int
 	coreBorder  bool
@@ -32,11 +34,11 @@ type Widget struct {
 	historyLen  int
 
 	// Strategy pattern for single-value mode rendering
-	strategy shared.MetricDisplayStrategy
+	strategy render.MetricDisplayStrategy
 	// Strategy pattern for per-core (grid) mode rendering
-	gridStrategy shared.GridMetricDisplayStrategy
+	gridStrategy render.GridMetricDisplayStrategy
 	// MetricRenderer for rendering
-	Renderer *shared.MetricRenderer
+	Renderer *render.MetricRenderer
 
 	// Metrics provider (abstraction over gopsutil)
 	cpuProvider metrics.CPUProvider
@@ -45,9 +47,9 @@ type Widget struct {
 	currentUsageSingle  float64   // Aggregate CPU usage (when perCore=false)
 	currentUsagePerCore []float64 // Per-core CPU usage (when perCore=true)
 	// Ring buffers for graph history - O(1) push with zero allocations
-	historySingle  *shared.RingBuffer[float64]   // Aggregate history (when perCore=false)
-	historyPerCore *shared.RingBuffer[[]float64] // Per-core history (when perCore=true)
-	hasData        bool                          // Indicates if currentUsage has been set
+	historySingle  *util.RingBuffer[float64]   // Aggregate history (when perCore=false)
+	historyPerCore *util.RingBuffer[[]float64] // Per-core history (when perCore=true)
+	hasData        bool                        // Indicates if currentUsage has been set
 	coreCount      int
 	fontFace       font.Face    // Kept for per-core text rendering
 	fontName       string       // Kept for per-core text rendering
@@ -60,7 +62,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
-	displayMode := shared.DisplayMode(helper.GetDisplayMode(config.ModeText))
+	displayMode := render.DisplayMode(helper.GetDisplayMode(config.ModeText))
 	textSettings := helper.GetTextSettings()
 	padding := helper.GetPadding()
 	barSettings := helper.GetBarSettings()
@@ -90,24 +92,24 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	}
 
 	// Create metric renderer for single-value mode
-	renderer := shared.NewMetricRenderer(
-		shared.BarConfig{
+	renderer := render.NewMetricRenderer(
+		render.BarConfig{
 			Direction: barSettings.Direction,
 			Border:    barSettings.Border,
 			Color:     barColor,
 		},
-		shared.GraphConfig{
+		render.GraphConfig{
 			FillColor:  graphSettings.FillColor,
 			LineColor:  graphSettings.LineColor,
 			HistoryLen: graphSettings.HistoryLen,
 		},
-		shared.GaugeConfig{
+		render.GaugeConfig{
 			ArcColor:    uint8(gaugeSettings.ArcColor),
 			NeedleColor: uint8(gaugeSettings.NeedleColor),
 			ShowTicks:   gaugeSettings.ShowTicks,
 			TicksColor:  uint8(gaugeSettings.TicksColor),
 		},
-		shared.TextConfig{
+		render.TextConfig{
 			FontFace:   fontFace,
 			FontName:   textSettings.FontName,
 			HorizAlign: textSettings.HorizAlign,
@@ -125,12 +127,12 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		coreMargin:     coreMargin,
 		fillColor:      graphSettings.FillColor,
 		historyLen:     graphSettings.HistoryLen,
-		strategy:       shared.GetMetricStrategy(displayMode),
-		gridStrategy:   shared.GetGridMetricStrategy(displayMode),
+		strategy:       render.GetMetricStrategy(displayMode),
+		gridStrategy:   render.GetGridMetricStrategy(displayMode),
 		Renderer:       renderer,
 		cpuProvider:    cpuProvider,
-		historySingle:  shared.NewRingBuffer[float64](graphSettings.HistoryLen),
-		historyPerCore: shared.NewRingBuffer[[]float64](graphSettings.HistoryLen),
+		historySingle:  util.NewRingBuffer[float64](graphSettings.HistoryLen),
+		historyPerCore: util.NewRingBuffer[[]float64](graphSettings.HistoryLen),
 		coreCount:      cores,
 		fontFace:       fontFace,
 		fontName:       textSettings.FontName,
@@ -161,7 +163,7 @@ func (w *Widget) Update() error {
 		w.hasData = true
 
 		// Add to history (ring buffer handles capacity automatically)
-		if w.displayMode == shared.DisplayModeGraph {
+		if w.displayMode == render.DisplayModeGraph {
 			w.historyPerCore.Push(percentages)
 		}
 		w.mu.Unlock()
@@ -190,7 +192,7 @@ func (w *Widget) Update() error {
 		w.hasData = true
 
 		// Add to history (ring buffer handles capacity automatically)
-		if w.displayMode == shared.DisplayModeGraph {
+		if w.displayMode == render.DisplayModeGraph {
 			w.historySingle.Push(usage)
 		}
 		w.mu.Unlock()
@@ -225,7 +227,7 @@ func (w *Widget) Render() (image.Image, error) {
 		}
 
 		// Prepare grid data
-		gridData := shared.GridMetricData{
+		gridData := render.GridMetricData{
 			Values:      w.currentUsagePerCore,
 			ContentArea: image.Rect(content.X, content.Y, content.X+content.Width, content.Y+content.Height),
 			Position:    pos,
@@ -237,7 +239,7 @@ func (w *Widget) Render() (image.Image, error) {
 		}
 
 		// For graph mode, transpose history from [time][core] to [core][time]
-		if w.displayMode == shared.DisplayModeGraph && w.historyPerCore.Len() >= 2 {
+		if w.displayMode == render.DisplayModeGraph && w.historyPerCore.Len() >= 2 {
 			historySlice := w.historyPerCore.ToSlice()
 			numCores := len(historySlice[0])
 			coreHistories := make([][]float64, numCores)
@@ -257,7 +259,7 @@ func (w *Widget) Render() (image.Image, error) {
 	}
 
 	// For single-value mode, use strategy pattern
-	w.strategy.Render(img, shared.MetricData{
+	w.strategy.Render(img, render.MetricData{
 		Value:       w.currentUsageSingle,
 		History:     w.historySingle.ToSlice(),
 		TextFormat:  "%.0f",

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
-	"github.com/pozitronik/steelclock-go/internal/widget/shared"
+	"github.com/pozitronik/steelclock-go/internal/shared/render"
 )
 
 // TestNew tests successful network widget creation
@@ -64,7 +64,7 @@ func TestNew_Defaults(t *testing.T) {
 	}
 
 	// Check defaults
-	if widget.DisplayMode != shared.DisplayModeText {
+	if widget.DisplayMode != render.DisplayModeText {
 		t.Errorf("default DisplayMode = %s, want text", widget.DisplayMode)
 	}
 
