@@ -10,8 +10,10 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/shared"
+	"github.com/pozitronik/steelclock-go/internal/shared/render"
+	"github.com/pozitronik/steelclock-go/internal/shared/util"
 	"github.com/pozitronik/steelclock-go/internal/widget"
-	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
@@ -84,7 +86,7 @@ type Widget struct {
 
 	// Graph mode
 	graphHistory int
-	history      *shared.RingBuffer[int]
+	history      *util.RingBuffer[int]
 
 	// Font for text rendering
 	fontSize   int
@@ -258,7 +260,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		colorBackground:   colorBackground,
 		colorBorder:       colorBorder,
 		graphHistory:      graphHistory,
-		history:           shared.NewRingBuffer[int](graphHistory),
+		history:           util.NewRingBuffer[int](graphHistory),
 		fontSize:          textSettings.FontSize,
 		fontName:          textSettings.FontName,
 		horizAlign:        textSettings.HorizAlign,
@@ -456,7 +458,7 @@ func formatMinutes(minutes int) string {
 }
 
 // buildTokenFormatter creates a TokenFormatter with all battery token values
-func (w *Widget) buildTokenFormatter(status Status) *shared.TokenFormatter {
+func (w *Widget) buildTokenFormatter(status Status) *render.TokenFormatter {
 	// Calculate status text (respects power_status visibility and blink)
 	statusText := ""
 	if w.shouldShowIndicator(&w.chargingState, status.IsCharging) && !w.shouldBlinkIndicator(&w.chargingState) {
@@ -513,7 +515,7 @@ func (w *Widget) buildTokenFormatter(status Status) *shared.TokenFormatter {
 
 	percentStr := fmt.Sprintf("%d", status.Percentage)
 
-	return shared.NewTokenFormatter().
+	return render.NewTokenFormatter().
 		Set("percent", percentStr).
 		Set("pct", percentStr).
 		Set("status", statusText).

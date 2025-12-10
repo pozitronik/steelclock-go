@@ -1,9 +1,56 @@
 package config
 
 import (
+	"sort"
 	"strings"
 	"testing"
 )
+
+// testWidgetTypes is a list of widget types used for testing.
+// In production, WidgetTypeChecker is set by the widget package.
+var testWidgetTypes = map[string]bool{
+	"clock":            true,
+	"cpu":              true,
+	"memory":           true,
+	"network":          true,
+	"disk":             true,
+	"keyboard":         true,
+	"keyboard_layout":  true,
+	"volume":           true,
+	"volume_meter":     true,
+	"audio_visualizer": true,
+	"doom":             true,
+	"winamp":           true,
+	"matrix":           true,
+	"weather":          true,
+	"battery":          true,
+	"game_of_life":     true,
+	"hyperspace":       true,
+	"starwars_intro":   true,
+	"telegram":         true,
+	"telegram_counter": true,
+}
+
+// setupTestWidgetCallbacks sets up the widget type callbacks for testing.
+// This simulates what the widget package does in production.
+func setupTestWidgetCallbacks() {
+	WidgetTypeChecker = func(typeName string) bool {
+		return testWidgetTypes[typeName]
+	}
+	WidgetTypesLister = func() string {
+		types := make([]string, 0, len(testWidgetTypes))
+		for t := range testWidgetTypes {
+			types = append(types, t)
+		}
+		sort.Strings(types)
+		return strings.Join(types, ", ")
+	}
+}
+
+func init() {
+	// Set up widget callbacks for all tests in this package
+	setupTestWidgetCallbacks()
+}
 
 //goland:noinspection GoBoolExpressions,GoBoolExpressions,GoBoolExpressions,GoBoolExpressions
 func TestValidatorConstants(t *testing.T) {
@@ -22,18 +69,42 @@ func TestValidatorConstants(t *testing.T) {
 }
 
 func TestValidBackends(t *testing.T) {
-	expectedBackends := []string{"", "gamesense", "direct", "any"}
+	// Set up mock BackendTypeChecker for testing
+	originalChecker := BackendTypeChecker
+	originalLister := BackendTypesLister
+	defer func() {
+		BackendTypeChecker = originalChecker
+		BackendTypesLister = originalLister
+	}()
 
-	for _, backend := range expectedBackends {
-		if !ValidBackends[backend] {
-			t.Errorf("ValidBackends[%q] should be true", backend)
+	registeredBackends := map[string]bool{
+		"gamesense": true,
+		"direct":    true,
+	}
+	BackendTypeChecker = func(name string) bool {
+		return registeredBackends[name]
+	}
+	BackendTypesLister = func() string {
+		return "gamesense, direct"
+	}
+
+	// Empty string means auto-selection
+	if !IsValidBackend("") {
+		t.Error("IsValidBackend(\"\") should be true (auto-selection)")
+	}
+
+	// Registered backends should be valid
+	registeredNames := []string{"gamesense", "direct"}
+	for _, backend := range registeredNames {
+		if !IsValidBackend(backend) {
+			t.Errorf("IsValidBackend(%q) should be true (registered)", backend)
 		}
 	}
 
-	invalidBackends := []string{"invalid", "GAMESENSE", "Direct", "foo"}
+	invalidBackends := []string{"invalid", "GAMESENSE", "Direct", "foo", "any"}
 	for _, backend := range invalidBackends {
-		if ValidBackends[backend] {
-			t.Errorf("ValidBackends[%q] should be false", backend)
+		if IsValidBackend(backend) {
+			t.Errorf("IsValidBackend(%q) should be false", backend)
 		}
 	}
 }
@@ -60,6 +131,13 @@ func TestValidWidgetTypes(t *testing.T) {
 }
 
 func TestValidateGlobalConfig(t *testing.T) {
+	// Set up mock BackendTypeChecker for testing
+	originalChecker := BackendTypeChecker
+	defer func() { BackendTypeChecker = originalChecker }()
+	BackendTypeChecker = func(name string) bool {
+		return name == "gamesense" || name == "direct"
+	}
+
 	tests := []struct {
 		name    string
 		cfg     Config
@@ -552,6 +630,13 @@ func TestValidateWidgetsGeneratesIDs(t *testing.T) {
 }
 
 func TestValidate(t *testing.T) {
+	// Set up mock BackendTypeChecker for testing
+	originalChecker := BackendTypeChecker
+	defer func() { BackendTypeChecker = originalChecker }()
+	BackendTypeChecker = func(name string) bool {
+		return name == "gamesense" || name == "direct"
+	}
+
 	iface := "eth0"
 
 	tests := []struct {
@@ -614,7 +699,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "complex valid config",
 			cfg: Config{
-				Backend:             "any",
+				Backend:             "",
 				Display:             DisplayConfig{Width: 128, Height: 40},
 				RefreshRateMs:       50,
 				DeinitializeTimerMs: 5000,

@@ -78,17 +78,17 @@ Supported IDEs: VS Code, JetBrains IDEs, Visual Studio, Sublime Text, and others
 | `game_name`             | string  | "STEELCLOCK" | Internal game name for GameSense         |
 | `game_display_name`     | string  | "SteelClock" | Display name in SteelSeries GG           |
 | `refresh_rate_ms`       | integer | 100          | Display refresh rate (see notes)         |
-| `backend`               | string  | "gamesense"  | Backend: "gamesense", "direct", "any"    |
+| `backend`               | string  | (auto)       | Backend: "gamesense", "direct", or omit for auto |
 | `unregister_on_exit`    | boolean | false        | Unregister on exit (may timeout)         |
 | `deinitialize_timer_ms` | integer | 15000        | Game deactivation timeout (1000-60000ms) |
 
 ### Backend Configuration
 
-| Backend     | Description                       | Min Refresh  | Max Refresh |
-|-------------|-----------------------------------|--------------|-------------|
-| `gamesense` | SteelSeries GG API (default)      | 100ms (10Hz) | 100ms       |
-| `direct`    | USB HID (Windows only)            | ~16ms (60Hz) | 30ms (33Hz) |
-| `any`       | Try gamesense, fallback to direct | -            | -           |
+| Backend     | Description                               | Min Refresh  | Max Refresh |
+|-------------|-------------------------------------------|--------------|-------------|
+| `gamesense` | SteelSeries GG API                        | 100ms (10Hz) | 100ms       |
+| `direct`    | USB HID (Windows only)                    | ~16ms (60Hz) | 30ms (33Hz) |
+| (omitted)   | Auto-select: tries gamesense, then direct | -            | -           |
 
 **Direct Driver Config:**
 

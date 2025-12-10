@@ -15,6 +15,19 @@ type Factory func(cfg config.WidgetConfig) (Widget, error)
 // registry holds all registered widget factories
 var registry = make(map[string]Factory)
 
+func init() {
+	// Set up callbacks in config package to use factory registry as single source of truth.
+	// This avoids maintaining duplicate widget type lists and prevents import cycles.
+	config.WidgetTypeChecker = IsRegistered
+	config.WidgetTypesLister = RegisteredTypesList
+}
+
+// IsRegistered checks if a widget type is registered in the factory
+func IsRegistered(typeName string) bool {
+	_, exists := registry[typeName]
+	return exists
+}
+
 // Register registers a widget factory for the given type name.
 // This should be called from init() functions in widget implementation files.
 func Register(typeName string, factory Factory) {

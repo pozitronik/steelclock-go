@@ -108,9 +108,7 @@ func applyGlobalDefaults(cfg *Config) {
 	if cfg.GameDisplayName == "" {
 		cfg.GameDisplayName = DefaultGameDisplay
 	}
-	if cfg.Backend == "" {
-		cfg.Backend = "any" // Try GameSense first, fall back to direct driver
-	}
+	// Empty Backend means auto-selection (try backends by priority)
 }
 
 // applyDirectDriverDefaults sets default values for direct driver configuration

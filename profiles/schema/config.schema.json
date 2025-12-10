@@ -40,9 +40,8 @@
     },
     "backend": {
       "type": "string",
-      "description": "Backend: 'gamesense' (requires SteelSeries GG), 'direct' (USB HID), 'any' (try gamesense, fallback to direct)",
-      "enum": ["gamesense", "direct", "any"],
-      "default": "any"
+      "description": "Backend: 'gamesense' (requires SteelSeries GG), 'direct' (USB HID). If omitted, auto-selects (tries gamesense first, then direct)",
+      "enum": ["gamesense", "direct", ""]
     },
     "direct_driver": {
       "type": "object",

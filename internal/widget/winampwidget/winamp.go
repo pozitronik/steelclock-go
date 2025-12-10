@@ -9,8 +9,10 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/shared"
+	"github.com/pozitronik/steelclock-go/internal/shared/anim"
+	"github.com/pozitronik/steelclock-go/internal/shared/render"
 	"github.com/pozitronik/steelclock-go/internal/widget"
-	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"github.com/pozitronik/steelclock-go/internal/winamp"
 	"golang.org/x/image/font"
 )
@@ -62,7 +64,7 @@ type Widget struct {
 	mu             sync.RWMutex
 
 	// Shared scroller
-	scroller *shared.TextScroller
+	scroller *anim.TextScroller
 }
 
 // New creates a new Winamp widget
@@ -121,9 +123,9 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 
 	// Extract scroll settings
 	scrollEnabled := false
-	scrollDirection := shared.ScrollLeft
+	scrollDirection := anim.ScrollLeft
 	scrollSpeed := 30.0 // pixels per second
-	scrollMode := shared.ScrollContinuous
+	scrollMode := anim.ScrollContinuous
 	scrollPauseMs := 1000
 	scrollGap := 20
 
@@ -153,7 +155,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	}
 
 	// Create scroller with configuration
-	scroller := shared.NewTextScroller(shared.ScrollerConfig{
+	scroller := anim.NewTextScroller(anim.ScrollerConfig{
 		Speed:     scrollSpeed,
 		Mode:      scrollMode,
 		Direction: scrollDirection,
@@ -296,7 +298,7 @@ func (w *Widget) formatOutput(info *winamp.TrackInfo) string {
 	}
 
 	// Use TokenFormatter for placeholder replacement
-	formatter := shared.NewTokenFormatter().
+	formatter := render.NewTokenFormatter().
 		Set("title", info.Title).
 		Set("filename", info.FileName).
 		Set("filepath", info.FilePath).
@@ -407,11 +409,11 @@ func (w *Widget) renderScrollingText(img *image.Gray, text string, offset float6
 		scrollX := textX - int(offset)
 
 		// For continuous mode, draw text twice for seamless loop
-		if scrollCfg.Mode == shared.ScrollContinuous {
+		if scrollCfg.Mode == anim.ScrollContinuous {
 			bitmap.SmartDrawTextAtPosition(img, text, w.fontFace, w.fontName, scrollX, textY, contentX, contentY, contentW, contentH)
 
 			// Draw second instance for seamless loop
-			if scrollCfg.Direction == shared.ScrollLeft {
+			if scrollCfg.Direction == anim.ScrollLeft {
 				textX2 := scrollX + textWidth + w.scrollGap
 				if textX2 < contentX+contentW {
 					bitmap.SmartDrawTextAtPosition(img, text, w.fontFace, w.fontName, textX2, textY, contentX, contentY, contentW, contentH)

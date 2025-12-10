@@ -181,9 +181,9 @@ SteelClock supports two connection backends for communicating with your SteelSer
 
 | Backend     | Description                              | Refresh Rate        | Requirements                        |
 |-------------|------------------------------------------|---------------------|-------------------------------------|
-| `gamesense` | Uses SteelSeries GG/Engine API (default) | 100ms (10 Hz)       | SteelSeries GG/Engine running       |
+| `gamesense` | Uses SteelSeries GG/Engine API           | 100ms (10 Hz)       | SteelSeries GG/Engine running       |
 | `direct`    | Direct USB HID communication             | ~16-30ms (30-60 Hz) | Device VID/PID, udev rules on Linux |
-| `any`       | Try GameSense first, fallback to direct  | Varies              | -                                   |
+| (omitted)   | Auto-select: tries gamesense, then direct | Varies             | -                                   |
 
 ### Configuration
 
@@ -236,7 +236,7 @@ Common values: VID `1038` (SteelSeries), PID varies by model.
 
 - Direct mode bypasses the GameSense API entirely
 - Some devices may have multiple HID interfaces - use `interface` to specify (e.g., `mi_01`)
-- If experiencing issues, try `backend: "any"` to automatically fallback
+- If experiencing issues, omit the `backend` field to enable auto-selection with fallback
 - Direct mode reconnects automatically if the device is disconnected and reconnected
 
 ## Linux Limitations

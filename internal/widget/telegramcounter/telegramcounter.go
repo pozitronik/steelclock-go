@@ -10,9 +10,11 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/shared/anim"
+	"github.com/pozitronik/steelclock-go/internal/shared/render"
+	"github.com/pozitronik/steelclock-go/internal/shared/util"
 	tgclient "github.com/pozitronik/steelclock-go/internal/telegram"
 	"github.com/pozitronik/steelclock-go/internal/widget"
-	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
@@ -55,9 +57,9 @@ type Widget struct {
 	fetchInterval time.Duration
 
 	// Shared modules
-	connection     *shared.ConnectionManager
-	blink          *shared.BlinkAnimator
-	statusRenderer *shared.StatusRenderer
+	connection     *util.ConnectionManager
+	blink          *anim.BlinkAnimator
+	statusRenderer *render.StatusRenderer
 
 	// Display dimensions
 	width  int
@@ -91,7 +93,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		mode = modeBadge // default mode
 	}
 
-	blinkMode := shared.BlinkNever
+	blinkMode := anim.BlinkNever
 	badgeForeground := 255 // default: white
 	badgeBackground := 0   // default: black
 
@@ -128,7 +130,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	}
 
 	// Create connection manager
-	connManager := shared.NewConnectionManager(client, 30*time.Second, 60*time.Second)
+	connManager := util.NewConnectionManager(client, 30*time.Second, 60*time.Second)
 
 	w := &Widget{
 		BaseWidget:      base,
@@ -145,8 +147,8 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		width:           pos.W,
 		height:          pos.H,
 		connection:      connManager,
-		blink:           shared.NewBlinkAnimator(blinkMode, 500*time.Millisecond),
-		statusRenderer:  shared.NewStatusRenderer("5x7"),
+		blink:           anim.NewBlinkAnimator(blinkMode, 500*time.Millisecond),
+		statusRenderer:  render.NewStatusRenderer("5x7"),
 	}
 
 	// Add error callback (using Add instead of Set for proper multi-widget support)

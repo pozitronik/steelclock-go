@@ -8,8 +8,10 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/metrics"
+	"github.com/pozitronik/steelclock-go/internal/shared"
+	"github.com/pozitronik/steelclock-go/internal/shared/render"
+	"github.com/pozitronik/steelclock-go/internal/shared/util"
 	"github.com/pozitronik/steelclock-go/internal/widget"
-	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 func init() {
@@ -22,11 +24,11 @@ func init() {
 type Widget struct {
 	*widget.BaseWidget
 	mu             sync.RWMutex
-	strategy       shared.MetricDisplayStrategy
-	Renderer       *shared.MetricRenderer
-	displayMode    shared.DisplayMode
+	strategy       render.MetricDisplayStrategy
+	Renderer       *render.MetricRenderer
+	displayMode    render.DisplayMode
 	currentValue   float64
-	history        *shared.RingBuffer[float64]
+	history        *util.RingBuffer[float64]
 	textFormat     string
 	memoryProvider metrics.MemoryProvider
 }
@@ -37,7 +39,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
-	displayMode := shared.DisplayMode(helper.GetDisplayMode(config.ModeText))
+	displayMode := render.DisplayMode(helper.GetDisplayMode(config.ModeText))
 	textSettings := helper.GetTextSettings()
 	padding := helper.GetPadding()
 	barSettings := helper.GetBarSettings()
@@ -57,24 +59,24 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	}
 
 	// Create metric renderer
-	renderer := shared.NewMetricRenderer(
-		shared.BarConfig{
+	renderer := render.NewMetricRenderer(
+		render.BarConfig{
 			Direction: barSettings.Direction,
 			Border:    barSettings.Border,
 			Color:     barColor,
 		},
-		shared.GraphConfig{
+		render.GraphConfig{
 			FillColor:  graphSettings.FillColor,
 			LineColor:  graphSettings.LineColor,
 			HistoryLen: graphSettings.HistoryLen,
 		},
-		shared.GaugeConfig{
+		render.GaugeConfig{
 			ArcColor:    uint8(gaugeSettings.ArcColor),
 			NeedleColor: uint8(gaugeSettings.NeedleColor),
 			ShowTicks:   gaugeSettings.ShowTicks,
 			TicksColor:  uint8(gaugeSettings.TicksColor),
 		},
-		shared.TextConfig{
+		render.TextConfig{
 			FontFace:   fontFace,
 			FontName:   textSettings.FontName,
 			HorizAlign: textSettings.HorizAlign,
@@ -85,10 +87,10 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 
 	return &Widget{
 		BaseWidget:     base,
-		strategy:       shared.GetMetricStrategy(displayMode),
+		strategy:       render.GetMetricStrategy(displayMode),
 		Renderer:       renderer,
 		displayMode:    displayMode,
-		history:        shared.NewRingBuffer[float64](graphSettings.HistoryLen),
+		history:        util.NewRingBuffer[float64](graphSettings.HistoryLen),
 		textFormat:     "%.0f",
 		memoryProvider: metrics.DefaultMemory,
 	}, nil
@@ -113,7 +115,7 @@ func (w *Widget) Update() error {
 	defer w.mu.Unlock()
 
 	w.currentValue = percent
-	if w.displayMode == shared.DisplayModeGraph {
+	if w.displayMode == render.DisplayModeGraph {
 		w.history.Push(percent)
 	}
 
@@ -141,7 +143,7 @@ func (w *Widget) Render() (image.Image, error) {
 	defer w.mu.RUnlock()
 
 	// Delegate rendering to strategy
-	w.strategy.Render(img, shared.MetricData{
+	w.strategy.Render(img, render.MetricData{
 		Value:       w.currentValue,
 		History:     w.history.ToSlice(),
 		TextFormat:  w.textFormat,

@@ -2,8 +2,6 @@ package config
 
 import (
 	"fmt"
-	"sort"
-	"strings"
 )
 
 // Validation constants
@@ -14,52 +12,63 @@ const (
 	MaxEventBatchSize      = 100
 )
 
-// ValidBackends contains valid backend values
-var ValidBackends = map[string]bool{
-	"":          true, // Empty = default (gamesense)
-	"gamesense": true,
-	"direct":    true,
-	"any":       true,
-}
+// BackendTypeChecker is a callback function that checks if a backend type is registered.
+// This is set by the backend package to avoid import cycles.
+var BackendTypeChecker func(name string) bool
 
-// ValidWidgetTypes contains all valid widget type names.
-// This is the single source of truth for widget types.
-var ValidWidgetTypes = map[string]bool{
-	"clock":            true,
-	"cpu":              true,
-	"memory":           true,
-	"network":          true,
-	"disk":             true,
-	"keyboard":         true,
-	"keyboard_layout":  true,
-	"volume":           true,
-	"volume_meter":     true,
-	"audio_visualizer": true,
-	"doom":             true,
-	"winamp":           true,
-	"matrix":           true,
-	"weather":          true,
-	"battery":          true,
-	"game_of_life":     true,
-	"hyperspace":       true,
-	"starwars_intro":   true,
-	"telegram":         true,
-	"telegram_counter": true,
-}
+// BackendTypesLister is a callback function that returns a list of registered backend types.
+// This is set by the backend package to avoid import cycles.
+var BackendTypesLister func() string
 
-// IsValidWidgetType checks if the given type name is a valid widget type
-func IsValidWidgetType(typeName string) bool {
-	return ValidWidgetTypes[typeName]
-}
-
-// GetValidWidgetTypesList returns a sorted comma-separated list of valid widget types
-func GetValidWidgetTypesList() string {
-	types := make([]string, 0, len(ValidWidgetTypes))
-	for t := range ValidWidgetTypes {
-		types = append(types, t)
+// IsValidBackend checks if the given backend name is valid.
+// Empty string means auto-selection (try backends by priority).
+// Other values are checked against the backend registry.
+func IsValidBackend(name string) bool {
+	if name == "" {
+		return true
 	}
-	sort.Strings(types)
-	return strings.Join(types, ", ")
+	if BackendTypeChecker != nil {
+		return BackendTypeChecker(name)
+	}
+	// Fallback for tests that don't import backend packages
+	return false
+}
+
+// GetValidBackendsList returns a comma-separated list of valid backend types.
+func GetValidBackendsList() string {
+	if BackendTypesLister != nil {
+		return BackendTypesLister()
+	}
+	return "(no backends registered)"
+}
+
+// WidgetTypeChecker is a callback function that checks if a widget type is registered.
+// This is set by the widget package to avoid import cycles.
+// When set, it delegates to the widget factory's registry (single source of truth).
+var WidgetTypeChecker func(typeName string) bool
+
+// WidgetTypesLister is a callback function that returns a list of registered widget types.
+// This is set by the widget package to avoid import cycles.
+var WidgetTypesLister func() string
+
+// IsValidWidgetType checks if the given type name is a valid widget type.
+// It delegates to the widget factory's registry if available.
+func IsValidWidgetType(typeName string) bool {
+	if WidgetTypeChecker != nil {
+		return WidgetTypeChecker(typeName)
+	}
+	// Fallback should not happen in production (widget package sets the checker),
+	// but provides safety for tests that don't import widget packages.
+	return false
+}
+
+// GetValidWidgetTypesList returns a sorted comma-separated list of valid widget types.
+// It delegates to the widget factory's registry if available.
+func GetValidWidgetTypesList() string {
+	if WidgetTypesLister != nil {
+		return WidgetTypesLister()
+	}
+	return "(no widget types registered)"
 }
 
 // Validate checks that the configuration is valid
@@ -81,8 +90,8 @@ func Validate(cfg *Config) error {
 
 // validateGlobalConfig validates global configuration settings
 func validateGlobalConfig(cfg *Config) error {
-	if !ValidBackends[cfg.Backend] {
-		return fmt.Errorf("invalid backend '%s' (valid: gamesense, direct, any)", cfg.Backend)
+	if !IsValidBackend(cfg.Backend) {
+		return fmt.Errorf("invalid backend '%s' (valid: %s)", cfg.Backend, GetValidBackendsList())
 	}
 
 	if cfg.DeinitializeTimerMs != 0 {

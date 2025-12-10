@@ -7,8 +7,11 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/metrics"
+	"github.com/pozitronik/steelclock-go/internal/shared"
+	widgetbase "github.com/pozitronik/steelclock-go/internal/shared/base"
+	"github.com/pozitronik/steelclock-go/internal/shared/render"
+	"github.com/pozitronik/steelclock-go/internal/shared/util"
 	"github.com/pozitronik/steelclock-go/internal/widget"
-	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 )
 
 func init() {
@@ -19,7 +22,7 @@ func init() {
 
 // Widget displays network I/O (RX/TX)
 type Widget struct {
-	*shared.BaseDualIOWidget
+	*widgetbase.BaseDualIOWidget
 	base            *widget.BaseWidget
 	interfaceName   *string
 	networkProvider metrics.NetworkProvider
@@ -36,7 +39,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	helper := shared.NewConfigHelper(cfg)
 
 	// Extract common settings using helper
-	displayMode := shared.DisplayMode(helper.GetDisplayMode(config.ModeText))
+	displayMode := render.DisplayMode(helper.GetDisplayMode(config.ModeText))
 	textSettings := helper.GetTextSettings()
 	padding := helper.GetPadding()
 	barSettings := helper.GetBarSettings()
@@ -49,7 +52,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	txNeedleColor := 200
 
 	switch displayMode {
-	case shared.DisplayModeBar:
+	case render.DisplayModeBar:
 		if cfg.Bar != nil && cfg.Bar.Colors != nil {
 			if cfg.Bar.Colors.Rx != nil {
 				rxColor = *cfg.Bar.Colors.Rx
@@ -58,7 +61,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 				txColor = *cfg.Bar.Colors.Tx
 			}
 		}
-	case shared.DisplayModeGraph:
+	case render.DisplayModeGraph:
 		if cfg.Graph != nil && cfg.Graph.Colors != nil {
 			if cfg.Graph.Colors.Rx != nil {
 				rxColor = *cfg.Graph.Colors.Rx
@@ -67,7 +70,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 				txColor = *cfg.Graph.Colors.Tx
 			}
 		}
-	case shared.DisplayModeGauge:
+	case render.DisplayModeGauge:
 		if cfg.Gauge != nil && cfg.Gauge.Colors != nil {
 			if cfg.Gauge.Colors.Rx != nil {
 				rxColor = *cfg.Gauge.Colors.Rx
@@ -98,12 +101,12 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		unit = "Mbps"
 	}
 	// Validate unit
-	if unit != "auto" && !shared.IsValidUnit(unit) {
+	if unit != "auto" && !util.IsValidUnit(unit) {
 		unit = "Mbps" // Fallback to default
 	}
 
 	// Create byte rate converter
-	converter := shared.NewByteRateConverter(unit)
+	converter := util.NewByteRateConverter(unit)
 
 	// Show unit suffix in text mode
 	showUnit := false
@@ -118,27 +121,27 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	}
 
 	// Create dual metric renderer
-	renderer := shared.NewDualMetricRenderer(
-		shared.DualBarConfig{
+	renderer := render.NewDualMetricRenderer(
+		render.DualBarConfig{
 			Direction:      barSettings.Direction,
 			Border:         barSettings.Border,
 			PrimaryColor:   rxColor,
 			SecondaryColor: txColor,
 		},
-		shared.DualGraphConfig{
+		render.DualGraphConfig{
 			HistoryLen:    graphSettings.HistoryLen,
 			PrimaryFill:   rxColor,
 			PrimaryLine:   rxColor,
 			SecondaryFill: txColor,
 			SecondaryLine: txColor,
 		},
-		shared.DualGaugeConfig{
+		render.DualGaugeConfig{
 			PrimaryArcColor:      uint8(max(0, rxColor)),
 			PrimaryNeedleColor:   uint8(max(0, rxNeedleColor)),
 			SecondaryArcColor:    uint8(max(0, txColor)),
 			SecondaryNeedleColor: uint8(max(0, txNeedleColor)),
 		},
-		shared.TextConfig{
+		render.TextConfig{
 			FontFace:   fontFace,
 			FontName:   textSettings.FontName,
 			HorizAlign: textSettings.HorizAlign,
@@ -148,7 +151,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	)
 
 	// Create base dual I/O widget
-	baseDualIO := shared.NewBaseDualIOWidget(shared.BaseDualIOConfig{
+	baseDualIO := widgetbase.NewBaseDualIOWidget(widgetbase.BaseDualIOConfig{
 		Base:          base,
 		DisplayMode:   displayMode,
 		Padding:       padding,
@@ -156,7 +159,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		Unit:          unit,
 		ShowUnit:      showUnit,
 		SupportsGauge: true,
-		TextConfig: shared.DualIOTextConfig{
+		TextConfig: widgetbase.DualIOTextConfig{
 			PrimaryPrefix:   "↓",
 			SecondaryPrefix: "↑",
 		},

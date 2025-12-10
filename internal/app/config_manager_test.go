@@ -6,6 +6,11 @@ import (
 	"testing"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
+
+	// Import widget package to trigger init() which sets up config.WidgetTypeChecker
+	_ "github.com/pozitronik/steelclock-go/internal/widget"
+	// Import clock widget to register the "clock" widget type used in tests
+	_ "github.com/pozitronik/steelclock-go/internal/widget/clock"
 )
 
 func TestNewConfigManager(t *testing.T) {

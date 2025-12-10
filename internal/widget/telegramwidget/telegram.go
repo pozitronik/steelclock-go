@@ -8,9 +8,11 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/shared/anim"
+	"github.com/pozitronik/steelclock-go/internal/shared/render"
+	"github.com/pozitronik/steelclock-go/internal/shared/util"
 	tgclient "github.com/pozitronik/steelclock-go/internal/telegram"
 	"github.com/pozitronik/steelclock-go/internal/widget"
-	"github.com/pozitronik/steelclock-go/internal/widget/shared"
 	"golang.org/x/image/font"
 )
 
@@ -39,9 +41,9 @@ type ElementAppearance struct {
 	Format string
 	// Scroll settings
 	ScrollEnabled   bool
-	ScrollDirection shared.ScrollDirection
+	ScrollDirection anim.ScrollDirection
 	ScrollSpeed     float64
-	ScrollMode      shared.ScrollMode
+	ScrollMode      anim.ScrollMode
 	ScrollGap       int
 	// Word break mode: "normal" or "break-all"
 	WordBreak string
@@ -75,24 +77,24 @@ type Widget struct {
 	dismissedMessageID int // Track dismissed message to prevent re-showing after timeout
 
 	// Connection manager (shared module)
-	connection *shared.ConnectionManager
+	connection *util.ConnectionManager
 
 	// Scroll state (per element)
-	headerScroller  *shared.TextScroller
-	messageScroller *shared.TextScroller
+	headerScroller  *anim.TextScroller
+	messageScroller *anim.TextScroller
 
 	// Blink animator
-	blink *shared.BlinkAnimator
+	blink *anim.BlinkAnimator
 
 	// Transition manager
-	transition *shared.TransitionManager
+	transition *anim.TransitionManager
 
 	// Display dimensions
 	width  int
 	height int
 
 	// Status text renderer for connection/error messages
-	statusRenderer *shared.StatusRenderer
+	statusRenderer *render.StatusRenderer
 }
 
 // New creates a new Telegram notification widget
@@ -123,16 +125,16 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	}
 
 	// Create status renderer for connection/error messages
-	statusRenderer := shared.NewStatusRenderer("5x7")
+	statusRenderer := render.NewStatusRenderer("5x7")
 
 	// Create scrollers from appearance config
-	headerScrollerCfg := shared.ScrollerConfig{
+	headerScrollerCfg := anim.ScrollerConfig{
 		Speed:     appearance.Header.ScrollSpeed,
 		Mode:      appearance.Header.ScrollMode,
 		Direction: appearance.Header.ScrollDirection,
 		Gap:       appearance.Header.ScrollGap,
 	}
-	messageScrollerCfg := shared.ScrollerConfig{
+	messageScrollerCfg := anim.ScrollerConfig{
 		Speed:     appearance.Message.ScrollSpeed,
 		Mode:      appearance.Message.ScrollMode,
 		Direction: appearance.Message.ScrollDirection,
@@ -145,14 +147,14 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		authCfg:         cfg.Auth,
 		appearance:      appearance,
 		messages:        make([]tgclient.MessageInfo, 0),
-		connection:      shared.NewConnectionManager(client, 30*time.Second, 60*time.Second),
+		connection:      util.NewConnectionManager(client, 30*time.Second, 60*time.Second),
 		width:           pos.W,
 		height:          pos.H,
 		statusRenderer:  statusRenderer,
-		headerScroller:  shared.NewTextScroller(headerScrollerCfg),
-		messageScroller: shared.NewTextScroller(messageScrollerCfg),
-		blink:           shared.NewBlinkAnimator(shared.BlinkAlways, 500*time.Millisecond),
-		transition:      shared.NewTransitionManager(pos.W, pos.H),
+		headerScroller:  anim.NewTextScroller(headerScrollerCfg),
+		messageScroller: anim.NewTextScroller(messageScrollerCfg),
+		blink:           anim.NewBlinkAnimator(anim.BlinkAlways, 500*time.Millisecond),
+		transition:      anim.NewTransitionManager(pos.W, pos.H),
 	}
 
 	// Add message callback (using Add instead of Set for proper multi-widget support)
@@ -205,9 +207,9 @@ func parseAppearance(appCfg *config.TelegramAppearanceConfig) (ChatAppearance, e
 			VertAlign:       config.AlignTop,
 			Format:          "", // empty = auto format based on chat type
 			ScrollEnabled:   true,
-			ScrollDirection: shared.ScrollLeft,
+			ScrollDirection: anim.ScrollLeft,
 			ScrollSpeed:     30,
-			ScrollMode:      shared.ScrollContinuous,
+			ScrollMode:      anim.ScrollContinuous,
 			ScrollGap:       20,
 			WordBreak:       "normal",
 		},
@@ -220,9 +222,9 @@ func parseAppearance(appCfg *config.TelegramAppearanceConfig) (ChatAppearance, e
 			VertAlign:       config.AlignTop,
 			Format:          "", // not used for message
 			ScrollEnabled:   true,
-			ScrollDirection: shared.ScrollLeft,
+			ScrollDirection: anim.ScrollLeft,
 			ScrollSpeed:     30,
-			ScrollMode:      shared.ScrollContinuous,
+			ScrollMode:      anim.ScrollContinuous,
 			ScrollGap:       20,
 			WordBreak:       "normal",
 		},
@@ -486,7 +488,7 @@ func (w *Widget) startTransition(chatType tgclient.ChatType) {
 	}
 
 	// Start transition via manager
-	w.transition.Start(shared.TransitionType(appearance.Transitions.In), transitionSpeed, oldFrame)
+	w.transition.Start(anim.TransitionType(appearance.Transitions.In), transitionSpeed, oldFrame)
 }
 
 // Render draws the widget
@@ -663,7 +665,7 @@ func (w *Widget) renderMessage(img *image.Gray, msg tgclient.MessageInfo) {
 
 // renderMultiLineText renders wrapped text with optional vertical scrolling
 func (w *Widget) renderMultiLineText(img *image.Gray, text string, elem ElementAppearance, scrollOffset float64, x, y, width, height int) {
-	renderer := shared.NewMultiLineRenderer(shared.MultiLineRendererConfig{
+	renderer := render.NewMultiLineRenderer(render.MultiLineRendererConfig{
 		FontFace:      elem.FontFace,
 		FontName:      elem.FontName,
 		HorizAlign:    elem.HorizAlign,
@@ -680,7 +682,7 @@ func (w *Widget) renderMultiLineText(img *image.Gray, text string, elem ElementA
 
 // renderScrollingText renders text with scrolling support (single line, horizontal scroll)
 func (w *Widget) renderScrollingText(img *image.Gray, text string, elem ElementAppearance, scrollOffset float64, x, y, width, height int) {
-	renderer := shared.NewHorizontalTextRenderer(shared.HorizontalTextRendererConfig{
+	renderer := render.NewHorizontalTextRenderer(render.HorizontalTextRendererConfig{
 		FontFace:      elem.FontFace,
 		FontName:      elem.FontName,
 		HorizAlign:    elem.HorizAlign,
@@ -762,7 +764,7 @@ func (w *Widget) formatHeader(msg tgclient.MessageInfo) string {
 	}
 
 	// Apply format tokens using TokenFormatter
-	formatter := shared.NewTokenFormatter().
+	formatter := render.NewTokenFormatter().
 		Set("sender", senderName).
 		Set("chat", chatTitle).
 		Set("type", chatTypeStr).
