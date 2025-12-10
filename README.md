@@ -28,7 +28,7 @@ https://github.com/user-attachments/assets/58f607cb-be31-4af4-bb3d-6e0628f0748c
 - **System Tray Integration**: Runs in background with system tray icon
 - **Configuration Profiles**: Switch between multiple configurations via tray menu
 - **Live Configuration Reload**: Edit and reload config without restarting
-- **Multiple Widgets**: Clock, CPU, Memory, Network, Disk, Keyboard indicators, Keyboard layout, Volume control, Audio visualizer, Winamp integration, Matrix digital rain, Weather
+- **Multiple Widgets**: Clock, CPU, Memory, Battery, Network, Disk, Keyboard indicators, Keyboard layout, Volume control, Audio visualizer, Winamp integration, Telegram notifications, Matrix digital rain, Weather, Game of Life, Hyperspace, Star Wars intro
 - **Display Modes**: Text, horizontal/vertical bars, graphs, analog gauges, etc
 - **Per-Core CPU Monitoring**: Grid layouts showing individual core usage for all display modes
 - **Widget Transparency**: Overlay widgets using `background_color: -1` for layered displays
@@ -51,6 +51,10 @@ And it also runs [DOOM](profiles/DOOM_README.md).
    build.cmd
    # Or from WSL/bash:
    ./build.sh
+
+   # For light build (smaller, excludes telegram widgets):
+   build.cmd light
+   ./build.sh --light
    ```
 
 2. Run the application:
@@ -68,6 +72,9 @@ And it also runs [DOOM](profiles/DOOM_README.md).
 2. Build the application:
    ```bash
    ./build-linux.sh
+
+   # For light build (smaller, excludes telegram widgets):
+   ./build-linux.sh --light
    ```
 
 3. Install udev rules for device access (one-time setup):
@@ -93,7 +100,25 @@ GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H windowsgui" -o steelclock.
 
 # Build for Linux
 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o steelclock ./cmd/steelclock
+
+# Light build (add -tags light to exclude telegram widgets)
+go build -tags light -ldflags="-s -w" -o steelclock-light ./cmd/steelclock
 ```
+
+### Build Variants
+
+SteelClock provides two build variants:
+
+| Variant | Size   | Description                                      |
+|---------|--------|--------------------------------------------------|
+| Full    | ~15 MB | All widgets included (default)                   |
+| Light   | ~10 MB | Excludes widgets with external API dependencies  |
+
+**Widgets excluded in light build:**
+- `telegram` - Telegram notifications (requires Telegram API)
+- `telegram_counter` - Telegram unread counter (requires Telegram API)
+
+To modify the exclusion list, edit `cmd/steelclock/imports_light.go`.
 
 ### Command Line Options
 
@@ -157,6 +182,7 @@ The `config_name` field determines how the profile appears in the tray menu. If 
 | **clock**            | Current time display              | text, analog                           |   Yes   |   Yes    |
 | **cpu**              | CPU usage (per-core support)      | text, bar, graph, gauge                |   Yes   |   Yes    |
 | **memory**           | RAM usage                         | text, bar, graph, gauge                |   Yes   |   Yes    |
+| **battery**          | Battery level and charging status | text, bar, graph, gauge                |   Yes   |   Yes    |
 | **network**          | Network I/O (RX/TX)               | text, bar, graph, gauge                |   Yes   |   Yes    |
 | **disk**             | Disk I/O (read/write)             | text, bar, graph                       |   Yes   |   Yes    |
 | **keyboard**         | Lock indicators (Caps/Num/Scroll) | icons, text, mixed                     |   Yes   |    No    |
@@ -165,7 +191,12 @@ The `config_name` field determines how the profile appears in the tray menu. If 
 | **volume_meter**     | Realtime audio peak meter         | bar, gauge (stereo & VU support)       |   Yes   | Limited* |
 | **audio_visualizer** | Realtime audio spectrum/waveform  | spectrum, oscilloscope                 |   Yes   |   Yes*   |
 | **winamp**           | Winamp player info display        | text (with scrolling support)          |   Yes   |    No    |
+| **telegram**         | Telegram notifications display    | text (with scrolling/transitions)      |   Yes   |   Yes    |
+| **telegram_counter** | Telegram unread message counter   | text                                   |   Yes   |   Yes    |
 | **doom**             | Interactive DOOM game display     | game                                   |   Yes   |   Yes    |
+| **game_of_life**     | Conway's Game of Life simulation  | -                                      |   Yes   |   Yes    |
+| **hyperspace**       | Star Wars hyperspace animation    | -                                      |   Yes   |   Yes    |
+| **starwars_intro**   | Star Wars opening crawl text      | -                                      |   Yes   |   Yes    |
 | **matrix**           | Matrix "digital rain" effect      | -                                      |   Yes   |   Yes    |
 | **weather**          | Current weather conditions        | icon, text                             |   Yes   |   Yes    |
 
