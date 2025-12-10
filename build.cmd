@@ -1,8 +1,23 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM Build script for SteelClock
+REM Usage:
+REM   build.cmd         - Full build (all widgets)
+REM   build.cmd light   - Light build (excludes heavy widgets)
+
+set BUILD_VARIANT=full
+set BUILD_TAGS=
+set OUTPUT_SUFFIX=
+
+if /i "%~1"=="light" (
+    set BUILD_VARIANT=light
+    set BUILD_TAGS=-tags light
+    set OUTPUT_SUFFIX=-light
+)
+
 echo ======================================
-echo Building SteelClock for Windows
+echo Building SteelClock for Windows (%BUILD_VARIANT%)
 echo ======================================
 echo.
 
@@ -11,6 +26,7 @@ echo [1/6] Cleaning old resources...
 if exist "cmd\steelclock\*.syso" del /q "cmd\steelclock\*.syso" 2>nul
 if exist "internal\tray\icon.ico" del /q "internal\tray\icon.ico" 2>nul
 if exist "steelclock.exe" del /q "steelclock.exe" 2>nul
+if exist "steelclock-light.exe" del /q "steelclock-light.exe" 2>nul
 if exist "winres\*.syso" del /q "winres\*.syso" 2>nul
 echo [OK] Cleanup complete
 echo.
@@ -89,10 +105,11 @@ if exist "winres\icon.ico" (
 echo.
 
 REM Step 5: Build executable
-echo [5/6] Compiling executable...
+echo [5/6] Compiling executable (%BUILD_VARIANT%)...
 set GOOS=windows
 set GOARCH=amd64
-go build -ldflags="-s -w -H windowsgui" -o steelclock.exe ./cmd/steelclock
+set OUTPUT_NAME=steelclock%OUTPUT_SUFFIX%.exe
+go build %BUILD_TAGS% -ldflags="-s -w -H windowsgui" -o %OUTPUT_NAME% ./cmd/steelclock
 if %errorlevel% neq 0 (
     echo.
     echo [X] Compilation failed!
@@ -109,18 +126,18 @@ echo.
 
 REM Summary
 echo ======================================
-echo Build Summary
+echo Build Summary (%BUILD_VARIANT%)
 echo ======================================
-dir steelclock.exe | find "steelclock.exe"
+dir %OUTPUT_NAME% | find "%OUTPUT_NAME%"
 
 REM Check if resources are embedded (using PowerShell as objdump may not be available)
-powershell -Command "if ((Get-Content -Path 'steelclock.exe' -Encoding Byte -ReadCount 0 | ForEach-Object { [System.Text.Encoding]::ASCII.GetString($_) }) -match '\.rsrc') { Write-Host '[OK] Windows resources (.rsrc) embedded' -ForegroundColor Green } else { Write-Host '[!] No .rsrc section found (no icon embedded)' -ForegroundColor Yellow }" 2>nul
+powershell -Command "if ((Get-Content -Path '%OUTPUT_NAME%' -Encoding Byte -ReadCount 0 | ForEach-Object { [System.Text.Encoding]::ASCII.GetString($_) }) -match '\.rsrc') { Write-Host '[OK] Windows resources (.rsrc) embedded' -ForegroundColor Green } else { Write-Host '[!] No .rsrc section found (no icon embedded)' -ForegroundColor Yellow }" 2>nul
 
 echo.
 echo [OK] Build complete!
 echo.
 echo Usage:
-echo   steelclock.exe          # Run with system tray
-echo   steelclock.exe -config path\to\config.json
+echo   %OUTPUT_NAME%          # Run with system tray
+echo   %OUTPUT_NAME% -config path\to\config.json
 echo.
 echo Logs: steelclock.log in the same directory as the executable

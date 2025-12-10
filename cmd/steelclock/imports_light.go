@@ -1,11 +1,18 @@
-//go:build !light
+//go:build light
 
 package main
 
-// This file imports all widget packages to ensure their init() functions
-// are called and widgets are registered with the factory.
-// Add new widget package imports here as widgets are created.
-// For light build configuration, see imports_light.go
+// LIGHT BUILD - Widget Exclusion Configuration
+// =============================================
+// This is the SINGLE POINT of configuration for light build exclusions.
+// Widgets commented out below are EXCLUDED from the light build.
+//
+// Currently excluded widgets:
+//   - telegramcounter (requires external API dependencies)
+//   - telegramwidget  (requires external API dependencies)
+//
+// To modify exclusions, edit the import list below.
+// Build with: go build -tags light ./cmd/steelclock
 
 import (
 	// Widget packages (blank imports for registration)
@@ -23,8 +30,8 @@ import (
 	_ "github.com/pozitronik/steelclock-go/internal/widget/memory"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/network"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/starwarsintro"
-	_ "github.com/pozitronik/steelclock-go/internal/widget/telegramcounter"
-	_ "github.com/pozitronik/steelclock-go/internal/widget/telegramwidget"
+	// EXCLUDED: _ "github.com/pozitronik/steelclock-go/internal/widget/telegramcounter"
+	// EXCLUDED: _ "github.com/pozitronik/steelclock-go/internal/widget/telegramwidget"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/volume"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/volumemeter"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/weather"

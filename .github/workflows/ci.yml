@@ -97,15 +97,14 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
+        variant: [full, light]
         include:
           - os: ubuntu-latest
             goos: linux
             goarch: amd64
-            artifact: steelclock-linux-amd64
           - os: windows-latest
             goos: windows
             goarch: amd64
-            artifact: steelclock-windows-amd64.exe
 
     steps:
     - name: Checkout code
@@ -153,20 +152,40 @@ jobs:
           echo "Warning: winres/winres.json not found, skipping resource generation"
         fi
 
+    - name: Set build variables
+      id: vars
+      shell: bash
+      run: |
+        if [ "${{ matrix.variant }}" == "light" ]; then
+          echo "tags=-tags light" >> $GITHUB_OUTPUT
+          echo "suffix=-light" >> $GITHUB_OUTPUT
+        else
+          echo "tags=" >> $GITHUB_OUTPUT
+          echo "suffix=" >> $GITHUB_OUTPUT
+        fi
+
+        if [ "${{ matrix.goos }}" == "windows" ]; then
+          echo "ext=.exe" >> $GITHUB_OUTPUT
+        else
+          echo "ext=" >> $GITHUB_OUTPUT
+        fi
+
     - name: Build
       shell: bash
       env:
         GOOS: ${{ matrix.goos }}
         GOARCH: ${{ matrix.goarch }}
       run: |
+        ARTIFACT="steelclock${{ steps.vars.outputs.suffix }}-${{ matrix.goos }}-${{ matrix.goarch }}${{ steps.vars.outputs.ext }}"
         if [ "${{ matrix.goos }}" == "windows" ]; then
-          go build -ldflags="-s -w -H windowsgui" -o ${{ matrix.artifact }} ./cmd/steelclock
+          go build ${{ steps.vars.outputs.tags }} -ldflags="-s -w -H windowsgui" -o "$ARTIFACT" ./cmd/steelclock
         else
-          go build -ldflags="-s -w" -o ${{ matrix.artifact }} ./cmd/steelclock
+          go build ${{ steps.vars.outputs.tags }} -ldflags="-s -w" -o "$ARTIFACT" ./cmd/steelclock
         fi
+        echo "Built: $ARTIFACT"
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.artifact }}
-        path: ${{ matrix.artifact }}
+        name: steelclock${{ steps.vars.outputs.suffix }}-${{ matrix.goos }}-${{ matrix.goarch }}
+        path: steelclock${{ steps.vars.outputs.suffix }}-${{ matrix.goos }}-${{ matrix.goarch }}${{ steps.vars.outputs.ext }}

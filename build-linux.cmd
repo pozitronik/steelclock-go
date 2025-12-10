@@ -1,8 +1,23 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM Build script for SteelClock - Linux cross-compile from Windows
+REM Usage:
+REM   build-linux.cmd         - Full build (all widgets)
+REM   build-linux.cmd light   - Light build (excludes heavy widgets)
+
+set BUILD_VARIANT=full
+set BUILD_TAGS=
+set OUTPUT_SUFFIX=
+
+if /i "%~1"=="light" (
+    set BUILD_VARIANT=light
+    set BUILD_TAGS=-tags light
+    set OUTPUT_SUFFIX=-light
+)
+
 echo ======================================
-echo Building SteelClock for Linux
+echo Building SteelClock for Linux (%BUILD_VARIANT%)
 echo (Cross-compiling from Windows)
 echo ======================================
 echo.
@@ -10,6 +25,7 @@ echo.
 REM Step 1: Cleanup old build
 echo [1/3] Cleaning old build...
 if exist "steelclock" del /q "steelclock" 2>nul
+if exist "steelclock-light" del /q "steelclock-light" 2>nul
 echo [OK] Cleanup complete
 echo.
 
@@ -26,11 +42,12 @@ if exist "winres\icon.ico" (
 echo.
 
 REM Step 3: Build executable
-echo [3/3] Compiling executable...
+echo [3/3] Compiling executable (%BUILD_VARIANT%)...
 set GOOS=linux
 set GOARCH=amd64
 set CGO_ENABLED=0
-go build -ldflags="-s -w" -o steelclock ./cmd/steelclock
+set OUTPUT_NAME=steelclock%OUTPUT_SUFFIX%
+go build %BUILD_TAGS% -ldflags="-s -w" -o %OUTPUT_NAME% ./cmd/steelclock
 if %errorlevel% neq 0 (
     echo.
     echo [X] Compilation failed!
@@ -44,9 +61,9 @@ echo.
 
 REM Summary
 echo ======================================
-echo Build Summary
+echo Build Summary (%BUILD_VARIANT%)
 echo ======================================
-dir steelclock | find "steelclock"
+dir %OUTPUT_NAME% | find "%OUTPUT_NAME%"
 
 echo.
 echo [OK] Build complete!
@@ -55,8 +72,8 @@ echo Note: This is a cross-compiled binary.
 echo For full functionality (system tray), build natively on Linux.
 echo.
 echo Usage on Linux:
-echo   ./steelclock                    # Run (requires udev rules for direct driver)
-echo   ./steelclock -config config.json
+echo   ./%OUTPUT_NAME%                    # Run (requires udev rules for direct driver)
+echo   ./%OUTPUT_NAME% -config config.json
 echo.
 echo For direct USB driver access, install udev rules:
 echo   sudo cp profiles/99-steelseries.rules /etc/udev/rules.d/

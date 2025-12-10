@@ -1,11 +1,37 @@
 #!/bin/bash
 # Build script for SteelClock on Linux
 # Can be run natively on Linux or for cross-compilation
+#
+# Usage:
+#   ./build-linux.sh         # Full build (all widgets)
+#   ./build-linux.sh --light # Light build (excludes heavy widgets)
+#   ./build-linux.sh -l      # Same as --light
 
 set -e
 
+# Parse arguments
+BUILD_VARIANT="full"
+BUILD_TAGS=""
+OUTPUT_SUFFIX=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --light|-l)
+            BUILD_VARIANT="light"
+            BUILD_TAGS="-tags light"
+            OUTPUT_SUFFIX="-light"
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--light|-l]"
+            exit 1
+            ;;
+    esac
+done
+
 echo "======================================"
-echo "Building SteelClock for Linux"
+echo "Building SteelClock for Linux ($BUILD_VARIANT)"
 echo "======================================"
 echo ""
 
@@ -17,7 +43,7 @@ fi
 
 # Step 1: Cleanup old build
 echo "[1/4] Cleaning old build..."
-rm -f steelclock
+rm -f steelclock steelclock-light
 rm -f internal/tray/icon.ico
 echo "OK Cleanup complete"
 echo ""
@@ -67,24 +93,25 @@ fi
 echo ""
 
 # Step 4: Build executable
-echo "[4/4] Compiling executable..."
-GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o steelclock ./cmd/steelclock
+echo "[4/4] Compiling executable ($BUILD_VARIANT)..."
+OUTPUT_NAME="steelclock${OUTPUT_SUFFIX}"
+GOOS=linux GOARCH=amd64 go build $BUILD_TAGS -ldflags="-s -w" -o "$OUTPUT_NAME" ./cmd/steelclock
 echo "OK Compilation successful"
 echo ""
 
 # Summary
 echo "======================================"
-echo "Build Summary"
+echo "Build Summary ($BUILD_VARIANT)"
 echo "======================================"
-ls -lh steelclock
-file steelclock
+ls -lh "$OUTPUT_NAME"
+file "$OUTPUT_NAME"
 
 echo ""
 echo "OK Build complete!"
 echo ""
 echo "Usage:"
-echo "  ./steelclock                    # Run (requires udev rules for direct driver)"
-echo "  ./steelclock -config config.json"
+echo "  ./$OUTPUT_NAME                    # Run (requires udev rules for direct driver)"
+echo "  ./$OUTPUT_NAME -config config.json"
 echo ""
 echo "For direct USB driver access, install udev rules:"
 echo "  sudo cp profiles/99-steelseries.rules /etc/udev/rules.d/"

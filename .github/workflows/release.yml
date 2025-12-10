@@ -13,6 +13,9 @@ jobs:
   build-windows:
     name: Build Windows
     runs-on: windows-latest
+    strategy:
+      matrix:
+        variant: [full, light]
 
     steps:
     - name: Checkout code
@@ -33,6 +36,20 @@ jobs:
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
+
+    - name: Set build variables
+      id: vars
+      shell: bash
+      run: |
+        if [ "${{ matrix.variant }}" == "light" ]; then
+          echo "tags=-tags light" >> $GITHUB_OUTPUT
+          echo "suffix=-light" >> $GITHUB_OUTPUT
+          echo "display_name=Light" >> $GITHUB_OUTPUT
+        else
+          echo "tags=" >> $GITHUB_OUTPUT
+          echo "suffix=" >> $GITHUB_OUTPUT
+          echo "display_name=Full" >> $GITHUB_OUTPUT
+        fi
 
     - name: Prepare icon resources
       shell: bash
@@ -110,14 +127,14 @@ jobs:
     - name: Build Windows executable
       shell: bash
       run: |
-        GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H windowsgui" -o steelclock.exe ./cmd/steelclock
-        echo "Built steelclock.exe"
+        GOOS=windows GOARCH=amd64 go build ${{ steps.vars.outputs.tags }} -ldflags="-s -w -H windowsgui" -o steelclock.exe ./cmd/steelclock
+        echo "Built steelclock.exe (${{ steps.vars.outputs.display_name }})"
 
     - name: Create release package
       shell: bash
       run: |
         VERSION="${{ steps.version.outputs.version }}"
-        PACKAGE_NAME="steelclock-v${VERSION}-windows-amd64"
+        PACKAGE_NAME="steelclock-v${VERSION}${{ steps.vars.outputs.suffix }}-windows-amd64"
 
         # Create release directory
         mkdir -p release/$PACKAGE_NAME
@@ -152,12 +169,15 @@ jobs:
     - name: Upload Windows artifact
       uses: actions/upload-artifact@v4
       with:
-        name: windows-release
+        name: windows-release${{ steps.vars.outputs.suffix }}
         path: release/*.zip
 
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        variant: [full, light]
 
     steps:
     - name: Checkout code
@@ -184,6 +204,20 @@ jobs:
         echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
 
+    - name: Set build variables
+      id: vars
+      shell: bash
+      run: |
+        if [ "${{ matrix.variant }}" == "light" ]; then
+          echo "tags=-tags light" >> $GITHUB_OUTPUT
+          echo "suffix=-light" >> $GITHUB_OUTPUT
+          echo "display_name=Light" >> $GITHUB_OUTPUT
+        else
+          echo "tags=" >> $GITHUB_OUTPUT
+          echo "suffix=" >> $GITHUB_OUTPUT
+          echo "display_name=Full" >> $GITHUB_OUTPUT
+        fi
+
     - name: Prepare icon resources
       shell: bash
       run: |
@@ -198,14 +232,14 @@ jobs:
     - name: Build Linux executable
       shell: bash
       run: |
-        GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o steelclock ./cmd/steelclock
-        echo "Built steelclock"
+        GOOS=linux GOARCH=amd64 go build ${{ steps.vars.outputs.tags }} -ldflags="-s -w" -o steelclock ./cmd/steelclock
+        echo "Built steelclock (${{ steps.vars.outputs.display_name }})"
 
     - name: Create release package
       shell: bash
       run: |
         VERSION="${{ steps.version.outputs.version }}"
-        PACKAGE_NAME="steelclock-v${VERSION}-linux-amd64"
+        PACKAGE_NAME="steelclock-v${VERSION}${{ steps.vars.outputs.suffix }}-linux-amd64"
 
         # Create release directory
         mkdir -p release/$PACKAGE_NAME
@@ -235,7 +269,7 @@ jobs:
     - name: Upload Linux artifact
       uses: actions/upload-artifact@v4
       with:
-        name: linux-release
+        name: linux-release${{ steps.vars.outputs.suffix }}
         path: release/*.tar.gz
 
   release:
@@ -258,16 +292,28 @@ jobs:
         echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
 
-    - name: Download Windows artifact
+    - name: Download Windows Full artifact
       uses: actions/download-artifact@v4
       with:
         name: windows-release
         path: release/
 
-    - name: Download Linux artifact
+    - name: Download Windows Light artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: windows-release-light
+        path: release/
+
+    - name: Download Linux Full artifact
       uses: actions/download-artifact@v4
       with:
         name: linux-release
+        path: release/
+
+    - name: Download Linux Light artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-release-light
         path: release/
 
     - name: List release files
@@ -279,6 +325,7 @@ jobs:
       with:
         script: |
           const tag = '${{ steps.version.outputs.tag }}';
+          const version = '${{ steps.version.outputs.version }}';
 
           // Get all tags
           const tags = await github.rest.repos.listTags({
@@ -295,10 +342,14 @@ jobs:
 
           let releaseNotes = `## What's New in ${tag}\n\n`;
 
-          // Platform notes
+          // Platform notes with both variants
           releaseNotes += `### Downloads\n\n`;
-          releaseNotes += `- **Windows**: \`steelclock-v${{ steps.version.outputs.version }}-windows-amd64.zip\`\n`;
-          releaseNotes += `- **Linux**: \`steelclock-v${{ steps.version.outputs.version }}-linux-amd64.tar.gz\`\n\n`;
+          releaseNotes += `**Full Build** (all widgets):\n`;
+          releaseNotes += `- Windows: \`steelclock-v${version}-windows-amd64.zip\`\n`;
+          releaseNotes += `- Linux: \`steelclock-v${version}-linux-amd64.tar.gz\`\n\n`;
+          releaseNotes += `**Light Build** (excludes telegram widgets):\n`;
+          releaseNotes += `- Windows: \`steelclock-v${version}-light-windows-amd64.zip\`\n`;
+          releaseNotes += `- Linux: \`steelclock-v${version}-light-linux-amd64.tar.gz\`\n\n`;
 
           releaseNotes += `> **Linux users**: For direct USB driver access, install the udev rules from \`profiles/99-steelseries.rules\`\n\n`;
 
