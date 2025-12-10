@@ -1,9 +1,56 @@
 package config
 
 import (
+	"sort"
 	"strings"
 	"testing"
 )
+
+// testWidgetTypes is a list of widget types used for testing.
+// In production, WidgetTypeChecker is set by the widget package.
+var testWidgetTypes = map[string]bool{
+	"clock":            true,
+	"cpu":              true,
+	"memory":           true,
+	"network":          true,
+	"disk":             true,
+	"keyboard":         true,
+	"keyboard_layout":  true,
+	"volume":           true,
+	"volume_meter":     true,
+	"audio_visualizer": true,
+	"doom":             true,
+	"winamp":           true,
+	"matrix":           true,
+	"weather":          true,
+	"battery":          true,
+	"game_of_life":     true,
+	"hyperspace":       true,
+	"starwars_intro":   true,
+	"telegram":         true,
+	"telegram_counter": true,
+}
+
+// setupTestWidgetCallbacks sets up the widget type callbacks for testing.
+// This simulates what the widget package does in production.
+func setupTestWidgetCallbacks() {
+	WidgetTypeChecker = func(typeName string) bool {
+		return testWidgetTypes[typeName]
+	}
+	WidgetTypesLister = func() string {
+		types := make([]string, 0, len(testWidgetTypes))
+		for t := range testWidgetTypes {
+			types = append(types, t)
+		}
+		sort.Strings(types)
+		return strings.Join(types, ", ")
+	}
+}
+
+func init() {
+	// Set up widget callbacks for all tests in this package
+	setupTestWidgetCallbacks()
+}
 
 //goland:noinspection GoBoolExpressions,GoBoolExpressions,GoBoolExpressions,GoBoolExpressions
 func TestValidatorConstants(t *testing.T) {

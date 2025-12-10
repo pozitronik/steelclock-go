@@ -2,8 +2,6 @@ package config
 
 import (
 	"fmt"
-	"sort"
-	"strings"
 )
 
 // Validation constants
@@ -22,44 +20,33 @@ var ValidBackends = map[string]bool{
 	"any":       true,
 }
 
-// ValidWidgetTypes contains all valid widget type names.
-// This is the single source of truth for widget types.
-var ValidWidgetTypes = map[string]bool{
-	"clock":            true,
-	"cpu":              true,
-	"memory":           true,
-	"network":          true,
-	"disk":             true,
-	"keyboard":         true,
-	"keyboard_layout":  true,
-	"volume":           true,
-	"volume_meter":     true,
-	"audio_visualizer": true,
-	"doom":             true,
-	"winamp":           true,
-	"matrix":           true,
-	"weather":          true,
-	"battery":          true,
-	"game_of_life":     true,
-	"hyperspace":       true,
-	"starwars_intro":   true,
-	"telegram":         true,
-	"telegram_counter": true,
-}
+// WidgetTypeChecker is a callback function that checks if a widget type is registered.
+// This is set by the widget package to avoid import cycles.
+// When set, it delegates to the widget factory's registry (single source of truth).
+var WidgetTypeChecker func(typeName string) bool
 
-// IsValidWidgetType checks if the given type name is a valid widget type
+// WidgetTypesLister is a callback function that returns a list of registered widget types.
+// This is set by the widget package to avoid import cycles.
+var WidgetTypesLister func() string
+
+// IsValidWidgetType checks if the given type name is a valid widget type.
+// It delegates to the widget factory's registry if available.
 func IsValidWidgetType(typeName string) bool {
-	return ValidWidgetTypes[typeName]
+	if WidgetTypeChecker != nil {
+		return WidgetTypeChecker(typeName)
+	}
+	// Fallback should not happen in production (widget package sets the checker),
+	// but provides safety for tests that don't import widget packages.
+	return false
 }
 
-// GetValidWidgetTypesList returns a sorted comma-separated list of valid widget types
+// GetValidWidgetTypesList returns a sorted comma-separated list of valid widget types.
+// It delegates to the widget factory's registry if available.
 func GetValidWidgetTypesList() string {
-	types := make([]string, 0, len(ValidWidgetTypes))
-	for t := range ValidWidgetTypes {
-		types = append(types, t)
+	if WidgetTypesLister != nil {
+		return WidgetTypesLister()
 	}
-	sort.Strings(types)
-	return strings.Join(types, ", ")
+	return "(no widget types registered)"
 }
 
 // Validate checks that the configuration is valid
