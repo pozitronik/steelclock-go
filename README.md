@@ -36,7 +36,7 @@ https://github.com/user-attachments/assets/58f607cb-be31-4af4-bb3d-6e0628f0748c
 - **Auto-Hide Widgets**: Widgets can appear temporarily and hide automatically (ideal for notifications and volume indicators)
 - **Volume Control**: Real-time Windows system volume monitoring via Core Audio API
 - **Low Resource Usage**: Minimal CPU and memory footprint (~0.5% CPU, ~15MB RAM)
-- **Single Executable**: ~8-9MB, no dependencies, no DLLs required
+- **Single Executable**: no dependencies, no DLLs required
 - **Automatic Logging**: All output logged to `steelclock.log` with timestamps
 - **JSON Schema Support**: Full IDE autocomplete and validation via included schema file
 
