@@ -4,10 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"path/filepath"
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/tray"
+	"github.com/pozitronik/steelclock-go/internal/webeditor"
 )
 
 // GameSense API constants
@@ -43,6 +45,7 @@ type App struct {
 	lifecycle *LifecycleManager
 	configMgr *ConfigManager
 	trayMgr   *tray.Manager
+	webEditor *webeditor.Server
 }
 
 // NewApp creates a new application instance (legacy single-config mode)
@@ -76,6 +79,9 @@ func (a *App) Run() {
 		a.trayMgr = tray.NewManager(a.configMgr.GetConfigPath(), a.ReloadConfig, a.Stop)
 	}
 
+	// Create web editor server
+	a.createWebEditor()
+
 	log.Println("========================================")
 
 	// Set callback to run when tray is ready
@@ -91,8 +97,50 @@ func (a *App) Run() {
 	a.trayMgr.Run()
 
 	log.Println("SteelClock shutting down...")
+
+	// Stop web editor if running
+	if a.webEditor != nil {
+		if err := a.webEditor.Stop(); err != nil {
+			log.Printf("Failed to stop web editor: %v", err)
+		}
+	}
+
 	a.lifecycle.Shutdown()
 	log.Println("SteelClock stopped")
+}
+
+// createWebEditor creates and configures the web editor server
+func (a *App) createWebEditor() {
+	// Find schema path relative to config file location
+	configPath := a.configMgr.GetConfigPath()
+	if configPath == "" {
+		log.Println("Web editor: No config path available, skipping web editor setup")
+		return
+	}
+
+	// Schema is in profiles/schema/ relative to config file's directory
+	configDir := filepath.Dir(configPath)
+	schemaPath := filepath.Join(configDir, "profiles", "schema", "config.schema.json")
+
+	// If config is in profiles/ directory, adjust path
+	if filepath.Base(configDir) == "profiles" {
+		schemaPath = filepath.Join(configDir, "schema", "config.schema.json")
+	}
+
+	// Create providers
+	configProvider := NewConfigProviderAdapter(a.configMgr)
+	var profileProvider webeditor.ProfileProvider
+	if a.configMgr.HasProfiles() {
+		profileProvider = NewProfileProviderAdapter(a.configMgr.GetProfileManager())
+	}
+
+	// Create web editor server
+	a.webEditor = webeditor.NewServer(configProvider, profileProvider, schemaPath, a.ReloadConfig)
+
+	// Wire up with tray manager
+	a.trayMgr.SetWebEditor(a.webEditor)
+
+	log.Println("Web editor: Configured (will start on first 'Edit Config' click)")
 }
 
 // Start initializes and starts all components

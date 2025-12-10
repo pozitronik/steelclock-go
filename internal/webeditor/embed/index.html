@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelClock Configuration Editor</title>
+    <link rel="stylesheet" href="pico.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="container">
+        <header>
+            <h1>SteelClock Configuration Editor</h1>
+            <p id="profile-info"></p>
+        </header>
+
+        <div id="notification" role="alert"></div>
+
+        <nav>
+            <ul>
+                <li><button id="btn-reload" class="secondary outline">Reload from File</button></li>
+                <li><button id="btn-save" class="primary">Save &amp; Apply</button></li>
+            </ul>
+        </nav>
+
+        <article id="editor-container">
+            <label for="config-editor">
+                Configuration JSON
+                <small>Edit the configuration below. Changes will be applied when you click "Save &amp; Apply".</small>
+            </label>
+            <textarea id="config-editor" rows="30" spellcheck="false"></textarea>
+        </article>
+
+        <footer>
+            <small>
+                <span id="status">Ready</span> |
+                <a href="#" id="toggle-theme">Toggle Dark Mode</a>
+            </small>
+        </footer>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
