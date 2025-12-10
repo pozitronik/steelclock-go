@@ -8,7 +8,7 @@ import (
 )
 
 func TestCreateBackendClientInvalidBackend(t *testing.T) {
-	// Test with empty/default backend (should try gamesense)
+	// Test with empty/default backend (should try backends by priority)
 	cfg := &config.Config{
 		GameName:        "TEST",
 		GameDisplayName: "Test",
@@ -19,11 +19,11 @@ func TestCreateBackendClientInvalidBackend(t *testing.T) {
 		},
 	}
 
-	// This will fail because GameSense isn't running, but we can verify
+	// This will fail because no backend is available, but we can verify
 	// it returns BackendUnavailableError
-	_, err := CreateBackendClient(cfg)
+	_, _, err := CreateBackendClient(cfg)
 	if err == nil {
-		t.Skip("GameSense is running, cannot test error path")
+		t.Skip("A backend is available, cannot test error path")
 	}
 
 	var backendErr *BackendUnavailableError
@@ -43,8 +43,11 @@ func TestCreateBackendClientGameSense(t *testing.T) {
 		},
 	}
 
-	_, err := CreateBackendClient(cfg)
+	_, backendName, err := CreateBackendClient(cfg)
 	if err == nil {
+		if backendName != "gamesense" {
+			t.Errorf("expected backend name 'gamesense', got %q", backendName)
+		}
 		t.Skip("GameSense is running, cannot test error path")
 	}
 
@@ -65,8 +68,11 @@ func TestCreateBackendClientDirect(t *testing.T) {
 		},
 	}
 
-	_, err := CreateBackendClient(cfg)
+	_, backendName, err := CreateBackendClient(cfg)
 	if err == nil {
+		if backendName != "direct" {
+			t.Errorf("expected backend name 'direct', got %q", backendName)
+		}
 		t.Skip("Direct driver available, cannot test error path")
 	}
 
@@ -87,19 +93,19 @@ func TestCreateBackendClientAny(t *testing.T) {
 		},
 	}
 
-	_, err := CreateBackendClient(cfg)
+	_, _, err := CreateBackendClient(cfg)
 	if err == nil {
 		t.Skip("A backend is available, cannot test error path")
 	}
 
-	// With "any" mode, should try both and return error
+	// With "any" mode, should try all backends and return error
 	var backendErr *BackendUnavailableError
 	if !errors.As(err, &backendErr) {
 		t.Errorf("expected BackendUnavailableError, got %T: %v", err, err)
 	}
 }
 
-func TestCreateDirectClientInvalidVID(t *testing.T) {
+func TestCreateBackendByNameInvalidVID(t *testing.T) {
 	cfg := &config.Config{
 		GameName:        "TEST",
 		GameDisplayName: "Test",
@@ -114,15 +120,15 @@ func TestCreateDirectClientInvalidVID(t *testing.T) {
 		},
 	}
 
-	_, err := CreateDirectClient(cfg)
+	_, err := CreateBackendByName("direct", cfg)
 	if err == nil {
 		t.Fatal("expected error for invalid VID")
 	}
 
-	// Should NOT be BackendUnavailableError - it's a config error
+	// All errors from CreateBackendByName are wrapped in BackendUnavailableError
 	var backendErr *BackendUnavailableError
-	if errors.As(err, &backendErr) {
-		t.Error("invalid VID should not be BackendUnavailableError")
+	if !errors.As(err, &backendErr) {
+		t.Errorf("expected BackendUnavailableError, got %T: %v", err, err)
 	}
 
 	if err.Error() == "" {
@@ -130,7 +136,7 @@ func TestCreateDirectClientInvalidVID(t *testing.T) {
 	}
 }
 
-func TestCreateDirectClientInvalidPID(t *testing.T) {
+func TestCreateBackendByNameInvalidPID(t *testing.T) {
 	cfg := &config.Config{
 		GameName:        "TEST",
 		GameDisplayName: "Test",
@@ -145,19 +151,19 @@ func TestCreateDirectClientInvalidPID(t *testing.T) {
 		},
 	}
 
-	_, err := CreateDirectClient(cfg)
+	_, err := CreateBackendByName("direct", cfg)
 	if err == nil {
 		t.Fatal("expected error for invalid PID")
 	}
 
-	// Should NOT be BackendUnavailableError - it's a config error
+	// All errors from CreateBackendByName are wrapped in BackendUnavailableError
 	var backendErr *BackendUnavailableError
-	if errors.As(err, &backendErr) {
-		t.Error("invalid PID should not be BackendUnavailableError")
+	if !errors.As(err, &backendErr) {
+		t.Errorf("expected BackendUnavailableError, got %T: %v", err, err)
 	}
 }
 
-func TestCreateDirectClientValidHexParsing(t *testing.T) {
+func TestCreateBackendByNameValidHexParsing(t *testing.T) {
 	tests := []struct {
 		name    string
 		vid     string
@@ -194,25 +200,18 @@ func TestCreateDirectClientValidHexParsing(t *testing.T) {
 				},
 			}
 
-			_, err := CreateDirectClient(cfg)
+			_, err := CreateBackendByName("direct", cfg)
 
 			// We expect either a parse error or a device not found error
-			if tt.wantErr {
-				if err == nil {
-					t.Error("expected error for invalid hex")
-				}
-				// Verify it's not a BackendUnavailableError (config error, not device error)
-				var backendErr *BackendUnavailableError
-				if errors.As(err, &backendErr) {
-					t.Error("config parse error should not be BackendUnavailableError")
-				}
+			if tt.wantErr && err == nil {
+				t.Error("expected error for invalid hex")
 			}
-			// If no parse error expected, we might still get device not found
+			// All errors are wrapped in BackendUnavailableError
 		})
 	}
 }
 
-func TestCreateDirectClientDefaultInterface(t *testing.T) {
+func TestCreateBackendByNameDefaultInterface(t *testing.T) {
 	// Test that default interface is used when not specified
 	cfg := &config.Config{
 		GameName:        "TEST",
@@ -226,7 +225,7 @@ func TestCreateDirectClientDefaultInterface(t *testing.T) {
 	}
 
 	// This will fail because device isn't found, but we test the code path
-	_, err := CreateDirectClient(cfg)
+	_, err := CreateBackendByName("direct", cfg)
 	if err == nil {
 		t.Skip("Direct driver succeeded unexpectedly")
 	}
@@ -238,7 +237,7 @@ func TestCreateDirectClientDefaultInterface(t *testing.T) {
 	}
 }
 
-func TestCreateDirectClientCustomInterface(t *testing.T) {
+func TestCreateBackendByNameCustomInterface(t *testing.T) {
 	cfg := &config.Config{
 		GameName:        "TEST",
 		GameDisplayName: "Test",
@@ -252,27 +251,52 @@ func TestCreateDirectClientCustomInterface(t *testing.T) {
 		},
 	}
 
-	_, err := CreateDirectClient(cfg)
+	_, err := CreateBackendByName("direct", cfg)
 	if err == nil {
 		t.Skip("Direct driver succeeded unexpectedly")
 	}
 
-	// Should still be BackendUnavailableError
+	// Should be BackendUnavailableError
 	var backendErr *BackendUnavailableError
 	if !errors.As(err, &backendErr) {
 		t.Errorf("expected BackendUnavailableError, got %T: %v", err, err)
 	}
 }
 
-func TestCreateGameSenseClientError(t *testing.T) {
+func TestCreateBackendByNameGameSenseError(t *testing.T) {
 	cfg := &config.Config{
 		GameName:        "TEST_GAME",
 		GameDisplayName: "Test Game",
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
 	}
 
-	_, err := CreateGameSenseClient(cfg)
+	_, err := CreateBackendByName("gamesense", cfg)
 	if err == nil {
 		t.Skip("GameSense is running")
+	}
+
+	var backendErr *BackendUnavailableError
+	if !errors.As(err, &backendErr) {
+		t.Errorf("expected BackendUnavailableError, got %T: %v", err, err)
+	}
+}
+
+func TestCreateBackendByNameUnknownBackend(t *testing.T) {
+	cfg := &config.Config{
+		GameName:        "TEST_GAME",
+		GameDisplayName: "Test Game",
+		Display: config.DisplayConfig{
+			Width:  128,
+			Height: 40,
+		},
+	}
+
+	_, err := CreateBackendByName("unknown", cfg)
+	if err == nil {
+		t.Fatal("expected error for unknown backend")
 	}
 
 	var backendErr *BackendUnavailableError

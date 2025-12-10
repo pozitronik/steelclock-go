@@ -140,7 +140,7 @@ func TestApplyGlobalDefaults(t *testing.T) {
 			input:           Config{},
 			expectedGame:    DefaultGameName,
 			expectedDisplay: DefaultGameDisplay,
-			expectedBackend: "any",
+			expectedBackend: "",
 		},
 		{
 			name: "custom game name",
@@ -149,7 +149,7 @@ func TestApplyGlobalDefaults(t *testing.T) {
 			},
 			expectedGame:    "CUSTOM",
 			expectedDisplay: DefaultGameDisplay,
-			expectedBackend: "any",
+			expectedBackend: "",
 		},
 		{
 			name: "custom backend",
@@ -165,11 +165,11 @@ func TestApplyGlobalDefaults(t *testing.T) {
 			input: Config{
 				GameName:        "MY_GAME",
 				GameDisplayName: "My Game",
-				Backend:         "any",
+				Backend:         "gamesense",
 			},
 			expectedGame:    "MY_GAME",
 			expectedDisplay: "My Game",
-			expectedBackend: "any",
+			expectedBackend: "gamesense",
 		},
 	}
 
@@ -560,8 +560,9 @@ func TestApplyDefaults(t *testing.T) {
 	if cfg.GameName != DefaultGameName {
 		t.Errorf("GameName not set to default")
 	}
-	if cfg.Backend != "any" {
-		t.Errorf("Backend not set to default, got %s", cfg.Backend)
+	// Empty backend means auto-selection - no default value is applied
+	if cfg.Backend != "" {
+		t.Errorf("Backend should remain empty for auto-selection, got %s", cfg.Backend)
 	}
 
 	// Check display defaults applied

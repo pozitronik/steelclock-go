@@ -1,3 +1,4 @@
+// Package gamesense provides a GameSense API backend implementation.
 package gamesense
 
 import (
@@ -8,50 +9,38 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pozitronik/steelclock-go/internal/backend"
+	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/display"
 )
 
-// FrameSender handles frame transmission to the display.
-// Used by components that only need to send frames.
-type FrameSender interface {
-	SendScreenData(eventName string, bitmapData []byte) error
-	SendScreenDataMultiRes(eventName string, resolutionData map[string][]byte) error
-	SendMultipleScreenData(eventName string, frames [][]byte) error
+// Priority for auto-selection (lower = tried first)
+const Priority = 10
+
+// DeveloperName is the developer identifier used for GameSense registration
+const DeveloperName = "Pozitronik"
+
+func init() {
+	backend.Register("gamesense", newBackend, Priority)
 }
 
-// HeartbeatSender handles keep-alive messages to the backend.
-type HeartbeatSender interface {
-	SendHeartbeat() error
-}
+// newBackend creates a GameSense backend from configuration
+func newBackend(cfg *config.Config) (display.Backend, error) {
+	client, err := NewClient(cfg.GameName, cfg.GameDisplayName)
+	if err != nil {
+		log.Printf("ERROR: Failed to create GameSense client: %v", err)
+		log.Println("SteelSeries GG may not be running or GameSense API is unavailable")
+		return nil, err
+	}
 
-// BatchCapability provides information about batching support.
-type BatchCapability interface {
-	SupportsMultipleEvents() bool
-}
+	log.Println("GameSense client created")
 
-// GameRegistrar handles game/application registration lifecycle.
-// Used by components managing backend registration.
-type GameRegistrar interface {
-	RegisterGame(developer string, deinitializeTimerMs int) error
-	BindScreenEvent(eventName, deviceType string) error
-	RemoveGame() error
-}
+	if err := client.RegisterGame(DeveloperName, cfg.DeinitializeTimerMs); err != nil {
+		log.Printf("ERROR: Failed to register game: %v", err)
+		return nil, err
+	}
 
-// DisplayClient combines frame sending and heartbeat capabilities.
-// Used by components that render and maintain connection (e.g., Compositor).
-type DisplayClient interface {
-	FrameSender
-	HeartbeatSender
-	BatchCapability
-}
-
-// API defines the full interface for GameSense API operations.
-// Combines all segregated interfaces for complete functionality.
-type API interface {
-	FrameSender
-	HeartbeatSender
-	BatchCapability
-	GameRegistrar
+	return client, nil
 }
 
 // Client is a GameSense API client
@@ -62,8 +51,7 @@ type Client struct {
 	httpClient      *http.Client
 }
 
-// Ensure Client implements API and display.Backend
-var _ API = (*Client)(nil)
+// Ensure Client implements display.Backend
 var _ display.Backend = (*Client)(nil)
 
 // NewClient creates a new GameSense API client

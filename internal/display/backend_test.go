@@ -3,9 +3,9 @@ package display_test
 import (
 	"testing"
 
+	"github.com/pozitronik/steelclock-go/internal/backend/gamesense"
 	"github.com/pozitronik/steelclock-go/internal/display"
 	"github.com/pozitronik/steelclock-go/internal/driver"
-	"github.com/pozitronik/steelclock-go/internal/gamesense"
 	"github.com/pozitronik/steelclock-go/internal/testutil"
 )
 

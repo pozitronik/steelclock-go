@@ -6,11 +6,11 @@ import (
 	"log"
 	"sync"
 
+	"github.com/pozitronik/steelclock-go/internal/backend"
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/compositor"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/display"
-	"github.com/pozitronik/steelclock-go/internal/gamesense"
 )
 
 // ErrorDisplayRefreshRateMs is the refresh rate for error display (flash interval)
@@ -84,8 +84,8 @@ func (m *LifecycleManager) Start(cfg *config.Config) error {
 
 	m.comp = setup.Compositor
 
-	// Set up backend failover callback for "any" backend mode
-	if cfg.Backend == "any" {
+	// Set up backend failover callback for auto-select mode
+	if cfg.Backend == "" {
 		m.comp.OnBackendFailure = func() {
 			m.handleBackendFailure(cfg)
 		}
@@ -191,27 +191,27 @@ func (m *LifecycleManager) StartErrorDisplay(message string, width, height int) 
 
 		var err error
 		if m.lastGoodConfig != nil {
-			errorClient, err = CreateBackendClient(m.lastGoodConfig)
+			errorClient, _, err = CreateBackendClient(m.lastGoodConfig)
 		} else {
-			errorClient, err = gamesense.NewClient(config.DefaultGameName, config.DefaultGameDisplay)
-			if err == nil {
-				err = errorClient.RegisterGame(DeveloperName, 0)
+			// Use default config for error display
+			defaultCfg := config.CreateDefault()
+			result, createErr := backend.Create(defaultCfg)
+			if createErr != nil {
+				err = createErr
+			} else {
+				errorClient = result.Backend
 			}
 		}
 		if err != nil {
 			log.Printf("ERROR: Failed to create client for error display: %v", err)
 			return fmt.Errorf("failed to create client: %w", err)
 		}
-	}
 
-	if err := errorClient.RegisterGame(DeveloperName, 0); err != nil {
-		log.Printf("ERROR: Failed to register game for error display: %v", err)
-		return fmt.Errorf("failed to register game: %w", err)
-	}
-
-	if err := errorClient.BindScreenEvent(EventName, DeviceType); err != nil {
-		log.Printf("ERROR: Failed to bind screen event for error display: %v", err)
-		return fmt.Errorf("failed to bind screen event: %w", err)
+		// Bind screen event (no-op for direct driver)
+		if err := errorClient.BindScreenEvent(EventName, DeviceType); err != nil {
+			log.Printf("ERROR: Failed to bind screen event for error display: %v", err)
+			return fmt.Errorf("failed to bind screen event: %w", err)
+		}
 	}
 
 	setup := m.widgetMgr.CreateErrorDisplay(errorClient, message, width, height)
@@ -251,13 +251,6 @@ func (m *LifecycleManager) ensureClient(cfg *config.Config) error {
 	needNewClient := m.client == nil
 
 	if m.client != nil {
-		// Check if game name changed
-		if gsClient, ok := m.client.(*gamesense.Client); ok {
-			if gsClient.GameName() != cfg.GameName {
-				log.Printf("GameName changed from %s to %s, recreating client...", gsClient.GameName(), cfg.GameName)
-				needNewClient = true
-			}
-		}
 		// Check if backend changed
 		if m.currentBackend != cfg.Backend {
 			log.Printf("Backend changed from %s to %s, recreating client...", m.currentBackend, cfg.Backend)
@@ -278,25 +271,18 @@ func (m *LifecycleManager) ensureClient(cfg *config.Config) error {
 
 	// Create new client
 	var err error
-	m.client, err = CreateBackendClient(cfg)
+	var backendName string
+	m.client, backendName, err = CreateBackendClient(cfg)
 	if err != nil {
 		return err
 	}
+	m.currentBackend = backendName
 
-	// Determine backend type
-	if _, ok := m.client.(*gamesense.Client); ok {
-		m.currentBackend = "gamesense"
-	} else {
-		m.currentBackend = "direct"
-	}
-
-	// Bind event for GameSense backend
-	if m.currentBackend == "gamesense" {
-		if err := m.bindEventWithRetry(10); err != nil {
-			log.Printf("ERROR: Failed to bind screen event after retries: %v", err)
-			m.client = nil
-			return err
-		}
+	// Bind screen event (no-op for direct driver)
+	if err := m.bindEventWithRetry(10); err != nil {
+		log.Printf("ERROR: Failed to bind screen event after retries: %v", err)
+		m.client = nil
+		return err
 	}
 
 	return nil
@@ -329,22 +315,10 @@ func (m *LifecycleManager) handleBackendFailure(cfg *config.Config) {
 		m.comp = nil
 	}
 
-	var newClient display.Backend
-	var newBackend string
-	var err error
-
-	if m.currentBackend == "gamesense" {
-		log.Println("Trying direct driver backend...")
-		newClient, err = CreateDirectClient(cfg)
-		newBackend = "direct"
-	} else {
-		log.Println("Trying GameSense backend...")
-		newClient, err = CreateGameSenseClient(cfg)
-		newBackend = "gamesense"
-	}
-
+	// Try to create a backend, excluding the current one
+	newClient, newBackend, err := CreateBackendExcluding(cfg, m.currentBackend)
 	if err != nil {
-		log.Printf("ERROR: Failed to switch to %s backend: %v", newBackend, err)
+		log.Printf("ERROR: Failed to switch to alternative backend: %v", err)
 		log.Println("Will retry on next heartbeat cycle...")
 		return
 	}
@@ -352,6 +326,12 @@ func (m *LifecycleManager) handleBackendFailure(cfg *config.Config) {
 	m.client = newClient
 	m.currentBackend = newBackend
 	log.Printf("Successfully switched to %s backend", m.currentBackend)
+
+	// Bind screen event (no-op for direct driver)
+	if err := m.client.BindScreenEvent(EventName, DeviceType); err != nil {
+		log.Printf("ERROR: Failed to bind screen event: %v", err)
+		return
+	}
 
 	setup, err := m.widgetMgr.CreateFromConfig(m.client, cfg)
 	if err != nil {
