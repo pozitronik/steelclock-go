@@ -1,0 +1,270 @@
+/**
+ * SchemaProcessor - Resolves $ref and extracts widget-specific schemas
+ */
+
+class SchemaProcessor {
+    constructor(schema) {
+        this.schema = schema;
+        this.definitions = schema.definitions || {};
+        this.widgetSchemas = {};
+        this.processedRefs = new Map();
+    }
+
+    /**
+     * Initialize the processor by extracting widget schemas
+     */
+    init() {
+        this.extractWidgetSchemas();
+    }
+
+    /**
+     * Resolve a $ref reference to its definition
+     * @param {string} ref - The $ref string (e.g., "#/definitions/position")
+     * @returns {Object|null} The resolved definition
+     */
+    resolveRef(ref) {
+        if (!ref || !ref.startsWith('#/definitions/')) {
+            return null;
+        }
+
+        // Check cache
+        if (this.processedRefs.has(ref)) {
+            return this.processedRefs.get(ref);
+        }
+
+        const defName = ref.replace('#/definitions/', '');
+        const definition = this.definitions[defName];
+
+        if (!definition) {
+            return null;
+        }
+
+        // Deep clone to avoid mutation
+        const resolved = JSON.parse(JSON.stringify(definition));
+
+        // Recursively resolve nested $refs
+        this.resolveNestedRefs(resolved);
+
+        this.processedRefs.set(ref, resolved);
+        return resolved;
+    }
+
+    /**
+     * Recursively resolve $ref in an object
+     * @param {Object} obj - The object to process
+     */
+    resolveNestedRefs(obj) {
+        if (!obj || typeof obj !== 'object') {
+            return;
+        }
+
+        if (Array.isArray(obj)) {
+            obj.forEach(item => this.resolveNestedRefs(item));
+            return;
+        }
+
+        // If this object has a $ref, merge the resolved definition
+        if (obj.$ref) {
+            const resolved = this.resolveRef(obj.$ref);
+            if (resolved) {
+                delete obj.$ref;
+                Object.assign(obj, resolved);
+            }
+        }
+
+        // Recurse into nested objects
+        for (const key of Object.keys(obj)) {
+            if (typeof obj[key] === 'object') {
+                this.resolveNestedRefs(obj[key]);
+            }
+        }
+    }
+
+    /**
+     * Extract widget-specific schemas from allOf conditionals
+     */
+    extractWidgetSchemas() {
+        const widgetDef = this.definitions.widget;
+        if (!widgetDef) {
+            console.warn('No widget definition found in schema');
+            return;
+        }
+
+        // Get base properties that apply to all widgets
+        const baseProps = widgetDef.properties || {};
+        const resolvedBaseProps = JSON.parse(JSON.stringify(baseProps));
+        this.resolveNestedRefs(resolvedBaseProps);
+
+        // Extract widget-specific properties from allOf conditionals
+        const conditionals = widgetDef.allOf || [];
+
+        for (const cond of conditionals) {
+            if (!cond.if || !cond.then) {
+                continue;
+            }
+
+            // Extract widget type from if condition
+            const typeConst = cond.if?.properties?.type?.const;
+            if (!typeConst) {
+                continue;
+            }
+
+            // Get widget-specific properties
+            const specificProps = cond.then.properties || {};
+            const resolvedSpecificProps = JSON.parse(JSON.stringify(specificProps));
+            this.resolveNestedRefs(resolvedSpecificProps);
+
+            this.widgetSchemas[typeConst] = {
+                base: resolvedBaseProps,
+                specific: resolvedSpecificProps,
+                required: cond.then.required || []
+            };
+        }
+    }
+
+    /**
+     * Get all available widget types
+     * @returns {string[]} Array of widget type names
+     */
+    getWidgetTypes() {
+        return Object.keys(this.widgetSchemas).sort();
+    }
+
+    /**
+     * Get merged properties for a widget type
+     * @param {string} widgetType - The widget type
+     * @returns {Object} Merged properties object
+     */
+    getWidgetProperties(widgetType) {
+        const schema = this.widgetSchemas[widgetType];
+        if (!schema) {
+            // Return base widget properties if type not found
+            const widgetDef = this.definitions.widget;
+            return widgetDef?.properties || {};
+        }
+
+        return {
+            ...schema.base,
+            ...schema.specific
+        };
+    }
+
+    /**
+     * Get the root schema properties (global config)
+     * @returns {Object} Root properties
+     */
+    getRootProperties() {
+        const props = this.schema.properties || {};
+        const resolved = JSON.parse(JSON.stringify(props));
+        this.resolveNestedRefs(resolved);
+        return resolved;
+    }
+
+    /**
+     * Get required fields for root schema
+     * @returns {string[]} Array of required field names
+     */
+    getRootRequired() {
+        return this.schema.required || [];
+    }
+
+    /**
+     * Get a specific definition by name
+     * @param {string} name - Definition name
+     * @returns {Object|null} The definition
+     */
+    getDefinition(name) {
+        const def = this.definitions[name];
+        if (!def) {
+            return null;
+        }
+        const resolved = JSON.parse(JSON.stringify(def));
+        this.resolveNestedRefs(resolved);
+        return resolved;
+    }
+
+    /**
+     * Get property schema with resolved refs
+     * @param {string} propPath - Dot-separated property path (e.g., "display.width")
+     * @returns {Object|null} The property schema
+     */
+    getPropertySchema(propPath) {
+        const parts = propPath.split('.');
+        let current = this.getRootProperties();
+
+        for (const part of parts) {
+            if (!current || !current[part]) {
+                return null;
+            }
+            current = current[part];
+
+            // If it's an object with properties, go into properties
+            if (current.properties) {
+                current = current.properties;
+            }
+        }
+
+        return current;
+    }
+
+    /**
+     * Check if a property is an enum
+     * @param {Object} propSchema - The property schema
+     * @returns {boolean}
+     */
+    isEnum(propSchema) {
+        return Array.isArray(propSchema?.enum);
+    }
+
+    /**
+     * Get the type of a property
+     * @param {Object} propSchema - The property schema
+     * @returns {string} The type (string, number, boolean, object, array, enum)
+     */
+    getPropertyType(propSchema) {
+        if (!propSchema) {
+            return 'unknown';
+        }
+
+        if (this.isEnum(propSchema)) {
+            return 'enum';
+        }
+
+        if (propSchema.type) {
+            return propSchema.type;
+        }
+
+        // Infer type from other properties
+        if (propSchema.properties) {
+            return 'object';
+        }
+        if (propSchema.items) {
+            return 'array';
+        }
+
+        return 'unknown';
+    }
+
+    /**
+     * Get human-readable label from property name
+     * @param {string} name - Property name (e.g., "refresh_rate_ms")
+     * @returns {string} Human-readable label
+     */
+    getLabel(name) {
+        return name
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    /**
+     * Get description for a property
+     * @param {Object} propSchema - The property schema
+     * @returns {string} Description or empty string
+     */
+    getDescription(propSchema) {
+        return propSchema?.description || '';
+    }
+}
+
+// Export for use in other modules
+window.SchemaProcessor = SchemaProcessor;

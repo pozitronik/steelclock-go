@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -46,6 +47,11 @@ type App struct {
 	configMgr *ConfigManager
 	trayMgr   *tray.Manager
 	webEditor *webeditor.Server
+
+	// configMu serializes config reload and profile switch operations.
+	// This prevents race conditions when multiple sources (tray, web editor)
+	// trigger config changes concurrently.
+	configMu sync.Mutex
 }
 
 // NewApp creates a new application instance (legacy single-config mode)
@@ -130,12 +136,14 @@ func (a *App) createWebEditor() {
 	// Create providers
 	configProvider := NewConfigProviderAdapter(a.configMgr)
 	var profileProvider webeditor.ProfileProvider
+	var onProfileSwitch func(path string) error
 	if a.configMgr.HasProfiles() {
 		profileProvider = NewProfileProviderAdapter(a.configMgr.GetProfileManager())
+		onProfileSwitch = a.switchProfileAndUpdateTray
 	}
 
 	// Create web editor server
-	a.webEditor = webeditor.NewServer(configProvider, profileProvider, schemaPath, a.ReloadConfig)
+	a.webEditor = webeditor.NewServer(configProvider, profileProvider, schemaPath, a.ReloadConfig, onProfileSwitch)
 
 	// Wire up with tray manager
 	a.trayMgr.SetWebEditor(a.webEditor)
@@ -163,8 +171,12 @@ func (a *App) Stop() {
 	a.lifecycle.Stop()
 }
 
-// ReloadConfig reloads configuration and restarts components
+// ReloadConfig reloads configuration and restarts components.
+// This operation is serialized with other config operations via configMu.
 func (a *App) ReloadConfig() error {
+	a.configMu.Lock()
+	defer a.configMu.Unlock()
+
 	log.Println("========================================")
 	log.Println("Reloading configuration...")
 
@@ -215,8 +227,12 @@ func (a *App) ReloadConfig() error {
 	return nil
 }
 
-// SwitchProfile switches to a different configuration profile
+// SwitchProfile switches to a different configuration profile.
+// This operation is serialized with other config operations via configMu.
 func (a *App) SwitchProfile(path string) error {
+	a.configMu.Lock()
+	defer a.configMu.Unlock()
+
 	if !a.configMgr.HasProfiles() {
 		return fmt.Errorf("profile manager not available")
 	}
@@ -261,6 +277,21 @@ func (a *App) SwitchProfile(path string) error {
 
 	log.Printf("Profile switched successfully to: %s", profileName)
 	log.Println("========================================")
+	return nil
+}
+
+// switchProfileAndUpdateTray switches profile and updates the tray menu
+// This is used by the web editor to ensure UI consistency
+func (a *App) switchProfileAndUpdateTray(path string) error {
+	if err := a.SwitchProfile(path); err != nil {
+		return err
+	}
+
+	// Update tray menu to reflect the new active profile
+	if a.trayMgr != nil {
+		a.trayMgr.UpdateActiveProfile()
+	}
+
 	return nil
 }
 

@@ -21,18 +21,20 @@ type Server struct {
 	profileProvider ProfileProvider
 	schemaPath      string
 	onReload        func() error
+	onProfileSwitch func(path string) error
 
 	mu      sync.Mutex
 	running bool
 }
 
 // NewServer creates a new web editor server
-func NewServer(configProvider ConfigProvider, profileProvider ProfileProvider, schemaPath string, onReload func() error) *Server {
+func NewServer(configProvider ConfigProvider, profileProvider ProfileProvider, schemaPath string, onReload func() error, onProfileSwitch func(path string) error) *Server {
 	return &Server{
 		configProvider:  configProvider,
 		profileProvider: profileProvider,
 		schemaPath:      schemaPath,
 		onReload:        onReload,
+		onProfileSwitch: onProfileSwitch,
 	}
 }
 

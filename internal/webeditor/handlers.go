@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
 // registerHandlers sets up all HTTP routes
@@ -28,6 +30,7 @@ func (s *Server) registerHandlers(mux *http.ServeMux) {
 	// API endpoints
 	mux.HandleFunc("/api/schema", s.handleGetSchema)
 	mux.HandleFunc("/api/config", s.handleConfig)
+	mux.HandleFunc("/api/validate", s.handleValidate)
 	mux.HandleFunc("/api/profiles", s.handleProfiles)
 	mux.HandleFunc("/api/profiles/active", s.handleActiveProfile)
 }
@@ -133,6 +136,47 @@ func (s *Server) saveConfig(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, response)
 }
 
+// handleValidate validates configuration without saving
+func (s *Server) handleValidate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Limit request body size
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		respondError(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+
+	// Parse JSON into config struct
+	var cfg config.Config
+	if err := json.Unmarshal(body, &cfg); err != nil {
+		respondJSON(w, map[string]interface{}{
+			"valid":  false,
+			"errors": []string{"Invalid JSON: " + err.Error()},
+		})
+		return
+	}
+
+	// Validate (defaults are applied when actually loading the config)
+	if err := config.Validate(&cfg); err != nil {
+		respondJSON(w, map[string]interface{}{
+			"valid":  false,
+			"errors": []string{err.Error()},
+		})
+		return
+	}
+
+	respondJSON(w, map[string]interface{}{
+		"valid":  true,
+		"errors": []string{},
+	})
+}
+
 // handleProfiles returns list of available profiles
 func (s *Server) handleProfiles(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -164,7 +208,7 @@ func (s *Server) handleActiveProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.profileProvider == nil {
+	if s.profileProvider == nil || s.onProfileSwitch == nil {
 		respondError(w, "Profile management not available", http.StatusNotImplemented)
 		return
 	}
@@ -178,20 +222,14 @@ func (s *Server) handleActiveProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.profileProvider.SetActiveProfile(req.Path); err != nil {
-		respondError(w, err.Error(), http.StatusBadRequest)
+	// Use the proper profile switch callback which handles:
+	// 1. Stopping compositor
+	// 2. Loading new config
+	// 3. Starting with new profile
+	// 4. Updating tray menu
+	if err := s.onProfileSwitch(req.Path); err != nil {
+		respondError(w, "Failed to switch profile: "+err.Error(), http.StatusInternalServerError)
 		return
-	}
-
-	// Trigger reload after profile switch
-	if s.onReload != nil {
-		if err := s.onReload(); err != nil {
-			respondJSON(w, map[string]interface{}{
-				"success": true,
-				"warning": "Profile switched but reload failed: " + err.Error(),
-			})
-			return
-		}
 	}
 
 	respondJSON(w, map[string]interface{}{

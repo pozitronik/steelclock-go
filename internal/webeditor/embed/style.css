@@ -1,7 +1,25 @@
 /* Custom styles for SteelClock Configuration Editor */
 
-/* Editor container */
-#editor-container {
+/* View toggle buttons */
+.view-toggle {
+    margin-bottom: 0;
+    padding: 0;
+    border: none;
+}
+
+.view-toggle button {
+    margin: 0;
+}
+
+.view-toggle button[aria-pressed="true"] {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: var(--primary-inverse);
+}
+
+/* Editor containers */
+#form-container,
+#json-container {
     margin: 1rem 0;
 }
 
@@ -41,9 +59,18 @@
     color: white;
 }
 
-/* Navigation buttons */
+/* Navigation layout */
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
 nav ul {
     padding: 0;
+    margin: 0;
     display: flex;
     gap: 0.5rem;
 }
@@ -83,7 +110,342 @@ header h1 {
     50% { opacity: 0.7; }
 }
 
+/* Form styling */
+.form-section {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border: 1px solid var(--muted-border-color);
+    border-radius: var(--border-radius);
+}
+
+.form-section h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    border-bottom: 1px solid var(--muted-border-color);
+    padding-bottom: 0.5rem;
+}
+
+.form-section h3 {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    color: var(--muted-color);
+}
+
+/* Form grid for side-by-side fields */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.form-field {
+    margin-bottom: 0.75rem;
+}
+
+.form-field label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+.form-field small {
+    display: block;
+    color: var(--muted-color);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.form-field input[type="number"] {
+    width: 100%;
+}
+
+.form-field input[type="checkbox"] {
+    width: auto;
+    margin-right: 0.5rem;
+}
+
+.form-field.checkbox-field {
+    display: flex;
+    align-items: center;
+}
+
+.form-field.checkbox-field label {
+    margin-bottom: 0;
+    font-weight: normal;
+}
+
+/* Color input styling */
+.form-field input[type="number"].color-input {
+    width: 80px;
+}
+
+.color-preview {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--muted-border-color);
+    border-radius: 3px;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+}
+
+/* Collapsible sections */
+.collapsible-header {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.collapsible-header::before {
+    content: '▶';
+    font-size: 0.75rem;
+    transition: transform 0.2s;
+}
+
+.collapsible-header.expanded::before {
+    transform: rotate(90deg);
+}
+
+.collapsible-content {
+    display: none;
+    padding-top: 0.5rem;
+}
+
+.collapsible-content.expanded {
+    display: block;
+}
+
+/* Loading state */
+.loading {
+    color: var(--muted-color);
+    font-style: italic;
+}
+
+/* Widgets section header */
+.widgets-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--muted-border-color);
+    padding-bottom: 0.5rem;
+}
+
+.widgets-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.widgets-header button {
+    padding: 0.5rem 1rem;
+}
+
+/* Widget list */
+.widget-list {
+    margin-top: 0.5rem;
+}
+
+.empty-message {
+    color: var(--muted-color);
+    font-style: italic;
+    text-align: center;
+    padding: 2rem;
+}
+
+.widget-item {
+    border: 1px solid var(--muted-border-color);
+    border-radius: var(--border-radius);
+    margin-bottom: 0.75rem;
+    background: var(--card-background-color);
+}
+
+.widget-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-bottom: 1px solid var(--muted-border-color);
+}
+
+[data-theme="dark"] .widget-item-header {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.widget-title-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.widget-item-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.drag-handle {
+    cursor: grab;
+    color: var(--muted-color);
+    font-size: 1.2rem;
+    user-select: none;
+}
+
+.widget-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.widget-actions button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.85rem;
+    min-width: 2rem;
+}
+
+.widget-toggle {
+    font-size: 0.7rem !important;
+}
+
+.widget-content {
+    padding: 1rem;
+}
+
+.widget-type-section {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--muted-border-color);
+}
+
+.widget-type-section select {
+    max-width: 300px;
+}
+
+.hint {
+    color: var(--muted-color);
+    font-style: italic;
+}
+
+/* Nested object styling */
+.nested-object {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: var(--border-radius);
+}
+
+[data-theme="dark"] .nested-object {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.nested-object h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: var(--muted-color);
+}
+
+/* Validation status */
+#validation-status {
+    display: none;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+}
+
+#validation-status.validation-valid {
+    background-color: rgba(46, 125, 50, 0.1);
+    border: 1px solid var(--ins-color);
+    color: var(--ins-color);
+}
+
+#validation-status.validation-error {
+    background-color: rgba(211, 47, 47, 0.1);
+    border: 1px solid var(--del-color);
+    color: var(--del-color);
+}
+
+#validation-status ul {
+    margin: 0.5rem 0 0 0;
+    padding-left: 1.5rem;
+}
+
+#validation-status li {
+    margin: 0.25rem 0;
+}
+
+/* Profile selector */
+#profile-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+#profile-selector label {
+    margin: 0;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+#profile-selector select {
+    margin: 0;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.9rem;
+    min-width: 200px;
+}
+
+/* Improved notification area */
+#notification {
+    transition: opacity 0.3s ease;
+    position: relative;
+}
+
+#notification.fade-out {
+    opacity: 0;
+}
+
+#notification.error {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notification-message {
+    flex: 1;
+}
+
+.notification-close {
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0 0.5rem;
+    margin: -0.5rem -0.5rem -0.5rem 0.5rem;
+    opacity: 0.7;
+    line-height: 1;
+}
+
+.notification-close:hover {
+    opacity: 1;
+}
+
 /* Dark mode adjustments */
 [data-theme="dark"] #config-editor {
     background-color: #1a1a2e;
+}
+
+[data-theme="dark"] .form-section {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] #validation-status.validation-valid {
+    background-color: rgba(46, 125, 50, 0.2);
+}
+
+[data-theme="dark"] #validation-status.validation-error {
+    background-color: rgba(211, 47, 47, 0.2);
 }

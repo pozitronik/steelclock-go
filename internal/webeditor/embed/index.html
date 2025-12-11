@@ -11,22 +11,42 @@
     <main class="container">
         <header>
             <h1>SteelClock Configuration Editor</h1>
-            <p id="profile-info"></p>
+            <div id="profile-selector" style="display: none;">
+                <label for="profile-select">Profile:</label>
+                <select id="profile-select"></select>
+            </div>
         </header>
 
         <div id="notification" role="alert"></div>
+        <div id="validation-status" role="status"></div>
 
         <nav>
             <ul>
                 <li><button id="btn-reload" class="secondary outline">Reload from File</button></li>
                 <li><button id="btn-save" class="primary">Save &amp; Apply</button></li>
             </ul>
+            <ul>
+                <li>
+                    <fieldset role="group" class="view-toggle">
+                        <button id="btn-view-form" class="outline" aria-pressed="true">Form</button>
+                        <button id="btn-view-json" class="outline secondary" aria-pressed="false">JSON</button>
+                    </fieldset>
+                </li>
+            </ul>
         </nav>
 
-        <article id="editor-container">
+        <!-- Form View -->
+        <article id="form-container">
+            <div id="form-content">
+                <p class="loading">Loading schema...</p>
+            </div>
+        </article>
+
+        <!-- JSON View (hidden by default) -->
+        <article id="json-container" style="display: none;">
             <label for="config-editor">
                 Configuration JSON
-                <small>Edit the configuration below. Changes will be applied when you click "Save &amp; Apply".</small>
+                <small>Edit the raw JSON configuration. Changes will be applied when you click "Save &amp; Apply".</small>
             </label>
             <textarea id="config-editor" rows="30" spellcheck="false"></textarea>
         </article>
@@ -40,6 +60,9 @@
     </main>
 
     <script src="js/api.js"></script>
+    <script src="js/schema.js"></script>
+    <script src="js/form.js"></script>
+    <script src="js/widgets.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
