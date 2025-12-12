@@ -50,7 +50,7 @@ class SchemaProcessor {
     }
 
     /**
-     * Recursively resolve $ref in an object
+     * Recursively resolve $ref and allOf in an object
      * @param {Object} obj - The object to process
      */
     resolveNestedRefs(obj) {
@@ -72,10 +72,84 @@ class SchemaProcessor {
             }
         }
 
+        // Handle allOf by merging all schemas
+        if (Array.isArray(obj.allOf)) {
+            this.mergeAllOf(obj);
+        }
+
         // Recurse into nested objects
         for (const key of Object.keys(obj)) {
             if (typeof obj[key] === 'object') {
                 this.resolveNestedRefs(obj[key]);
+            }
+        }
+    }
+
+    /**
+     * Merge allOf array into a single schema
+     * @param {Object} obj - Object containing allOf array
+     */
+    mergeAllOf(obj) {
+        if (!Array.isArray(obj.allOf)) {
+            return;
+        }
+
+        const allOfItems = obj.allOf;
+        delete obj.allOf;
+
+        for (const item of allOfItems) {
+            // First resolve any $ref in the item
+            if (item.$ref) {
+                const resolved = this.resolveRef(item.$ref);
+                if (resolved) {
+                    delete item.$ref;
+                    Object.assign(item, resolved);
+                }
+            }
+
+            // Recursively handle nested allOf
+            if (Array.isArray(item.allOf)) {
+                this.mergeAllOf(item);
+            }
+
+            // Merge properties
+            if (item.properties) {
+                obj.properties = obj.properties || {};
+                for (const [key, value] of Object.entries(item.properties)) {
+                    // If property already exists, merge them
+                    if (obj.properties[key]) {
+                        Object.assign(obj.properties[key], value);
+                    } else {
+                        obj.properties[key] = value;
+                    }
+                }
+            }
+
+            // Merge required arrays
+            if (Array.isArray(item.required)) {
+                obj.required = obj.required || [];
+                for (const req of item.required) {
+                    if (!obj.required.includes(req)) {
+                        obj.required.push(req);
+                    }
+                }
+            }
+
+            // Merge type (prefer explicit type)
+            if (item.type && !obj.type) {
+                obj.type = item.type;
+            }
+
+            // Merge description (prefer first non-empty)
+            if (item.description && !obj.description) {
+                obj.description = item.description;
+            }
+
+            // Merge other scalar properties
+            for (const key of ['default', 'minimum', 'maximum', 'minLength', 'maxLength', 'pattern']) {
+                if (item[key] !== undefined && obj[key] === undefined) {
+                    obj[key] = item[key];
+                }
             }
         }
     }

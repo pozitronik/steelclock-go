@@ -160,11 +160,10 @@
         }
       }
     },
-    "textObject": {
+    "textStyle": {
       "type": "object",
-      "description": "Text rendering properties",
+      "description": "Text styling properties (font, size, alignment)",
       "properties": {
-        "format": { "type": "string", "description": "Format string (widget-specific)" },
         "font": { "type": ["string", "null"], "description": "Font name (pixel3x5, pixel5x7) or TTF path. Null = bundled font", "default": null },
         "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 10 },
         "align": {
@@ -176,6 +175,18 @@
           }
         }
       }
+    },
+    "textObject": {
+      "type": "object",
+      "description": "Text rendering properties with format string",
+      "allOf": [
+        { "$ref": "#/definitions/textStyle" },
+        {
+          "properties": {
+            "format": { "type": "string", "description": "Format string (widget-specific)" }
+          }
+        }
+      ]
     },
     "autoHide": {
       "type": "object",
@@ -470,19 +481,14 @@
               "text": {
                 "type": "object",
                 "description": "Text mode settings",
-                "properties": {
-                  "font": { "type": ["string", "null"], "description": "Font name (pixel3x5, pixel5x7) or TTF path. Null = bundled font", "default": null },
-                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 10 },
-                  "align": {
-                    "type": "object",
-                    "description": "Text alignment within the widget content area",
+                "allOf": [
+                  { "$ref": "#/definitions/textStyle" },
+                  {
                     "properties": {
-                      "h": { "type": "string", "description": "Horizontal alignment", "enum": ["left", "center", "right"], "default": "center" },
-                      "v": { "type": "string", "description": "Vertical alignment", "enum": ["top", "center", "bottom"], "default": "center" }
+                      "show_unit": { "type": "boolean", "description": "Show unit suffix (e.g., 'Mbps') in text mode", "default": false }
                     }
-                  },
-                  "show_unit": { "type": "boolean", "description": "Show unit suffix (e.g., 'Mbps') in text mode", "default": false }
-                }
+                  }
+                ]
               },
               "bar": {
                 "type": "object",
@@ -545,19 +551,14 @@
               "text": {
                 "type": "object",
                 "description": "Text mode settings",
-                "properties": {
-                  "font": { "type": ["string", "null"], "description": "Font name (pixel3x5, pixel5x7) or TTF path. Null = bundled font", "default": null },
-                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 10 },
-                  "align": {
-                    "type": "object",
-                    "description": "Text alignment within the widget content area",
+                "allOf": [
+                  { "$ref": "#/definitions/textStyle" },
+                  {
                     "properties": {
-                      "h": { "type": "string", "description": "Horizontal alignment", "enum": ["left", "center", "right"], "default": "center" },
-                      "v": { "type": "string", "description": "Vertical alignment", "enum": ["top", "center", "bottom"], "default": "center" }
+                      "show_unit": { "type": "boolean", "description": "Show unit suffix (e.g., 'MB/s') in text mode", "default": false }
                     }
-                  },
-                  "show_unit": { "type": "boolean", "description": "Show unit suffix (e.g., 'MB/s') in text mode", "default": false }
-                }
+                  }
+                ]
               },
               "bar": {
                 "type": "object",
@@ -679,19 +680,14 @@
               "text": {
                 "type": "object",
                 "description": "Text mode settings",
-                "properties": {
-                  "format": { "type": "string", "description": "Text format string", "default": "%d%%" },
-                  "font": { "type": ["string", "null"], "description": "Font name (pixel3x5, pixel5x7) or TTF path. Null = bundled font", "default": null },
-                  "size": { "type": "integer", "description": "Font size in points", "minimum": 6, "maximum": 72, "default": 10 },
-                  "align": {
-                    "type": "object",
-                    "description": "Text alignment",
+                "allOf": [
+                  { "$ref": "#/definitions/textStyle" },
+                  {
                     "properties": {
-                      "h": { "type": "string", "description": "Horizontal alignment", "enum": ["left", "center", "right"], "default": "center" },
-                      "v": { "type": "string", "description": "Vertical alignment", "enum": ["top", "center", "bottom"], "default": "center" }
+                      "format": { "type": "string", "description": "Text format string", "default": "%d%%" }
                     }
                   }
-                }
+                ]
               },
               "stereo": {
                 "type": "object",
@@ -918,23 +914,18 @@
               "text": {
                 "type": "object",
                 "description": "Text rendering properties for Winamp widget",
-                "properties": {
-                  "format": {
-                    "type": "string",
-                    "description": "Format string with placeholders: {title} (track title), {filename} (file name), {filepath} (full path), {position} (MM:SS), {duration} (MM:SS), {position_ms} (ms), {duration_s} (seconds), {bitrate} (kbps), {samplerate} (Hz), {channels} (count), {status} (Playing/Paused/Stopped), {track_num} (current track number in playlist), {playlist_length} (total tracks in playlist), {shuffle} ('S' if enabled, empty otherwise), {repeat} ('R' if enabled, empty otherwise), {version} (Winamp version string)",
-                    "default": "{title}"
-                  },
-                  "font": { "type": ["string", "null"], "description": "Font name (pixel3x5, pixel5x7) or TTF path. Null = bundled font", "default": null },
-                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 10 },
-                  "align": {
-                    "type": "object",
-                    "description": "Text alignment within the widget content area",
+                "allOf": [
+                  { "$ref": "#/definitions/textStyle" },
+                  {
                     "properties": {
-                      "h": { "type": "string", "description": "Horizontal alignment", "enum": ["left", "center", "right"], "default": "center" },
-                      "v": { "type": "string", "description": "Vertical alignment", "enum": ["top", "center", "bottom"], "default": "center" }
+                      "format": {
+                        "type": "string",
+                        "description": "Format string with placeholders: {title} (track title), {filename} (file name), {filepath} (full path), {position} (MM:SS), {duration} (MM:SS), {position_ms} (ms), {duration_s} (seconds), {bitrate} (kbps), {samplerate} (Hz), {channels} (count), {status} (Playing/Paused/Stopped), {track_num} (current track number in playlist), {playlist_length} (total tracks in playlist), {shuffle} ('S' if enabled, empty otherwise), {repeat} ('R' if enabled, empty otherwise), {version} (Winamp version string)",
+                        "default": "{title}"
+                      }
                     }
                   }
-                }
+                ]
               },
               "winamp": {
                 "type": "object",
@@ -1376,23 +1367,19 @@
               "text": {
                 "type": "object",
                 "description": "Text mode settings",
-                "properties": {
-                  "format": {
-                    "type": "string",
-                    "description": "Format string with tokens: {percent}/{pct} (value), {status} (CHG/AC/ECO), {status_full} (Charging/AC Power/Economy), {time} (smart remaining), {time_left}, {time_to_full}, {time_left_min} (minutes), {level} (critical/low/normal), {charging}/{plugged}/{economy} (boolean indicators)",
-                    "default": "{percent}%"
-                  },
-                  "font": { "type": ["string", "null"], "description": "Font name (pixel3x5, pixel5x7) or TTF path. Null = bundled font", "default": null },
-                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 16 },
-                  "align": {
-                    "type": "object",
-                    "description": "Text alignment within the widget content area",
+                "allOf": [
+                  { "$ref": "#/definitions/textStyle" },
+                  {
                     "properties": {
-                      "h": { "type": "string", "description": "Horizontal alignment", "enum": ["left", "center", "right"], "default": "center" },
-                      "v": { "type": "string", "description": "Vertical alignment", "enum": ["top", "center", "bottom"], "default": "center" }
+                      "format": {
+                        "type": "string",
+                        "description": "Format string with tokens: {percent}/{pct} (value), {status} (CHG/AC/ECO), {status_full} (Charging/AC Power/Economy), {time} (smart remaining), {time_left}, {time_to_full}, {time_left_min} (minutes), {level} (critical/low/normal), {charging}/{plugged}/{economy} (boolean indicators)",
+                        "default": "{percent}%"
+                      },
+                      "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 16 }
                     }
                   }
-                }
+                ]
               }
             }
           }
@@ -1866,23 +1853,19 @@
               "text": {
                 "type": "object",
                 "description": "Text mode settings",
-                "properties": {
-                  "format": {
-                    "type": "string",
-                    "description": "Format string with tokens: {icon}, {unread}/{total}, {mentions}, {reactions}, {private}, {groups}, {channels}, {muted}, {private_muted}, {groups_muted}, {channels_muted}",
-                    "default": "{unread} unread"
-                  },
-                  "font": { "type": ["string", "null"], "description": "Font name (pixel3x5, pixel5x7) or TTF path. Null = bundled font", "default": null },
-                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 16 },
-                  "align": {
-                    "type": "object",
-                    "description": "Text alignment within the widget content area",
+                "allOf": [
+                  { "$ref": "#/definitions/textStyle" },
+                  {
                     "properties": {
-                      "h": { "type": "string", "description": "Horizontal alignment", "enum": ["left", "center", "right"], "default": "center" },
-                      "v": { "type": "string", "description": "Vertical alignment", "enum": ["top", "center", "bottom"], "default": "center" }
+                      "format": {
+                        "type": "string",
+                        "description": "Format string with tokens: {icon}, {unread}/{total}, {mentions}, {reactions}, {private}, {groups}, {channels}, {muted}, {private_muted}, {groups_muted}, {channels_muted}",
+                        "default": "{unread} unread"
+                      },
+                      "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 16 }
                     }
                   }
-                }
+                ]
               }
             }
           }
