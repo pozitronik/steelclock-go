@@ -13,8 +13,6 @@ class ConfigEditor {
         this.widgetEditor = null;
         this.isDirty = false;
         this.currentView = 'form'; // 'form' or 'json'
-        this.validationErrors = [];
-        this.validationTimeout = null;
         this.notificationTimeout = null;
         this.profiles = [];
 
@@ -27,11 +25,10 @@ class ConfigEditor {
         this.reloadBtn = document.getElementById('btn-reload');
         this.viewFormBtn = document.getElementById('btn-view-form');
         this.viewJsonBtn = document.getElementById('btn-view-json');
-        this.notificationEl = document.getElementById('notification');
-        this.validationEl = document.getElementById('validation-status');
         this.statusEl = document.getElementById('status');
         this.profileSelector = document.getElementById('profile-selector');
         this.profileSelect = document.getElementById('profile-select');
+        this.newProfileBtn = document.getElementById('btn-new-profile');
         this.themeToggle = document.getElementById('toggle-theme');
     }
 
@@ -44,7 +41,6 @@ class ConfigEditor {
         this.reloadBtn.addEventListener('click', () => this.reload());
         this.editorEl.addEventListener('input', () => {
             this.markDirty();
-            this.scheduleValidation();
         });
         this.themeToggle.addEventListener('click', (e) => {
             e.preventDefault();
@@ -53,6 +49,7 @@ class ConfigEditor {
 
         // Profile selector
         this.profileSelect.addEventListener('change', () => this.switchProfile());
+        this.newProfileBtn.addEventListener('click', () => this.createNewProfile());
 
         // View toggle
         this.viewFormBtn.addEventListener('click', () => this.switchView('form'));
@@ -144,9 +141,15 @@ class ConfigEditor {
             ? this.widgetEditor.renderWidgetsSection(this.config, () => this.onFormChange())
             : this.formBuilder.renderWidgetsSummary(this.config);
 
-        this.formContent.appendChild(generalSection);
-        this.formContent.appendChild(displaySection);
-        this.formContent.appendChild(defaultsSection);
+        if (generalSection) {
+            this.formContent.appendChild(generalSection);
+        }
+        if (displaySection) {
+            this.formContent.appendChild(displaySection);
+        }
+        if (defaultsSection) {
+            this.formContent.appendChild(defaultsSection);
+        }
         this.formContent.appendChild(widgetsSection);
     }
 
@@ -156,68 +159,6 @@ class ConfigEditor {
     onFormChange() {
         // Update JSON editor with current config
         this.editorEl.value = JSON.stringify(this.config, null, 2);
-        this.scheduleValidation();
-    }
-
-    /**
-     * Schedule validation with debounce
-     */
-    scheduleValidation() {
-        if (this.validationTimeout) {
-            clearTimeout(this.validationTimeout);
-        }
-        this.validationTimeout = setTimeout(() => this.validate(), 500);
-    }
-
-    /**
-     * Validate current configuration
-     */
-    async validate() {
-        try {
-            let configToValidate;
-            if (this.currentView === 'json') {
-                try {
-                    configToValidate = JSON.parse(this.editorEl.value);
-                } catch (err) {
-                    this.showValidationStatus(false, ['Invalid JSON: ' + err.message]);
-                    return;
-                }
-            } else {
-                configToValidate = this.config;
-            }
-
-            const result = await API.validateConfig(configToValidate);
-            this.validationErrors = result.errors || [];
-            this.showValidationStatus(result.valid, this.validationErrors);
-        } catch (err) {
-            // Silent fail for validation - don't interrupt user
-            console.warn('Validation failed:', err);
-        }
-    }
-
-    /**
-     * Show validation status
-     * @param {boolean} valid - Whether config is valid
-     * @param {string[]} errors - Array of error messages
-     */
-    showValidationStatus(valid, errors) {
-        if (valid) {
-            this.validationEl.className = 'validation-valid';
-            this.validationEl.textContent = 'Configuration is valid';
-            this.validationEl.style.display = 'block';
-            // Hide after 3 seconds if valid
-            setTimeout(() => {
-                if (this.validationEl.className === 'validation-valid') {
-                    this.validationEl.style.display = 'none';
-                }
-            }, 3000);
-        } else {
-            this.validationEl.className = 'validation-error';
-            this.validationEl.innerHTML = '<strong>Validation errors:</strong><ul>' +
-                errors.map(e => `<li>${this.escapeHtml(e)}</li>`).join('') +
-                '</ul>';
-            this.validationEl.style.display = 'block';
-        }
     }
 
     /**
@@ -338,8 +279,8 @@ class ConfigEditor {
         try {
             this.profiles = await API.getProfiles();
 
-            if (this.profiles.length > 1) {
-                // Show profile selector if there are multiple profiles
+            if (this.profiles.length > 0) {
+                // Show profile selector if profiles are available
                 this.profileSelector.style.display = 'flex';
                 this.profileSelect.innerHTML = '';
 
@@ -403,6 +344,37 @@ class ConfigEditor {
     }
 
     /**
+     * Create a new profile
+     */
+    async createNewProfile() {
+        const name = prompt('Enter name for the new profile:');
+        if (!name || !name.trim()) {
+            return;
+        }
+
+        try {
+            this.setStatus('Creating profile...');
+            const result = await API.createProfile(name.trim());
+
+            this.showNotification('Profile "' + name.trim() + '" created', 'success');
+
+            // Reload profiles list
+            await this.loadProfiles();
+
+            // Switch to the new profile
+            if (result.path) {
+                this.profileSelect.value = result.path;
+                await this.switchProfile();
+            }
+
+            this.setStatus('Ready');
+        } catch (err) {
+            this.showNotification('Failed to create profile: ' + err.message, 'error');
+            this.setStatus('Error');
+        }
+    }
+
+    /**
      * Mark configuration as modified
      */
     markDirty() {
@@ -414,60 +386,57 @@ class ConfigEditor {
     }
 
     /**
-     * Show a notification message
+     * Show a notification message in the status indicator
      * @param {string} message - The message to show
      * @param {string} type - 'success', 'error', or 'warning'
      */
     showNotification(message, type) {
-        // Clear any pending hide timeout
+        // Clear any pending revert timeout
         if (this.notificationTimeout) {
             clearTimeout(this.notificationTimeout);
             this.notificationTimeout = null;
         }
 
-        // Reset state
-        this.notificationEl.classList.remove('fade-out');
-        this.notificationEl.style.display = 'block';
-        this.notificationEl.className = type;
-
-        // Build content with close button for errors
+        // Show message in status indicator
+        this.statusEl.textContent = message;
+        this.statusEl.className = 'status-indicator';
         if (type === 'error') {
-            this.notificationEl.innerHTML = `
-                <span class="notification-message">${this.escapeHtml(message)}</span>
-                <button class="notification-close" onclick="window.configEditor.hideNotification()" title="Dismiss">&times;</button>
-            `;
+            this.statusEl.classList.add('error');
+        } else if (type === 'warning') {
+            this.statusEl.classList.add('modified');
         } else {
-            this.notificationEl.textContent = message;
+            this.statusEl.classList.add('success');
         }
 
-        // Auto-hide success and warning messages
-        const hideDelay = type === 'success' ? 3000 : (type === 'warning' ? 5000 : 0);
-        if (hideDelay > 0) {
-            this.notificationTimeout = setTimeout(() => {
-                this.hideNotification();
-            }, hideDelay);
-        }
-    }
-
-    /**
-     * Hide the notification with fade-out animation
-     */
-    hideNotification() {
-        this.notificationEl.classList.add('fade-out');
-        setTimeout(() => {
-            if (this.notificationEl.classList.contains('fade-out')) {
-                this.notificationEl.style.display = 'none';
-                this.notificationEl.className = '';
+        // Auto-revert to appropriate status
+        const hideDelay = type === 'success' ? 2000 : (type === 'warning' ? 4000 : 6000);
+        this.notificationTimeout = setTimeout(() => {
+            if (this.isDirty) {
+                this.setStatus('Modified');
+            } else {
+                this.setStatus('Ready');
             }
-        }, 300);
+        }, hideDelay);
     }
 
     /**
-     * Set the status bar text
+     * Set the status indicator text and style
      * @param {string} text - The status text
      */
     setStatus(text) {
+        // Clear any pending notification timeout
+        if (this.notificationTimeout) {
+            clearTimeout(this.notificationTimeout);
+            this.notificationTimeout = null;
+        }
+
         this.statusEl.textContent = text;
+        this.statusEl.className = 'status-indicator';
+        if (text === 'Modified') {
+            this.statusEl.classList.add('modified');
+        } else if (text === 'Error') {
+            this.statusEl.classList.add('error');
+        }
     }
 
     /**

@@ -177,13 +177,20 @@ func (s *Server) handleValidate(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleProfiles returns list of available profiles
+// handleProfiles handles GET (list) and POST (create) for profiles
 func (s *Server) handleProfiles(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
+		s.listProfiles(w)
+	case http.MethodPost:
+		s.createProfile(w, r)
+	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
 	}
+}
 
+// listProfiles returns list of available profiles
+func (s *Server) listProfiles(w http.ResponseWriter) {
 	if s.profileProvider == nil {
 		respondJSON(w, []ProfileInfo{})
 		return
@@ -191,6 +198,48 @@ func (s *Server) handleProfiles(w http.ResponseWriter, r *http.Request) {
 
 	profiles := s.profileProvider.GetProfiles()
 	respondJSON(w, profiles)
+}
+
+// createProfile creates a new profile with the given name
+func (s *Server) createProfile(w http.ResponseWriter, r *http.Request) {
+	// Origin check for POST
+	origin := r.Header.Get("Origin")
+	if origin != "" && !strings.HasPrefix(origin, "http://127.0.0.1") &&
+		!strings.HasPrefix(origin, "http://localhost") {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	if s.profileProvider == nil {
+		respondError(w, "Profile management not available", http.StatusNotImplemented)
+		return
+	}
+
+	var req struct {
+		Name string `json:"name"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if req.Name == "" {
+		respondError(w, "Profile name is required", http.StatusBadRequest)
+		return
+	}
+
+	path, err := s.profileProvider.CreateProfile(req.Name)
+	if err != nil {
+		respondError(w, "Failed to create profile: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, map[string]interface{}{
+		"success": true,
+		"path":    path,
+		"message": "Profile created",
+	})
 }
 
 // handleActiveProfile handles switching active profile

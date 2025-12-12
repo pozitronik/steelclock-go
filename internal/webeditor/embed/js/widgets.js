@@ -83,6 +83,7 @@ class WidgetEditor {
 
         const titleContainer = document.createElement('div');
         titleContainer.className = 'widget-title-container';
+        titleContainer.style.cursor = 'pointer';
 
         const dragHandle = document.createElement('span');
         dragHandle.className = 'drag-handle';
@@ -160,6 +161,13 @@ class WidgetEditor {
             const isExpanded = content.style.display !== 'none';
             content.style.display = isExpanded ? 'none' : 'block';
             toggleBtn.textContent = isExpanded ? '▼' : '▲';
+        });
+
+        // Click on title container expands/collapses
+        titleContainer.addEventListener('click', (e) => {
+            // Don't toggle if clicking the drag handle
+            if (e.target.classList.contains('drag-handle')) return;
+            toggleBtn.click();
         });
 
         actions.insertBefore(toggleBtn, upBtn);

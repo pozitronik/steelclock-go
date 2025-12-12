@@ -382,7 +382,8 @@ class FormBuilder {
         const rootProps = this.schema.getRootProperties();
 
         // Define which properties to show in general section
-        const generalProps = ['game_name', 'game_display_name', 'refresh_rate_ms', 'backend'];
+        // Note: game_name and game_display_name are hidden (advanced settings, edit in JSON)
+        const generalProps = ['config_name', 'refresh_rate_ms', 'backend'];
 
         for (const propName of generalProps) {
             if (!rootProps[propName]) continue;
@@ -409,87 +410,30 @@ class FormBuilder {
 
     /**
      * Render display config section
+     * Note: This section is hidden as display settings are advanced options.
+     * Users can edit display settings in JSON view if needed.
      * @param {Object} config - Current configuration
      * @param {Function} onUpdate - Callback when config changes
-     * @returns {HTMLElement}
+     * @returns {HTMLElement|null}
      */
     renderDisplayConfig(config, onUpdate) {
-        const section = this.createSection('Display Settings', 'section-display');
-        const grid = document.createElement('div');
-        grid.className = 'form-grid';
-
-        const displaySchema = this.schema.getDefinition('display');
-        if (!displaySchema || !displaySchema.properties) {
-            const info = document.createElement('p');
-            info.textContent = 'Display schema not available.';
-            section.appendChild(info);
-            return section;
-        }
-
-        config.display = config.display || {};
-
-        for (const [propName, propDef] of Object.entries(displaySchema.properties)) {
-            const field = this.createField(
-                propName,
-                propDef,
-                config.display[propName],
-                (newVal) => {
-                    if (newVal === undefined) {
-                        delete config.display[propName];
-                    } else {
-                        config.display[propName] = newVal;
-                    }
-                    onUpdate(config);
-                }
-            );
-            grid.appendChild(field);
-        }
-
-        section.appendChild(grid);
-        return section;
+        // Return null to hide this section - display settings are advanced
+        // and rarely need to be changed (device-specific dimensions)
+        return null;
     }
 
     /**
      * Render defaults config section
+     * Note: This section is hidden as it contains complex dynamic properties.
+     * Users can edit defaults in JSON view if needed.
      * @param {Object} config - Current configuration
      * @param {Function} onUpdate - Callback when config changes
-     * @returns {HTMLElement}
+     * @returns {HTMLElement|null}
      */
     renderDefaultsConfig(config, onUpdate) {
-        const section = this.createSection('Default Colors', 'section-defaults');
-
-        const defaultsSchema = this.schema.getDefinition('defaults');
-        if (!defaultsSchema || !defaultsSchema.properties) {
-            const info = document.createElement('p');
-            info.textContent = 'Defaults schema not available.';
-            section.appendChild(info);
-            return section;
-        }
-
-        config.defaults = config.defaults || {};
-
-        const grid = document.createElement('div');
-        grid.className = 'form-grid';
-
-        for (const [propName, propDef] of Object.entries(defaultsSchema.properties)) {
-            const field = this.createField(
-                propName,
-                propDef,
-                config.defaults[propName],
-                (newVal) => {
-                    if (newVal === undefined) {
-                        delete config.defaults[propName];
-                    } else {
-                        config.defaults[propName] = newVal;
-                    }
-                    onUpdate(config);
-                }
-            );
-            grid.appendChild(field);
-        }
-
-        section.appendChild(grid);
-        return section;
+        // Return null to hide this section - defaults contain dynamic color
+        // definitions that are better edited in JSON view
+        return null;
     }
 
     /**

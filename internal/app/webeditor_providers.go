@@ -94,3 +94,11 @@ func (a *ProfileProviderAdapter) SetActiveProfile(path string) error {
 	}
 	return a.profileMgr.SetActiveProfile(path)
 }
+
+// CreateProfile creates a new profile with the given name and returns its path
+func (a *ProfileProviderAdapter) CreateProfile(name string) (string, error) {
+	if a.profileMgr == nil {
+		return "", nil
+	}
+	return a.profileMgr.CreateProfile(name)
+}

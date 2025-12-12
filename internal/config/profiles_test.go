@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -305,5 +306,131 @@ func TestProfile_FilenameToName(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("filenameToName(%q) = %q, want %q", tt.path, got, tt.want)
 		}
+	}
+}
+
+func TestProfileManager_SanitizeFilename(t *testing.T) {
+	pm := NewProfileManager("/tmp")
+
+	tests := []struct {
+		name string
+		want string
+	}{
+		{"My Profile", "my_profile"},
+		{"Gaming Setup", "gaming_setup"},
+		{"test-profile", "test-profile"},
+		{"TEST_123", "test_123"},
+		{"Profile@#$%!", "profile"},
+		{"", "profile"},
+		{"   ", "___"}, // spaces become underscores
+		{"simple", "simple"},
+		{"@#$%", "profile"}, // all special chars result in fallback
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := pm.sanitizeFilename(tt.name)
+			if got != tt.want {
+				t.Errorf("sanitizeFilename(%q) = %q, want %q", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestProfileManager_CreateProfile(t *testing.T) {
+	tmpDir, cleanup := setupTestDir(t)
+	defer cleanup()
+
+	// Create main config first
+	writeConfig(t, tmpDir, MainConfigFile, "Main")
+
+	pm := NewProfileManager(tmpDir)
+	if err := pm.LoadProfiles(); err != nil {
+		t.Fatalf("LoadProfiles failed: %v", err)
+	}
+
+	// Test creating a new profile
+	path, err := pm.CreateProfile("My New Profile")
+	if err != nil {
+		t.Fatalf("CreateProfile failed: %v", err)
+	}
+
+	// Verify the path is correct
+	expectedPath := filepath.Join(tmpDir, ProfilesDir, "my_new_profile.json")
+	if path != expectedPath {
+		t.Errorf("Created profile path = %q, want %q", path, expectedPath)
+	}
+
+	// Verify the file exists
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		t.Fatal("Profile file was not created")
+	}
+
+	// Read and parse file directly (not using Load which validates widgets)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("Failed to read created profile: %v", err)
+	}
+
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		t.Fatalf("Failed to parse created profile: %v", err)
+	}
+
+	if cfg.ConfigName != "My New Profile" {
+		t.Errorf("ConfigName = %q, want %q", cfg.ConfigName, "My New Profile")
+	}
+	if cfg.GameName != DefaultGameName {
+		t.Errorf("GameName = %q, want %q", cfg.GameName, DefaultGameName)
+	}
+	if len(cfg.Widgets) != 0 {
+		t.Errorf("Widgets count = %d, want 0", len(cfg.Widgets))
+	}
+
+	// Verify the profile was added to the list
+	profiles := pm.GetProfiles()
+	var found bool
+	for _, p := range profiles {
+		if p.Name == "My New Profile" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Created profile not found in profiles list")
+	}
+}
+
+func TestProfileManager_CreateProfile_EmptyName(t *testing.T) {
+	tmpDir, cleanup := setupTestDir(t)
+	defer cleanup()
+
+	pm := NewProfileManager(tmpDir)
+
+	_, err := pm.CreateProfile("")
+	if err == nil {
+		t.Error("Expected error for empty profile name")
+	}
+}
+
+func TestProfileManager_CreateProfile_Duplicate(t *testing.T) {
+	tmpDir, cleanup := setupTestDir(t)
+	defer cleanup()
+
+	pm := NewProfileManager(tmpDir)
+	if err := pm.LoadProfiles(); err != nil {
+		t.Fatalf("LoadProfiles failed: %v", err)
+	}
+
+	// Create first profile
+	_, err := pm.CreateProfile("Duplicate")
+	if err != nil {
+		t.Fatalf("First CreateProfile failed: %v", err)
+	}
+
+	// Try to create duplicate
+	_, err = pm.CreateProfile("Duplicate")
+	if err == nil {
+		t.Error("Expected error for duplicate profile name")
 	}
 }

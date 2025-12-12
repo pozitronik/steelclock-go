@@ -247,3 +247,94 @@ func (pm *ProfileManager) RefreshProfile(path string) {
 func (pm *ProfileManager) HasMultipleProfiles() bool {
 	return len(pm.profiles) > 1
 }
+
+// CreateProfile creates a new profile with the given name.
+// Returns the path to the created profile file.
+func (pm *ProfileManager) CreateProfile(name string) (string, error) {
+	if name == "" {
+		return "", fmt.Errorf("profile name cannot be empty")
+	}
+
+	// Sanitize name for filename
+	filename := pm.sanitizeFilename(name) + ".json"
+	profilesPath := filepath.Join(pm.baseDir, ProfilesDir)
+
+	// Ensure profiles directory exists
+	if err := os.MkdirAll(profilesPath, 0755); err != nil {
+		return "", fmt.Errorf("failed to create profiles directory: %w", err)
+	}
+
+	// Build full path
+	profilePath := filepath.Join(profilesPath, filename)
+
+	// Check if file already exists
+	if _, err := os.Stat(profilePath); err == nil {
+		return "", fmt.Errorf("profile '%s' already exists", filename)
+	}
+
+	// Create minimal valid config with no widgets
+	cfg := &Config{
+		ConfigName:      name,
+		GameName:        DefaultGameName,
+		GameDisplayName: name,
+		RefreshRateMs:   DefaultRefreshRateMs,
+		Display: DisplayConfig{
+			Width:  DefaultDisplayWidth,
+			Height: DefaultDisplayHeight,
+		},
+		Widgets: []WidgetConfig{}, // Empty - user will add widgets
+	}
+
+	// Marshal to JSON
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	// Write file
+	if err := os.WriteFile(profilePath, data, 0644); err != nil {
+		return "", fmt.Errorf("failed to write profile: %w", err)
+	}
+
+	// Add to profiles list
+	profile := &Profile{
+		Path:       profilePath,
+		Name:       name,
+		IsMain:     false,
+		loadedName: name,
+	}
+	pm.profiles = append(pm.profiles, profile)
+
+	// Re-sort profiles
+	sort.Slice(pm.profiles, func(i, j int) bool {
+		if pm.profiles[i].IsMain != pm.profiles[j].IsMain {
+			return pm.profiles[i].IsMain
+		}
+		return pm.profiles[i].Name < pm.profiles[j].Name
+	})
+
+	return profilePath, nil
+}
+
+// sanitizeFilename converts a profile name to a safe filename
+func (pm *ProfileManager) sanitizeFilename(name string) string {
+	// Replace spaces with underscores
+	result := strings.ReplaceAll(name, " ", "_")
+
+	// Remove or replace invalid characters
+	var safe strings.Builder
+	for _, r := range result {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9') || r == '_' || r == '-' {
+			safe.WriteRune(r)
+		}
+	}
+
+	result = safe.String()
+	if result == "" {
+		result = "profile"
+	}
+
+	// Convert to lowercase for consistency
+	return strings.ToLower(result)
+}

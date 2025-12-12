@@ -11,6 +11,9 @@ import (
 	"time"
 )
 
+// DefaultPort is the default port for the web editor server
+const DefaultPort = 8384
+
 // Server manages the embedded web configuration editor
 type Server struct {
 	httpServer *http.Server
@@ -38,7 +41,7 @@ func NewServer(configProvider ConfigProvider, profileProvider ProfileProvider, s
 	}
 }
 
-// Start starts the HTTP server on a random available port (localhost only)
+// Start starts the HTTP server on the default port (localhost only)
 func (s *Server) Start() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -47,10 +50,11 @@ func (s *Server) Start() error {
 		return nil // Already running
 	}
 
-	// Bind to localhost only with random available port
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	// Bind to localhost only on the default port
+	addr := fmt.Sprintf("127.0.0.1:%d", DefaultPort)
+	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		return fmt.Errorf("failed to start listener: %w", err)
+		return fmt.Errorf("failed to start listener on port %d: %w", DefaultPort, err)
 	}
 
 	s.listener = listener

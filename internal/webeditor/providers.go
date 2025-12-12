@@ -18,6 +18,8 @@ type ProfileProvider interface {
 	GetActiveProfile() *ProfileInfo
 	// SetActiveProfile switches to a different profile by path
 	SetActiveProfile(path string) error
+	// CreateProfile creates a new profile with the given name and returns its path
+	CreateProfile(name string) (string, error)
 }
 
 // ProfileInfo contains profile metadata for the API

@@ -101,4 +101,27 @@ const API = {
 
         return result;
     },
+
+    /**
+     * Create a new profile
+     * @param {string} name - The name for the new profile
+     * @returns {Promise<Object>} The creation result with path
+     */
+    async createProfile(name) {
+        const response = await fetch('/api/profiles', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name }),
+        });
+
+        const result = await response.json();
+
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        return result;
+    },
 };

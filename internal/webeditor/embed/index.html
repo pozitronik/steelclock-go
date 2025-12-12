@@ -10,15 +10,16 @@
 <body>
     <main class="container">
         <header>
-            <h1>SteelClock Configuration Editor</h1>
+            <div class="header-row">
+                <h1>SteelClock Configuration Editor</h1>
+                <span id="status" class="status-indicator">Ready</span>
+            </div>
             <div id="profile-selector" style="display: none;">
                 <label for="profile-select">Profile:</label>
                 <select id="profile-select"></select>
+                <button id="btn-new-profile" class="outline secondary" title="Create new profile">+</button>
             </div>
         </header>
-
-        <div id="notification" role="alert"></div>
-        <div id="validation-status" role="status"></div>
 
         <nav>
             <ul>
@@ -53,7 +54,6 @@
 
         <footer>
             <small>
-                <span id="status">Ready</span> |
                 <a href="#" id="toggle-theme">Toggle Dark Mode</a>
             </small>
         </footer>

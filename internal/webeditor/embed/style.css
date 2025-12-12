@@ -33,41 +33,6 @@
     min-height: 400px;
 }
 
-/* Notification area */
-#notification {
-    display: none;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border-radius: var(--border-radius);
-}
-
-#notification.success {
-    display: block;
-    background-color: var(--ins-color);
-    color: white;
-}
-
-#notification.error {
-    display: block;
-    background-color: var(--del-color);
-    color: white;
-}
-
-#notification.warning {
-    display: block;
-    background-color: #f0ad4e;
-    color: white;
-}
-
-/* Navigation layout */
-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
 nav ul {
     padding: 0;
     margin: 0;
@@ -91,13 +56,90 @@ footer {
     font-size: 0.9rem;
 }
 
-/* Header layout */
+/* Header layout - fixed */
 header {
-    margin-bottom: 1.5rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #fff;
+    padding: 0.4rem 1rem;
+    z-index: 200;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+[data-theme="dark"] header {
+    background-color: #13171f;
+    border-bottom-color: #374151;
+}
+
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 header h1 {
-    margin-bottom: 0.25rem;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.status-indicator {
+    font-size: 0.75rem;
+    color: var(--muted-color);
+    padding: 0.15rem 0.4rem;
+    background: var(--muted-border-color);
+    border-radius: var(--border-radius);
+    white-space: nowrap;
+}
+
+.status-indicator.modified {
+    background: rgba(245, 124, 0, 0.2);
+    color: #e65100;
+}
+
+.status-indicator.error {
+    background: rgba(198, 40, 40, 0.2);
+    color: #c62828;
+}
+
+.status-indicator.success {
+    background: rgba(46, 125, 50, 0.2);
+    color: #2e7d32;
+}
+
+/* Navigation - fixed below header */
+nav {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    right: 0;
+    background-color: #fff;
+    padding: 0.3rem 1rem;
+    z-index: 199;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+[data-theme="dark"] nav {
+    background-color: #13171f;
+    border-bottom-color: #374151;
+}
+
+/* Main content offset for fixed header/nav */
+main.container {
+    padding-top: 115px;
+}
+
+/* Compact nav buttons */
+nav button {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.85rem;
 }
 
 /* Save button highlight when there are changes */
@@ -346,91 +388,34 @@ header h1 {
     color: var(--muted-color);
 }
 
-/* Validation status */
-#validation-status {
-    display: none;
-    padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
-    border-radius: var(--border-radius);
-    font-size: 0.9rem;
-}
-
-#validation-status.validation-valid {
-    background-color: rgba(46, 125, 50, 0.1);
-    border: 1px solid var(--ins-color);
-    color: var(--ins-color);
-}
-
-#validation-status.validation-error {
-    background-color: rgba(211, 47, 47, 0.1);
-    border: 1px solid var(--del-color);
-    color: var(--del-color);
-}
-
-#validation-status ul {
-    margin: 0.5rem 0 0 0;
-    padding-left: 1.5rem;
-}
-
-#validation-status li {
-    margin: 0.25rem 0;
-}
-
 /* Profile selector */
 #profile-selector {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
+    gap: 0.4rem;
+    margin-top: 0.3rem;
 }
 
 #profile-selector label {
     margin: 0;
     font-weight: 500;
+    font-size: 0.8rem;
     white-space: nowrap;
 }
 
 #profile-selector select {
     margin: 0;
-    padding: 0.25rem 0.5rem;
+    padding: 0.15rem 0.4rem;
+    font-size: 0.8rem;
+    min-width: 150px;
+}
+
+#btn-new-profile {
+    margin: 0;
+    padding: 0.15rem 0.5rem;
     font-size: 0.9rem;
-    min-width: 200px;
-}
-
-/* Improved notification area */
-#notification {
-    transition: opacity 0.3s ease;
-    position: relative;
-}
-
-#notification.fade-out {
-    opacity: 0;
-}
-
-#notification.error {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.notification-message {
-    flex: 1;
-}
-
-.notification-close {
-    background: transparent;
-    border: none;
-    color: inherit;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0 0.5rem;
-    margin: -0.5rem -0.5rem -0.5rem 0.5rem;
-    opacity: 0.7;
+    font-weight: bold;
     line-height: 1;
-}
-
-.notification-close:hover {
-    opacity: 1;
 }
 
 /* Dark mode adjustments */
@@ -442,10 +427,21 @@ header h1 {
     background-color: rgba(255, 255, 255, 0.02);
 }
 
-[data-theme="dark"] #validation-status.validation-valid {
-    background-color: rgba(46, 125, 50, 0.2);
+[data-theme="dark"] .status-indicator {
+    background: rgba(255, 255, 255, 0.1);
 }
 
-[data-theme="dark"] #validation-status.validation-error {
-    background-color: rgba(211, 47, 47, 0.2);
+[data-theme="dark"] .status-indicator.modified {
+    background: rgba(245, 124, 0, 0.3);
+    color: #ffb74d;
+}
+
+[data-theme="dark"] .status-indicator.error {
+    background: rgba(198, 40, 40, 0.3);
+    color: #ef9a9a;
+}
+
+[data-theme="dark"] .status-indicator.success {
+    background: rgba(46, 125, 50, 0.3);
+    color: #81c784;
 }
