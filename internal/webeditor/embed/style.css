@@ -383,8 +383,9 @@ nav button {
 .field-row {
     display: grid;
     grid-template-columns: 120px 180px 1fr;
-    align-items: center;
+    align-items: start;
     gap: 0.5rem;
+    padding: 0.15rem 0;
 }
 
 .field-label {
@@ -393,6 +394,7 @@ nav button {
     color: var(--color);
     text-align: right;
     padding-right: 0.25rem;
+    padding-top: 0.3rem;
     white-space: nowrap;
 }
 
@@ -410,9 +412,8 @@ nav button {
 .field-desc {
     font-size: 0.7rem;
     color: var(--muted-color);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.4;
+    padding-top: 0.35rem;
 }
 
 /* Subsection (Position, Style) */
