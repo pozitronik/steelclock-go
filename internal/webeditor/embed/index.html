@@ -11,32 +11,24 @@
     <main class="container">
         <header>
             <div class="header-row">
-                <h1>SteelClock Configuration Editor</h1>
+                <h1>SteelClock</h1>
+                <div id="profile-selector" style="display: none;">
+                    <select id="profile-select"></select>
+                    <button id="btn-rename-profile" class="outline secondary" title="Rename profile">✎</button>
+                    <button id="btn-new-profile" class="outline secondary" title="Create new profile">+</button>
+                </div>
+                <div class="header-actions">
+                    <button id="btn-reload" class="secondary outline">Reload</button>
+                    <button id="btn-save" class="primary outline">Save</button>
+                    <button id="btn-apply" class="primary">Apply</button>
+                </div>
+                <fieldset role="group" class="view-toggle">
+                    <button id="btn-view-form" class="outline" aria-pressed="true">Form</button>
+                    <button id="btn-view-json" class="outline secondary" aria-pressed="false">JSON</button>
+                </fieldset>
                 <span id="status" class="status-indicator">Ready</span>
             </div>
-            <div id="profile-selector" style="display: none;">
-                <label for="profile-select">Profile:</label>
-                <select id="profile-select"></select>
-                <button id="btn-rename-profile" class="outline secondary" title="Rename profile">✎</button>
-                <button id="btn-new-profile" class="outline secondary" title="Create new profile">+</button>
-            </div>
         </header>
-
-        <nav>
-            <ul>
-                <li><button id="btn-reload" class="secondary outline">Reload</button></li>
-                <li><button id="btn-save" class="primary outline">Save</button></li>
-                <li><button id="btn-apply" class="primary">Apply</button></li>
-            </ul>
-            <ul>
-                <li>
-                    <fieldset role="group" class="view-toggle">
-                        <button id="btn-view-form" class="outline" aria-pressed="true">Form</button>
-                        <button id="btn-view-json" class="outline secondary" aria-pressed="false">JSON</button>
-                    </fieldset>
-                </li>
-            </ul>
-        </nav>
 
         <!-- Form View -->
         <article id="form-container">

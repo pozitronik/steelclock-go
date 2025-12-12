@@ -2,13 +2,12 @@
 
 /* View toggle buttons */
 .view-toggle {
-    margin-bottom: 0;
+    margin: 0;
     padding: 0;
     border: none;
-}
-
-.view-toggle button {
-    margin: 0;
+    display: inline-flex;
+    width: auto;
+    flex-shrink: 0;
 }
 
 .view-toggle button[aria-pressed="true"] {
@@ -17,10 +16,22 @@
     color: var(--primary-inverse);
 }
 
-/* Editor containers */
+/* Editor containers - overflow visible needed for sticky headers */
 #form-container,
 #json-container {
     margin: 1rem 0;
+    overflow: visible;
+}
+
+article#form-container {
+    overflow: visible;
+}
+
+#form-content,
+.form-section,
+.widget-list,
+.widget-item {
+    overflow: visible;
 }
 
 /* Code-like textarea */
@@ -31,17 +42,6 @@
     tab-size: 2;
     resize: vertical;
     min-height: 400px;
-}
-
-nav ul {
-    padding: 0;
-    margin: 0;
-    display: flex;
-    gap: 0.5rem;
-}
-
-nav li {
-    list-style: none;
 }
 
 /* Status bar */
@@ -75,17 +75,35 @@ header {
 
 .header-row {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     gap: 0.5rem;
 }
 
 header h1 {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 1rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+/* Consistent button sizing in header */
+.header-actions button,
+#profile-selector button,
+.view-toggle button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    margin: 0;
+    height: auto;
 }
 
 .status-indicator {
+    flex-shrink: 0;
     font-size: 0.75rem;
     color: var(--muted-color);
     padding: 0.15rem 0.4rem;
@@ -109,38 +127,11 @@ header h1 {
     color: #2e7d32;
 }
 
-/* Navigation - fixed below header */
-nav {
-    position: fixed;
-    top: 70px;
-    left: 0;
-    right: 0;
-    background-color: #fff;
-    padding: 0.3rem 1rem;
-    z-index: 199;
-    border-bottom: 1px solid #e0e0e0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
-[data-theme="dark"] nav {
-    background-color: #13171f;
-    border-bottom-color: #374151;
-}
-
-/* Main content offset for fixed header/nav */
+/* Main content offset for fixed header */
 main.container {
-    padding-top: 115px;
+    padding-top: 55px;
     max-width: none;
-}
-
-/* Compact nav buttons */
-nav button {
-    padding: 0.3rem 0.6rem;
-    font-size: 0.85rem;
+    overflow: visible;
 }
 
 /* Save button highlight when there are changes */
@@ -320,12 +311,15 @@ nav button {
     justify-content: space-between;
     align-items: center;
     padding: 0.4rem 0.6rem;
-    background: rgba(0, 0, 0, 0.02);
+    background: #f8f8f8;
     border-bottom: 1px solid var(--muted-border-color);
+    position: sticky;
+    top: 50px;
+    z-index: 100;
 }
 
 [data-theme="dark"] .widget-item-header {
-    background: rgba(255, 255, 255, 0.02);
+    background: #1e2430;
 }
 
 .widget-title-container {
@@ -395,7 +389,6 @@ nav button {
     text-align: right;
     padding-right: 0.25rem;
     padding-top: 0.3rem;
-    white-space: nowrap;
 }
 
 .field-input {
@@ -605,35 +598,26 @@ nav button {
     color: var(--muted-color);
 }
 
-/* Profile selector */
+/* Profile selector - takes available space */
 #profile-selector {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    margin-top: 0.3rem;
-}
-
-#profile-selector label {
-    margin: 0;
-    font-weight: 500;
-    font-size: 0.8rem;
-    white-space: nowrap;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
 }
 
 #profile-selector select {
     margin: 0;
-    padding: 0.15rem 0.4rem;
+    padding: 0.2rem 0.4rem;
     font-size: 0.8rem;
-    min-width: 150px;
+    flex: 1;
+    min-width: 100px;
 }
 
 #btn-new-profile,
 #btn-rename-profile {
-    margin: 0;
-    padding: 0.15rem 0.5rem;
-    font-size: 0.9rem;
-    font-weight: bold;
-    line-height: 1;
+    flex-shrink: 0;
 }
 
 /* Dark mode adjustments */
