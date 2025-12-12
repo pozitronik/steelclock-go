@@ -647,3 +647,114 @@ main.container {
     background: rgba(46, 125, 50, 0.3);
     color: #81c784;
 }
+
+/* Preview Panel */
+.preview-panel {
+    position: fixed;
+    top: 60px;
+    right: 10px;
+    z-index: 300;
+    background: var(--card-background-color);
+    border: 1px solid var(--muted-border-color);
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: none;
+    min-width: 200px;
+}
+
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0.6rem;
+    background: #f8f8f8;
+    border-bottom: 1px solid var(--muted-border-color);
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    cursor: grab;
+    user-select: none;
+}
+
+[data-theme="dark"] .preview-header {
+    background: #1e2430;
+}
+
+.preview-title {
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.preview-controls {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.preview-controls select,
+.preview-controls button {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.75rem;
+    margin: 0;
+    height: auto;
+}
+
+.preview-controls select {
+    width: auto;
+    min-width: 50px;
+}
+
+.preview-content {
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+#preview-canvas {
+    border: 1px solid var(--muted-border-color);
+    background: #000;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+.preview-status {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 0.65rem;
+    color: var(--muted-color);
+    padding: 0 0.25rem;
+}
+
+.preview-unavailable {
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--muted-color);
+}
+
+.preview-unavailable p {
+    margin: 0.25rem 0;
+}
+
+.preview-unavailable code {
+    background: var(--muted-border-color);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+}
+
+/* Preview toggle button in header */
+#btn-preview {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+/* Dark mode preview panel */
+[data-theme="dark"] .preview-panel {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] #preview-canvas {
+    border-color: #374151;
+}

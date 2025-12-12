@@ -1,5 +1,10 @@
 package webeditor
 
+import (
+	"net/http"
+	"time"
+)
+
 // ConfigProvider abstracts configuration file operations
 type ConfigProvider interface {
 	// GetConfigPath returns the path to the current configuration file
@@ -8,6 +13,23 @@ type ConfigProvider interface {
 	Load() ([]byte, error)
 	// Save writes the configuration JSON to the file
 	Save(data []byte) error
+}
+
+// PreviewProvider abstracts preview frame access
+type PreviewProvider interface {
+	// GetCurrentFrame returns the current frame data, frame number, and timestamp
+	GetCurrentFrame() (data []byte, frameNum uint64, timestamp time.Time)
+	// GetPreviewConfig returns the preview configuration (width, height, fps)
+	GetPreviewConfig() PreviewDisplayConfig
+	// HandleWebSocket handles a WebSocket connection for live preview
+	HandleWebSocket(w http.ResponseWriter, r *http.Request)
+}
+
+// PreviewDisplayConfig contains display configuration for preview
+type PreviewDisplayConfig struct {
+	Width     int `json:"width"`
+	Height    int `json:"height"`
+	TargetFPS int `json:"target_fps"`
 }
 
 // ProfileProvider abstracts profile management operations

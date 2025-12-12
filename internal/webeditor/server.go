@@ -22,6 +22,7 @@ type Server struct {
 
 	configProvider  ConfigProvider
 	profileProvider ProfileProvider
+	previewProvider PreviewProvider
 	schemaPath      string
 	onReload        func() error
 	onProfileSwitch func(path string) error
@@ -39,6 +40,13 @@ func NewServer(configProvider ConfigProvider, profileProvider ProfileProvider, s
 		onReload:        onReload,
 		onProfileSwitch: onProfileSwitch,
 	}
+}
+
+// SetPreviewProvider sets the preview provider for live preview support
+func (s *Server) SetPreviewProvider(provider PreviewProvider) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.previewProvider = provider
 }
 
 // Start starts the HTTP server on the default port (localhost only)

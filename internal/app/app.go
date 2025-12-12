@@ -172,12 +172,31 @@ func (a *App) Start() error {
 		return a.handleStartupError(err, cfg)
 	}
 
+	// Update preview provider if preview backend is active
+	a.updatePreviewProvider()
+
 	return nil
 }
 
 // Stop stops all components gracefully (used during reload)
 func (a *App) Stop() {
 	a.lifecycle.Stop()
+}
+
+// updatePreviewProvider updates the web editor with the preview provider if preview backend is active
+func (a *App) updatePreviewProvider() {
+	if a.webEditor == nil {
+		return
+	}
+
+	previewClient := a.lifecycle.GetPreviewClient()
+	if previewClient != nil {
+		adapter := NewPreviewProviderAdapter(previewClient)
+		a.webEditor.SetPreviewProvider(adapter)
+		log.Println("Preview provider connected to web editor")
+	} else {
+		a.webEditor.SetPreviewProvider(nil)
+	}
 }
 
 // ReloadConfig reloads configuration and restarts components.
@@ -229,6 +248,9 @@ func (a *App) ReloadConfig() error {
 		time.Sleep(1 * time.Second)
 		return a.handleStartupError(err, newCfg)
 	}
+
+	// Update preview provider if preview backend is active
+	a.updatePreviewProvider()
 
 	log.Println("Configuration reloaded successfully!")
 	log.Printf("Running with: %s (%s)", newCfg.GameName, newCfg.GameDisplayName)
@@ -283,6 +305,9 @@ func (a *App) SwitchProfile(path string) error {
 		time.Sleep(1 * time.Second)
 		return a.handleStartupError(err, newCfg)
 	}
+
+	// Update preview provider if preview backend is active
+	a.updatePreviewProvider()
 
 	log.Printf("Profile switched successfully to: %s", profileName)
 	log.Println("========================================")

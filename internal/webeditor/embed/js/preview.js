@@ -1,0 +1,399 @@
+/**
+ * PreviewPanel - Live display preview for SteelClock web editor
+ * Renders packed bit frames to a canvas element with zoom support
+ */
+
+class PreviewPanel {
+    constructor() {
+        this.container = null;
+        this.canvas = null;
+        this.ctx = null;
+        this.ws = null;
+
+        this.config = {
+            width: 128,
+            height: 40,
+            targetFPS: 30,
+        };
+
+        this.zoom = 4; // Default zoom level
+        this.isLive = false;
+        this.isVisible = false;
+        this.available = false;
+
+        this.frameCount = 0;
+        this.lastFrameTime = 0;
+        this.fps = 0;
+
+        // Create panel elements
+        this.createPanel();
+    }
+
+    /**
+     * Create the preview panel DOM elements
+     */
+    createPanel() {
+        // Create container
+        this.container = document.createElement('div');
+        this.container.id = 'preview-panel';
+        this.container.className = 'preview-panel';
+        this.container.innerHTML = `
+            <div class="preview-header">
+                <span class="preview-title">Display Preview</span>
+                <div class="preview-controls">
+                    <select id="preview-zoom" title="Zoom level">
+                        <option value="1">1x</option>
+                        <option value="2">2x</option>
+                        <option value="4" selected>4x</option>
+                        <option value="8">8x</option>
+                    </select>
+                    <button id="preview-mode" class="outline secondary" title="Toggle live/static mode">Static</button>
+                    <button id="preview-close" class="outline secondary" title="Close preview">X</button>
+                </div>
+            </div>
+            <div class="preview-content">
+                <canvas id="preview-canvas"></canvas>
+                <div class="preview-status">
+                    <span id="preview-fps">0 FPS</span>
+                    <span id="preview-size">128x40</span>
+                </div>
+            </div>
+            <div class="preview-unavailable" style="display: none;">
+                <p>Preview not available.</p>
+                <p>Set <code>backend: "preview"</code> in config to enable.</p>
+            </div>
+        `;
+
+        // Add to body
+        document.body.appendChild(this.container);
+
+        // Get references
+        this.canvas = document.getElementById('preview-canvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        // Set up event listeners
+        document.getElementById('preview-zoom').addEventListener('change', (e) => {
+            this.setZoom(parseInt(e.target.value, 10));
+        });
+
+        document.getElementById('preview-mode').addEventListener('click', () => {
+            this.toggleMode();
+        });
+
+        document.getElementById('preview-close').addEventListener('click', () => {
+            this.hide();
+        });
+
+        // Make draggable
+        this.makeDraggable();
+    }
+
+    /**
+     * Make the panel draggable by its header
+     */
+    makeDraggable() {
+        const header = this.container.querySelector('.preview-header');
+        let isDragging = false;
+        let startX, startY, startLeft, startTop;
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT') return;
+
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+
+            const rect = this.container.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+
+            header.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+
+            this.container.style.left = (startLeft + dx) + 'px';
+            this.container.style.top = (startTop + dy) + 'px';
+            this.container.style.right = 'auto';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                header.style.cursor = 'grab';
+            }
+        });
+    }
+
+    /**
+     * Initialize the preview panel by checking availability
+     */
+    async init() {
+        try {
+            const info = await API.getPreviewInfo();
+
+            if (info.available) {
+                this.available = true;
+                this.config.width = info.width;
+                this.config.height = info.height;
+                this.config.targetFPS = info.target_fps;
+
+                this.updateCanvasSize();
+
+                // Update status display
+                document.getElementById('preview-size').textContent =
+                    `${info.width}x${info.height}`;
+
+                // Show canvas, hide unavailable message
+                this.container.querySelector('.preview-content').style.display = 'block';
+                this.container.querySelector('.preview-unavailable').style.display = 'none';
+            } else {
+                this.available = false;
+                // Show unavailable message
+                this.container.querySelector('.preview-content').style.display = 'none';
+                this.container.querySelector('.preview-unavailable').style.display = 'block';
+            }
+        } catch (err) {
+            console.warn('Preview not available:', err);
+            this.available = false;
+            this.container.querySelector('.preview-content').style.display = 'none';
+            this.container.querySelector('.preview-unavailable').style.display = 'block';
+        }
+    }
+
+    /**
+     * Show the preview panel
+     */
+    async show() {
+        if (!this.isVisible) {
+            await this.init();
+            this.container.style.display = 'block';
+            this.isVisible = true;
+
+            // Start in static mode with initial frame
+            if (this.available && !this.isLive) {
+                this.fetchStaticFrame();
+            }
+        }
+    }
+
+    /**
+     * Hide the preview panel
+     */
+    hide() {
+        this.container.style.display = 'none';
+        this.isVisible = false;
+        this.stopLive();
+    }
+
+    /**
+     * Toggle panel visibility
+     */
+    toggle() {
+        if (this.isVisible) {
+            this.hide();
+        } else {
+            this.show();
+        }
+    }
+
+    /**
+     * Set zoom level
+     * @param {number} zoom - Zoom multiplier (1, 2, 4, 8)
+     */
+    setZoom(zoom) {
+        this.zoom = zoom;
+        this.updateCanvasSize();
+    }
+
+    /**
+     * Update canvas dimensions based on config and zoom
+     */
+    updateCanvasSize() {
+        this.canvas.width = this.config.width * this.zoom;
+        this.canvas.height = this.config.height * this.zoom;
+        this.ctx.imageSmoothingEnabled = false;
+    }
+
+    /**
+     * Toggle between live and static mode
+     */
+    toggleMode() {
+        if (this.isLive) {
+            this.stopLive();
+        } else {
+            this.startLive();
+        }
+    }
+
+    /**
+     * Start live preview via WebSocket
+     */
+    startLive() {
+        if (!this.available || this.isLive) return;
+
+        this.isLive = true;
+        document.getElementById('preview-mode').textContent = 'Live';
+        document.getElementById('preview-mode').classList.remove('secondary');
+
+        this.frameCount = 0;
+        this.lastFrameTime = performance.now();
+
+        // Connect WebSocket
+        this.ws = API.createPreviewWebSocket();
+
+        this.ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'frame') {
+                    this.renderFrame(data.frame);
+                    this.updateFPS();
+                } else if (data.type === 'config') {
+                    // Update config if server sends it
+                    this.config.width = data.width;
+                    this.config.height = data.height;
+                    this.config.targetFPS = data.target_fps;
+                    this.updateCanvasSize();
+                    document.getElementById('preview-size').textContent =
+                        `${data.width}x${data.height}`;
+                }
+            } catch (err) {
+                console.error('Preview: failed to parse message:', err);
+            }
+        };
+
+        this.ws.onclose = () => {
+            if (this.isLive) {
+                // Reconnect after a delay
+                setTimeout(() => {
+                    if (this.isLive) {
+                        this.startLive();
+                    }
+                }, 1000);
+            }
+        };
+
+        this.ws.onerror = (err) => {
+            console.error('Preview WebSocket error:', err);
+        };
+    }
+
+    /**
+     * Stop live preview
+     */
+    stopLive() {
+        this.isLive = false;
+        document.getElementById('preview-mode').textContent = 'Static';
+        document.getElementById('preview-mode').classList.add('secondary');
+
+        if (this.ws) {
+            this.ws.close();
+            this.ws = null;
+        }
+
+        document.getElementById('preview-fps').textContent = '0 FPS';
+    }
+
+    /**
+     * Fetch a single frame for static preview
+     */
+    async fetchStaticFrame() {
+        if (!this.available) return;
+
+        try {
+            const data = await API.getPreviewFrame();
+            if (data.frame) {
+                this.renderFrame(data.frame);
+            }
+        } catch (err) {
+            console.warn('Failed to fetch preview frame:', err);
+        }
+    }
+
+    /**
+     * Render a frame from packed bit data
+     * @param {Array|string} frameData - Packed bits as byte array or base64 string
+     */
+    renderFrame(frameData) {
+        // Convert from base64 if needed
+        let bytes;
+        if (typeof frameData === 'string') {
+            const binary = atob(frameData);
+            bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+        } else {
+            bytes = new Uint8Array(frameData);
+        }
+
+        const width = this.config.width;
+        const height = this.config.height;
+
+        // Create ImageData at 1x scale
+        const imageData = this.ctx.createImageData(width, height);
+        const data = imageData.data;
+
+        // Unpack bits to RGBA pixels
+        // Each byte contains 8 pixels, MSB first
+        let bitIndex = 0;
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const byteIndex = Math.floor(bitIndex / 8);
+                const bitPos = 7 - (bitIndex % 8); // MSB first
+
+                let pixelOn = false;
+                if (byteIndex < bytes.length) {
+                    pixelOn = (bytes[byteIndex] & (1 << bitPos)) !== 0;
+                }
+
+                // Convert to RGBA (white = on, black = off for OLED)
+                const pixelIndex = (y * width + x) * 4;
+                const color = pixelOn ? 255 : 0;
+                data[pixelIndex] = color;     // R
+                data[pixelIndex + 1] = color; // G
+                data[pixelIndex + 2] = color; // B
+                data[pixelIndex + 3] = 255;   // A
+
+                bitIndex++;
+            }
+        }
+
+        // Draw at 1x scale first, then scale up
+        // Create a temporary canvas for 1x rendering
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = width;
+        tempCanvas.height = height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.putImageData(imageData, 0, 0);
+
+        // Clear and draw scaled
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.drawImage(tempCanvas, 0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    /**
+     * Update FPS counter
+     */
+    updateFPS() {
+        this.frameCount++;
+        const now = performance.now();
+        const elapsed = now - this.lastFrameTime;
+
+        if (elapsed >= 1000) {
+            this.fps = Math.round(this.frameCount * 1000 / elapsed);
+            document.getElementById('preview-fps').textContent = `${this.fps} FPS`;
+            this.frameCount = 0;
+            this.lastFrameTime = now;
+        }
+    }
+}
+
+// Create global instance
+window.previewPanel = new PreviewPanel();

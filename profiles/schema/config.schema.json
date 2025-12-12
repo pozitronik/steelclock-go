@@ -40,8 +40,8 @@
     },
     "backend": {
       "type": "string",
-      "description": "Backend: 'gamesense' (requires SteelSeries GG), 'direct' (USB HID). If omitted, auto-selects (tries gamesense first, then direct)",
-      "enum": ["gamesense", "direct", ""]
+      "description": "Backend: 'gamesense' (requires SteelSeries GG), 'direct' (USB HID), 'preview' (web preview only). If omitted, auto-selects (tries gamesense first, then direct)",
+      "enum": ["gamesense", "direct", "preview", ""]
     },
     "direct_driver": {
       "type": "object",
@@ -61,6 +61,19 @@
           "type": "string",
           "description": "USB interface identifier",
           "default": "mi_01"
+        }
+      }
+    },
+    "preview": {
+      "type": "object",
+      "description": "Web preview backend configuration (only used when backend is 'preview')",
+      "properties": {
+        "target_fps": {
+          "type": "integer",
+          "description": "Target frame rate for preview streaming (frames per second)",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 30
         }
       }
     },

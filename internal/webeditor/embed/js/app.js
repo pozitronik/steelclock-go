@@ -33,6 +33,7 @@ class ConfigEditor {
         this.renameProfileBtn = document.getElementById('btn-rename-profile');
         this.newProfileBtn = document.getElementById('btn-new-profile');
         this.themeToggle = document.getElementById('toggle-theme');
+        this.previewBtn = document.getElementById('btn-preview');
     }
 
     /**
@@ -59,6 +60,13 @@ class ConfigEditor {
         // View toggle
         this.viewFormBtn.addEventListener('click', () => this.switchView('form'));
         this.viewJsonBtn.addEventListener('click', () => this.switchView('json'));
+
+        // Preview toggle
+        this.previewBtn.addEventListener('click', () => {
+            if (window.previewPanel) {
+                window.previewPanel.toggle();
+            }
+        });
 
         // Warn before leaving with unsaved changes (temporarily disabled)
         // window.addEventListener('beforeunload', (e) => {

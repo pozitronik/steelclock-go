@@ -48,6 +48,7 @@ type Config struct {
 	BundledFontURL       *string             `json:"bundled_font_url,omitempty"`
 	Backend              string              `json:"backend,omitempty"`
 	DirectDriver         *DirectDriverConfig `json:"direct_driver,omitempty"`
+	Preview              *PreviewConfig      `json:"preview,omitempty"`
 	Display              DisplayConfig       `json:"display"`
 	Defaults             *DefaultsConfig     `json:"defaults,omitempty"`
 	Layout               *LayoutConfig       `json:"layout,omitempty"`
@@ -59,6 +60,12 @@ type DirectDriverConfig struct {
 	VID       string `json:"vid,omitempty"`
 	PID       string `json:"pid,omitempty"`
 	Interface string `json:"interface,omitempty"`
+}
+
+// PreviewConfig represents settings for web preview backend
+type PreviewConfig struct {
+	// TargetFPS limits the frame rate sent to preview clients (default: 30)
+	TargetFPS int `json:"target_fps,omitempty"`
 }
 
 // ResolutionConfig represents an additional display resolution

@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/pozitronik/steelclock-go/internal/backend"
+	"github.com/pozitronik/steelclock-go/internal/backend/preview"
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/compositor"
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -351,4 +352,24 @@ func (m *LifecycleManager) handleBackendFailure(cfg *config.Config) {
 
 	log.Println("Successfully recovered with alternative backend")
 	log.Println("========================================")
+}
+
+// GetPreviewClient returns the preview client if the preview backend is active
+func (m *LifecycleManager) GetPreviewClient() *preview.Client {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.currentBackend == "preview" {
+		if previewClient, ok := m.client.(*preview.Client); ok {
+			return previewClient
+		}
+	}
+	return nil
+}
+
+// GetCurrentBackend returns the name of the current backend
+func (m *LifecycleManager) GetCurrentBackend() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.currentBackend
 }

@@ -35,6 +35,11 @@ func (s *Server) registerHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/api/profiles", s.handleProfiles)
 	mux.HandleFunc("/api/profiles/active", s.handleActiveProfile)
 	mux.HandleFunc("/api/profiles/rename", s.handleRenameProfile)
+
+	// Preview endpoints
+	mux.HandleFunc("/api/preview", s.handlePreviewInfo)
+	mux.HandleFunc("/api/preview/frame", s.handlePreviewFrame)
+	mux.HandleFunc("/api/preview/ws", s.handlePreviewWebSocket)
 }
 
 // serveIndex serves the main HTML page
@@ -405,6 +410,74 @@ func respondError(w http.ResponseWriter, message string, code int) {
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"error": message,
 	})
+}
+
+// handlePreviewInfo returns preview configuration and availability
+func (s *Server) handlePreviewInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.previewProvider == nil {
+		respondJSON(w, map[string]interface{}{
+			"available": false,
+			"message":   "Preview backend not enabled. Set backend to 'preview' in config.",
+		})
+		return
+	}
+
+	cfg := s.previewProvider.GetPreviewConfig()
+	respondJSON(w, map[string]interface{}{
+		"available":  true,
+		"width":      cfg.Width,
+		"height":     cfg.Height,
+		"target_fps": cfg.TargetFPS,
+	})
+}
+
+// handlePreviewFrame returns the current frame as raw bytes (for static preview)
+func (s *Server) handlePreviewFrame(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.previewProvider == nil {
+		respondError(w, "Preview not available", http.StatusNotImplemented)
+		return
+	}
+
+	frame, frameNum, timestamp := s.previewProvider.GetCurrentFrame()
+	if frame == nil {
+		// No frame yet, return empty response with metadata
+		respondJSON(w, map[string]interface{}{
+			"frame":        nil,
+			"frame_number": 0,
+			"timestamp":    0,
+		})
+		return
+	}
+
+	cfg := s.previewProvider.GetPreviewConfig()
+	respondJSON(w, map[string]interface{}{
+		"frame":        frame, // Will be base64 encoded by JSON
+		"frame_number": frameNum,
+		"timestamp":    timestamp.UnixMilli(),
+		"width":        cfg.Width,
+		"height":       cfg.Height,
+	})
+}
+
+// handlePreviewWebSocket upgrades to WebSocket for live preview
+func (s *Server) handlePreviewWebSocket(w http.ResponseWriter, r *http.Request) {
+	if s.previewProvider == nil {
+		http.Error(w, "Preview not available", http.StatusNotImplemented)
+		return
+	}
+
+	// Delegate to the preview provider's WebSocket handler
+	s.previewProvider.HandleWebSocket(w, r)
 }
 
 // fallbackHTML is a minimal HTML page for when embedded assets are not available

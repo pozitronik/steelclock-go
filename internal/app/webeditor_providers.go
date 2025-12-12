@@ -1,8 +1,11 @@
 package app
 
 import (
+	"net/http"
 	"os"
+	"time"
 
+	"github.com/pozitronik/steelclock-go/internal/backend/preview"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/webeditor"
 )
@@ -109,4 +112,37 @@ func (a *ProfileProviderAdapter) RenameProfile(oldPath, newName string) (string,
 		return "", nil
 	}
 	return a.profileMgr.RenameProfile(oldPath, newName)
+}
+
+// PreviewProviderAdapter adapts preview.Client to webeditor.PreviewProvider interface
+type PreviewProviderAdapter struct {
+	client *preview.Client
+}
+
+// NewPreviewProviderAdapter creates a new PreviewProviderAdapter
+func NewPreviewProviderAdapter(client *preview.Client) *PreviewProviderAdapter {
+	if client == nil {
+		return nil
+	}
+	return &PreviewProviderAdapter{client: client}
+}
+
+// GetCurrentFrame returns the current frame data, frame number, and timestamp
+func (a *PreviewProviderAdapter) GetCurrentFrame() ([]byte, uint64, time.Time) {
+	return a.client.GetCurrentFrame()
+}
+
+// GetPreviewConfig returns the preview configuration
+func (a *PreviewProviderAdapter) GetPreviewConfig() webeditor.PreviewDisplayConfig {
+	cfg := a.client.GetConfig()
+	return webeditor.PreviewDisplayConfig{
+		Width:     cfg.Width,
+		Height:    cfg.Height,
+		TargetFPS: cfg.TargetFPS,
+	}
+}
+
+// HandleWebSocket handles a WebSocket connection for live preview
+func (a *PreviewProviderAdapter) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	a.client.HandleWebSocket(w, r)
 }
