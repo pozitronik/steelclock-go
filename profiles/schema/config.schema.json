@@ -140,7 +140,7 @@
       "properties": {
         "background": {
           "type": "integer",
-          "description": "Fill density (-1=transparent, 0=black, 255=white)",
+          "description": "Fill density (-1=none, 0=black, 255=white)",
           "minimum": -1,
           "maximum": 255,
           "default": 0
@@ -202,7 +202,7 @@
       "type": "object",
       "description": "Separator line between elements",
       "properties": {
-        "color": { "type": "integer", "description": "Separator density (-1 = transparent, 0-255 = grayscale)", "minimum": -1, "maximum": 255, "default": 128 },
+        "color": { "type": "integer", "description": "Separator density (-1 = none, 0-255 = grayscale)", "minimum": -1, "maximum": 255, "default": 128 },
         "thickness": { "type": "integer", "description": "Separator thickness in pixels (0 = disabled)", "minimum": 0, "default": 1 }
       }
     },
@@ -285,12 +285,12 @@
                   "show_ticks": { "type": "boolean", "description": "Show hour tick marks", "default": true },
                   "colors": {
                     "type": "object",
-                    "description": "Analog clock density values (-1 = transparent)",
+                    "description": "Analog clock density values (-1 = none)",
                     "properties": {
-                      "face": { "type": "integer", "description": "Clock face outline density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "hour": { "type": "integer", "description": "Hour hand density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "minute": { "type": "integer", "description": "Minute hand density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "second": { "type": "integer", "description": "Second hand density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "face": { "type": "integer", "description": "Clock face outline density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "hour": { "type": "integer", "description": "Hour hand density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "minute": { "type": "integer", "description": "Minute hand density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "second": { "type": "integer", "description": "Second hand density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
                       "ticks": { "type": "integer", "description": "Hour tick marks density", "minimum": 0, "maximum": 255, "default": 150 }
                     }
                   }
@@ -308,8 +308,8 @@
                   "dot_size": { "type": "integer", "description": "Dot diameter in pixels", "minimum": 1, "default": 4 },
                   "dot_spacing": { "type": "integer", "description": "Gap between dots in pixels", "minimum": 0, "default": 2 },
                   "dot_style": { "type": "string", "description": "Dot shape", "enum": ["circle", "square"], "default": "circle" },
-                  "on_color": { "type": "integer", "description": "Density for 'on' bits (1)", "minimum": 0, "maximum": 255, "default": 255 },
-                  "off_color": { "type": "integer", "description": "Density for 'off' bits (0 = transparent)", "minimum": 0, "maximum": 255, "default": 40 }
+                  "on_color": { "type": "integer", "description": "Density for 'on' bits (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                  "off_color": { "type": "integer", "description": "Density for 'off' bits (-1 = none)", "minimum": -1, "maximum": 255, "default": 40 }
                 }
               },
               "segment": {
@@ -323,8 +323,8 @@
                   "digit_spacing": { "type": "integer", "description": "Space between digits in pixels", "minimum": 0, "default": 2 },
                   "colon_style": { "type": "string", "description": "Colon separator style", "enum": ["dots", "bar", "none"], "default": "dots" },
                   "colon_blink": { "type": "boolean", "description": "Blink colon separators", "default": true },
-                  "on_color": { "type": "integer", "description": "Density for active segments", "minimum": 0, "maximum": 255, "default": 255 },
-                  "off_color": { "type": "integer", "description": "Density for inactive segments (0 = transparent)", "minimum": 0, "maximum": 255, "default": 30 },
+                  "on_color": { "type": "integer", "description": "Density for active segments (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                  "off_color": { "type": "integer", "description": "Density for inactive segments (-1 = none)", "minimum": -1, "maximum": 255, "default": 30 },
                   "flip": {
                     "type": "object",
                     "description": "Digit flip animation settings",
@@ -368,7 +368,7 @@
                     "type": "object",
                     "description": "Graph colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Graph fill density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "fill": { "type": "integer", "description": "Graph fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
                       "line": { "type": "integer", "description": "Graph line density", "minimum": 0, "maximum": 255, "default": 255 }
                     }
                   }
@@ -433,7 +433,7 @@
                     "type": "object",
                     "description": "Graph colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Graph fill density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "fill": { "type": "integer", "description": "Graph fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
                       "line": { "type": "integer", "description": "Graph line density", "minimum": 0, "maximum": 255, "default": 255 }
                     }
                   }
@@ -492,10 +492,10 @@
                   "border": { "type": "boolean", "description": "Draw border around bars", "default": false },
                   "colors": {
                     "type": "object",
-                    "description": "Bar density values for RX/TX (-1 = transparent)",
+                    "description": "Bar density values for RX/TX (-1 = none)",
                     "properties": {
-                      "rx": { "type": "integer", "description": "Receive (download) bar density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "tx": { "type": "integer", "description": "Transmit (upload) bar density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 128 }
+                      "rx": { "type": "integer", "description": "Receive (download) bar density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "description": "Transmit (upload) bar density (-1 = none)", "minimum": -1, "maximum": 255, "default": 128 }
                     }
                   }
                 }
@@ -507,10 +507,10 @@
                   "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
                   "colors": {
                     "type": "object",
-                    "description": "Graph density values for RX/TX (-1 = transparent)",
+                    "description": "Graph density values for RX/TX (-1 = none)",
                     "properties": {
-                      "rx": { "type": "integer", "description": "Receive (download) fill density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "tx": { "type": "integer", "description": "Transmit (upload) fill density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 128 }
+                      "rx": { "type": "integer", "description": "Receive (download) fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "description": "Transmit (upload) fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 128 }
                     }
                   }
                 }
@@ -521,12 +521,12 @@
                 "properties": {
                   "colors": {
                     "type": "object",
-                    "description": "Gauge density values for RX/TX (-1 = transparent)",
+                    "description": "Gauge density values for RX/TX (-1 = none)",
                     "properties": {
-                      "rx": { "type": "integer", "description": "Receive (download) arc density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "tx": { "type": "integer", "description": "Transmit (upload) arc density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 128 },
-                      "rx_needle": { "type": "integer", "description": "Receive needle density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "tx_needle": { "type": "integer", "description": "Transmit needle density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 180 }
+                      "rx": { "type": "integer", "description": "Receive (download) arc density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "description": "Transmit (upload) arc density (-1 = none)", "minimum": -1, "maximum": 255, "default": 128 },
+                      "rx_needle": { "type": "integer", "description": "Receive needle density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "tx_needle": { "type": "integer", "description": "Transmit needle density (-1 = none)", "minimum": -1, "maximum": 255, "default": 180 }
                     }
                   }
                 }
@@ -567,10 +567,10 @@
                   "border": { "type": "boolean", "description": "Draw border around bars", "default": false },
                   "colors": {
                     "type": "object",
-                    "description": "Bar density values for read/write (-1 = transparent)",
+                    "description": "Bar density values for read/write (-1 = none)",
                     "properties": {
-                      "read": { "type": "integer", "description": "Read bar density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "write": { "type": "integer", "description": "Write bar density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 200 }
+                      "read": { "type": "integer", "description": "Read bar density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "write": { "type": "integer", "description": "Write bar density (-1 = none)", "minimum": -1, "maximum": 255, "default": 200 }
                     }
                   }
                 }
@@ -582,10 +582,10 @@
                   "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
                   "colors": {
                     "type": "object",
-                    "description": "Graph density values for read/write (-1 = transparent)",
+                    "description": "Graph density values for read/write (-1 = none)",
                     "properties": {
-                      "read": { "type": "integer", "description": "Read fill density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "write": { "type": "integer", "description": "Write fill density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 200 }
+                      "read": { "type": "integer", "description": "Read fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "write": { "type": "integer", "description": "Write fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 200 }
                     }
                   }
                 }
@@ -698,7 +698,7 @@
                 "description": "Stereo channel settings",
                 "properties": {
                   "enabled": { "type": "boolean", "description": "Show separate left/right channels", "default": false },
-                  "divider": { "type": "integer", "description": "Divider line density between left/right channels (-1 = transparent, 0-255 = grayscale)", "minimum": -1, "maximum": 255, "default": 64 }
+                  "divider": { "type": "integer", "description": "Divider line density between left/right channels (-1 = none, 0-255 = grayscale)", "minimum": -1, "maximum": 255, "default": 64 }
                 }
               },
               "metering": {
@@ -837,10 +837,10 @@
               },
               "colors": {
                 "type": "object",
-                "description": "Indicator density values (-1 = transparent)",
+                "description": "Indicator density values (-1 = none)",
                 "properties": {
-                  "on": { "type": "integer", "description": "Density when indicator is active (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 255 },
-                  "off": { "type": "integer", "description": "Density when indicator is inactive (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 100 }
+                  "on": { "type": "integer", "description": "Density when indicator is active (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                  "off": { "type": "integer", "description": "Density when indicator is inactive (-1 = none)", "minimum": -1, "maximum": 255, "default": 100 }
                 }
               }
             }
@@ -1360,7 +1360,7 @@
                     "type": "object",
                     "description": "Graph colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Graph fill density (-1 = transparent)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "fill": { "type": "integer", "description": "Graph fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
                       "line": { "type": "integer", "description": "Graph line density", "minimum": 0, "maximum": 255, "default": 255 }
                     }
                   }
@@ -1847,14 +1847,14 @@
                     "properties": {
                       "foreground": {
                         "type": "integer",
-                        "description": "Icon foreground color (0-255, or -1 for transparent)",
+                        "description": "Icon foreground color (0-255, or -1 for none)",
                         "minimum": -1,
                         "maximum": 255,
                         "default": 255
                       },
                       "background": {
                         "type": "integer",
-                        "description": "Icon background color (0-255, or -1 for transparent)",
+                        "description": "Icon background color (0-255, or -1 for none)",
                         "minimum": -1,
                         "maximum": 255,
                         "default": 0
