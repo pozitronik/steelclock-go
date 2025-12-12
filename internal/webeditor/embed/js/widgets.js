@@ -210,15 +210,14 @@ class WidgetEditor {
     renderWidgetFields(widget, container, onUpdate) {
         container.innerHTML = '';
 
-        // === COMMON SETTINGS ===
-        const commonSection = document.createElement('div');
-        commonSection.className = 'widget-common-settings';
+        const mainSection = document.createElement('div');
+        mainSection.className = 'widget-common-settings';
 
-        // Single-value fields in horizontal rows
-        const singleFields = document.createElement('div');
-        singleFields.className = 'widget-single-fields';
+        // === FLAT FIELDS FIRST ===
+        const flatFields = document.createElement('div');
+        flatFields.className = 'widget-single-fields';
 
-        // Type row
+        // Type row (common)
         const typeRow = this.createFieldRow('Type',
             this.createTypeSelect(widget, () => {
                 this.renderWidgetFields(widget, container, onUpdate);
@@ -226,9 +225,9 @@ class WidgetEditor {
             }),
             'Widget type to display'
         );
-        singleFields.appendChild(typeRow);
+        flatFields.appendChild(typeRow);
 
-        // Enabled row
+        // Enabled row (common)
         const enabledRow = this.createFieldRow('Enabled',
             this.createCheckbox(widget.enabled !== false, (val) => {
                 widget.enabled = val;
@@ -237,9 +236,9 @@ class WidgetEditor {
             }),
             'Show or hide this widget'
         );
-        singleFields.appendChild(enabledRow);
+        flatFields.appendChild(enabledRow);
 
-        // Update interval row
+        // Update interval row (common)
         const intervalRow = this.createFieldRow('Interval',
             this.createNumberInput(widget.update_interval, 0.1, null, 'sec', (val) => {
                 widget.update_interval = val;
@@ -248,11 +247,25 @@ class WidgetEditor {
             }),
             'Update interval in seconds'
         );
-        singleFields.appendChild(intervalRow);
+        flatFields.appendChild(intervalRow);
 
-        commonSection.appendChild(singleFields);
+        // Widget-specific flat properties
+        if (widget.type) {
+            const properties = this.schema.getWidgetProperties(widget.type);
+            for (const [propName, propSchema] of Object.entries(properties)) {
+                if (WidgetEditor.COMMON_PROPS.includes(propName)) continue;
+                if (propSchema.properties) continue; // Skip nested objects
 
-        // Position subsection
+                const row = this.renderPropertyRow(propName, propSchema, widget, onUpdate);
+                flatFields.appendChild(row);
+            }
+        }
+
+        mainSection.appendChild(flatFields);
+
+        // === SUBSECTIONS AFTER ===
+
+        // Position subsection (common)
         widget.position = widget.position || { x: 0, y: 0, w: 128, h: 40 };
         const positionSection = this.createSubsection('Position', 'Widget location and dimensions on the display', [
             { key: 'x', label: 'x', desc: 'Horizontal offset from left edge in pixels' },
@@ -261,50 +274,38 @@ class WidgetEditor {
             { key: 'h', label: 'h', desc: 'Widget height in pixels' },
             { key: 'z', label: 'z', desc: 'Layer order (higher values render on top)' }
         ], widget.position, onUpdate);
-        commonSection.appendChild(positionSection);
+        mainSection.appendChild(positionSection);
 
-        // Style subsection
+        // Style subsection (common)
         widget.style = widget.style || {};
         const styleSection = this.createSubsection('Style', 'Widget visual appearance', [
             { key: 'background', label: 'background', desc: 'Fill density (-1=transparent, 0=black, 255=white)' },
             { key: 'border', label: 'border', desc: 'Border density (-1=none, 0=black, 255=white)' },
             { key: 'padding', label: 'padding', desc: 'Inner padding from edges in pixels' }
         ], widget.style, onUpdate);
-        commonSection.appendChild(styleSection);
+        mainSection.appendChild(styleSection);
 
-        container.appendChild(commonSection);
+        // Widget-specific nested subsections
+        if (widget.type) {
+            const properties = this.schema.getWidgetProperties(widget.type);
+            for (const [propName, propSchema] of Object.entries(properties)) {
+                if (WidgetEditor.COMMON_PROPS.includes(propName)) continue;
+                if (!propSchema.properties) continue; // Skip flat properties
+
+                widget[propName] = widget[propName] || {};
+                const subsection = this.renderPropertySubsection(propName, propSchema, widget[propName], onUpdate);
+                mainSection.appendChild(subsection);
+            }
+        }
+
+        container.appendChild(mainSection);
 
         if (!widget.type) {
             const hint = document.createElement('p');
             hint.className = 'hint';
             hint.textContent = 'Select a widget type to see available options.';
             container.appendChild(hint);
-            return;
         }
-
-        // === WIDGET-SPECIFIC SETTINGS ===
-        const properties = this.schema.getWidgetProperties(widget.type);
-
-        const specificSection = document.createElement('div');
-        specificSection.className = 'widget-specific-settings';
-
-        for (const [propName, propSchema] of Object.entries(properties)) {
-            // Skip common props (already rendered above)
-            if (WidgetEditor.COMMON_PROPS.includes(propName)) continue;
-
-            if (propSchema.properties) {
-                // Nested object - render as subsection
-                widget[propName] = widget[propName] || {};
-                const subsection = this.renderPropertySubsection(propName, propSchema, widget[propName], onUpdate);
-                specificSection.appendChild(subsection);
-            } else {
-                // Simple field - render as row
-                const row = this.renderPropertyRow(propName, propSchema, widget, onUpdate);
-                specificSection.appendChild(row);
-            }
-        }
-
-        container.appendChild(specificSection);
     }
 
     /**
