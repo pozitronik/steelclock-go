@@ -200,28 +200,79 @@ class WidgetEditor {
     }
 
     /**
-     * Render fields for a widget (compact layout)
+     * Common widget properties that apply to all widgets
+     */
+    static COMMON_PROPS = ['type', 'enabled', 'position', 'style', 'update_interval'];
+
+    /**
+     * Render fields for a widget (compact layout with descriptions)
      */
     renderWidgetFields(widget, container, onUpdate) {
         container.innerHTML = '';
 
-        // Top row: Type + Position (inline)
-        const topRow = document.createElement('div');
-        topRow.className = 'widget-top-row';
+        // === COMMON SETTINGS ===
+        const commonSection = document.createElement('div');
+        commonSection.className = 'widget-common-settings';
 
-        // Type selector (compact)
-        const typeField = this.createCompactTypeSelector(widget, () => {
-            this.renderWidgetFields(widget, container, onUpdate);
-            onUpdate();
-        });
-        topRow.appendChild(typeField);
+        // Single-value fields in horizontal rows
+        const singleFields = document.createElement('div');
+        singleFields.className = 'widget-single-fields';
 
-        // Position fields inline (x, y, w, h, z)
+        // Type row
+        const typeRow = this.createFieldRow('Type',
+            this.createTypeSelect(widget, () => {
+                this.renderWidgetFields(widget, container, onUpdate);
+                onUpdate();
+            }),
+            'Widget type to display'
+        );
+        singleFields.appendChild(typeRow);
+
+        // Enabled row
+        const enabledRow = this.createFieldRow('Enabled',
+            this.createCheckbox(widget.enabled !== false, (val) => {
+                widget.enabled = val;
+                onUpdate();
+                this.onChange();
+            }),
+            'Show or hide this widget'
+        );
+        singleFields.appendChild(enabledRow);
+
+        // Update interval row
+        const intervalRow = this.createFieldRow('Interval',
+            this.createNumberInput(widget.update_interval, 0.1, null, 'sec', (val) => {
+                widget.update_interval = val;
+                onUpdate();
+                this.onChange();
+            }),
+            'Update interval in seconds'
+        );
+        singleFields.appendChild(intervalRow);
+
+        commonSection.appendChild(singleFields);
+
+        // Position subsection
         widget.position = widget.position || { x: 0, y: 0, w: 128, h: 40 };
-        const posFields = this.createPositionFields(widget.position, onUpdate);
-        topRow.appendChild(posFields);
+        const positionSection = this.createSubsection('Position', 'Widget location and dimensions on the display', [
+            { key: 'x', label: 'x', desc: 'Horizontal offset from left edge in pixels' },
+            { key: 'y', label: 'y', desc: 'Vertical offset from top edge in pixels' },
+            { key: 'w', label: 'w', desc: 'Widget width in pixels' },
+            { key: 'h', label: 'h', desc: 'Widget height in pixels' },
+            { key: 'z', label: 'z', desc: 'Layer order (higher values render on top)' }
+        ], widget.position, onUpdate);
+        commonSection.appendChild(positionSection);
 
-        container.appendChild(topRow);
+        // Style subsection
+        widget.style = widget.style || {};
+        const styleSection = this.createSubsection('Style', 'Widget visual appearance', [
+            { key: 'background', label: 'background', desc: 'Fill density (-1=transparent, 0=black, 255=white)' },
+            { key: 'border', label: 'border', desc: 'Border density (-1=none, 0=black, 255=white)' },
+            { key: 'padding', label: 'padding', desc: 'Inner padding from edges in pixels' }
+        ], widget.style, onUpdate);
+        commonSection.appendChild(styleSection);
+
+        container.appendChild(commonSection);
 
         if (!widget.type) {
             const hint = document.createElement('p');
@@ -231,18 +282,19 @@ class WidgetEditor {
             return;
         }
 
-        // Get properties for this widget type
+        // === WIDGET-SPECIFIC SETTINGS ===
         const properties = this.schema.getWidgetProperties(widget.type);
 
-        // Render remaining fields in a flat grid (skip type and position)
+        const specificSection = document.createElement('div');
+        specificSection.className = 'widget-specific-settings';
+
         const grid = document.createElement('div');
         grid.className = 'form-grid widget-fields-grid';
 
         for (const [propName, propSchema] of Object.entries(properties)) {
-            // Skip type and position (already rendered)
-            if (propName === 'type' || propName === 'position') continue;
+            // Skip common props (already rendered above)
+            if (WidgetEditor.COMMON_PROPS.includes(propName)) continue;
 
-            // Handle nested objects
             if (propSchema.properties) {
                 widget[propName] = widget[propName] || {};
                 const nestedFields = this.renderFlatNestedObject(propName, propSchema, widget[propName], onUpdate);
@@ -265,7 +317,132 @@ class WidgetEditor {
             }
         }
 
-        container.appendChild(grid);
+        specificSection.appendChild(grid);
+        container.appendChild(specificSection);
+    }
+
+    /**
+     * Create a field row with label, input, and description
+     */
+    createFieldRow(label, inputEl, description) {
+        const row = document.createElement('div');
+        row.className = 'field-row';
+
+        const labelEl = document.createElement('span');
+        labelEl.className = 'field-label';
+        labelEl.textContent = label + ':';
+
+        const inputWrapper = document.createElement('span');
+        inputWrapper.className = 'field-input';
+        inputWrapper.appendChild(inputEl);
+
+        const descEl = document.createElement('span');
+        descEl.className = 'field-desc';
+        descEl.textContent = description;
+
+        row.appendChild(labelEl);
+        row.appendChild(inputWrapper);
+        row.appendChild(descEl);
+
+        return row;
+    }
+
+    /**
+     * Create a subsection with header and indented field rows
+     */
+    createSubsection(title, description, fields, obj, onUpdate) {
+        const section = document.createElement('div');
+        section.className = 'widget-subsection';
+
+        const header = document.createElement('div');
+        header.className = 'subsection-header';
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'subsection-title';
+        titleEl.textContent = title + ':';
+
+        const descEl = document.createElement('span');
+        descEl.className = 'subsection-desc';
+        descEl.textContent = description;
+
+        header.appendChild(titleEl);
+        header.appendChild(descEl);
+        section.appendChild(header);
+
+        const content = document.createElement('div');
+        content.className = 'subsection-content';
+
+        for (const { key, label, desc } of fields) {
+            const row = this.createFieldRow(label,
+                this.createNumberInput(obj[key], null, null, '', (val) => {
+                    obj[key] = val;
+                    onUpdate();
+                    this.onChange();
+                }),
+                desc
+            );
+            content.appendChild(row);
+        }
+
+        section.appendChild(content);
+        return section;
+    }
+
+    /**
+     * Create type selector
+     */
+    createTypeSelect(widget, onChange) {
+        const select = document.createElement('select');
+
+        const emptyOpt = document.createElement('option');
+        emptyOpt.value = '';
+        emptyOpt.textContent = '-- Select --';
+        select.appendChild(emptyOpt);
+
+        const types = this.schema.getWidgetTypes();
+        for (const type of types) {
+            const opt = document.createElement('option');
+            opt.value = type;
+            opt.textContent = type;
+            if (type === widget.type) {
+                opt.selected = true;
+            }
+            select.appendChild(opt);
+        }
+
+        select.addEventListener('change', () => {
+            widget.type = select.value || undefined;
+            onChange();
+        });
+
+        return select;
+    }
+
+    /**
+     * Create checkbox input
+     */
+    createCheckbox(checked, onChange) {
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = checked;
+        input.addEventListener('change', () => onChange(input.checked));
+        return input;
+    }
+
+    /**
+     * Create number input
+     */
+    createNumberInput(value, min, max, placeholder, onChange) {
+        const input = document.createElement('input');
+        input.type = 'number';
+        if (min !== null) input.min = min;
+        if (max !== null) input.max = max;
+        input.placeholder = placeholder || '';
+        input.value = value ?? '';
+        input.addEventListener('input', () => {
+            onChange(input.value === '' ? undefined : Number(input.value));
+        });
+        return input;
     }
 
     /**

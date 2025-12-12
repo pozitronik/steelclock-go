@@ -55,13 +55,13 @@ class ConfigEditor {
         this.viewFormBtn.addEventListener('click', () => this.switchView('form'));
         this.viewJsonBtn.addEventListener('click', () => this.switchView('json'));
 
-        // Warn before leaving with unsaved changes
-        window.addEventListener('beforeunload', (e) => {
-            if (this.isDirty) {
-                e.preventDefault();
-                e.returnValue = '';
-            }
-        });
+        // Warn before leaving with unsaved changes (temporarily disabled)
+        // window.addEventListener('beforeunload', (e) => {
+        //     if (this.isDirty) {
+        //         e.preventDefault();
+        //         e.returnValue = '';
+        //     }
+        // });
 
         // Load schema first
         await this.loadSchema();

@@ -364,15 +364,96 @@ nav button {
     padding: 0.5rem 0.6rem;
 }
 
-/* Compact widget top row (type + position inline) */
-.widget-top-row {
+/* Widget common settings section */
+.widget-common-settings {
     display: flex;
-    align-items: flex-end;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--muted-border-color);
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Single-value fields container */
+.widget-single-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+/* Field row: Label | Input | Description */
+.field-row {
+    display: grid;
+    grid-template-columns: 120px 180px 1fr;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.field-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color);
+    text-align: right;
+    padding-right: 0.25rem;
+    white-space: nowrap;
+}
+
+.field-input {
+    display: flex;
+    align-items: center;
+}
+
+.field-input input,
+.field-input select {
+    width: 100%;
+    text-align: left;
+}
+
+.field-desc {
+    font-size: 0.7rem;
+    color: var(--muted-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Subsection (Position, Style) */
+.widget-subsection {
+    margin-top: 0.25rem;
+    padding-left: 0;
+}
+
+.subsection-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.subsection-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color);
+}
+
+.subsection-desc {
+    font-size: 0.7rem;
+    color: var(--muted-color);
+    font-style: italic;
+}
+
+.subsection-content {
+    padding-left: 1rem;
+    border-left: 2px solid var(--muted-border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.subsection-content .field-row {
+    grid-template-columns: 110px 80px 1fr;
+}
+
+.subsection-content .field-label {
+    font-weight: 500;
+    color: var(--muted-color);
 }
 
 .widget-type-compact {
