@@ -678,13 +678,11 @@
                 }
               },
               "text": {
-                "type": "object",
-                "description": "Text mode settings",
                 "allOf": [
-                  { "$ref": "#/definitions/textStyle" },
+                  { "$ref": "#/definitions/textObject" },
                   {
                     "properties": {
-                      "format": { "type": "string", "description": "Text format string", "default": "%d%%" }
+                      "format": { "description": "Text format string (e.g., '%d%%')", "default": "%d%%" }
                     }
                   }
                 ]
@@ -792,7 +790,7 @@
           "if": { "properties": { "type": { "const": "keyboard" } }, "required": ["type"] },
           "then": {
             "properties": {
-              "text": { "$ref": "#/definitions/textObject" },
+              "text": { "$ref": "#/definitions/textStyle" },
               "indicators": {
                 "type": "object",
                 "description": "Keyboard lock indicator settings",
@@ -846,7 +844,7 @@
           "if": { "properties": { "type": { "const": "keyboard_layout" } }, "required": ["type"] },
           "then": {
             "properties": {
-              "text": { "$ref": "#/definitions/textObject" },
+              "text": { "$ref": "#/definitions/textStyle" },
               "format": { "type": "string", "description": "Language code format: iso639-1 (EN), iso639-2 (ENG), or full (English)", "enum": ["iso639-1", "iso639-2", "full"], "default": "iso639-1" }
             }
           }
@@ -912,14 +910,11 @@
             "properties": {
               "auto_hide": { "$ref": "#/definitions/autoHide" },
               "text": {
-                "type": "object",
-                "description": "Text rendering properties for Winamp widget",
                 "allOf": [
-                  { "$ref": "#/definitions/textStyle" },
+                  { "$ref": "#/definitions/textObject" },
                   {
                     "properties": {
                       "format": {
-                        "type": "string",
                         "description": "Format string with placeholders: {title} (track title), {filename} (file name), {filepath} (full path), {position} (MM:SS), {duration} (MM:SS), {position_ms} (ms), {duration_s} (seconds), {bitrate} (kbps), {samplerate} (Hz), {channels} (count), {status} (Playing/Paused/Stopped), {track_num} (current track number in playlist), {playlist_length} (total tracks in playlist), {shuffle} ('S' if enabled, empty otherwise), {repeat} ('R' if enabled, empty otherwise), {version} (Winamp version string)",
                         "default": "{title}"
                       }
@@ -1365,18 +1360,15 @@
                 }
               },
               "text": {
-                "type": "object",
-                "description": "Text mode settings",
                 "allOf": [
-                  { "$ref": "#/definitions/textStyle" },
+                  { "$ref": "#/definitions/textObject" },
                   {
                     "properties": {
                       "format": {
-                        "type": "string",
                         "description": "Format string with tokens: {percent}/{pct} (value), {status} (CHG/AC/ECO), {status_full} (Charging/AC Power/Economy), {time} (smart remaining), {time_left}, {time_to_full}, {time_left_min} (minutes), {level} (critical/low/normal), {charging}/{plugged}/{economy} (boolean indicators)",
                         "default": "{percent}%"
                       },
-                      "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 16 }
+                      "size": { "default": 16 }
                     }
                   }
                 ]
@@ -1851,18 +1843,15 @@
                 }
               },
               "text": {
-                "type": "object",
-                "description": "Text mode settings",
                 "allOf": [
-                  { "$ref": "#/definitions/textStyle" },
+                  { "$ref": "#/definitions/textObject" },
                   {
                     "properties": {
                       "format": {
-                        "type": "string",
                         "description": "Format string with tokens: {icon}, {unread}/{total}, {mentions}, {reactions}, {private}, {groups}, {channels}, {muted}, {private_muted}, {groups_muted}, {channels_muted}",
                         "default": "{unread} unread"
                       },
-                      "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 16 }
+                      "size": { "default": 16 }
                     }
                   }
                 ]
