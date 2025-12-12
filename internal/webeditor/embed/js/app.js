@@ -107,6 +107,12 @@ class ConfigEditor {
         try {
             this.setStatus('Loading...');
             this.config = await API.getConfig();
+
+            // Apply schema defaults to fill in missing values
+            if (this.schemaProcessor) {
+                this.config = this.schemaProcessor.applyDefaults(this.config);
+            }
+
             this.originalConfig = JSON.stringify(this.config, null, 2);
             this.editorEl.value = this.originalConfig;
             this.isDirty = false;
@@ -138,6 +144,12 @@ class ConfigEditor {
     async loadConfigFromPath(path) {
         this.setStatus('Loading...');
         this.config = await API.loadConfigByPath(path);
+
+        // Apply schema defaults to fill in missing values
+        if (this.schemaProcessor) {
+            this.config = this.schemaProcessor.applyDefaults(this.config);
+        }
+
         this.originalConfig = JSON.stringify(this.config, null, 2);
         this.editorEl.value = this.originalConfig;
         this.isDirty = false;

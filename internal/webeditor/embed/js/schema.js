@@ -264,6 +264,64 @@ class SchemaProcessor {
     getDescription(propSchema) {
         return propSchema?.description || '';
     }
+
+    /**
+     * Apply schema defaults to a config object
+     * @param {Object} config - The config object to fill with defaults
+     * @returns {Object} The config with defaults applied
+     */
+    applyDefaults(config) {
+        if (!config) {
+            config = {};
+        }
+
+        // Apply root-level defaults
+        const rootProps = this.getRootProperties();
+        this.applyDefaultsToObject(config, rootProps);
+
+        // Apply defaults to widgets based on their type
+        if (Array.isArray(config.widgets)) {
+            for (const widget of config.widgets) {
+                if (widget.type) {
+                    const widgetProps = this.getWidgetProperties(widget.type);
+                    this.applyDefaultsToObject(widget, widgetProps);
+                }
+            }
+        }
+
+        return config;
+    }
+
+    /**
+     * Apply defaults from property schemas to an object
+     * @param {Object} obj - The object to fill with defaults
+     * @param {Object} properties - Schema properties object
+     */
+    applyDefaultsToObject(obj, properties) {
+        if (!properties || typeof properties !== 'object') {
+            return;
+        }
+
+        for (const [key, propSchema] of Object.entries(properties)) {
+            // Skip widgets array - handled separately
+            if (key === 'widgets') {
+                continue;
+            }
+
+            // Handle nested objects
+            if (propSchema.type === 'object' && propSchema.properties) {
+                if (obj[key] === undefined) {
+                    obj[key] = {};
+                }
+                if (typeof obj[key] === 'object' && obj[key] !== null) {
+                    this.applyDefaultsToObject(obj[key], propSchema.properties);
+                }
+            } else if (obj[key] === undefined && propSchema.default !== undefined) {
+                // Apply default value for missing fields
+                obj[key] = JSON.parse(JSON.stringify(propSchema.default));
+            }
+        }
+    }
 }
 
 // Export for use in other modules
