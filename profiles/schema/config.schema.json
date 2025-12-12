@@ -268,14 +268,14 @@
         "enabled": { "type": "boolean", "description": "Show or hide this widget", "default": true },
         "position": { "$ref": "#/definitions/position" },
         "style": { "$ref": "#/definitions/style" },
-        "update_interval": { "type": "number", "description": "Update interval in seconds", "minimum": 0.01 },
-        "text": { "$ref": "#/definitions/textObject" }
+        "update_interval": { "type": "number", "description": "Update interval in seconds", "minimum": 0.01 }
       },
       "allOf": [
         {
           "if": { "properties": { "type": { "const": "clock" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "text": { "$ref": "#/definitions/textObject" },
               "mode": { "type": "string", "description": "Display mode: text, analog clock face, binary clock, or seven-segment display", "enum": ["text", "analog", "binary", "segment"], "default": "text" },
               "analog": {
                 "type": "object",
@@ -342,6 +342,7 @@
           "if": { "properties": { "type": { "const": "cpu" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "text": { "$ref": "#/definitions/textObject" },
               "mode": { "type": "string", "description": "Display mode for CPU usage", "enum": ["text", "bar", "graph", "gauge"], "default": "bar" },
               "bar": {
                 "type": "object",
@@ -406,6 +407,7 @@
           "if": { "properties": { "type": { "const": "memory" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "text": { "$ref": "#/definitions/textObject" },
               "mode": { "type": "string", "description": "Display mode for memory usage", "enum": ["text", "bar", "graph", "gauge"], "default": "bar" },
               "bar": {
                 "type": "object",
@@ -595,6 +597,7 @@
           "if": { "properties": { "type": { "const": "volume" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "text": { "$ref": "#/definitions/textObject" },
               "auto_hide": { "$ref": "#/definitions/autoHide" },
               "poll_interval": { "type": "number", "description": "Internal polling interval in seconds", "minimum": 0.01, "default": 0.1 },
               "mode": { "type": "string", "description": "Display mode for system volume", "enum": ["text", "bar", "gauge"], "default": "bar" },
@@ -793,6 +796,7 @@
           "if": { "properties": { "type": { "const": "keyboard" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "text": { "$ref": "#/definitions/textObject" },
               "indicators": {
                 "type": "object",
                 "description": "Keyboard lock indicator settings",
@@ -846,6 +850,7 @@
           "if": { "properties": { "type": { "const": "keyboard_layout" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "text": { "$ref": "#/definitions/textObject" },
               "format": { "type": "string", "description": "Language code format: iso639-1 (EN), iso639-2 (ENG), or full (English)", "enum": ["iso639-1", "iso639-2", "full"], "default": "iso639-1" }
             }
           }
@@ -1110,6 +1115,7 @@
           "if": { "properties": { "type": { "const": "weather" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "text": { "$ref": "#/definitions/textObject" },
               "weather": {
                 "type": "object",
                 "description": "Weather widget settings",
