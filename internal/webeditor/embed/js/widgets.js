@@ -288,37 +288,198 @@ class WidgetEditor {
         const specificSection = document.createElement('div');
         specificSection.className = 'widget-specific-settings';
 
-        const grid = document.createElement('div');
-        grid.className = 'form-grid widget-fields-grid';
-
         for (const [propName, propSchema] of Object.entries(properties)) {
             // Skip common props (already rendered above)
             if (WidgetEditor.COMMON_PROPS.includes(propName)) continue;
 
             if (propSchema.properties) {
+                // Nested object - render as subsection
                 widget[propName] = widget[propName] || {};
-                const nestedFields = this.renderFlatNestedObject(propName, propSchema, widget[propName], onUpdate);
-                grid.appendChild(nestedFields);
+                const subsection = this.renderPropertySubsection(propName, propSchema, widget[propName], onUpdate);
+                specificSection.appendChild(subsection);
             } else {
-                const field = this.formBuilder.createField(
-                    propName,
-                    propSchema,
-                    widget[propName],
-                    (newVal) => {
-                        if (newVal === undefined) {
-                            delete widget[propName];
-                        } else {
-                            widget[propName] = newVal;
-                        }
-                        onUpdate();
-                    }
-                );
-                grid.appendChild(field);
+                // Simple field - render as row
+                const row = this.renderPropertyRow(propName, propSchema, widget, onUpdate);
+                specificSection.appendChild(row);
             }
         }
 
-        specificSection.appendChild(grid);
         container.appendChild(specificSection);
+    }
+
+    /**
+     * Render a simple property as a field row
+     */
+    renderPropertyRow(propName, propSchema, obj, onUpdate) {
+        const inputEl = this.createInputForSchema(propSchema, obj[propName], (val) => {
+            if (val === undefined) {
+                delete obj[propName];
+            } else {
+                obj[propName] = val;
+            }
+            onUpdate();
+            this.onChange();
+        });
+
+        return this.createFieldRow(
+            propName,
+            inputEl,
+            propSchema.description || ''
+        );
+    }
+
+    /**
+     * Render a nested object as a subsection
+     */
+    renderPropertySubsection(propName, propSchema, obj, onUpdate) {
+        const section = document.createElement('div');
+        section.className = 'widget-subsection';
+
+        const header = document.createElement('div');
+        header.className = 'subsection-header';
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'subsection-title';
+        titleEl.textContent = propName + ':';
+
+        const descEl = document.createElement('span');
+        descEl.className = 'subsection-desc';
+        descEl.textContent = propSchema.description || '';
+
+        header.appendChild(titleEl);
+        header.appendChild(descEl);
+        section.appendChild(header);
+
+        const content = document.createElement('div');
+        content.className = 'subsection-content';
+
+        // Separate flat properties from nested objects
+        const flatProps = [];
+        const nestedProps = [];
+
+        for (const [subPropName, subPropSchema] of Object.entries(propSchema.properties || {})) {
+            if (subPropSchema.properties) {
+                nestedProps.push([subPropName, subPropSchema]);
+            } else {
+                flatProps.push([subPropName, subPropSchema]);
+            }
+        }
+
+        // Render flat properties first
+        for (const [subPropName, subPropSchema] of flatProps) {
+            const row = this.renderPropertyRow(subPropName, subPropSchema, obj, onUpdate);
+            content.appendChild(row);
+        }
+
+        // Then render nested subsections
+        for (const [subPropName, subPropSchema] of nestedProps) {
+            obj[subPropName] = obj[subPropName] || {};
+            const nestedSubsection = this.renderPropertySubsection(subPropName, subPropSchema, obj[subPropName], onUpdate);
+            content.appendChild(nestedSubsection);
+        }
+
+        section.appendChild(content);
+        return section;
+    }
+
+    /**
+     * Create appropriate input element based on schema type
+     */
+    createInputForSchema(schema, value, onChange) {
+        // Enum - use select
+        if (schema.enum) {
+            return this.createSelectFromEnum(schema.enum, value, schema.default, onChange);
+        }
+
+        // Boolean - use checkbox
+        if (schema.type === 'boolean') {
+            const defaultVal = schema.default !== undefined ? schema.default : false;
+            return this.createCheckbox(value !== undefined ? value : defaultVal, onChange);
+        }
+
+        // Number/Integer - use number input
+        if (schema.type === 'number' || schema.type === 'integer') {
+            const step = schema.type === 'integer' ? '1' : '0.1';
+            return this.createNumberInputWithSchema(value, schema.minimum, schema.maximum, step, onChange);
+        }
+
+        // String - use text input
+        if (schema.type === 'string') {
+            return this.createTextInput(value, schema.default, onChange);
+        }
+
+        // Array of strings
+        if (schema.type === 'array') {
+            return this.createTextInput(
+                Array.isArray(value) ? value.join(', ') : '',
+                '',
+                (val) => onChange(val ? val.split(',').map(s => s.trim()) : undefined)
+            );
+        }
+
+        // Fallback to text input
+        return this.createTextInput(value, '', onChange);
+    }
+
+    /**
+     * Create select from enum values
+     */
+    createSelectFromEnum(enumValues, value, defaultValue, onChange) {
+        const select = document.createElement('select');
+
+        // Add empty option if no default
+        if (defaultValue === undefined) {
+            const emptyOpt = document.createElement('option');
+            emptyOpt.value = '';
+            emptyOpt.textContent = '-- Select --';
+            select.appendChild(emptyOpt);
+        }
+
+        for (const enumVal of enumValues) {
+            const opt = document.createElement('option');
+            opt.value = enumVal;
+            opt.textContent = enumVal;
+            if (enumVal === value || (value === undefined && enumVal === defaultValue)) {
+                opt.selected = true;
+            }
+            select.appendChild(opt);
+        }
+
+        select.addEventListener('change', () => {
+            onChange(select.value || undefined);
+        });
+
+        return select;
+    }
+
+    /**
+     * Create number input with schema constraints
+     */
+    createNumberInputWithSchema(value, min, max, step, onChange) {
+        const input = document.createElement('input');
+        input.type = 'number';
+        if (min !== undefined) input.min = min;
+        if (max !== undefined) input.max = max;
+        if (step) input.step = step;
+        input.value = value ?? '';
+        input.addEventListener('input', () => {
+            onChange(input.value === '' ? undefined : Number(input.value));
+        });
+        return input;
+    }
+
+    /**
+     * Create text input
+     */
+    createTextInput(value, placeholder, onChange) {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = placeholder || '';
+        input.value = value ?? '';
+        input.addEventListener('input', () => {
+            onChange(input.value || undefined);
+        });
+        return input;
     }
 
     /**

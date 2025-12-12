@@ -416,19 +416,28 @@ nav button {
 
 /* Subsection (Position, Style) */
 .widget-subsection {
-    margin-top: 0.25rem;
-    padding-left: 0;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid var(--muted-border-color);
+    border-radius: var(--border-radius);
+}
+
+[data-theme="dark"] .widget-subsection {
+    background: rgba(255, 255, 255, 0.02);
 }
 
 .subsection-header {
     display: flex;
     align-items: baseline;
     gap: 0.5rem;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.4rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--muted-border-color);
 }
 
 .subsection-title {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--color);
 }
@@ -440,20 +449,36 @@ nav button {
 }
 
 .subsection-content {
-    padding-left: 1rem;
-    border-left: 2px solid var(--muted-border-color);
+    padding-left: 0.5rem;
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
 }
 
+/* Nested subsections */
+.subsection-content .widget-subsection {
+    background: rgba(0, 0, 0, 0.03);
+    margin-top: 0.3rem;
+}
+
+[data-theme="dark"] .subsection-content .widget-subsection {
+    background: rgba(255, 255, 255, 0.03);
+}
+
 .subsection-content .field-row {
-    grid-template-columns: 110px 80px 1fr;
+    grid-template-columns: 120px 180px 1fr;
 }
 
 .subsection-content .field-label {
     font-weight: 500;
     color: var(--muted-color);
+}
+
+/* Widget-specific settings */
+.widget-specific-settings {
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--muted-border-color);
 }
 
 .widget-type-compact {
