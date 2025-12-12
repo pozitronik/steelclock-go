@@ -15,6 +15,7 @@ class ConfigEditor {
         this.currentView = 'form'; // 'form' or 'json'
         this.notificationTimeout = null;
         this.profiles = [];
+        this.editingProfilePath = null; // Path of profile being edited (may differ from active)
 
         // DOM elements
         this.formContainer = document.getElementById('form-container');
@@ -22,12 +23,14 @@ class ConfigEditor {
         this.jsonContainer = document.getElementById('json-container');
         this.editorEl = document.getElementById('config-editor');
         this.saveBtn = document.getElementById('btn-save');
+        this.applyBtn = document.getElementById('btn-apply');
         this.reloadBtn = document.getElementById('btn-reload');
         this.viewFormBtn = document.getElementById('btn-view-form');
         this.viewJsonBtn = document.getElementById('btn-view-json');
         this.statusEl = document.getElementById('status');
         this.profileSelector = document.getElementById('profile-selector');
         this.profileSelect = document.getElementById('profile-select');
+        this.renameProfileBtn = document.getElementById('btn-rename-profile');
         this.newProfileBtn = document.getElementById('btn-new-profile');
         this.themeToggle = document.getElementById('toggle-theme');
     }
@@ -38,6 +41,7 @@ class ConfigEditor {
     async init() {
         // Set up event listeners
         this.saveBtn.addEventListener('click', () => this.save());
+        this.applyBtn.addEventListener('click', () => this.apply());
         this.reloadBtn.addEventListener('click', () => this.reload());
         this.editorEl.addEventListener('input', () => {
             this.markDirty();
@@ -49,6 +53,7 @@ class ConfigEditor {
 
         // Profile selector
         this.profileSelect.addEventListener('change', () => this.switchProfile());
+        this.renameProfileBtn.addEventListener('click', () => this.renameCurrentProfile());
         this.newProfileBtn.addEventListener('click', () => this.createNewProfile());
 
         // View toggle
@@ -96,7 +101,7 @@ class ConfigEditor {
     }
 
     /**
-     * Load configuration from server
+     * Load configuration from server (active profile)
      */
     async loadConfig() {
         try {
@@ -107,17 +112,43 @@ class ConfigEditor {
             this.isDirty = false;
             this.saveBtn.classList.remove('has-changes');
 
+            // Set editing profile to active profile
+            const activeProfile = this.profiles.find(p => p.is_active);
+            if (activeProfile) {
+                this.editingProfilePath = activeProfile.path;
+            }
+
             // Render form if schema is available
             if (this.schemaProcessor && this.currentView === 'form') {
                 this.renderForm();
             }
 
+            this.updateApplyButtonState();
             this.showNotification('Configuration loaded', 'success');
             this.setStatus('Ready');
         } catch (err) {
             this.showNotification('Failed to load: ' + err.message, 'error');
             this.setStatus('Error');
         }
+    }
+
+    /**
+     * Load configuration from a specific path (without switching active profile)
+     */
+    async loadConfigFromPath(path) {
+        this.setStatus('Loading...');
+        this.config = await API.loadConfigByPath(path);
+        this.originalConfig = JSON.stringify(this.config, null, 2);
+        this.editorEl.value = this.originalConfig;
+        this.isDirty = false;
+        this.saveBtn.classList.remove('has-changes');
+
+        // Render form if schema is available
+        if (this.schemaProcessor && this.currentView === 'form') {
+            this.renderForm();
+        }
+
+        this.setStatus('Ready');
     }
 
     /**
@@ -229,7 +260,7 @@ class ConfigEditor {
     }
 
     /**
-     * Save configuration to server
+     * Save configuration to file (without applying)
      */
     async save() {
         try {
@@ -249,8 +280,8 @@ class ConfigEditor {
                 configToSave = this.config;
             }
 
-            // Save to server
-            const result = await API.saveConfig(configToSave);
+            // Save to the editing profile path
+            await API.saveConfig(configToSave, this.editingProfilePath);
 
             this.config = configToSave;
             this.originalConfig = JSON.stringify(configToSave, null, 2);
@@ -258,12 +289,7 @@ class ConfigEditor {
             this.isDirty = false;
             this.saveBtn.classList.remove('has-changes');
 
-            let message = result.message || 'Configuration saved';
-            if (result.warning) {
-                this.showNotification(message + ' (Warning: ' + result.warning + ')', 'warning');
-            } else {
-                this.showNotification(message, 'success');
-            }
+            this.showNotification('Configuration saved', 'success');
             this.setStatus('Saved');
 
         } catch (err) {
@@ -303,7 +329,7 @@ class ConfigEditor {
     }
 
     /**
-     * Switch to a different profile
+     * Switch to a different profile (load into editor without applying)
      */
     async switchProfile() {
         const selectedPath = this.profileSelect.value;
@@ -312,34 +338,84 @@ class ConfigEditor {
         // Check for unsaved changes
         if (this.isDirty) {
             if (!confirm('You have unsaved changes. Switch profile anyway?')) {
-                // Reset select to current active profile
-                const active = this.profiles.find(p => p.is_active);
-                if (active) {
-                    this.profileSelect.value = active.path;
-                }
+                // Reset select to currently editing profile
+                this.profileSelect.value = this.editingProfilePath;
                 return;
             }
         }
 
         try {
-            this.setStatus('Switching profile...');
-            await API.switchProfile(selectedPath);
+            this.setStatus('Loading profile...');
+            this.editingProfilePath = selectedPath;
+
+            // Load the config file directly (without switching active profile)
+            await this.loadConfigFromPath(selectedPath);
+
+            this.updateApplyButtonState();
+            this.showNotification('Profile loaded into editor', 'success');
+        } catch (err) {
+            this.showNotification('Failed to load profile: ' + err.message, 'error');
+            // Reset select to currently editing profile
+            this.profileSelect.value = this.editingProfilePath;
+        }
+    }
+
+    /**
+     * Apply the current profile (save if dirty, then switch/reload)
+     */
+    async apply() {
+        if (!this.editingProfilePath) return;
+
+        try {
+            this.setStatus('Applying...');
+
+            // Save first if there are unsaved changes
+            if (this.isDirty) {
+                let configToSave;
+                if (this.currentView === 'json') {
+                    configToSave = JSON.parse(this.editorEl.value);
+                } else {
+                    configToSave = this.config;
+                }
+                await API.saveConfig(configToSave, this.editingProfilePath);
+
+                this.config = configToSave;
+                this.originalConfig = JSON.stringify(configToSave, null, 2);
+                this.editorEl.value = this.originalConfig;
+                this.isDirty = false;
+                this.saveBtn.classList.remove('has-changes');
+            }
+
+            // Switch profile (which triggers reload) or just trigger reload
+            await API.switchProfile(this.editingProfilePath);
 
             // Update profile selection state
             this.profiles.forEach(p => {
-                p.is_active = (p.path === selectedPath);
+                p.is_active = (p.path === this.editingProfilePath);
             });
 
-            // Reload configuration
-            await this.loadConfig();
-            this.showNotification('Profile switched successfully', 'success');
+            this.updateApplyButtonState();
+            this.showNotification('Configuration applied', 'success');
+            this.setStatus('Ready');
         } catch (err) {
-            this.showNotification('Failed to switch profile: ' + err.message, 'error');
-            // Reset select to current active profile
-            const active = this.profiles.find(p => p.is_active);
-            if (active) {
-                this.profileSelect.value = active.path;
-            }
+            this.showNotification('Failed to apply: ' + err.message, 'error');
+            this.setStatus('Error');
+        }
+    }
+
+    /**
+     * Update Apply button state based on whether editing profile differs from active
+     */
+    updateApplyButtonState() {
+        const activeProfile = this.profiles.find(p => p.is_active);
+        const needsApply = !activeProfile || activeProfile.path !== this.editingProfilePath;
+
+        if (needsApply) {
+            this.applyBtn.classList.add('contrast');
+            this.applyBtn.title = 'Switch to this profile and apply';
+        } else {
+            this.applyBtn.classList.remove('contrast');
+            this.applyBtn.title = 'Reload configuration';
         }
     }
 
@@ -370,6 +446,37 @@ class ConfigEditor {
             this.setStatus('Ready');
         } catch (err) {
             this.showNotification('Failed to create profile: ' + err.message, 'error');
+            this.setStatus('Error');
+        }
+    }
+
+    /**
+     * Rename the current profile
+     */
+    async renameCurrentProfile() {
+        const activeProfile = this.profiles.find(p => p.is_active);
+        if (!activeProfile) {
+            this.showNotification('No active profile to rename', 'error');
+            return;
+        }
+
+        const newName = prompt('Enter new name for the profile:', activeProfile.name);
+        if (!newName || !newName.trim() || newName.trim() === activeProfile.name) {
+            return;
+        }
+
+        try {
+            this.setStatus('Renaming profile...');
+            await API.renameProfile(activeProfile.path, newName.trim());
+
+            this.showNotification('Profile renamed to "' + newName.trim() + '"', 'success');
+
+            // Reload profiles list to get updated name and order
+            await this.loadProfiles();
+
+            this.setStatus('Ready');
+        } catch (err) {
+            this.showNotification('Failed to rename profile: ' + err.message, 'error');
             this.setStatus('Error');
         }
     }

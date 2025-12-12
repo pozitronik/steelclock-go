@@ -134,6 +134,7 @@ nav {
 /* Main content offset for fixed header/nav */
 main.container {
     padding-top: 115px;
+    max-width: none;
 }
 
 /* Compact nav buttons */
@@ -625,7 +626,8 @@ nav button {
     min-width: 150px;
 }
 
-#btn-new-profile {
+#btn-new-profile,
+#btn-rename-profile {
     margin: 0;
     padding: 0.15rem 0.5rem;
     font-size: 0.9rem;

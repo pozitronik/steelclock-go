@@ -30,9 +30,11 @@ func (s *Server) registerHandlers(mux *http.ServeMux) {
 	// API endpoints
 	mux.HandleFunc("/api/schema", s.handleGetSchema)
 	mux.HandleFunc("/api/config", s.handleConfig)
+	mux.HandleFunc("/api/config/load", s.handleLoadConfigByPath)
 	mux.HandleFunc("/api/validate", s.handleValidate)
 	mux.HandleFunc("/api/profiles", s.handleProfiles)
 	mux.HandleFunc("/api/profiles/active", s.handleActiveProfile)
+	mux.HandleFunc("/api/profiles/rename", s.handleRenameProfile)
 }
 
 // serveIndex serves the main HTML page
@@ -93,7 +95,7 @@ func (s *Server) getConfig(w http.ResponseWriter) {
 	_, _ = w.Write(data)
 }
 
-// saveConfig saves configuration and triggers reload
+// saveConfig saves configuration (optionally to a specific path)
 func (s *Server) saveConfig(w http.ResponseWriter, r *http.Request) {
 	// Limit request body size to 1MB
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
@@ -104,36 +106,85 @@ func (s *Server) saveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Try to parse as {path, config} structure first
+	var wrappedReq struct {
+		Path   string          `json:"path"`
+		Config json.RawMessage `json:"config"`
+	}
+
+	var configData []byte
+	var savePath string
+
+	if err := json.Unmarshal(body, &wrappedReq); err == nil && wrappedReq.Config != nil {
+		// New format: {path: "...", config: {...}}
+		configData = wrappedReq.Config
+		savePath = wrappedReq.Path
+	} else {
+		// Old format: config directly
+		configData = body
+		savePath = ""
+	}
+
 	// Validate JSON syntax
 	var cfg interface{}
-	if err := json.Unmarshal(body, &cfg); err != nil {
+	if err := json.Unmarshal(configData, &cfg); err != nil {
 		respondError(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Save to file
-	if err := s.configProvider.Save(body); err != nil {
-		respondError(w, "Failed to save: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Trigger reload
-	var warning string
-	if s.onReload != nil {
-		if err := s.onReload(); err != nil {
-			warning = "Config saved but reload failed: " + err.Error()
+	if savePath != "" {
+		// Save to specific path
+		if err := os.WriteFile(savePath, configData, 0644); err != nil {
+			respondError(w, "Failed to save: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// Save to active config
+		if err := s.configProvider.Save(configData); err != nil {
+			respondError(w, "Failed to save: "+err.Error(), http.StatusInternalServerError)
+			return
 		}
 	}
 
 	response := map[string]interface{}{
 		"success": true,
-		"message": "Configuration saved and reloaded",
-	}
-	if warning != "" {
-		response["warning"] = warning
+		"message": "Configuration saved",
 	}
 
 	respondJSON(w, response)
+}
+
+// handleLoadConfigByPath loads a config file by path without switching active profile
+func (s *Server) handleLoadConfigByPath(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Path string `json:"path"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if req.Path == "" {
+		respondError(w, "Path is required", http.StatusBadRequest)
+		return
+	}
+
+	// Read the config file
+	data, err := os.ReadFile(req.Path)
+	if err != nil {
+		respondError(w, "Failed to load config: "+err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(data)
 }
 
 // handleValidate validates configuration without saving
@@ -284,6 +335,60 @@ func (s *Server) handleActiveProfile(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, map[string]interface{}{
 		"success": true,
 		"message": "Profile switched",
+	})
+}
+
+// handleRenameProfile handles renaming a profile
+func (s *Server) handleRenameProfile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Origin check
+	origin := r.Header.Get("Origin")
+	if origin != "" && !strings.HasPrefix(origin, "http://127.0.0.1") &&
+		!strings.HasPrefix(origin, "http://localhost") {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	if s.profileProvider == nil {
+		respondError(w, "Profile management not available", http.StatusNotImplemented)
+		return
+	}
+
+	var req struct {
+		Path    string `json:"path"`
+		NewName string `json:"new_name"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if req.Path == "" {
+		respondError(w, "Profile path is required", http.StatusBadRequest)
+		return
+	}
+
+	if req.NewName == "" {
+		respondError(w, "New name is required", http.StatusBadRequest)
+		return
+	}
+
+	newPath, err := s.profileProvider.RenameProfile(req.Path, req.NewName)
+	if err != nil {
+		respondError(w, "Failed to rename profile: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, map[string]interface{}{
+		"success":  true,
+		"path":     newPath,
+		"new_name": req.NewName,
+		"message":  "Profile renamed",
 	})
 }
 

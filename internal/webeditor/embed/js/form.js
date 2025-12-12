@@ -252,23 +252,19 @@ class FormBuilder {
         select.id = `field-${name}`;
         select.name = name;
 
-        // Add empty option if field is not required
-        const emptyOpt = document.createElement('option');
-        emptyOpt.value = '';
-        emptyOpt.textContent = '-- Select --';
-        select.appendChild(emptyOpt);
-
         for (const opt of propSchema.enum) {
             const option = document.createElement('option');
             option.value = opt;
-            option.textContent = opt;
-            if (opt === value) {
+            // Display empty string as "(auto)" for clarity
+            option.textContent = opt === '' ? '(auto)' : opt;
+            if (opt === value || (value === undefined && opt === '')) {
                 option.selected = true;
             }
             select.appendChild(option);
         }
 
         select.addEventListener('change', () => {
+            // Empty string means "omit" (auto-select)
             onUpdate(select.value || undefined);
             this.onChange();
         });

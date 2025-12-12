@@ -102,3 +102,11 @@ func (a *ProfileProviderAdapter) CreateProfile(name string) (string, error) {
 	}
 	return a.profileMgr.CreateProfile(name)
 }
+
+// RenameProfile renames a profile and returns its new path
+func (a *ProfileProviderAdapter) RenameProfile(oldPath, newName string) (string, error) {
+	if a.profileMgr == nil {
+		return "", nil
+	}
+	return a.profileMgr.RenameProfile(oldPath, newName)
+}

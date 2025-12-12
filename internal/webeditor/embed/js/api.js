@@ -28,17 +28,43 @@ const API = {
     },
 
     /**
+     * Load configuration from a specific path (without switching active profile)
+     * @param {string} path - The profile path to load from
+     * @returns {Promise<Object>} The configuration
+     */
+    async loadConfigByPath(path) {
+        const response = await fetch('/api/config/load', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ path }),
+        });
+
+        if (!response.ok) {
+            const result = await response.json();
+            throw new Error(result.error || response.statusText);
+        }
+        return response.json();
+    },
+
+    /**
      * Save the configuration
      * @param {Object} config - The configuration to save
+     * @param {string} [path] - Optional path to save to (if not active profile)
      * @returns {Promise<Object>} The save result
      */
-    async saveConfig(config) {
+    async saveConfig(config, path) {
+        const body = path
+            ? { path, config }
+            : config;
+
         const response = await fetch('/api/config', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(config),
+            body: JSON.stringify(body),
         });
 
         const result = await response.json();
@@ -114,6 +140,30 @@ const API = {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ name }),
+        });
+
+        const result = await response.json();
+
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        return result;
+    },
+
+    /**
+     * Rename a profile
+     * @param {string} path - The current profile path
+     * @param {string} newName - The new name for the profile
+     * @returns {Promise<Object>} The rename result with new path
+     */
+    async renameProfile(path, newName) {
+        const response = await fetch('/api/profiles/rename', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ path, new_name: newName }),
         });
 
         const result = await response.json();

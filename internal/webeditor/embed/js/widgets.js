@@ -299,13 +299,6 @@ class WidgetEditor {
         }
 
         container.appendChild(mainSection);
-
-        if (!widget.type) {
-            const hint = document.createElement('p');
-            hint.className = 'hint';
-            hint.textContent = 'Select a widget type to see available options.';
-            container.appendChild(hint);
-        }
     }
 
     /**
@@ -556,11 +549,6 @@ class WidgetEditor {
     createTypeSelect(widget, onChange) {
         const select = document.createElement('select');
 
-        const emptyOpt = document.createElement('option');
-        emptyOpt.value = '';
-        emptyOpt.textContent = '-- Select --';
-        select.appendChild(emptyOpt);
-
         const types = this.schema.getWidgetTypes();
         for (const type of types) {
             const opt = document.createElement('option');
@@ -573,7 +561,7 @@ class WidgetEditor {
         }
 
         select.addEventListener('change', () => {
-            widget.type = select.value || undefined;
+            widget.type = select.value;
             onChange();
         });
 
@@ -619,11 +607,6 @@ class WidgetEditor {
 
         const select = document.createElement('select');
 
-        const emptyOpt = document.createElement('option');
-        emptyOpt.value = '';
-        emptyOpt.textContent = '-- Select --';
-        select.appendChild(emptyOpt);
-
         const types = this.schema.getWidgetTypes();
         for (const type of types) {
             const opt = document.createElement('option');
@@ -636,7 +619,7 @@ class WidgetEditor {
         }
 
         select.addEventListener('change', () => {
-            widget.type = select.value || undefined;
+            widget.type = select.value;
             onTypeChange();
         });
 
@@ -806,8 +789,9 @@ class WidgetEditor {
      * Add a new widget
      */
     addWidget(config, listContainer, onUpdate) {
+        const types = this.schema.getWidgetTypes();
         const newWidget = {
-            type: '',
+            type: types[0] || 'clock',
             position: { x: 0, y: 0, w: 128, h: 40 }
         };
         config.widgets.push(newWidget);

@@ -316,6 +316,60 @@ func (pm *ProfileManager) CreateProfile(name string) (string, error) {
 	return profilePath, nil
 }
 
+// RenameProfile updates the config_name of a profile.
+// Returns the profile path (unchanged).
+func (pm *ProfileManager) RenameProfile(path, newName string) (string, error) {
+	if newName == "" {
+		return "", fmt.Errorf("profile name cannot be empty")
+	}
+
+	// Find the profile
+	var profile *Profile
+	for _, p := range pm.profiles {
+		if p.Path == path {
+			profile = p
+			break
+		}
+	}
+
+	if profile == nil {
+		return "", fmt.Errorf("profile not found: %s", path)
+	}
+
+	// Load and update the config file
+	cfg, err := Load(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to load profile: %w", err)
+	}
+
+	cfg.ConfigName = newName
+
+	// Marshal to JSON
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	// Save updated config
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return "", fmt.Errorf("failed to save profile: %w", err)
+	}
+
+	// Update profile object
+	profile.Name = newName
+	profile.loadedName = newName
+
+	// Re-sort profiles
+	sort.Slice(pm.profiles, func(i, j int) bool {
+		if pm.profiles[i].IsMain != pm.profiles[j].IsMain {
+			return pm.profiles[i].IsMain
+		}
+		return pm.profiles[i].Name < pm.profiles[j].Name
+	})
+
+	return path, nil
+}
+
 // sanitizeFilename converts a profile name to a safe filename
 func (pm *ProfileManager) sanitizeFilename(name string) string {
 	// Replace spaces with underscores

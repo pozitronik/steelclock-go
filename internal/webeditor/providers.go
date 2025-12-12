@@ -20,6 +20,8 @@ type ProfileProvider interface {
 	SetActiveProfile(path string) error
 	// CreateProfile creates a new profile with the given name and returns its path
 	CreateProfile(name string) (string, error)
+	// RenameProfile renames a profile and returns its new path
+	RenameProfile(oldPath, newName string) (string, error)
 }
 
 // ProfileInfo contains profile metadata for the API
