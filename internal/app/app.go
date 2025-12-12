@@ -95,6 +95,15 @@ func (a *App) Run() {
 		if err := a.Start(); err != nil {
 			a.handleStartupFailure(err)
 		}
+
+		// Auto-start web editor
+		if a.webEditor != nil {
+			if err := a.webEditor.Start(); err != nil {
+				log.Printf("Failed to auto-start web editor: %v", err)
+			} else {
+				log.Printf("Web editor started at %s", a.webEditor.GetURL())
+			}
+		}
 	})
 
 	log.Println("System tray initializing. Use tray icon to control the application.")
@@ -148,7 +157,7 @@ func (a *App) createWebEditor() {
 	// Wire up with tray manager
 	a.trayMgr.SetWebEditor(a.webEditor)
 
-	log.Println("Web editor: Configured (will start on first 'Edit Config' click)")
+	log.Println("Web editor: Configured")
 }
 
 // Start initializes and starts all components

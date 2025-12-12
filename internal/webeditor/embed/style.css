@@ -154,58 +154,64 @@ nav button {
 
 /* Form styling */
 .form-section {
-    margin-bottom: 1.5rem;
-    padding: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.6rem;
     border: 1px solid var(--muted-border-color);
     border-radius: var(--border-radius);
 }
 
 .form-section h2 {
     margin-top: 0;
-    margin-bottom: 1rem;
-    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
     border-bottom: 1px solid var(--muted-border-color);
-    padding-bottom: 0.5rem;
+    padding-bottom: 0.3rem;
 }
 
 .form-section h3 {
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
-    font-size: 1rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.3rem;
+    font-size: 0.9rem;
     color: var(--muted-color);
 }
 
 /* Form grid for side-by-side fields */
 .form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.5rem;
 }
 
 .form-field {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.4rem;
 }
 
 .form-field label {
     display: block;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.15rem;
     font-weight: 500;
+    font-size: 0.8rem;
 }
 
 .form-field small {
     display: block;
     color: var(--muted-color);
-    font-size: 0.8rem;
-    margin-top: 0.25rem;
+    font-size: 0.7rem;
+    margin-top: 0.15rem;
 }
 
 .form-field input[type="number"] {
     width: 100%;
 }
 
-.form-field input[type="checkbox"] {
-    width: auto;
-    margin-right: 0.5rem;
+.form-field input[type="checkbox"],
+.widget-content input[type="checkbox"] {
+    width: 1rem !important;
+    height: 1rem !important;
+    min-width: 1rem;
+    min-height: 1rem;
+    margin-right: 0.3rem;
+    flex-shrink: 0;
 }
 
 .form-field.checkbox-field {
@@ -216,6 +222,7 @@ nav button {
 .form-field.checkbox-field label {
     margin-bottom: 0;
     font-weight: normal;
+    font-size: 0.8rem;
 }
 
 /* Color input styling */
@@ -239,12 +246,13 @@ nav button {
     user-select: none;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.3rem;
+    font-size: 0.8rem;
 }
 
 .collapsible-header::before {
     content: '▶';
-    font-size: 0.75rem;
+    font-size: 0.6rem;
     transition: transform 0.2s;
 }
 
@@ -254,7 +262,7 @@ nav button {
 
 .collapsible-content {
     display: none;
-    padding-top: 0.5rem;
+    padding-top: 0.3rem;
 }
 
 .collapsible-content.expanded {
@@ -272,36 +280,37 @@ nav button {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     border-bottom: 1px solid var(--muted-border-color);
-    padding-bottom: 0.5rem;
+    padding-bottom: 0.3rem;
 }
 
 .widgets-header h2 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1rem;
 }
 
 .widgets-header button {
-    padding: 0.5rem 1rem;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.85rem;
 }
 
 /* Widget list */
 .widget-list {
-    margin-top: 0.5rem;
+    margin-top: 0.25rem;
 }
 
 .empty-message {
     color: var(--muted-color);
     font-style: italic;
     text-align: center;
-    padding: 2rem;
+    padding: 1rem;
 }
 
 .widget-item {
     border: 1px solid var(--muted-border-color);
     border-radius: var(--border-radius);
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
     background: var(--card-background-color);
 }
 
@@ -309,7 +318,7 @@ nav button {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 1rem;
+    padding: 0.4rem 0.6rem;
     background: rgba(0, 0, 0, 0.02);
     border-bottom: 1px solid var(--muted-border-color);
 }
@@ -321,48 +330,148 @@ nav button {
 .widget-title-container {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.4rem;
 }
 
 .widget-item-header h4 {
     margin: 0;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
 }
 
 .drag-handle {
     cursor: grab;
     color: var(--muted-color);
-    font-size: 1.2rem;
+    font-size: 1rem;
     user-select: none;
 }
 
 .widget-actions {
     display: flex;
-    gap: 0.25rem;
+    gap: 0.15rem;
 }
 
 .widget-actions button {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.85rem;
-    min-width: 2rem;
+    padding: 0.15rem 0.4rem;
+    font-size: 0.8rem;
+    min-width: 1.6rem;
 }
 
 .widget-toggle {
-    font-size: 0.7rem !important;
+    font-size: 0.65rem !important;
 }
 
 .widget-content {
-    padding: 1rem;
+    padding: 0.5rem 0.6rem;
 }
 
-.widget-type-section {
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
+/* Compact widget top row (type + position inline) */
+.widget-top-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--muted-border-color);
+    flex-wrap: wrap;
 }
 
-.widget-type-section select {
-    max-width: 300px;
+.widget-type-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.widget-type-compact label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted-color);
+    margin: 0;
+}
+
+.widget-type-compact select {
+    margin: 0;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.8rem;
+    min-width: 120px;
+}
+
+.widget-position-fields {
+    display: flex;
+    gap: 0.4rem;
+    align-items: flex-end;
+}
+
+.pos-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.pos-field label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--muted-color);
+    margin: 0;
+    text-align: center;
+}
+
+.pos-field input {
+    width: 50px;
+    margin: 0;
+    padding: 0.2rem 0.3rem;
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+/* Compact form controls - override Pico's large defaults */
+.widget-content input:not([type="checkbox"], [type="radio"], [type="range"]),
+.widget-content select,
+.widget-content button {
+    height: auto;
+    padding: 0.25rem 0.4rem;
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+/* Compact widget fields grid */
+.widget-fields-grid {
+    gap: 0.4rem;
+}
+
+.widget-fields-grid .form-field {
+    margin-bottom: 0.25rem;
+}
+
+.widget-fields-grid .form-field label {
+    font-size: 0.75rem;
+    margin-bottom: 0.1rem;
+}
+
+.widget-fields-grid .form-field small {
+    font-size: 0.65rem;
+    margin-top: 0.1rem;
+}
+
+/* Flat nested object styling */
+.nested-object-flat {
+    margin-top: 0.25rem;
+    padding: 0.4rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: var(--border-radius);
+    border-left: 2px solid var(--primary);
+}
+
+[data-theme="dark"] .nested-object-flat {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.nested-header {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 0.3rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .hint {

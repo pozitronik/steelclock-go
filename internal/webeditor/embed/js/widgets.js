@@ -147,15 +147,15 @@ class WidgetEditor {
         header.appendChild(titleContainer);
         header.appendChild(actions);
 
-        // Collapsible content
+        // Collapsible content (expanded by default)
         const toggleBtn = document.createElement('button');
         toggleBtn.className = 'widget-toggle outline secondary';
-        toggleBtn.textContent = '▼';
+        toggleBtn.textContent = '▲';
         toggleBtn.title = 'Expand/Collapse';
 
         const content = document.createElement('div');
         content.className = 'widget-content';
-        content.style.display = 'none';
+        content.style.display = 'block';
 
         toggleBtn.addEventListener('click', () => {
             const isExpanded = content.style.display !== 'none';
@@ -200,22 +200,28 @@ class WidgetEditor {
     }
 
     /**
-     * Render fields for a widget
+     * Render fields for a widget (compact layout)
      */
     renderWidgetFields(widget, container, onUpdate) {
         container.innerHTML = '';
 
-        // Type selector (always shown first)
-        const typeSection = document.createElement('div');
-        typeSection.className = 'widget-type-section';
+        // Top row: Type + Position (inline)
+        const topRow = document.createElement('div');
+        topRow.className = 'widget-top-row';
 
-        const typeField = this.createTypeSelector(widget, () => {
-            // Re-render fields when type changes
+        // Type selector (compact)
+        const typeField = this.createCompactTypeSelector(widget, () => {
             this.renderWidgetFields(widget, container, onUpdate);
             onUpdate();
         });
-        typeSection.appendChild(typeField);
-        container.appendChild(typeSection);
+        topRow.appendChild(typeField);
+
+        // Position fields inline (x, y, w, h, z)
+        widget.position = widget.position || { x: 0, y: 0, w: 128, h: 40 };
+        const posFields = this.createPositionFields(widget.position, onUpdate);
+        topRow.appendChild(posFields);
+
+        container.appendChild(topRow);
 
         if (!widget.type) {
             const hint = document.createElement('p');
@@ -228,35 +234,55 @@ class WidgetEditor {
         // Get properties for this widget type
         const properties = this.schema.getWidgetProperties(widget.type);
 
-        // Group properties by category
-        const groups = this.groupProperties(properties, widget.type);
+        // Render remaining fields in a flat grid (skip type and position)
+        const grid = document.createElement('div');
+        grid.className = 'form-grid widget-fields-grid';
 
-        // Render each group
-        for (const [groupName, props] of Object.entries(groups)) {
-            if (Object.keys(props).length === 0) continue;
+        for (const [propName, propSchema] of Object.entries(properties)) {
+            // Skip type and position (already rendered)
+            if (propName === 'type' || propName === 'position') continue;
 
-            const group = this.renderPropertyGroup(groupName, props, widget, onUpdate);
-            container.appendChild(group);
+            // Handle nested objects
+            if (propSchema.properties) {
+                widget[propName] = widget[propName] || {};
+                const nestedFields = this.renderFlatNestedObject(propName, propSchema, widget[propName], onUpdate);
+                grid.appendChild(nestedFields);
+            } else {
+                const field = this.formBuilder.createField(
+                    propName,
+                    propSchema,
+                    widget[propName],
+                    (newVal) => {
+                        if (newVal === undefined) {
+                            delete widget[propName];
+                        } else {
+                            widget[propName] = newVal;
+                        }
+                        onUpdate();
+                    }
+                );
+                grid.appendChild(field);
+            }
         }
+
+        container.appendChild(grid);
     }
 
     /**
-     * Create widget type selector
+     * Create compact widget type selector (inline style)
      */
-    createTypeSelector(widget, onTypeChange) {
+    createCompactTypeSelector(widget, onTypeChange) {
         const container = document.createElement('div');
-        container.className = 'form-field';
+        container.className = 'widget-type-compact';
 
         const label = document.createElement('label');
-        label.textContent = 'Widget Type';
-        label.setAttribute('for', 'widget-type-select');
+        label.textContent = 'Type';
 
         const select = document.createElement('select');
-        select.id = 'widget-type-select';
 
         const emptyOpt = document.createElement('option');
         emptyOpt.value = '';
-        emptyOpt.textContent = '-- Select Type --';
+        emptyOpt.textContent = '-- Select --';
         select.appendChild(emptyOpt);
 
         const types = this.schema.getWidgetTypes();
@@ -277,6 +303,45 @@ class WidgetEditor {
 
         container.appendChild(label);
         container.appendChild(select);
+
+        return container;
+    }
+
+    /**
+     * Create compact position fields (x, y, w, h, z in a row)
+     */
+    createPositionFields(position, onUpdate) {
+        const container = document.createElement('div');
+        container.className = 'widget-position-fields';
+
+        const fields = [
+            { key: 'x', label: 'X' },
+            { key: 'y', label: 'Y' },
+            { key: 'w', label: 'W' },
+            { key: 'h', label: 'H' },
+            { key: 'z', label: 'Z' }
+        ];
+
+        for (const { key, label } of fields) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'pos-field';
+
+            const lbl = document.createElement('label');
+            lbl.textContent = label;
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.value = position[key] ?? (key === 'z' ? 0 : '');
+            input.addEventListener('input', () => {
+                position[key] = input.value === '' ? undefined : Number(input.value);
+                onUpdate();
+                this.onChange();
+            });
+
+            wrapper.appendChild(lbl);
+            wrapper.appendChild(input);
+            container.appendChild(wrapper);
+        }
 
         return container;
     }
@@ -355,36 +420,43 @@ class WidgetEditor {
     }
 
     /**
-     * Render nested object properties inline
+     * Render nested object properties flat (compact, with section label)
      */
-    renderNestedObject(name, schema, obj, onUpdate) {
+    renderFlatNestedObject(name, schema, obj, onUpdate) {
         const container = document.createElement('div');
-        container.className = 'nested-object';
+        container.className = 'nested-object-flat';
         container.style.gridColumn = '1 / -1';
 
-        const title = document.createElement('h4');
-        title.textContent = this.schema.getLabel(name);
-        title.style.marginBottom = '0.5rem';
-        container.appendChild(title);
+        const header = document.createElement('div');
+        header.className = 'nested-header';
+        header.textContent = this.schema.getLabel(name);
+        container.appendChild(header);
 
         const grid = document.createElement('div');
         grid.className = 'form-grid';
 
         for (const [propName, propSchema] of Object.entries(schema.properties || {})) {
-            const field = this.formBuilder.createField(
-                propName,
-                propSchema,
-                obj[propName],
-                (newVal) => {
-                    if (newVal === undefined) {
-                        delete obj[propName];
-                    } else {
-                        obj[propName] = newVal;
+            // Recursively handle nested objects
+            if (propSchema.properties) {
+                obj[propName] = obj[propName] || {};
+                const nested = this.renderFlatNestedObject(propName, propSchema, obj[propName], onUpdate);
+                grid.appendChild(nested);
+            } else {
+                const field = this.formBuilder.createField(
+                    propName,
+                    propSchema,
+                    obj[propName],
+                    (newVal) => {
+                        if (newVal === undefined) {
+                            delete obj[propName];
+                        } else {
+                            obj[propName] = newVal;
+                        }
+                        onUpdate();
                     }
-                    onUpdate();
-                }
-            );
-            grid.appendChild(field);
+                );
+                grid.appendChild(field);
+            }
         }
 
         container.appendChild(grid);
