@@ -302,17 +302,6 @@ class PreviewPanel {
     }
 
     /**
-     * Toggle panel visibility
-     */
-    async toggle() {
-        if (this.isVisible) {
-            await this.hide();
-        } else {
-            await this.show();
-        }
-    }
-
-    /**
      * Set zoom level
      * @param {number} zoom - Zoom multiplier (1, 2, 4, 8)
      */
@@ -409,22 +398,6 @@ class PreviewPanel {
         }
 
         document.getElementById('preview-fps').textContent = '0 FPS';
-    }
-
-    /**
-     * Fetch a single frame for static preview
-     */
-    async fetchStaticFrame() {
-        if (!this.available) return;
-
-        try {
-            const data = await API.getPreviewFrame();
-            if (data.frame) {
-                this.renderFrame(data.frame);
-            }
-        } catch (err) {
-            console.warn('Failed to fetch preview frame:', err);
-        }
     }
 
     /**

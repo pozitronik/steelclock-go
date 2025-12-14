@@ -235,53 +235,6 @@ class SchemaProcessor {
     }
 
     /**
-     * Get required fields for root schema
-     * @returns {string[]} Array of required field names
-     */
-    getRootRequired() {
-        return this.schema.required || [];
-    }
-
-    /**
-     * Get a specific definition by name
-     * @param {string} name - Definition name
-     * @returns {Object|null} The definition
-     */
-    getDefinition(name) {
-        const def = this.definitions[name];
-        if (!def) {
-            return null;
-        }
-        const resolved = JSON.parse(JSON.stringify(def));
-        this.resolveNestedRefs(resolved);
-        return resolved;
-    }
-
-    /**
-     * Get property schema with resolved refs
-     * @param {string} propPath - Dot-separated property path (e.g., "display.width")
-     * @returns {Object|null} The property schema
-     */
-    getPropertySchema(propPath) {
-        const parts = propPath.split('.');
-        let current = this.getRootProperties();
-
-        for (const part of parts) {
-            if (!current || !current[part]) {
-                return null;
-            }
-            current = current[part];
-
-            // If it's an object with properties, go into properties
-            if (current.properties) {
-                current = current.properties;
-            }
-        }
-
-        return current;
-    }
-
-    /**
      * Check if a property is an enum
      * @param {Object} propSchema - The property schema
      * @returns {boolean}

@@ -77,23 +77,6 @@ const API = {
     },
 
     /**
-     * Validate configuration without saving
-     * @param {Object} config - The configuration to validate
-     * @returns {Promise<Object>} Validation result with valid (boolean) and errors (array)
-     */
-    async validateConfig(config) {
-        const response = await fetch('/api/validate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(config),
-        });
-
-        return response.json();
-    },
-
-    /**
      * Get all profiles
      * @returns {Promise<Array>} List of profiles
      */
