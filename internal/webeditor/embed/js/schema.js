@@ -2,11 +2,51 @@
  * SchemaProcessor - Resolves $ref and extracts widget-specific schemas
  */
 
+/**
+ * @typedef {Object} JSONSchemaProperty
+ * @property {string} [$ref] - Reference to another definition
+ * @property {string} [type] - Property type
+ * @property {string} [description] - Property description
+ * @property {*} [default] - Default value
+ * @property {number} [minimum] - Minimum value
+ * @property {number} [maximum] - Maximum value
+ * @property {number} [minLength] - Minimum string length
+ * @property {number} [maxLength] - Maximum string length
+ * @property {string} [pattern] - Regex pattern for strings
+ * @property {Array<string|number>} [enum] - Enumeration of allowed values
+ * @property {string} [const] - Constant value
+ * @property {Object<string, JSONSchemaProperty>} [properties] - Nested properties for objects
+ * @property {JSONSchemaProperty} [items] - Schema for array items
+ * @property {Array<string>} [required] - Required property names
+ * @property {Array<JSONSchemaProperty|JSONSchemaConditional>} [allOf] - All of these schemas must match
+ */
+
+/**
+ * @typedef {Object} JSONSchemaConditional
+ * @property {JSONSchemaProperty} [if] - Condition schema
+ * @property {JSONSchemaProperty} [then] - Schema if condition matches
+ * @property {JSONSchemaProperty} [else] - Schema if condition doesn't match
+ */
+
+/**
+ * @typedef {Object} JSONSchema
+ * @property {Object<string, JSONSchemaProperty>} [properties] - Root properties
+ * @property {Object<string, JSONSchemaProperty>} [definitions] - Schema definitions
+ * @property {Array<string>} [required] - Required properties
+ */
+
 class SchemaProcessor {
+    /**
+     * @param {JSONSchema} schema - The JSON Schema to process
+     */
     constructor(schema) {
+        /** @type {JSONSchema} */
         this.schema = schema;
-        this.definitions = schema.definitions || {};
+        /** @type {Object<string, JSONSchemaProperty>} */
+        this.definitions = /** @type {Object<string, JSONSchemaProperty>} */ (schema.definitions || {});
+        /** @type {Object<string, {base: Object, specific: Object, required: string[]}>} */
         this.widgetSchemas = {};
+        /** @type {Map<string, JSONSchemaProperty>} */
         this.processedRefs = new Map();
     }
 
@@ -51,7 +91,7 @@ class SchemaProcessor {
 
     /**
      * Recursively resolve $ref and allOf in an object
-     * @param {Object} obj - The object to process
+     * @param {JSONSchemaProperty|JSONSchemaProperty[]} obj - The object to process
      */
     resolveNestedRefs(obj) {
         if (!obj || typeof obj !== 'object') {
@@ -87,7 +127,7 @@ class SchemaProcessor {
 
     /**
      * Merge allOf array into a single schema
-     * @param {Object} obj - Object containing allOf array
+     * @param {JSONSchemaProperty} obj - Object containing allOf array
      */
     mergeAllOf(obj) {
         if (!Array.isArray(obj.allOf)) {
@@ -114,7 +154,7 @@ class SchemaProcessor {
 
             // Merge properties
             if (item.properties) {
-                obj.properties = obj.properties || {};
+                obj.properties = /** @type {Object<string, JSONSchemaProperty>} */ (obj.properties || {});
                 for (const [key, value] of Object.entries(item.properties)) {
                     // If property already exists, merge them
                     if (obj.properties[key]) {
@@ -244,7 +284,7 @@ class SchemaProcessor {
     }
 
     /**
-     * Get the type of a property
+     * Get the type of property
      * @param {Object} propSchema - The property schema
      * @returns {string} The type (string, number, boolean, object, array, enum)
      */
@@ -322,7 +362,7 @@ class SchemaProcessor {
     /**
      * Apply defaults from property schemas to an object
      * @param {Object} obj - The object to fill with defaults
-     * @param {Object} properties - Schema properties object
+     * @param {Object<string, JSONSchemaProperty>} properties - Schema properties object
      */
     applyDefaultsToObject(obj, properties) {
         if (!properties || typeof properties !== 'object') {

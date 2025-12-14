@@ -157,7 +157,7 @@ func (s *SplashRenderer) renderWebClientModeFrame() *image.Gray {
 	// Draw text
 	glyphs.DrawText(img, text, textX, textY, font, color.Gray{Y: 255})
 
-	// Draw decorative border lines
+	// Draw decorative borderlines
 	lineY1 := textY - 5
 	lineY2 := textY + textHeight + 4
 	lineStart := textX - 10
