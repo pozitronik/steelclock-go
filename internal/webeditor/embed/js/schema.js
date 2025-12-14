@@ -167,7 +167,7 @@ class SchemaProcessor {
 
             // Merge required arrays
             if (Array.isArray(item.required)) {
-                obj.required = obj.required || [];
+                obj.required = /** @type {Array<string>} */ (obj.required || []);
                 for (const req of item.required) {
                     if (!obj.required.includes(req)) {
                         obj.required.push(req);
