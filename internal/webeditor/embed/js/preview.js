@@ -36,6 +36,14 @@ class PreviewPanel {
 
         // Restore settings after panel is created
         this.restoreSettings();
+
+        // Add page unload listener to reset preview override
+        window.addEventListener('beforeunload', () => {
+            if (this.isVisible) {
+                // Use sendBeacon for reliable delivery during page unload
+                navigator.sendBeacon('/api/preview/override', JSON.stringify({ enable: false }));
+            }
+        });
     }
 
     /**
