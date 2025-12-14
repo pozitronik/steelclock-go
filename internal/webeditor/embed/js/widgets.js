@@ -2,6 +2,17 @@
  * WidgetEditor - Handles widget-specific form editing
  */
 
+/**
+ * @typedef {Object} JSONSchemaProperty
+ * @property {string} [type] - Property type
+ * @property {string} [description] - Property description
+ * @property {*} [default] - Default value
+ * @property {number} [minimum] - Minimum value for numbers
+ * @property {number} [maximum] - Maximum value for numbers
+ * @property {Array<string|number>} [enum] - Enumeration of allowed values
+ * @property {Object<string, JSONSchemaProperty>} [properties] - Nested properties
+ */
+
 class WidgetEditor {
     constructor(schemaProcessor, formBuilder, onChange) {
         this.schema = schemaProcessor;
@@ -378,6 +389,10 @@ class WidgetEditor {
 
     /**
      * Create appropriate input element based on schema type
+     * @param {JSONSchemaProperty} schema - Property schema
+     * @param {*} value - Current value
+     * @param {Function} onChange - Change callback
+     * @returns {HTMLElement}
      */
     createInputForSchema(schema, value, onChange) {
         // Enum - use select

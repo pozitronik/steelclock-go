@@ -2,6 +2,18 @@
  * FormBuilder - Creates form fields from schema properties
  */
 
+/**
+ * @typedef {Object} JSONSchemaProperty
+ * @property {string} [type] - Property type (string, number, integer, boolean, object, array)
+ * @property {string} [description] - Property description
+ * @property {*} [default] - Default value
+ * @property {number} [minimum] - Minimum value for numbers
+ * @property {number} [maximum] - Maximum value for numbers
+ * @property {Array<string|number>} [enum] - Enumeration of allowed values
+ * @property {Object<string, JSONSchemaProperty>} [properties] - Nested properties for objects
+ * @property {JSONSchemaProperty} [items] - Schema for array items
+ */
+
 class FormBuilder {
     constructor(schemaProcessor, onChange) {
         this.schema = schemaProcessor;
@@ -30,7 +42,7 @@ class FormBuilder {
      * Create a collapsible section
      * @param {string} title - Section title
      * @param {boolean} expanded - Whether initially expanded
-     * @returns {HTMLElement}
+     * @returns {{container: HTMLDivElement, content: HTMLDivElement}}
      */
     createCollapsibleSection(title, expanded = false) {
         const container = document.createElement('div');
@@ -127,6 +139,12 @@ class FormBuilder {
 
     /**
      * Create a number input field
+     * @param {string} name - Field name
+     * @param {string} label - Field label
+     * @param {string} description - Field description
+     * @param {JSONSchemaProperty} propSchema - Property schema
+     * @param {number} [value] - Current value
+     * @param {Function} onUpdate - Update callback
      */
     createNumberField(name, label, description, propSchema, value, onUpdate) {
         const container = document.createElement('div');
@@ -143,10 +161,10 @@ class FormBuilder {
         input.value = value ?? propSchema.default ?? '';
 
         if (propSchema.minimum !== undefined) {
-            input.min = propSchema.minimum;
+            input.min = String(propSchema.minimum);
         }
         if (propSchema.maximum !== undefined) {
-            input.max = propSchema.maximum;
+            input.max = String(propSchema.maximum);
         }
 
         // Check if this is a color field (0-255 or -1 for transparent)
@@ -239,6 +257,12 @@ class FormBuilder {
 
     /**
      * Create an enum select field
+     * @param {string} name - Field name
+     * @param {string} label - Field label
+     * @param {string} description - Field description
+     * @param {JSONSchemaProperty} propSchema - Property schema with enum values
+     * @param {string|number} [value] - Current value
+     * @param {Function} onUpdate - Update callback
      */
     createEnumField(name, label, description, propSchema, value, onUpdate) {
         const container = document.createElement('div');
@@ -408,9 +432,9 @@ class FormBuilder {
      * Render display config section
      * Note: This section is hidden as display settings are advanced options.
      * Users can edit display settings in JSON view if needed.
-     * @param {Object} config - Current configuration
-     * @param {Function} onUpdate - Callback when config changes
-     * @returns {HTMLElement|null}
+     * @param _onUpdate
+     * @param _config
+     * @param _onUpdate
      */
     renderDisplayConfig(_config, _onUpdate) {
         // Return null to hide this section - display settings are advanced
@@ -422,9 +446,9 @@ class FormBuilder {
      * Render defaults config section
      * Note: This section is hidden as it contains complex dynamic properties.
      * Users can edit defaults in JSON view if needed.
-     * @param {Object} config - Current configuration
-     * @param {Function} onUpdate - Callback when config changes
-     * @returns {HTMLElement|null}
+     * @param _onUpdate
+     * @param _config
+     * @param _onUpdate
      */
     renderDefaultsConfig(_config, _onUpdate) {
         // Return null to hide this section - defaults contain dynamic color

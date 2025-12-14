@@ -202,6 +202,7 @@
             async checkAvailability() {
                 try {
                     const response = await fetch('/api/preview');
+                    /** @type {{available: boolean, width: number, height: number, target_fps: number}} */
                     const info = await response.json();
 
                     if (info.available) {
@@ -289,6 +290,7 @@
 
                 this.ws.onmessage = (event) => {
                     try {
+                        /** @type {{type: string, frame?: string, width?: number, height?: number, target_fps?: number}} */
                         const data = JSON.parse(event.data);
 
                         if (data.type === 'frame') {

@@ -3,6 +3,22 @@
  * Renders packed bit frames to a canvas element with zoom support
  */
 
+/**
+ * @typedef {Object} PreviewInfo
+ * @property {boolean} available - Whether preview is available
+ * @property {number} width - Display width
+ * @property {number} height - Display height
+ * @property {number} target_fps - Target frame rate
+ */
+
+/**
+ * @typedef {Object} PreviewConfigMessage
+ * @property {string} type - Message type ('config')
+ * @property {number} width - Display width
+ * @property {number} height - Display height
+ * @property {number} target_fps - Target frame rate
+ */
+
 class PreviewPanel {
     static STORAGE_KEY = 'steelclock_preview_settings';
 
@@ -213,6 +229,7 @@ class PreviewPanel {
      */
     async init() {
         try {
+            /** @type {PreviewInfo} */
             const info = await API.getPreviewInfo();
 
             if (info.available) {
@@ -349,6 +366,7 @@ class PreviewPanel {
 
         this.ws.onmessage = (event) => {
             try {
+                /** @type {{type: string, frame?: string, width?: number, height?: number, target_fps?: number}} */
                 const data = JSON.parse(event.data);
 
                 if (data.type === 'frame') {
