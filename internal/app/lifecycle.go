@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/pozitronik/steelclock-go/internal/backend"
-	"github.com/pozitronik/steelclock-go/internal/backend/preview"
+	"github.com/pozitronik/steelclock-go/internal/backend/webclient"
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/compositor"
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -354,14 +354,14 @@ func (m *LifecycleManager) handleBackendFailure(cfg *config.Config) {
 	log.Println("========================================")
 }
 
-// GetPreviewClient returns the preview client if the preview backend is active
-func (m *LifecycleManager) GetPreviewClient() *preview.Client {
+// GetWebClient returns the webclient if the webclient backend is active
+func (m *LifecycleManager) GetWebClient() *webclient.Client {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.currentBackend == "preview" {
-		if previewClient, ok := m.client.(*preview.Client); ok {
-			return previewClient
+	if m.currentBackend == "webclient" {
+		if webClient, ok := m.client.(*webclient.Client); ok {
+			return webClient
 		}
 	}
 	return nil
@@ -374,9 +374,9 @@ func (m *LifecycleManager) GetCurrentBackend() string {
 	return m.currentBackend
 }
 
-// ShowPreviewModeMessage displays "PREVIEW MODE" on the current backend
-// This is called before switching to preview backend
-func (m *LifecycleManager) ShowPreviewModeMessage() {
+// ShowWebClientModeMessage displays "WEB CLIENT" on the current backend
+// This is called before switching to webclient backend
+func (m *LifecycleManager) ShowWebClientModeMessage() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -392,7 +392,7 @@ func (m *LifecycleManager) ShowPreviewModeMessage() {
 	}
 
 	splash := NewSplashRenderer(m.client, displayWidth, displayHeight)
-	if err := splash.ShowPreviewModeMessage(); err != nil {
-		log.Printf("Warning: Failed to show preview mode message: %v", err)
+	if err := splash.ShowWebClientModeMessage(); err != nil {
+		log.Printf("Warning: Failed to show webclient mode message: %v", err)
 	}
 }

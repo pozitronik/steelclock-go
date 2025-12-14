@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/pozitronik/steelclock-go/internal/backend/preview"
+	"github.com/pozitronik/steelclock-go/internal/backend/webclient"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/webeditor"
 )
@@ -114,26 +114,26 @@ func (a *ProfileProviderAdapter) RenameProfile(oldPath, newName string) (string,
 	return a.profileMgr.RenameProfile(oldPath, newName)
 }
 
-// PreviewProviderAdapter adapts preview.Client to webeditor.PreviewProvider interface
-type PreviewProviderAdapter struct {
-	client *preview.Client
+// WebClientProviderAdapter adapts webclient.Client to webeditor.PreviewProvider interface
+type WebClientProviderAdapter struct {
+	client *webclient.Client
 }
 
-// NewPreviewProviderAdapter creates a new PreviewProviderAdapter
-func NewPreviewProviderAdapter(client *preview.Client) *PreviewProviderAdapter {
+// NewWebClientProviderAdapter creates a new WebClientProviderAdapter
+func NewWebClientProviderAdapter(client *webclient.Client) *WebClientProviderAdapter {
 	if client == nil {
 		return nil
 	}
-	return &PreviewProviderAdapter{client: client}
+	return &WebClientProviderAdapter{client: client}
 }
 
 // GetCurrentFrame returns the current frame data, frame number, and timestamp
-func (a *PreviewProviderAdapter) GetCurrentFrame() ([]byte, uint64, time.Time) {
+func (a *WebClientProviderAdapter) GetCurrentFrame() ([]byte, uint64, time.Time) {
 	return a.client.GetCurrentFrame()
 }
 
-// GetPreviewConfig returns the preview configuration
-func (a *PreviewProviderAdapter) GetPreviewConfig() webeditor.PreviewDisplayConfig {
+// GetPreviewConfig returns the webclient configuration
+func (a *WebClientProviderAdapter) GetPreviewConfig() webeditor.PreviewDisplayConfig {
 	cfg := a.client.GetConfig()
 	return webeditor.PreviewDisplayConfig{
 		Width:     cfg.Width,
@@ -142,7 +142,7 @@ func (a *PreviewProviderAdapter) GetPreviewConfig() webeditor.PreviewDisplayConf
 	}
 }
 
-// HandleWebSocket handles a WebSocket connection for live preview
-func (a *PreviewProviderAdapter) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+// HandleWebSocket handles a WebSocket connection for live display
+func (a *WebClientProviderAdapter) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	a.client.HandleWebSocket(w, r)
 }

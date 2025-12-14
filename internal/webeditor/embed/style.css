@@ -1,19 +1,131 @@
 /* Custom styles for SteelClock Configuration Editor */
 
-/* View toggle buttons */
+/* View toggle switch */
 .view-toggle {
     margin: 0;
     padding: 0;
-    border: none;
     display: inline-flex;
-    width: auto;
+    align-items: center;
+    gap: 0.4em;
     flex-shrink: 0;
 }
 
-.view-toggle button[aria-pressed="true"] {
-    background-color: var(--primary);
-    border-color: var(--primary);
-    color: var(--primary-inverse);
+.view-toggle-label {
+    font-size: 0.8rem;
+    color: var(--muted-color);
+    cursor: pointer;
+    transition: color 0.2s;
+    font-weight: 600;
+}
+
+.view-toggle-label::before {
+    content: attr(data-view);
+    text-transform: capitalize;
+    font-weight: 600;
+    visibility: hidden;
+    height: 0;
+    display: block;
+}
+
+.view-toggle-label:not(.active) {
+    font-weight: 400;
+}
+
+.view-toggle-label.active {
+    color: var(--primary);
+}
+
+/* Toggle divider */
+.toggle-divider {
+    width: 1px;
+    height: 16px;
+    background-color: #ccc;
+    margin: 0 0.3em;
+}
+
+[data-theme="dark"] .toggle-divider {
+    background-color: #555;
+}
+
+/* Preview toggle */
+.preview-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+}
+
+.preview-toggle-label {
+    font-size: 0.8rem;
+    color: var(--muted-color);
+    cursor: pointer;
+    transition: color 0.2s;
+    font-weight: 600;
+}
+
+.preview-toggle-label::before {
+    content: "Preview";
+    font-weight: 600;
+    visibility: hidden;
+    height: 0;
+    display: block;
+}
+
+.preview-toggle:not(:has(input:checked)) .preview-toggle-label {
+    font-weight: 400;
+}
+
+.preview-toggle:has(input:checked) .preview-toggle-label {
+    color: var(--primary);
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 36px;
+    height: 20px;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.toggle-slider {
+    width: 36px;
+    height: 20px;
+    background-color: #ccc;
+    border: 1px solid #999;
+    transition: 0.2s;
+    border-radius: 10px;
+    cursor: pointer;
+    position: relative;
+}
+
+[data-theme="dark"] .toggle-slider {
+    background-color: #444;
+    border-color: #666;
+}
+
+.toggle-slider::before {
+    content: "";
+    position: absolute;
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    top: 2px;
+    background-color: #1095c1;
+    transition: 0.2s;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    left: 18px;
 }
 
 /* Editor containers - overflow visible needed for sticky headers */
@@ -742,12 +854,6 @@ main.container {
     padding: 0.1rem 0.3rem;
     border-radius: 3px;
     font-size: 0.75rem;
-}
-
-/* Preview toggle button in header */
-#btn-preview {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
 }
 
 /* Dark mode preview panel */

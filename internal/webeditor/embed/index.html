@@ -25,15 +25,25 @@
                     <button id="btn-new-profile" class="outline secondary" title="Create new profile">+</button>
                 </div>
                 <div class="header-actions">
-                    <button id="btn-preview" class="secondary outline" title="Toggle display preview">Preview</button>
                     <button id="btn-reload" class="secondary outline">Reload</button>
                     <button id="btn-save" class="primary outline">Save</button>
                     <button id="btn-apply" class="primary">Apply</button>
                 </div>
-                <fieldset role="group" class="view-toggle">
-                    <button id="btn-view-form" class="outline" aria-pressed="true">Form</button>
-                    <button id="btn-view-json" class="outline secondary" aria-pressed="false">JSON</button>
-                </fieldset>
+                <div class="view-toggle">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="view-toggle-checkbox">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="view-toggle-label" data-view="json">JSON</span>
+                </div>
+                <div class="toggle-divider"></div>
+                <div class="preview-toggle" title="Toggle display preview">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="preview-toggle-checkbox">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="preview-toggle-label">Preview</span>
+                </div>
                 <span id="status" class="status-indicator">Ready</span>
             </div>
         </header>

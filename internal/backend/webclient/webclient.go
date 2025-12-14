@@ -1,7 +1,7 @@
-// Package preview provides a display backend for web-based preview.
+// Package webclient provides a display backend for web-based display.
 // This backend stores rendered frames in memory and broadcasts them
-// to connected WebSocket clients for live preview in the web editor.
-package preview
+// to connected WebSocket clients for live display in the browser.
+package webclient
 
 import (
 	"context"
@@ -17,14 +17,14 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/display"
 )
 
-// Priority for auto-selection (highest = tried last, preview should not be auto-selected)
+// Priority for auto-selection (highest = tried last, webclient should not be auto-selected)
 const Priority = 1000
 
 func init() {
-	backend.Register("preview", newBackend, Priority)
+	backend.Register("webclient", newBackend, Priority)
 }
 
-// Config holds preview backend configuration
+// Config holds webclient backend configuration
 type Config struct {
 	// TargetFPS limits the frame rate sent to clients (0 = unlimited)
 	TargetFPS int
@@ -34,7 +34,7 @@ type Config struct {
 	Height int
 }
 
-// Client implements display.Backend for web preview
+// Client implements display.Backend for web display
 type Client struct {
 	config Config
 
@@ -71,30 +71,30 @@ type FrameMessage struct {
 	Timestamp   int64  `json:"timestamp"` // Unix milliseconds
 }
 
-// newBackend creates a preview backend from configuration
+// newBackend creates a webclient backend from configuration
 func newBackend(cfg *config.Config) (display.Backend, error) {
-	previewCfg := Config{
+	webclientCfg := Config{
 		TargetFPS: 30, // Default 30 FPS
 		Width:     cfg.Display.Width,
 		Height:    cfg.Display.Height,
 	}
 
 	// Override from config if available
-	if cfg.Preview != nil {
-		if cfg.Preview.TargetFPS > 0 {
-			previewCfg.TargetFPS = cfg.Preview.TargetFPS
+	if cfg.WebClient != nil {
+		if cfg.WebClient.TargetFPS > 0 {
+			webclientCfg.TargetFPS = cfg.WebClient.TargetFPS
 		}
 	}
 
-	client := NewClient(previewCfg)
+	client := NewClient(webclientCfg)
 
-	log.Printf("Preview backend created (width: %d, height: %d, target FPS: %d)",
-		previewCfg.Width, previewCfg.Height, previewCfg.TargetFPS)
+	log.Printf("WebClient backend created (width: %d, height: %d, target FPS: %d)",
+		webclientCfg.Width, webclientCfg.Height, webclientCfg.TargetFPS)
 
 	return client, nil
 }
 
-// NewClient creates a new preview client
+// NewClient creates a new webclient
 func NewClient(cfg Config) *Client {
 	var minInterval time.Duration
 	if cfg.TargetFPS > 0 {
@@ -126,7 +126,7 @@ func (c *Client) SendScreenDataMultiRes(_ string, resolutionData map[string][]by
 
 // SendMultipleScreenData implements display.FrameSender
 func (c *Client) SendMultipleScreenData(_ string, frames [][]byte) error {
-	// Send only the last frame for preview
+	// Send only the last frame for webclient
 	if len(frames) > 0 {
 		c.storeAndBroadcast(frames[len(frames)-1])
 	}
@@ -135,7 +135,7 @@ func (c *Client) SendMultipleScreenData(_ string, frames [][]byte) error {
 
 // SendHeartbeat implements display.HeartbeatSender
 func (c *Client) SendHeartbeat() error {
-	// No-op for preview backend
+	// No-op for webclient backend
 	return nil
 }
 
@@ -146,19 +146,19 @@ func (c *Client) SupportsMultipleEvents() bool {
 
 // RegisterGame implements display.GameRegistrar
 func (c *Client) RegisterGame(_ string, _ int) error {
-	// No-op for preview backend
+	// No-op for webclient backend
 	return nil
 }
 
 // BindScreenEvent implements display.GameRegistrar
 func (c *Client) BindScreenEvent(_ string, _ string) error {
-	// No-op for preview backend
+	// No-op for webclient backend
 	return nil
 }
 
 // RemoveGame implements display.GameRegistrar
 func (c *Client) RemoveGame() error {
-	// No-op for preview backend
+	// No-op for webclient backend
 	return nil
 }
 
@@ -209,7 +209,7 @@ func (c *Client) broadcast(data []byte, frameNum uint64, timestamp time.Time) {
 
 	msgBytes, err := json.Marshal(msg)
 	if err != nil {
-		log.Printf("Preview: failed to marshal frame message: %v", err)
+		log.Printf("WebClient: failed to marshal frame message: %v", err)
 		return
 	}
 
@@ -226,7 +226,7 @@ func (c *Client) broadcast(data []byte, frameNum uint64, timestamp time.Time) {
 	}
 }
 
-// GetCurrentFrame returns the current frame data for static preview
+// GetCurrentFrame returns the current frame data for static display
 func (c *Client) GetCurrentFrame() ([]byte, uint64, time.Time) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -240,7 +240,7 @@ func (c *Client) GetCurrentFrame() ([]byte, uint64, time.Time) {
 	return frame, c.frameNumber, c.lastUpdate
 }
 
-// GetConfig returns the preview configuration
+// GetConfig returns the webclient configuration
 func (c *Client) GetConfig() Config {
 	return c.config
 }
@@ -252,13 +252,13 @@ func (c *Client) SubscriberCount() int {
 	return len(c.subscribers)
 }
 
-// HandleWebSocket handles a WebSocket connection for live preview
+// HandleWebSocket handles a WebSocket connection for live display
 func (c *Client) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		OriginPatterns: []string{"*"}, // Allow all origins for local use
 	})
 	if err != nil {
-		log.Printf("Preview: failed to accept WebSocket: %v", err)
+		log.Printf("WebClient: failed to accept WebSocket: %v", err)
 		return
 	}
 
@@ -275,7 +275,7 @@ func (c *Client) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	c.subscribers[sub] = struct{}{}
 	c.subscribersMu.Unlock()
 
-	log.Printf("Preview: client connected (total: %d)", c.SubscriberCount())
+	log.Printf("WebClient: client connected (total: %d)", c.SubscriberCount())
 
 	// Send current frame immediately if available
 	frame, frameNum, timestamp := c.GetCurrentFrame()
@@ -323,7 +323,7 @@ func (c *Client) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	c.subscribersMu.Unlock()
 
 	_ = conn.Close(websocket.StatusNormalClosure, "")
-	log.Printf("Preview: client disconnected (total: %d)", c.SubscriberCount())
+	log.Printf("WebClient: client disconnected (total: %d)", c.SubscriberCount())
 }
 
 // sendLoop sends messages to a WebSocket client

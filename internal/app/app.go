@@ -55,13 +55,13 @@ type App struct {
 	// trigger config changes concurrently.
 	configMu sync.Mutex
 
-	// previewBrowserOpened tracks if we've already opened the preview browser
+	// webclientBrowserOpened tracks if we've already opened the webclient browser
 	// to avoid opening multiple times during session
-	previewBrowserOpened bool
+	webclientBrowserOpened bool
 
-	// Preview override state - for temporary preview backend when using config editor
-	previewOverrideActive   bool
-	previewOverrideOriginal string // Original backend name to restore
+	// WebClient override state - for temporary webclient backend when using config editor
+	webclientOverrideActive   bool
+	webclientOverrideOriginal string // Original backend name to restore
 }
 
 // NewApp creates a new application instance (legacy single-config mode)
@@ -112,8 +112,8 @@ func (a *App) Run() {
 				log.Printf("Failed to auto-start web editor: %v", err)
 			} else {
 				log.Printf("Web editor started at %s", a.webEditor.GetURL())
-				// Try to open preview browser now that web editor is running
-				a.openPreviewBrowser()
+				// Try to open webclient browser now that web editor is running
+				a.openWebClientBrowser()
 			}
 		}
 	})
@@ -166,8 +166,8 @@ func (a *App) createWebEditor() {
 	// Create web editor server
 	a.webEditor = webeditor.NewServer(configProvider, profileProvider, schemaPath, a.ReloadConfig, onProfileSwitch)
 
-	// Set preview override callback
-	a.webEditor.SetPreviewOverrideCallback(a.SetPreviewOverride)
+	// Set webclient override callback
+	a.webEditor.SetPreviewOverrideCallback(a.SetWebClientOverride)
 
 	// Wire up with tray manager
 	a.trayMgr.SetWebEditor(a.webEditor)
@@ -187,8 +187,8 @@ func (a *App) Start() error {
 		return a.handleStartupError(err, cfg)
 	}
 
-	// Update preview provider if preview backend is active
-	a.updatePreviewProvider()
+	// Update webclient provider if webclient backend is active
+	a.updateWebClientProvider()
 
 	return nil
 }
@@ -198,47 +198,47 @@ func (a *App) Stop() {
 	a.lifecycle.Stop()
 }
 
-// updatePreviewProvider updates the web editor with the preview provider if preview backend is active
-func (a *App) updatePreviewProvider() {
+// updateWebClientProvider updates the web editor with the webclient provider if webclient backend is active
+func (a *App) updateWebClientProvider() {
 	if a.webEditor == nil {
 		return
 	}
 
-	previewClient := a.lifecycle.GetPreviewClient()
-	if previewClient != nil {
-		adapter := NewPreviewProviderAdapter(previewClient)
+	webClient := a.lifecycle.GetWebClient()
+	if webClient != nil {
+		adapter := NewWebClientProviderAdapter(webClient)
 		a.webEditor.SetPreviewProvider(adapter)
-		log.Println("Preview provider connected to web editor")
+		log.Println("WebClient provider connected to web editor")
 
-		// Auto-open browser for preview if web editor is running
-		a.openPreviewBrowser()
+		// Auto-open browser for webclient if web editor is running
+		a.openWebClientBrowser()
 	} else {
 		a.webEditor.SetPreviewProvider(nil)
 	}
 }
 
-// openPreviewBrowser opens the preview page in browser if conditions are met
-func (a *App) openPreviewBrowser() {
+// openWebClientBrowser opens the webclient page in browser if conditions are met
+func (a *App) openWebClientBrowser() {
 	// Only open once per session
-	if a.previewBrowserOpened {
+	if a.webclientBrowserOpened {
 		return
 	}
 
 	// Check if web editor is running
 	if !a.webEditor.IsRunning() {
-		log.Println("Preview: web editor not running yet, will open browser later")
+		log.Println("WebClient: web editor not running yet, will open browser later")
 		return
 	}
 
-	// Check if preview backend is active
-	if a.lifecycle.GetPreviewClient() == nil {
+	// Check if webclient backend is active
+	if a.lifecycle.GetWebClient() == nil {
 		return
 	}
 
-	a.previewBrowserOpened = true
-	previewURL := a.webEditor.GetURL() + "/preview"
-	log.Printf("Opening preview in browser: %s", previewURL)
-	if err := openBrowser(previewURL); err != nil {
+	a.webclientBrowserOpened = true
+	webclientURL := a.webEditor.GetURL() + "/preview"
+	log.Printf("Opening webclient in browser: %s", webclientURL)
+	if err := openBrowser(webclientURL); err != nil {
 		log.Printf("Failed to open browser: %v", err)
 	}
 }
@@ -259,38 +259,38 @@ func openBrowser(url string) error {
 	return cmd.Start()
 }
 
-// SetPreviewOverride enables or disables temporary preview backend override.
-// When enabled, switches to preview backend regardless of config setting.
+// SetWebClientOverride enables or disables temporary webclient backend override.
+// When enabled, switches to webclient backend regardless of config setting.
 // When disabled, restores the original backend from config.
-func (a *App) SetPreviewOverride(enable bool) error {
+func (a *App) SetWebClientOverride(enable bool) error {
 	a.configMu.Lock()
 	defer a.configMu.Unlock()
 
 	if enable {
-		return a.enablePreviewOverride()
+		return a.enableWebClientOverride()
 	}
-	return a.disablePreviewOverride()
+	return a.disableWebClientOverride()
 }
 
-// enablePreviewOverride switches to preview backend temporarily
-func (a *App) enablePreviewOverride() error {
-	if a.previewOverrideActive {
-		log.Println("Preview override already active")
+// enableWebClientOverride switches to webclient backend temporarily
+func (a *App) enableWebClientOverride() error {
+	if a.webclientOverrideActive {
+		log.Println("WebClient override already active")
 		return nil
 	}
 
 	// Get current backend name
 	currentBackend := a.lifecycle.GetCurrentBackend()
-	if currentBackend == "preview" {
-		log.Println("Preview override: already using preview backend")
+	if currentBackend == "webclient" {
+		log.Println("WebClient override: already using webclient backend")
 		return nil
 	}
 
 	log.Println("========================================")
-	log.Printf("Enabling preview override (current backend: %s)", currentBackend)
+	log.Printf("Enabling webclient override (current backend: %s)", currentBackend)
 
 	// Store original backend name
-	a.previewOverrideOriginal = currentBackend
+	a.webclientOverrideOriginal = currentBackend
 
 	// Get current config
 	cfg := a.lifecycle.GetLastGoodConfig()
@@ -302,46 +302,46 @@ func (a *App) enablePreviewOverride() error {
 	log.Println("Stopping current compositor...")
 	a.lifecycle.Stop()
 
-	// Show "PREVIEW MODE" message on hardware (now nothing will overwrite it)
-	a.lifecycle.ShowPreviewModeMessage()
+	// Show "WEB CLIENT" message on hardware (now nothing will overwrite it)
+	a.lifecycle.ShowWebClientModeMessage()
 
-	// Create a modified config with preview backend
-	previewCfg := *cfg
-	previewCfg.Backend = "preview"
+	// Create a modified config with webclient backend
+	webclientCfg := *cfg
+	webclientCfg.Backend = "webclient"
 
-	// Start with preview backend
-	log.Println("Starting with preview backend...")
-	if err := a.lifecycle.Start(&previewCfg); err != nil {
-		log.Printf("ERROR: Failed to start preview backend: %v", err)
+	// Start with webclient backend
+	log.Println("Starting with webclient backend...")
+	if err := a.lifecycle.Start(&webclientCfg); err != nil {
+		log.Printf("ERROR: Failed to start webclient backend: %v", err)
 		// Try to restore original backend
 		log.Println("Attempting to restore original backend...")
 		if restoreErr := a.lifecycle.Start(cfg); restoreErr != nil {
 			log.Printf("ERROR: Failed to restore original backend: %v", restoreErr)
 		}
-		return fmt.Errorf("failed to enable preview override: %w", err)
+		return fmt.Errorf("failed to enable webclient override: %w", err)
 	}
 
-	a.previewOverrideActive = true
+	a.webclientOverrideActive = true
 
-	// Update preview provider
-	a.updatePreviewProviderUnlocked()
+	// Update webclient provider
+	a.updateWebClientProviderUnlocked()
 
-	log.Println("Preview override enabled")
+	log.Println("WebClient override enabled")
 	log.Println("========================================")
 	return nil
 }
 
-// disablePreviewOverride restores the original backend
-func (a *App) disablePreviewOverride() error {
-	if !a.previewOverrideActive {
-		log.Println("Preview override not active")
+// disableWebClientOverride restores the original backend
+func (a *App) disableWebClientOverride() error {
+	if !a.webclientOverrideActive {
+		log.Println("WebClient override not active")
 		return nil
 	}
 
 	log.Println("========================================")
-	log.Printf("Disabling preview override (restoring backend: %s)", a.previewOverrideOriginal)
+	log.Printf("Disabling webclient override (restoring backend: %s)", a.webclientOverrideOriginal)
 
-	// Get current config (with preview backend)
+	// Get current config (with webclient backend)
 	cfg := a.lifecycle.GetLastGoodConfig()
 	if cfg == nil {
 		return fmt.Errorf("no configuration loaded")
@@ -349,44 +349,44 @@ func (a *App) disablePreviewOverride() error {
 
 	// Create config with original backend
 	originalCfg := *cfg
-	originalCfg.Backend = a.previewOverrideOriginal
+	originalCfg.Backend = a.webclientOverrideOriginal
 
-	// Stop preview compositor
-	log.Println("Stopping preview compositor...")
+	// Stop webclient compositor
+	log.Println("Stopping webclient compositor...")
 	a.lifecycle.Stop()
 
 	// Start with original backend
-	log.Printf("Starting with original backend: %s", a.previewOverrideOriginal)
+	log.Printf("Starting with original backend: %s", a.webclientOverrideOriginal)
 	if err := a.lifecycle.Start(&originalCfg); err != nil {
 		log.Printf("ERROR: Failed to restore original backend: %v", err)
-		return fmt.Errorf("failed to disable preview override: %w", err)
+		return fmt.Errorf("failed to disable webclient override: %w", err)
 	}
 
-	a.previewOverrideActive = false
-	a.previewOverrideOriginal = ""
+	a.webclientOverrideActive = false
+	a.webclientOverrideOriginal = ""
 
-	// Clear preview provider since we're no longer using preview backend
+	// Clear webclient provider since we're no longer using webclient backend
 	if a.webEditor != nil {
 		a.webEditor.SetPreviewProvider(nil)
 	}
 
-	log.Println("Preview override disabled, original backend restored")
+	log.Println("WebClient override disabled, original backend restored")
 	log.Println("========================================")
 	return nil
 }
 
-// updatePreviewProviderUnlocked updates preview provider without acquiring configMu
+// updateWebClientProviderUnlocked updates webclient provider without acquiring configMu
 // (caller must hold configMu)
-func (a *App) updatePreviewProviderUnlocked() {
+func (a *App) updateWebClientProviderUnlocked() {
 	if a.webEditor == nil {
 		return
 	}
 
-	previewClient := a.lifecycle.GetPreviewClient()
-	if previewClient != nil {
-		adapter := NewPreviewProviderAdapter(previewClient)
+	webClient := a.lifecycle.GetWebClient()
+	if webClient != nil {
+		adapter := NewWebClientProviderAdapter(webClient)
 		a.webEditor.SetPreviewProvider(adapter)
-		log.Println("Preview provider connected to web editor")
+		log.Println("WebClient provider connected to web editor")
 	} else {
 		a.webEditor.SetPreviewProvider(nil)
 	}
@@ -442,8 +442,8 @@ func (a *App) ReloadConfig() error {
 		return a.handleStartupError(err, newCfg)
 	}
 
-	// Update preview provider if preview backend is active
-	a.updatePreviewProvider()
+	// Update webclient provider if webclient backend is active
+	a.updateWebClientProvider()
 
 	log.Println("Configuration reloaded successfully!")
 	log.Printf("Running with: %s (%s)", newCfg.GameName, newCfg.GameDisplayName)
@@ -499,8 +499,8 @@ func (a *App) SwitchProfile(path string) error {
 		return a.handleStartupError(err, newCfg)
 	}
 
-	// Update preview provider if preview backend is active
-	a.updatePreviewProvider()
+	// Update webclient provider if webclient backend is active
+	a.updateWebClientProvider()
 
 	log.Printf("Profile switched successfully to: %s", profileName)
 	log.Println("========================================")

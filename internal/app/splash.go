@@ -28,8 +28,8 @@ const (
 	// ExitFrameInterval is time between exit frames
 	ExitFrameInterval = 30 * time.Millisecond
 
-	// PreviewModeMessageDuration is how long to show preview mode message
-	PreviewModeMessageDuration = 500 * time.Millisecond
+	// WebClientModeMessageDuration is how long to show webclient mode message
+	WebClientModeMessageDuration = 500 * time.Millisecond
 )
 
 // SplashRenderer handles animated splash screens
@@ -123,29 +123,29 @@ func (s *SplashRenderer) ShowExitMessage() error {
 	return s.sendFrame(blank)
 }
 
-// ShowPreviewModeMessage displays "PREVIEW MODE" on the hardware display
-// This is shown before switching to preview backend so user knows display is paused
-func (s *SplashRenderer) ShowPreviewModeMessage() error {
+// ShowWebClientModeMessage displays "WEB CLIENT" on the hardware display
+// This is shown before switching to webclient backend so user knows display is paused
+func (s *SplashRenderer) ShowWebClientModeMessage() error {
 	if s.client == nil {
 		return nil
 	}
 
-	img := s.renderPreviewModeFrame()
+	img := s.renderWebClientModeFrame()
 	if err := s.sendFrame(img); err != nil {
 		return err
 	}
 
 	// Hold the message briefly
-	time.Sleep(PreviewModeMessageDuration)
+	time.Sleep(WebClientModeMessageDuration)
 	return nil
 }
 
-// renderPreviewModeFrame renders the "PREVIEW MODE" static frame
-func (s *SplashRenderer) renderPreviewModeFrame() *image.Gray {
+// renderWebClientModeFrame renders the "WEB CLIENT" static frame
+func (s *SplashRenderer) renderWebClientModeFrame() *image.Gray {
 	img := image.NewGray(image.Rect(0, 0, s.width, s.height))
 
 	font := glyphs.Font5x7
-	text := "PREVIEW MODE"
+	text := "WEB CLIENT"
 
 	textWidth := glyphs.MeasureText(text, font)
 	textHeight := font.GlyphHeight

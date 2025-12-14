@@ -8,7 +8,7 @@ import (
 	// Import backend implementations for self-registration via init()
 	_ "github.com/pozitronik/steelclock-go/internal/backend/direct"
 	_ "github.com/pozitronik/steelclock-go/internal/backend/gamesense"
-	_ "github.com/pozitronik/steelclock-go/internal/backend/preview"
+	_ "github.com/pozitronik/steelclock-go/internal/backend/webclient"
 )
 
 // CreateBackendClient creates the appropriate client based on backend configuration.

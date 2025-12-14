@@ -40,8 +40,8 @@
     },
     "backend": {
       "type": "string",
-      "description": "Backend: 'gamesense' (requires SteelSeries GG), 'direct' (USB HID), 'preview' (web preview only). If omitted, auto-selects (tries gamesense first, then direct)",
-      "enum": ["gamesense", "direct", "preview", ""]
+      "description": "Backend: 'gamesense' (requires SteelSeries GG), 'direct' (USB HID), 'webclient' (web browser display). If omitted, auto-selects (tries gamesense first, then direct)",
+      "enum": ["gamesense", "direct", "webclient", ""]
     },
     "direct_driver": {
       "type": "object",
@@ -64,13 +64,13 @@
         }
       }
     },
-    "preview": {
+    "webclient": {
       "type": "object",
-      "description": "Web preview backend configuration (only used when backend is 'preview')",
+      "description": "Web client backend configuration (only used when backend is 'webclient')",
       "properties": {
         "target_fps": {
           "type": "integer",
-          "description": "Target frame rate for preview streaming (frames per second)",
+          "description": "Target frame rate for streaming to web browser (frames per second)",
           "minimum": 1,
           "maximum": 60,
           "default": 30

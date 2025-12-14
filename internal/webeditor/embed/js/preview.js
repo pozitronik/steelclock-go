@@ -134,7 +134,7 @@ class PreviewPanel {
             </div>
             <div class="preview-unavailable" style="display: none;">
                 <p>Preview not available.</p>
-                <p>Set <code>backend: "preview"</code> in config to enable.</p>
+                <p>Set <code>backend: "webclient"</code> in config to enable.</p>
             </div>
         `;
 
@@ -263,6 +263,7 @@ class PreviewPanel {
             this.container.style.display = 'block';
             this.isVisible = true;
             this.saveSettings();
+            this.syncCheckbox(true);
 
             // Start in live mode by default
             if (this.available && !this.isLive) {
@@ -279,12 +280,24 @@ class PreviewPanel {
         this.isVisible = false;
         this.stopLive();
         this.saveSettings();
+        this.syncCheckbox(false);
 
         // Disable preview override (restore original backend)
         try {
             await API.setPreviewOverride(false);
         } catch (err) {
             console.warn('Failed to disable preview override:', err);
+        }
+    }
+
+    /**
+     * Sync the header checkbox with panel visibility
+     * @param {boolean} checked - Whether checkbox should be checked
+     */
+    syncCheckbox(checked) {
+        const checkbox = document.getElementById('preview-toggle-checkbox');
+        if (checkbox) {
+            checkbox.checked = checked;
         }
     }
 

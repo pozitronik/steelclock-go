@@ -25,15 +25,14 @@ class ConfigEditor {
         this.saveBtn = document.getElementById('btn-save');
         this.applyBtn = document.getElementById('btn-apply');
         this.reloadBtn = document.getElementById('btn-reload');
-        this.viewFormBtn = document.getElementById('btn-view-form');
-        this.viewJsonBtn = document.getElementById('btn-view-json');
+        this.viewToggleCheckbox = document.getElementById('view-toggle-checkbox');
         this.statusEl = document.getElementById('status');
         this.profileSelector = document.getElementById('profile-selector');
         this.profileSelect = document.getElementById('profile-select');
         this.renameProfileBtn = document.getElementById('btn-rename-profile');
         this.newProfileBtn = document.getElementById('btn-new-profile');
         this.themeToggle = document.getElementById('toggle-theme');
-        this.previewBtn = document.getElementById('btn-preview');
+        this.previewToggleCheckbox = document.getElementById('preview-toggle-checkbox');
     }
 
     /**
@@ -57,15 +56,30 @@ class ConfigEditor {
         this.renameProfileBtn.addEventListener('click', () => this.renameCurrentProfile());
         this.newProfileBtn.addEventListener('click', () => this.createNewProfile());
 
-        // View toggle
-        this.viewFormBtn.addEventListener('click', () => this.switchView('form'));
-        this.viewJsonBtn.addEventListener('click', () => this.switchView('json'));
+        // View toggle (checkbox: unchecked = form, checked = json)
+        this.viewToggleCheckbox.addEventListener('change', () => {
+            this.switchView(this.viewToggleCheckbox.checked ? 'json' : 'form');
+        });
+        // Allow clicking JSON label to toggle
+        document.querySelector('.view-toggle-label[data-view="json"]').addEventListener('click', () => {
+            this.viewToggleCheckbox.checked = !this.viewToggleCheckbox.checked;
+            this.switchView(this.viewToggleCheckbox.checked ? 'json' : 'form');
+        });
 
         // Preview toggle
-        this.previewBtn.addEventListener('click', () => {
+        this.previewToggleCheckbox.addEventListener('change', async () => {
             if (window.previewPanel) {
-                window.previewPanel.toggle();
+                if (this.previewToggleCheckbox.checked) {
+                    await window.previewPanel.show();
+                } else {
+                    await window.previewPanel.hide();
+                }
             }
+        });
+        // Click on label toggles preview
+        document.querySelector('.preview-toggle-label').addEventListener('click', () => {
+            this.previewToggleCheckbox.checked = !this.previewToggleCheckbox.checked;
+            this.previewToggleCheckbox.dispatchEvent(new Event('change'));
         });
 
         // Warn before leaving with unsaved changes (temporarily disabled)
@@ -104,7 +118,7 @@ class ConfigEditor {
             this.showNotification('Schema not available - using JSON view only', 'warning');
             // Force JSON view if schema fails
             this.switchView('json');
-            this.viewFormBtn.disabled = true;
+            this.viewToggleCheckbox.disabled = true;
         }
     }
 
@@ -247,23 +261,20 @@ class ConfigEditor {
         this.currentView = view;
 
         // Update UI
+        const jsonLabel = document.querySelector('.view-toggle-label[data-view="json"]');
         if (view === 'form') {
             this.formContainer.style.display = 'block';
             this.jsonContainer.style.display = 'none';
-            this.viewFormBtn.setAttribute('aria-pressed', 'true');
-            this.viewFormBtn.classList.remove('secondary');
-            this.viewJsonBtn.setAttribute('aria-pressed', 'false');
-            this.viewJsonBtn.classList.add('secondary');
+            this.viewToggleCheckbox.checked = false;
+            jsonLabel.classList.remove('active');
 
             // Re-render form with current config
             this.renderForm();
         } else {
             this.formContainer.style.display = 'none';
             this.jsonContainer.style.display = 'block';
-            this.viewFormBtn.setAttribute('aria-pressed', 'false');
-            this.viewFormBtn.classList.add('secondary');
-            this.viewJsonBtn.setAttribute('aria-pressed', 'true');
-            this.viewJsonBtn.classList.remove('secondary');
+            this.viewToggleCheckbox.checked = true;
+            jsonLabel.classList.add('active');
         }
     }
 
