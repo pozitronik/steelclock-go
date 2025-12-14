@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 
@@ -52,6 +54,10 @@ type App struct {
 	// This prevents race conditions when multiple sources (tray, web editor)
 	// trigger config changes concurrently.
 	configMu sync.Mutex
+
+	// previewBrowserOpened tracks if we've already opened the preview browser
+	// to avoid opening multiple times during session
+	previewBrowserOpened bool
 }
 
 // NewApp creates a new application instance (legacy single-config mode)
@@ -102,6 +108,8 @@ func (a *App) Run() {
 				log.Printf("Failed to auto-start web editor: %v", err)
 			} else {
 				log.Printf("Web editor started at %s", a.webEditor.GetURL())
+				// Try to open preview browser now that web editor is running
+				a.openPreviewBrowser()
 			}
 		}
 	})
@@ -194,9 +202,54 @@ func (a *App) updatePreviewProvider() {
 		adapter := NewPreviewProviderAdapter(previewClient)
 		a.webEditor.SetPreviewProvider(adapter)
 		log.Println("Preview provider connected to web editor")
+
+		// Auto-open browser for preview if web editor is running
+		a.openPreviewBrowser()
 	} else {
 		a.webEditor.SetPreviewProvider(nil)
 	}
+}
+
+// openPreviewBrowser opens the preview page in browser if conditions are met
+func (a *App) openPreviewBrowser() {
+	// Only open once per session
+	if a.previewBrowserOpened {
+		return
+	}
+
+	// Check if web editor is running
+	if !a.webEditor.IsRunning() {
+		log.Println("Preview: web editor not running yet, will open browser later")
+		return
+	}
+
+	// Check if preview backend is active
+	if a.lifecycle.GetPreviewClient() == nil {
+		return
+	}
+
+	a.previewBrowserOpened = true
+	previewURL := a.webEditor.GetURL() + "/preview"
+	log.Printf("Opening preview in browser: %s", previewURL)
+	if err := openBrowser(previewURL); err != nil {
+		log.Printf("Failed to open browser: %v", err)
+	}
+}
+
+// openBrowser opens the specified URL in the default browser
+func openBrowser(url string) error {
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default: // linux, freebsd, etc.
+		cmd = exec.Command("xdg-open", url)
+	}
+
+	return cmd.Start()
 }
 
 // ReloadConfig reloads configuration and restarts components.

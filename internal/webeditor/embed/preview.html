@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelClock Preview</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #1a1a1a;
+            color: #e0e0e0;
+            font-family: system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .preview-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        h1 {
+            font-size: 1.2em;
+            font-weight: 500;
+            color: #808080;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        select, button {
+            padding: 6px 12px;
+            border: 1px solid #404040;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #e0e0e0;
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+
+        select:hover, button:hover {
+            border-color: #606060;
+            background: #333;
+        }
+
+        button.active {
+            background: #4a7c59;
+            border-color: #5a9c69;
+        }
+
+        .canvas-wrapper {
+            background: #000;
+            padding: 4px;
+            border-radius: 4px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #preview-canvas {
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 16px;
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .status-bar span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+
+        .status-dot.connected {
+            background: #4a7c59;
+        }
+
+        .status-dot.disconnected {
+            background: #a04040;
+        }
+
+        .error-message {
+            background: #3a2020;
+            border: 1px solid #5a3030;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .error-message h2 {
+            color: #c08080;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .error-message p {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .error-message code {
+            background: #2a2020;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container" id="preview-container">
+        <div class="preview-header">
+            <h1>SteelClock Display Preview</h1>
+            <div class="controls">
+                <select id="zoom-select" title="Zoom level">
+                    <option value="1">1x</option>
+                    <option value="2">2x</option>
+                    <option value="4" selected>4x</option>
+                    <option value="8">8x</option>
+                </select>
+                <button id="mode-btn" title="Toggle live/static mode">Live</button>
+            </div>
+        </div>
+
+        <div class="canvas-wrapper">
+            <canvas id="preview-canvas"></canvas>
+        </div>
+
+        <div class="status-bar">
+            <span><span class="status-dot" id="status-dot"></span><span id="status-text">Connecting...</span></span>
+            <span id="fps-display">0 FPS</span>
+            <span id="size-display">128x40</span>
+        </div>
+    </div>
+
+    <div class="error-message" id="error-container" style="display: none;">
+        <h2>Preview Not Available</h2>
+        <p>Set <code>backend: "preview"</code> in your configuration to enable live preview.</p>
+    </div>
+
+    <script>
+        // Standalone preview page script
+        const PreviewApp = {
+            canvas: null,
+            ctx: null,
+            ws: null,
+
+            config: {
+                width: 128,
+                height: 40,
+                targetFPS: 30,
+            },
+
+            zoom: 4,
+            isLive: true,
+            connected: false,
+
+            frameCount: 0,
+            lastFrameTime: 0,
+
+            async init() {
+                this.canvas = document.getElementById('preview-canvas');
+                this.ctx = this.canvas.getContext('2d');
+
+                // Set up controls
+                document.getElementById('zoom-select').addEventListener('change', (e) => {
+                    this.setZoom(parseInt(e.target.value, 10));
+                });
+
+                document.getElementById('mode-btn').addEventListener('click', () => {
+                    this.toggleMode();
+                });
+
+                // Check availability and start
+                await this.checkAvailability();
+            },
+
+            async checkAvailability() {
+                try {
+                    const response = await fetch('/api/preview');
+                    const info = await response.json();
+
+                    if (info.available) {
+                        this.config.width = info.width;
+                        this.config.height = info.height;
+                        this.config.targetFPS = info.target_fps;
+
+                        document.getElementById('size-display').textContent =
+                            `${info.width}x${info.height}`;
+
+                        this.updateCanvasSize();
+                        document.getElementById('preview-container').style.display = 'flex';
+                        document.getElementById('error-container').style.display = 'none';
+
+                        // Start live mode automatically
+                        this.startLive();
+                    } else {
+                        this.showError();
+                    }
+                } catch (err) {
+                    console.error('Failed to check preview availability:', err);
+                    this.showError();
+                }
+            },
+
+            showError() {
+                document.getElementById('preview-container').style.display = 'none';
+                document.getElementById('error-container').style.display = 'block';
+            },
+
+            setZoom(zoom) {
+                this.zoom = zoom;
+                this.updateCanvasSize();
+            },
+
+            updateCanvasSize() {
+                this.canvas.width = this.config.width * this.zoom;
+                this.canvas.height = this.config.height * this.zoom;
+                this.ctx.imageSmoothingEnabled = false;
+            },
+
+            toggleMode() {
+                if (this.isLive) {
+                    this.stopLive();
+                } else {
+                    this.startLive();
+                }
+            },
+
+            startLive() {
+                if (this.isLive && this.ws) return;
+
+                this.isLive = true;
+                document.getElementById('mode-btn').textContent = 'Live';
+                document.getElementById('mode-btn').classList.add('active');
+
+                this.frameCount = 0;
+                this.lastFrameTime = performance.now();
+
+                this.connect();
+            },
+
+            stopLive() {
+                this.isLive = false;
+                document.getElementById('mode-btn').textContent = 'Static';
+                document.getElementById('mode-btn').classList.remove('active');
+
+                if (this.ws) {
+                    this.ws.close();
+                    this.ws = null;
+                }
+
+                this.setStatus(false, 'Paused');
+                document.getElementById('fps-display').textContent = '0 FPS';
+            },
+
+            connect() {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                this.ws = new WebSocket(`${protocol}//${window.location.host}/api/preview/ws`);
+
+                this.ws.onopen = () => {
+                    this.connected = true;
+                    this.setStatus(true, 'Connected');
+                };
+
+                this.ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+
+                        if (data.type === 'frame') {
+                            this.renderFrame(data.frame);
+                            this.updateFPS();
+                        } else if (data.type === 'config') {
+                            this.config.width = data.width;
+                            this.config.height = data.height;
+                            this.config.targetFPS = data.target_fps;
+                            this.updateCanvasSize();
+                            document.getElementById('size-display').textContent =
+                                `${data.width}x${data.height}`;
+                        }
+                    } catch (err) {
+                        console.error('Failed to parse message:', err);
+                    }
+                };
+
+                this.ws.onclose = () => {
+                    this.connected = false;
+                    this.setStatus(false, 'Disconnected');
+
+                    if (this.isLive) {
+                        // Reconnect after delay
+                        setTimeout(() => {
+                            if (this.isLive) {
+                                this.setStatus(false, 'Reconnecting...');
+                                this.connect();
+                            }
+                        }, 1000);
+                    }
+                };
+
+                this.ws.onerror = (err) => {
+                    console.error('WebSocket error:', err);
+                };
+            },
+
+            setStatus(connected, text) {
+                const dot = document.getElementById('status-dot');
+                const textEl = document.getElementById('status-text');
+
+                dot.className = 'status-dot ' + (connected ? 'connected' : 'disconnected');
+                textEl.textContent = text;
+            },
+
+            renderFrame(frameData) {
+                // Convert from base64 if needed
+                let bytes;
+                if (typeof frameData === 'string') {
+                    const binary = atob(frameData);
+                    bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) {
+                        bytes[i] = binary.charCodeAt(i);
+                    }
+                } else {
+                    bytes = new Uint8Array(frameData);
+                }
+
+                const width = this.config.width;
+                const height = this.config.height;
+
+                // Create ImageData at 1x scale
+                const imageData = this.ctx.createImageData(width, height);
+                const data = imageData.data;
+
+                // Unpack bits to RGBA pixels
+                // Each byte contains 8 pixels, MSB first
+                let bitIndex = 0;
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const byteIndex = Math.floor(bitIndex / 8);
+                        const bitPos = 7 - (bitIndex % 8); // MSB first
+
+                        let pixelOn = false;
+                        if (byteIndex < bytes.length) {
+                            pixelOn = (bytes[byteIndex] & (1 << bitPos)) !== 0;
+                        }
+
+                        // Convert to RGBA (white = on, black = off for OLED)
+                        const pixelIndex = (y * width + x) * 4;
+                        const color = pixelOn ? 255 : 0;
+                        data[pixelIndex] = color;     // R
+                        data[pixelIndex + 1] = color; // G
+                        data[pixelIndex + 2] = color; // B
+                        data[pixelIndex + 3] = 255;   // A
+
+                        bitIndex++;
+                    }
+                }
+
+                // Draw at 1x scale first, then scale up
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.putImageData(imageData, 0, 0);
+
+                // Clear and draw scaled
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.drawImage(tempCanvas, 0, 0, this.canvas.width, this.canvas.height);
+            },
+
+            updateFPS() {
+                this.frameCount++;
+                const now = performance.now();
+                const elapsed = now - this.lastFrameTime;
+
+                if (elapsed >= 1000) {
+                    const fps = Math.round(this.frameCount * 1000 / elapsed);
+                    document.getElementById('fps-display').textContent = `${fps} FPS`;
+                    this.frameCount = 0;
+                    this.lastFrameTime = now;
+                }
+            },
+        };
+
+        // Start when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            PreviewApp.init();
+        });
+    </script>
+</body>
+</html>

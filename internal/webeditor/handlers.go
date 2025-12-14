@@ -27,6 +27,11 @@ func (s *Server) registerHandlers(mux *http.ServeMux) {
 		mux.Handle("/", http.FileServer(fs))
 	}
 
+	// Preview page redirect (clean URL)
+	mux.HandleFunc("/preview", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/preview.html", http.StatusFound)
+	})
+
 	// API endpoints
 	mux.HandleFunc("/api/schema", s.handleGetSchema)
 	mux.HandleFunc("/api/config", s.handleConfig)
