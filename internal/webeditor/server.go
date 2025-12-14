@@ -20,12 +20,13 @@ type Server struct {
 	listener   net.Listener
 	port       int
 
-	configProvider  ConfigProvider
-	profileProvider ProfileProvider
-	previewProvider PreviewProvider
-	schemaPath      string
-	onReload        func() error
-	onProfileSwitch func(path string) error
+	configProvider    ConfigProvider
+	profileProvider   ProfileProvider
+	previewProvider   PreviewProvider
+	schemaPath        string
+	onReload          func() error
+	onProfileSwitch   func(path string) error
+	onPreviewOverride func(enable bool) error
 
 	mu      sync.Mutex
 	running bool
@@ -47,6 +48,13 @@ func (s *Server) SetPreviewProvider(provider PreviewProvider) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.previewProvider = provider
+}
+
+// SetPreviewOverrideCallback sets the callback for preview override requests
+func (s *Server) SetPreviewOverrideCallback(callback func(enable bool) error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.onPreviewOverride = callback
 }
 
 // Start starts the HTTP server on the default port (localhost only)

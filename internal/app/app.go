@@ -58,6 +58,10 @@ type App struct {
 	// previewBrowserOpened tracks if we've already opened the preview browser
 	// to avoid opening multiple times during session
 	previewBrowserOpened bool
+
+	// Preview override state - for temporary preview backend when using config editor
+	previewOverrideActive   bool
+	previewOverrideOriginal string // Original backend name to restore
 }
 
 // NewApp creates a new application instance (legacy single-config mode)
@@ -162,6 +166,9 @@ func (a *App) createWebEditor() {
 	// Create web editor server
 	a.webEditor = webeditor.NewServer(configProvider, profileProvider, schemaPath, a.ReloadConfig, onProfileSwitch)
 
+	// Set preview override callback
+	a.webEditor.SetPreviewOverrideCallback(a.SetPreviewOverride)
+
 	// Wire up with tray manager
 	a.trayMgr.SetWebEditor(a.webEditor)
 
@@ -250,6 +257,139 @@ func openBrowser(url string) error {
 	}
 
 	return cmd.Start()
+}
+
+// SetPreviewOverride enables or disables temporary preview backend override.
+// When enabled, switches to preview backend regardless of config setting.
+// When disabled, restores the original backend from config.
+func (a *App) SetPreviewOverride(enable bool) error {
+	a.configMu.Lock()
+	defer a.configMu.Unlock()
+
+	if enable {
+		return a.enablePreviewOverride()
+	}
+	return a.disablePreviewOverride()
+}
+
+// enablePreviewOverride switches to preview backend temporarily
+func (a *App) enablePreviewOverride() error {
+	if a.previewOverrideActive {
+		log.Println("Preview override already active")
+		return nil
+	}
+
+	// Get current backend name
+	currentBackend := a.lifecycle.GetCurrentBackend()
+	if currentBackend == "preview" {
+		log.Println("Preview override: already using preview backend")
+		return nil
+	}
+
+	log.Println("========================================")
+	log.Printf("Enabling preview override (current backend: %s)", currentBackend)
+
+	// Store original backend name
+	a.previewOverrideOriginal = currentBackend
+
+	// Get current config
+	cfg := a.lifecycle.GetLastGoodConfig()
+	if cfg == nil {
+		return fmt.Errorf("no configuration loaded")
+	}
+
+	// Stop current compositor first (so it stops sending frames)
+	log.Println("Stopping current compositor...")
+	a.lifecycle.Stop()
+
+	// Show "PREVIEW MODE" message on hardware (now nothing will overwrite it)
+	a.lifecycle.ShowPreviewModeMessage()
+
+	// Create a modified config with preview backend
+	previewCfg := *cfg
+	previewCfg.Backend = "preview"
+
+	// Start with preview backend
+	log.Println("Starting with preview backend...")
+	if err := a.lifecycle.Start(&previewCfg); err != nil {
+		log.Printf("ERROR: Failed to start preview backend: %v", err)
+		// Try to restore original backend
+		log.Println("Attempting to restore original backend...")
+		if restoreErr := a.lifecycle.Start(cfg); restoreErr != nil {
+			log.Printf("ERROR: Failed to restore original backend: %v", restoreErr)
+		}
+		return fmt.Errorf("failed to enable preview override: %w", err)
+	}
+
+	a.previewOverrideActive = true
+
+	// Update preview provider
+	a.updatePreviewProviderUnlocked()
+
+	log.Println("Preview override enabled")
+	log.Println("========================================")
+	return nil
+}
+
+// disablePreviewOverride restores the original backend
+func (a *App) disablePreviewOverride() error {
+	if !a.previewOverrideActive {
+		log.Println("Preview override not active")
+		return nil
+	}
+
+	log.Println("========================================")
+	log.Printf("Disabling preview override (restoring backend: %s)", a.previewOverrideOriginal)
+
+	// Get current config (with preview backend)
+	cfg := a.lifecycle.GetLastGoodConfig()
+	if cfg == nil {
+		return fmt.Errorf("no configuration loaded")
+	}
+
+	// Create config with original backend
+	originalCfg := *cfg
+	originalCfg.Backend = a.previewOverrideOriginal
+
+	// Stop preview compositor
+	log.Println("Stopping preview compositor...")
+	a.lifecycle.Stop()
+
+	// Start with original backend
+	log.Printf("Starting with original backend: %s", a.previewOverrideOriginal)
+	if err := a.lifecycle.Start(&originalCfg); err != nil {
+		log.Printf("ERROR: Failed to restore original backend: %v", err)
+		return fmt.Errorf("failed to disable preview override: %w", err)
+	}
+
+	a.previewOverrideActive = false
+	a.previewOverrideOriginal = ""
+
+	// Clear preview provider since we're no longer using preview backend
+	if a.webEditor != nil {
+		a.webEditor.SetPreviewProvider(nil)
+	}
+
+	log.Println("Preview override disabled, original backend restored")
+	log.Println("========================================")
+	return nil
+}
+
+// updatePreviewProviderUnlocked updates preview provider without acquiring configMu
+// (caller must hold configMu)
+func (a *App) updatePreviewProviderUnlocked() {
+	if a.webEditor == nil {
+		return
+	}
+
+	previewClient := a.lifecycle.GetPreviewClient()
+	if previewClient != nil {
+		adapter := NewPreviewProviderAdapter(previewClient)
+		a.webEditor.SetPreviewProvider(adapter)
+		log.Println("Preview provider connected to web editor")
+	} else {
+		a.webEditor.SetPreviewProvider(nil)
+	}
 }
 
 // ReloadConfig reloads configuration and restarts components.

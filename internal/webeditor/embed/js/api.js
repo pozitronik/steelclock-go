@@ -207,4 +207,29 @@ const API = {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         return new WebSocket(`${protocol}//${window.location.host}/api/preview/ws`);
     },
+
+    /**
+     * Enable or disable preview backend override.
+     * When enabled, temporarily switches to preview backend regardless of config.
+     * When disabled, restores the original backend.
+     * @param {boolean} enable - Whether to enable or disable preview override
+     * @returns {Promise<Object>} Result with success and enabled status
+     */
+    async setPreviewOverride(enable) {
+        const response = await fetch('/api/preview/override', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ enable }),
+        });
+
+        const result = await response.json();
+
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        return result;
+    },
 };

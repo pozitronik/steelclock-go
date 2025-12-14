@@ -45,6 +45,7 @@ func (s *Server) registerHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/api/preview", s.handlePreviewInfo)
 	mux.HandleFunc("/api/preview/frame", s.handlePreviewFrame)
 	mux.HandleFunc("/api/preview/ws", s.handlePreviewWebSocket)
+	mux.HandleFunc("/api/preview/override", s.handlePreviewOverride)
 }
 
 // serveIndex serves the main HTML page
@@ -483,6 +484,46 @@ func (s *Server) handlePreviewWebSocket(w http.ResponseWriter, r *http.Request) 
 
 	// Delegate to the preview provider's WebSocket handler
 	s.previewProvider.HandleWebSocket(w, r)
+}
+
+// handlePreviewOverride enables/disables temporary preview backend override
+func (s *Server) handlePreviewOverride(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Origin check
+	origin := r.Header.Get("Origin")
+	if origin != "" && !strings.HasPrefix(origin, "http://127.0.0.1") &&
+		!strings.HasPrefix(origin, "http://localhost") {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	if s.onPreviewOverride == nil {
+		respondError(w, "Preview override not supported", http.StatusNotImplemented)
+		return
+	}
+
+	var req struct {
+		Enable bool `json:"enable"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid request: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := s.onPreviewOverride(req.Enable); err != nil {
+		respondError(w, "Failed to set preview override: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, map[string]interface{}{
+		"success": true,
+		"enabled": req.Enable,
+	})
 }
 
 // fallbackHTML is a minimal HTML page for when embedded assets are not available

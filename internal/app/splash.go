@@ -27,6 +27,9 @@ const (
 	ExitAnimationDuration = 800 * time.Millisecond
 	// ExitFrameInterval is time between exit frames
 	ExitFrameInterval = 30 * time.Millisecond
+
+	// PreviewModeMessageDuration is how long to show preview mode message
+	PreviewModeMessageDuration = 500 * time.Millisecond
 )
 
 // SplashRenderer handles animated splash screens
@@ -118,6 +121,66 @@ func (s *SplashRenderer) ShowExitMessage() error {
 	// Send final blank frame
 	blank := image.NewGray(image.Rect(0, 0, s.width, s.height))
 	return s.sendFrame(blank)
+}
+
+// ShowPreviewModeMessage displays "PREVIEW MODE" on the hardware display
+// This is shown before switching to preview backend so user knows display is paused
+func (s *SplashRenderer) ShowPreviewModeMessage() error {
+	if s.client == nil {
+		return nil
+	}
+
+	img := s.renderPreviewModeFrame()
+	if err := s.sendFrame(img); err != nil {
+		return err
+	}
+
+	// Hold the message briefly
+	time.Sleep(PreviewModeMessageDuration)
+	return nil
+}
+
+// renderPreviewModeFrame renders the "PREVIEW MODE" static frame
+func (s *SplashRenderer) renderPreviewModeFrame() *image.Gray {
+	img := image.NewGray(image.Rect(0, 0, s.width, s.height))
+
+	font := glyphs.Font5x7
+	text := "PREVIEW MODE"
+
+	textWidth := glyphs.MeasureText(text, font)
+	textHeight := font.GlyphHeight
+
+	// Center the text
+	textX := (s.width - textWidth) / 2
+	textY := (s.height - textHeight) / 2
+
+	// Draw text
+	glyphs.DrawText(img, text, textX, textY, font, color.Gray{Y: 255})
+
+	// Draw decorative border lines
+	lineY1 := textY - 5
+	lineY2 := textY + textHeight + 4
+	lineStart := textX - 10
+	lineEnd := textX + textWidth + 10
+
+	if lineStart < 2 {
+		lineStart = 2
+	}
+	if lineEnd > s.width-2 {
+		lineEnd = s.width - 2
+	}
+
+	lineColor := color.Gray{Y: 128}
+	for x := lineStart; x < lineEnd; x++ {
+		if lineY1 >= 0 && lineY1 < s.height {
+			img.Set(x, lineY1, lineColor)
+		}
+		if lineY2 >= 0 && lineY2 < s.height {
+			img.Set(x, lineY2, lineColor)
+		}
+	}
+
+	return img
 }
 
 // renderStartupFrame renders a single frame of the startup animation

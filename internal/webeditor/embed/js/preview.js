@@ -4,6 +4,8 @@
  */
 
 class PreviewPanel {
+    static STORAGE_KEY = 'steelclock_preview_settings';
+
     constructor() {
         this.container = null;
         this.canvas = null;
@@ -20,13 +22,77 @@ class PreviewPanel {
         this.isLive = false;
         this.isVisible = false;
         this.available = false;
+        this.position = null; // {left, top} or null for default
 
         this.frameCount = 0;
         this.lastFrameTime = 0;
         this.fps = 0;
 
+        // Load saved settings
+        this.loadSettings();
+
         // Create panel elements
         this.createPanel();
+
+        // Restore settings after panel is created
+        this.restoreSettings();
+    }
+
+    /**
+     * Load settings from localStorage
+     */
+    loadSettings() {
+        try {
+            const saved = localStorage.getItem(PreviewPanel.STORAGE_KEY);
+            if (saved) {
+                const settings = JSON.parse(saved);
+                if (settings.zoom) this.zoom = settings.zoom;
+                if (settings.position) this.position = settings.position;
+                if (settings.wasVisible) this.shouldAutoShow = true;
+            }
+        } catch (err) {
+            console.warn('Failed to load preview settings:', err);
+        }
+    }
+
+    /**
+     * Save settings to localStorage
+     */
+    saveSettings() {
+        try {
+            const settings = {
+                zoom: this.zoom,
+                position: this.position,
+                wasVisible: this.isVisible,
+            };
+            localStorage.setItem(PreviewPanel.STORAGE_KEY, JSON.stringify(settings));
+        } catch (err) {
+            console.warn('Failed to save preview settings:', err);
+        }
+    }
+
+    /**
+     * Restore settings after panel creation
+     */
+    restoreSettings() {
+        // Restore zoom
+        const zoomSelect = document.getElementById('preview-zoom');
+        if (zoomSelect) {
+            zoomSelect.value = this.zoom.toString();
+        }
+
+        // Restore position
+        if (this.position) {
+            this.container.style.left = this.position.left + 'px';
+            this.container.style.top = this.position.top + 'px';
+            this.container.style.right = 'auto';
+        }
+
+        // Auto-show if was visible before
+        if (this.shouldAutoShow) {
+            // Defer to allow page to fully load
+            setTimeout(() => this.show(), 100);
+        }
     }
 
     /**
@@ -41,13 +107,13 @@ class PreviewPanel {
             <div class="preview-header">
                 <span class="preview-title">Display Preview</span>
                 <div class="preview-controls">
-                    <select id="preview-zoom" title="Zoom level">
+                    <select id="preview-zoom" title="Zoom level" style="width: 6em;">
                         <option value="1">1x</option>
                         <option value="2">2x</option>
                         <option value="4" selected>4x</option>
                         <option value="8">8x</option>
                     </select>
-                    <button id="preview-mode" class="outline secondary" title="Toggle live/static mode">Static</button>
+                    <button id="preview-mode" class="outline secondary" title="Toggle live/static mode" style="display: none;">Static</button>
                     <button id="preview-close" class="outline secondary" title="Close preview">X</button>
                 </div>
             </div>
@@ -126,6 +192,10 @@ class PreviewPanel {
             if (isDragging) {
                 isDragging = false;
                 header.style.cursor = 'grab';
+                // Save position after drag
+                const rect = this.container.getBoundingClientRect();
+                this.position = { left: rect.left, top: rect.top };
+                this.saveSettings();
             }
         });
     }
@@ -171,13 +241,24 @@ class PreviewPanel {
      */
     async show() {
         if (!this.isVisible) {
+            // Enable preview override (temporary switch to preview backend)
+            try {
+                await API.setPreviewOverride(true);
+                // Wait a moment for backend to switch and become available
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (err) {
+                console.warn('Failed to enable preview override:', err);
+                // Continue anyway - might already be using preview backend
+            }
+
             await this.init();
             this.container.style.display = 'block';
             this.isVisible = true;
+            this.saveSettings();
 
-            // Start in static mode with initial frame
+            // Start in live mode by default
             if (this.available && !this.isLive) {
-                this.fetchStaticFrame();
+                this.startLive();
             }
         }
     }
@@ -185,20 +266,28 @@ class PreviewPanel {
     /**
      * Hide the preview panel
      */
-    hide() {
+    async hide() {
         this.container.style.display = 'none';
         this.isVisible = false;
         this.stopLive();
+        this.saveSettings();
+
+        // Disable preview override (restore original backend)
+        try {
+            await API.setPreviewOverride(false);
+        } catch (err) {
+            console.warn('Failed to disable preview override:', err);
+        }
     }
 
     /**
      * Toggle panel visibility
      */
-    toggle() {
+    async toggle() {
         if (this.isVisible) {
-            this.hide();
+            await this.hide();
         } else {
-            this.show();
+            await this.show();
         }
     }
 
@@ -209,6 +298,7 @@ class PreviewPanel {
     setZoom(zoom) {
         this.zoom = zoom;
         this.updateCanvasSize();
+        this.saveSettings();
     }
 
     /**

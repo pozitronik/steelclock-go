@@ -373,3 +373,26 @@ func (m *LifecycleManager) GetCurrentBackend() string {
 	defer m.mu.Unlock()
 	return m.currentBackend
 }
+
+// ShowPreviewModeMessage displays "PREVIEW MODE" on the current backend
+// This is called before switching to preview backend
+func (m *LifecycleManager) ShowPreviewModeMessage() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.client == nil {
+		return
+	}
+
+	displayWidth := config.DefaultDisplayWidth
+	displayHeight := config.DefaultDisplayHeight
+	if m.lastGoodConfig != nil {
+		displayWidth = m.lastGoodConfig.Display.Width
+		displayHeight = m.lastGoodConfig.Display.Height
+	}
+
+	splash := NewSplashRenderer(m.client, displayWidth, displayHeight)
+	if err := splash.ShowPreviewModeMessage(); err != nil {
+		log.Printf("Warning: Failed to show preview mode message: %v", err)
+	}
+}
