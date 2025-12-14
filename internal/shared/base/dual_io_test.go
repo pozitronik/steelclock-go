@@ -50,8 +50,8 @@ func newMockWidgetBase(w, h int) *mockWidgetBase {
 	}
 }
 
-// TestNewBaseDualIOWidget tests widget creation
-func TestNewBaseDualIOWidget(t *testing.T) {
+// TestNewDualIOWidget tests widget creation
+func TestNewDualIOWidget(t *testing.T) {
 	base := newMockWidgetBase(128, 40)
 	converter := util.NewByteRateConverter("Mbps")
 	renderer := render.NewDualMetricRenderer(
@@ -61,7 +61,7 @@ func TestNewBaseDualIOWidget(t *testing.T) {
 		render.TextConfig{HorizAlign: "center", VertAlign: "center"},
 	)
 
-	cfg := BaseDualIOConfig{
+	cfg := DualIOConfig{
 		Base:          base,
 		DisplayMode:   render.DisplayModeText,
 		Padding:       2,
@@ -78,10 +78,10 @@ func TestNewBaseDualIOWidget(t *testing.T) {
 		HistoryLen: 30,
 	}
 
-	widget := NewBaseDualIOWidget(cfg)
+	widget := NewDualIOWidget(cfg)
 
 	if widget == nil {
-		t.Fatal("NewBaseDualIOWidget() returned nil")
+		t.Fatal("NewDualIOWidget() returned nil")
 	}
 
 	if widget.DisplayMode != render.DisplayModeText {
@@ -437,11 +437,11 @@ func TestAutoScale(t *testing.T) {
 
 // Helper functions
 
-func createTestWidget(mode render.DisplayMode) *BaseDualIOWidget {
+func createTestWidget(mode render.DisplayMode) *DualIOWidget {
 	return createTestWidgetWithGauge(mode, false)
 }
 
-func createTestWidgetWithGauge(mode render.DisplayMode, supportsGauge bool) *BaseDualIOWidget {
+func createTestWidgetWithGauge(mode render.DisplayMode, supportsGauge bool) *DualIOWidget {
 	base := newMockWidgetBase(128, 40)
 	converter := util.NewByteRateConverter("MB/s")
 	renderer := render.NewDualMetricRenderer(
@@ -456,7 +456,7 @@ func createTestWidgetWithGauge(mode render.DisplayMode, supportsGauge bool) *Bas
 		render.TextConfig{HorizAlign: "center", VertAlign: "center"},
 	)
 
-	return NewBaseDualIOWidget(BaseDualIOConfig{
+	return NewDualIOWidget(DualIOConfig{
 		Base:          base,
 		DisplayMode:   mode,
 		Padding:       2,
@@ -474,7 +474,7 @@ func createTestWidgetWithGauge(mode render.DisplayMode, supportsGauge bool) *Bas
 	})
 }
 
-func createTestWidgetAutoScale(mode render.DisplayMode) *BaseDualIOWidget {
+func createTestWidgetAutoScale(mode render.DisplayMode) *DualIOWidget {
 	base := newMockWidgetBase(128, 40)
 	converter := util.NewByteRateConverter("MB/s")
 	renderer := render.NewDualMetricRenderer(
@@ -484,7 +484,7 @@ func createTestWidgetAutoScale(mode render.DisplayMode) *BaseDualIOWidget {
 		render.TextConfig{HorizAlign: "center", VertAlign: "center"},
 	)
 
-	return NewBaseDualIOWidget(BaseDualIOConfig{
+	return NewDualIOWidget(DualIOConfig{
 		Base:          base,
 		DisplayMode:   mode,
 		Padding:       2,

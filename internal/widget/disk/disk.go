@@ -22,7 +22,7 @@ func init() {
 
 // Widget displays disk I/O (Read/Write)
 type Widget struct {
-	*widgetbase.BaseDualIOWidget
+	*widgetbase.DualIOWidget
 	base         *widget.BaseWidget
 	diskName     *string
 	diskProvider metrics.DiskProvider
@@ -127,7 +127,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	)
 
 	// Create base dual I/O widget
-	baseDualIO := widgetbase.NewBaseDualIOWidget(widgetbase.BaseDualIOConfig{
+	baseDualIO := widgetbase.NewDualIOWidget(widgetbase.DualIOConfig{
 		Base:          base,
 		DisplayMode:   displayMode,
 		Padding:       padding,
@@ -145,10 +145,10 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	})
 
 	return &Widget{
-		BaseDualIOWidget: baseDualIO,
-		base:             base,
-		diskName:         cfg.Disk,
-		diskProvider:     metrics.DefaultDisk,
+		DualIOWidget: baseDualIO,
+		base:         base,
+		diskName:     cfg.Disk,
+		diskProvider: metrics.DefaultDisk,
 	}, nil
 }
 
