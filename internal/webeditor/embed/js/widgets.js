@@ -671,7 +671,7 @@ class WidgetEditor {
     /**
      * Group properties by category for better organization
      */
-    groupProperties(properties, widgetType) {
+    groupProperties(properties, _widgetType) {
         const groups = {
             'Position': {},
             'Style': {},

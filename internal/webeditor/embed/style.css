@@ -121,7 +121,7 @@
     background-color: #1095c1;
     transition: 0.2s;
     border-radius: 50%;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 30%);
 }
 
 .toggle-switch input:checked + .toggle-slider::before {
@@ -141,7 +141,7 @@ article#form-container {
 
 /* Code-like textarea */
 #config-editor {
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: Consolas, Monaco, 'Courier New', monospace;
     font-size: 13px;
     line-height: 1.4;
     tab-size: 2;
@@ -214,12 +214,12 @@ header h1 {
 }
 
 .status-indicator.error {
-    background: rgba(198, 40, 40, 0.2);
+    background: rgb(198 40 40 / 20%);
     color: #c62828;
 }
 
 .status-indicator.success {
-    background: rgba(46, 125, 50, 0.2);
+    background: rgb(46 125 50 / 20%);
     color: #2e7d32;
 }
 
@@ -433,7 +433,7 @@ main.container {
 /* Nested object styling */
 
 .nested-object h4 {
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 0.5rem;
     font-size: 0.9rem;
     color: var(--muted-color);
 }
@@ -466,16 +466,16 @@ main.container {
 }
 
 [data-theme="dark"] .status-indicator {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgb(255 255 255 / 10%);
 }
 
 [data-theme="dark"] .status-indicator.error {
-    background: rgba(198, 40, 40, 0.3);
+    background: rgb(198 40 40 / 30%);
     color: #ef9a9a;
 }
 
 [data-theme="dark"] .status-indicator.success {
-    background: rgba(46, 125, 50, 0.3);
+    background: rgb(46 125 50 / 30%);
     color: #81c784;
 }
 

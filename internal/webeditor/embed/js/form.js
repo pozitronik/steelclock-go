@@ -412,7 +412,7 @@ class FormBuilder {
      * @param {Function} onUpdate - Callback when config changes
      * @returns {HTMLElement|null}
      */
-    renderDisplayConfig(config, onUpdate) {
+    renderDisplayConfig(_config, _onUpdate) {
         // Return null to hide this section - display settings are advanced
         // and rarely need to be changed (device-specific dimensions)
         return null;
@@ -426,7 +426,7 @@ class FormBuilder {
      * @param {Function} onUpdate - Callback when config changes
      * @returns {HTMLElement|null}
      */
-    renderDefaultsConfig(config, onUpdate) {
+    renderDefaultsConfig(_config, _onUpdate) {
         // Return null to hide this section - defaults contain dynamic color
         // definitions that are better edited in JSON view
         return null;

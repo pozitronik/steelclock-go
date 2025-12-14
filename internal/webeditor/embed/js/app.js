@@ -249,7 +249,7 @@ class ConfigEditor {
             // Switching from JSON to Form - parse JSON and update config
             try {
                 this.config = JSON.parse(this.editorEl.value);
-            } catch (err) {
+            } catch (_err) {
                 this.showNotification('Invalid JSON - please fix before switching to Form view', 'error');
                 return;
             }
@@ -353,7 +353,7 @@ class ConfigEditor {
             } else {
                 this.profileSelector.style.display = 'none';
             }
-        } catch (err) {
+        } catch (_err) {
             // Profile info is optional, don't show error
             this.profileSelector.style.display = 'none';
         }
