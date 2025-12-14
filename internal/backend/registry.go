@@ -158,21 +158,3 @@ func createAutoWithExclude(cfg *config.Config, exclude map[string]bool) (Result,
 	}
 	return Result{}, fmt.Errorf("no backends registered")
 }
-
-// SnapshotRegistry returns a copy of the current registry (for tests)
-func SnapshotRegistry() map[string]registration {
-	registryMu.RLock()
-	defer registryMu.RUnlock()
-	snapshot := make(map[string]registration, len(registry))
-	for k, v := range registry {
-		snapshot[k] = v
-	}
-	return snapshot
-}
-
-// RestoreRegistry replaces the registry with a snapshot (for tests)
-func RestoreRegistry(snapshot map[string]registration) {
-	registryMu.Lock()
-	defer registryMu.Unlock()
-	registry = snapshot
-}
