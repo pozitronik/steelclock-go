@@ -154,8 +154,8 @@ class PreviewPanel {
             this.toggleMode();
         });
 
-        document.getElementById('preview-close').addEventListener('click', () => {
-            this.hide();
+        document.getElementById('preview-close').addEventListener('click', async () => {
+            await this.hide();
         });
 
         // Make draggable
