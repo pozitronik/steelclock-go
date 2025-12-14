@@ -171,18 +171,6 @@ const API = {
     },
 
     /**
-     * Get current preview frame (static mode)
-     * @returns {Promise<Object>} Frame data with frame (base64), frame_number, timestamp, width, height
-     */
-    async getPreviewFrame() {
-        const response = await fetch('/api/preview/frame');
-        if (!response.ok) {
-            throw new Error(`Failed to get preview frame: ${response.statusText}`);
-        }
-        return response.json();
-    },
-
-    /**
      * Create a WebSocket connection for live preview
      * @returns {WebSocket} WebSocket connection
      */

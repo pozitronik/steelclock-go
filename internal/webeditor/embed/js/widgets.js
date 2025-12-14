@@ -16,7 +16,6 @@
 class WidgetEditor {
     constructor(schemaProcessor, formBuilder, onChange) {
         this.schema = schemaProcessor;
-        this.formBuilder = formBuilder;
         this.onChange = onChange || (() => {});
     }
 
