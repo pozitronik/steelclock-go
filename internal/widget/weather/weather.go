@@ -225,6 +225,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	case providerOpenMeteo:
 		weatherProvider = NewOpenMeteoProvider(providerCfg, httpClient)
 	default:
+		_ = fontFace.Close() // Clean up loaded font
 		return nil, fmt.Errorf("unknown weather provider: %s", providerName)
 	}
 

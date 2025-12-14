@@ -3,6 +3,7 @@ package webeditor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -89,7 +90,7 @@ func (s *Server) Start() error {
 	s.running = true
 
 	go func() {
-		if err := s.httpServer.Serve(listener); err != http.ErrServerClosed {
+		if err := s.httpServer.Serve(listener); !errors.Is(err, http.ErrServerClosed) {
 			log.Printf("Web editor server error: %v", err)
 		}
 	}()
