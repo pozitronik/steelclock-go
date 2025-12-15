@@ -12,6 +12,7 @@ import (
 
 	"github.com/getlantern/systray"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/webeditor"
 )
 
 // Note: runtime is still used by handleEditConfig for runtime.GOOS
@@ -26,6 +27,9 @@ type Manager struct {
 
 	// Profile mode
 	profileMgr *config.ProfileManager
+
+	// Web editor
+	webEditor *webeditor.Server
 
 	// Callbacks
 	onReload        func() error
@@ -62,6 +66,11 @@ func NewManagerWithProfiles(profileMgr *config.ProfileManager, onReload func() e
 		onExit:          onExit,
 		readyChan:       make(chan struct{}),
 	}
+}
+
+// SetWebEditor sets the web editor server for browser-based config editing
+func (m *Manager) SetWebEditor(editor *webeditor.Server) {
+	m.webEditor = editor
 }
 
 // Run starts the system tray
@@ -237,8 +246,59 @@ func (m *Manager) handleProfileSwitch(index int) {
 	}
 }
 
-// handleEditConfig opens config file in default editor
+// handleEditConfig opens configuration editor in browser
 func (m *Manager) handleEditConfig() {
+	// If web editor is available, use it
+	if m.webEditor != nil {
+		m.handleEditInBrowser()
+		return
+	}
+
+	// Fallback to text editor if web editor not configured
+	m.handleEditConfigInTextEditor()
+}
+
+// handleEditInBrowser starts web editor and opens browser
+func (m *Manager) handleEditInBrowser() {
+	if m.webEditor == nil {
+		log.Println("Web editor not available, falling back to text editor")
+		m.handleEditConfigInTextEditor()
+		return
+	}
+
+	// Start server if not running
+	if !m.webEditor.IsRunning() {
+		if err := m.webEditor.Start(); err != nil {
+			log.Printf("Failed to start web editor: %v", err)
+			// Fall back to text editor
+			m.handleEditConfigInTextEditor()
+			return
+		}
+	}
+
+	// Open browser
+	url := m.webEditor.GetURL()
+	if err := openBrowser(url); err != nil {
+		log.Printf("Failed to open browser: %v", err)
+	}
+}
+
+// openBrowser opens the default browser with the given URL
+func openBrowser(url string) error {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default: // linux
+		cmd = exec.Command("xdg-open", url)
+	}
+	return cmd.Start()
+}
+
+// handleEditConfigInTextEditor opens config file in default text editor (fallback)
+func (m *Manager) handleEditConfigInTextEditor() {
 	var absPath string
 	var err error
 

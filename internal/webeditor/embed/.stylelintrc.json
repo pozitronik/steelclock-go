@@ -1,0 +1,8 @@
+{
+  "extends": "stylelint-config-standard",
+  "ignoreFiles": ["pico.min.css"],
+  "rules": {
+    "declaration-block-no-redundant-longhand-properties": null,
+    "no-descending-specificity": null
+  }
+}

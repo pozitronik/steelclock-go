@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/pozitronik/steelclock-go/internal/backend"
+	"github.com/pozitronik/steelclock-go/internal/backend/webclient"
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/compositor"
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -351,4 +352,47 @@ func (m *LifecycleManager) handleBackendFailure(cfg *config.Config) {
 
 	log.Println("Successfully recovered with alternative backend")
 	log.Println("========================================")
+}
+
+// GetWebClient returns the webclient if the webclient backend is active
+func (m *LifecycleManager) GetWebClient() *webclient.Client {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.currentBackend == "webclient" {
+		if webClient, ok := m.client.(*webclient.Client); ok {
+			return webClient
+		}
+	}
+	return nil
+}
+
+// GetCurrentBackend returns the name of the current backend
+func (m *LifecycleManager) GetCurrentBackend() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.currentBackend
+}
+
+// ShowWebClientModeMessage displays "WEB CLIENT" on the current backend
+// This is called before switching to webclient backend
+func (m *LifecycleManager) ShowWebClientModeMessage() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.client == nil {
+		return
+	}
+
+	displayWidth := config.DefaultDisplayWidth
+	displayHeight := config.DefaultDisplayHeight
+	if m.lastGoodConfig != nil {
+		displayWidth = m.lastGoodConfig.Display.Width
+		displayHeight = m.lastGoodConfig.Display.Height
+	}
+
+	splash := NewSplashRenderer(m.client, displayWidth, displayHeight)
+	if err := splash.ShowWebClientModeMessage(); err != nil {
+		log.Printf("Warning: Failed to show webclient mode message: %v", err)
+	}
 }

@@ -11,7 +11,7 @@ import (
 )
 
 // WidgetBase defines the interface for base widget functionality
-// needed by BaseDualIOWidget
+// needed by DualIOWidget
 type WidgetBase interface {
 	GetPosition() config.PositionConfig
 	GetStyle() config.StyleConfig
@@ -26,9 +26,9 @@ type DualIOTextConfig struct {
 	SecondaryPrefix string // e.g., "↑" for network TX, "W" for disk write
 }
 
-// BaseDualIOWidget contains common fields and methods for dual-metric I/O widgets
+// DualIOWidget contains common fields and methods for dual-metric I/O widgets
 // (network rx/tx, disk read/write, etc.)
-type BaseDualIOWidget struct {
+type DualIOWidget struct {
 	Base          WidgetBase
 	DisplayMode   render.DisplayMode
 	Padding       int
@@ -52,8 +52,8 @@ type BaseDualIOWidget struct {
 	Mu sync.RWMutex
 }
 
-// BaseDualIOConfig holds configuration for creating a BaseDualIOWidget
-type BaseDualIOConfig struct {
+// DualIOConfig holds configuration for creating a DualIOWidget
+type DualIOConfig struct {
 	Base          WidgetBase
 	DisplayMode   render.DisplayMode
 	Padding       int
@@ -67,9 +67,9 @@ type BaseDualIOConfig struct {
 	HistoryLen    int
 }
 
-// NewBaseDualIOWidget creates a new BaseDualIOWidget with the given configuration
-func NewBaseDualIOWidget(cfg BaseDualIOConfig) *BaseDualIOWidget {
-	return &BaseDualIOWidget{
+// NewDualIOWidget creates a new DualIOWidget with the given configuration
+func NewDualIOWidget(cfg DualIOConfig) *DualIOWidget {
+	return &DualIOWidget{
 		Base:             cfg.Base,
 		DisplayMode:      cfg.DisplayMode,
 		Padding:          cfg.Padding,
@@ -87,7 +87,7 @@ func NewBaseDualIOWidget(cfg BaseDualIOConfig) *BaseDualIOWidget {
 }
 
 // SetValues updates current primary and secondary values (thread-safe)
-func (w *BaseDualIOWidget) SetValues(primary, secondary float64) {
+func (w *DualIOWidget) SetValues(primary, secondary float64) {
 	w.Mu.Lock()
 	w.PrimaryValue = primary
 	w.SecondaryValue = secondary
@@ -96,7 +96,7 @@ func (w *BaseDualIOWidget) SetValues(primary, secondary float64) {
 
 // AddToHistory adds values to history buffers (thread-safe)
 // Should only be called when DisplayMode is 'graph'
-func (w *BaseDualIOWidget) AddToHistory(primary, secondary float64) {
+func (w *DualIOWidget) AddToHistory(primary, secondary float64) {
 	w.Mu.Lock()
 	w.PrimaryHistory.Push(primary)
 	w.SecondaryHistory.Push(secondary)
@@ -104,7 +104,7 @@ func (w *BaseDualIOWidget) AddToHistory(primary, secondary float64) {
 }
 
 // SetValuesAndHistory updates values and optionally adds to history (thread-safe)
-func (w *BaseDualIOWidget) SetValuesAndHistory(primary, secondary float64, addHistory bool) {
+func (w *DualIOWidget) SetValuesAndHistory(primary, secondary float64, addHistory bool) {
 	w.Mu.Lock()
 	w.PrimaryValue = primary
 	w.SecondaryValue = secondary
@@ -116,12 +116,12 @@ func (w *BaseDualIOWidget) SetValuesAndHistory(primary, secondary float64, addHi
 }
 
 // IsGraphMode returns true if the widget is in graph display mode
-func (w *BaseDualIOWidget) IsGraphMode() bool {
+func (w *DualIOWidget) IsGraphMode() bool {
 	return w.DisplayMode == render.DisplayModeGraph
 }
 
 // Render creates an image of the dual I/O widget
-func (w *BaseDualIOWidget) Render() (image.Image, error) {
+func (w *DualIOWidget) Render() (image.Image, error) {
 	pos := w.Base.GetPosition()
 
 	// Create canvas with background using base widget helper
@@ -162,7 +162,7 @@ func (w *BaseDualIOWidget) Render() (image.Image, error) {
 }
 
 // formatText formats the text output with unit conversion
-func (w *BaseDualIOWidget) formatText() string {
+func (w *DualIOWidget) formatText() string {
 	if w.Unit == "auto" {
 		// Auto-scale each value independently
 		primaryVal, primaryUnit := w.Converter.AutoScale(w.PrimaryValue)
@@ -187,7 +187,7 @@ func (w *BaseDualIOWidget) formatText() string {
 }
 
 // calculatePercentages calculates primary/secondary percentages based on max speed
-func (w *BaseDualIOWidget) calculatePercentages() (primaryPct, secondaryPct float64) {
+func (w *DualIOWidget) calculatePercentages() (primaryPct, secondaryPct float64) {
 	maxSpeed := w.MaxSpeedBps
 	if maxSpeed < 0 {
 		// Auto-scale
@@ -203,7 +203,7 @@ func (w *BaseDualIOWidget) calculatePercentages() (primaryPct, secondaryPct floa
 }
 
 // normalizeHistory normalizes history data to 0-100 scale
-func (w *BaseDualIOWidget) normalizeHistory() (primaryPct, secondaryPct []float64) {
+func (w *DualIOWidget) normalizeHistory() (primaryPct, secondaryPct []float64) {
 	if w.PrimaryHistory.Len() < 2 {
 		return nil, nil
 	}

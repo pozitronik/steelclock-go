@@ -130,6 +130,14 @@ func (r *BinaryRenderer) renderBCDVertical(img *image.Gray, pairs []digitPair, s
 				bitValue := 1 << (3 - row)
 				isOn := (digit & bitValue) != 0
 
+				// Skip drawing if color is transparent
+				if isOn && r.config.OnColor < 0 {
+					continue
+				}
+				if !isOn && r.config.OffColor < 0 {
+					continue
+				}
+
 				c := offColor
 				if isOn {
 					c = onColor
@@ -191,6 +199,14 @@ func (r *BinaryRenderer) renderBCDHorizontal(img *image.Gray, pairs []digitPair,
 			for bit := 0; bit < 4; bit++ {
 				bitValue := 1 << (3 - bit)
 				isOn := (digit & bitValue) != 0
+
+				// Skip drawing if color is transparent
+				if isOn && r.config.OnColor < 0 {
+					continue
+				}
+				if !isOn && r.config.OffColor < 0 {
+					continue
+				}
 
 				c := offColor
 				if isOn {
@@ -300,6 +316,14 @@ func (r *BinaryRenderer) renderTrueBinaryClock(img *image.Gray, t time.Time, x, 
 				bitValue := 1 << (v.bits - 1 - bit)
 				isOn := (v.value & bitValue) != 0
 
+				// Skip drawing if color is transparent
+				if isOn && r.config.OnColor < 0 {
+					continue
+				}
+				if !isOn && r.config.OffColor < 0 {
+					continue
+				}
+
 				c := offColor
 				if isOn {
 					c = onColor
@@ -338,6 +362,14 @@ func (r *BinaryRenderer) renderTrueBinaryClock(img *image.Gray, t time.Time, x, 
 			for bit := 0; bit < v.bits; bit++ {
 				bitValue := 1 << (v.bits - 1 - bit)
 				isOn := (v.value & bitValue) != 0
+
+				// Skip drawing if color is transparent
+				if isOn && r.config.OnColor < 0 {
+					continue
+				}
+				if !isOn && r.config.OffColor < 0 {
+					continue
+				}
 
 				c := offColor
 				if isOn {

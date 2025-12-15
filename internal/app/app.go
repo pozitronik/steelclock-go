@@ -4,10 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"sync"
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/tray"
+	"github.com/pozitronik/steelclock-go/internal/webeditor"
 )
 
 // GameSense API constants
@@ -43,6 +48,20 @@ type App struct {
 	lifecycle *LifecycleManager
 	configMgr *ConfigManager
 	trayMgr   *tray.Manager
+	webEditor *webeditor.Server
+
+	// configMu serializes config reload and profile switch operations.
+	// This prevents race conditions when multiple sources (tray, web editor)
+	// trigger config changes concurrently.
+	configMu sync.Mutex
+
+	// webclientBrowserOpened tracks if we've already opened the webclient browser
+	// to avoid opening multiple times during session
+	webclientBrowserOpened bool
+
+	// WebClient override state - for temporary webclient backend when using config editor
+	webclientOverrideActive   bool
+	webclientOverrideOriginal string // Original backend name to restore
 }
 
 // NewApp creates a new application instance (legacy single-config mode)
@@ -76,12 +95,26 @@ func (a *App) Run() {
 		a.trayMgr = tray.NewManager(a.configMgr.GetConfigPath(), a.ReloadConfig, a.Stop)
 	}
 
+	// Create web editor server
+	a.createWebEditor()
+
 	log.Println("========================================")
 
 	// Set callback to run when tray is ready
 	a.trayMgr.OnReady(func() {
 		if err := a.Start(); err != nil {
 			a.handleStartupFailure(err)
+		}
+
+		// Auto-start web editor
+		if a.webEditor != nil {
+			if err := a.webEditor.Start(); err != nil {
+				log.Printf("Failed to auto-start web editor: %v", err)
+			} else {
+				log.Printf("Web editor started at %s", a.webEditor.GetURL())
+				// Try to open webclient browser now that web editor is running
+				a.openWebClientBrowser()
+			}
 		}
 	})
 
@@ -91,8 +124,55 @@ func (a *App) Run() {
 	a.trayMgr.Run()
 
 	log.Println("SteelClock shutting down...")
+
+	// Stop web editor if running
+	if a.webEditor != nil {
+		if err := a.webEditor.Stop(); err != nil {
+			log.Printf("Failed to stop web editor: %v", err)
+		}
+	}
+
 	a.lifecycle.Shutdown()
 	log.Println("SteelClock stopped")
+}
+
+// createWebEditor creates and configures the web editor server
+func (a *App) createWebEditor() {
+	// Find schema path relative to config file location
+	configPath := a.configMgr.GetConfigPath()
+	if configPath == "" {
+		log.Println("Web editor: No config path available, skipping web editor setup")
+		return
+	}
+
+	// Schema is in profiles/schema/ relative to config file's directory
+	configDir := filepath.Dir(configPath)
+	schemaPath := filepath.Join(configDir, "profiles", "schema", "config.schema.json")
+
+	// If config is in profiles/ directory, adjust path
+	if filepath.Base(configDir) == "profiles" {
+		schemaPath = filepath.Join(configDir, "schema", "config.schema.json")
+	}
+
+	// Create providers
+	configProvider := NewConfigProviderAdapter(a.configMgr)
+	var profileProvider webeditor.ProfileProvider
+	var onProfileSwitch func(path string) error
+	if a.configMgr.HasProfiles() {
+		profileProvider = NewProfileProviderAdapter(a.configMgr.GetProfileManager())
+		onProfileSwitch = a.switchProfileAndUpdateTray
+	}
+
+	// Create web editor server
+	a.webEditor = webeditor.NewServer(configProvider, profileProvider, schemaPath, a.ReloadConfig, onProfileSwitch)
+
+	// Set webclient override callback
+	a.webEditor.SetPreviewOverrideCallback(a.SetWebClientOverride)
+
+	// Wire up with tray manager
+	a.trayMgr.SetWebEditor(a.webEditor)
+
+	log.Println("Web editor: Configured")
 }
 
 // Start initializes and starts all components
@@ -107,6 +187,9 @@ func (a *App) Start() error {
 		return a.handleStartupError(err, cfg)
 	}
 
+	// Update webclient provider if webclient backend is active
+	a.updateWebClientProvider()
+
 	return nil
 }
 
@@ -115,8 +198,206 @@ func (a *App) Stop() {
 	a.lifecycle.Stop()
 }
 
-// ReloadConfig reloads configuration and restarts components
+// updateWebClientProvider updates the web editor with the webclient provider if webclient backend is active
+func (a *App) updateWebClientProvider() {
+	if a.webEditor == nil {
+		return
+	}
+
+	webClient := a.lifecycle.GetWebClient()
+	if webClient != nil {
+		adapter := NewWebClientProviderAdapter(webClient)
+		a.webEditor.SetPreviewProvider(adapter)
+		log.Println("WebClient provider connected to web editor")
+
+		// Auto-open browser for webclient if web editor is running
+		a.openWebClientBrowser()
+	} else {
+		a.webEditor.SetPreviewProvider(nil)
+	}
+}
+
+// openWebClientBrowser opens the webclient page in browser if conditions are met
+func (a *App) openWebClientBrowser() {
+	// Only open once per session
+	if a.webclientBrowserOpened {
+		return
+	}
+
+	// Check if web editor is running
+	if !a.webEditor.IsRunning() {
+		log.Println("WebClient: web editor not running yet, will open browser later")
+		return
+	}
+
+	// Check if webclient backend is active
+	if a.lifecycle.GetWebClient() == nil {
+		return
+	}
+
+	a.webclientBrowserOpened = true
+	webclientURL := a.webEditor.GetURL() + "/preview"
+	log.Printf("Opening webclient in browser: %s", webclientURL)
+	if err := openBrowser(webclientURL); err != nil {
+		log.Printf("Failed to open browser: %v", err)
+	}
+}
+
+// openBrowser opens the specified URL in the default browser
+func openBrowser(url string) error {
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default: // linux, freebsd, etc.
+		cmd = exec.Command("xdg-open", url)
+	}
+
+	return cmd.Start()
+}
+
+// SetWebClientOverride enables or disables temporary webclient backend override.
+// When enabled, switches to webclient backend regardless of config setting.
+// When disabled, restores the original backend from config.
+func (a *App) SetWebClientOverride(enable bool) error {
+	a.configMu.Lock()
+	defer a.configMu.Unlock()
+
+	if enable {
+		return a.enableWebClientOverride()
+	}
+	return a.disableWebClientOverride()
+}
+
+// enableWebClientOverride switches to webclient backend temporarily
+func (a *App) enableWebClientOverride() error {
+	if a.webclientOverrideActive {
+		log.Println("WebClient override already active")
+		return nil
+	}
+
+	// Get current backend name
+	currentBackend := a.lifecycle.GetCurrentBackend()
+	if currentBackend == "webclient" {
+		log.Println("WebClient override: already using webclient backend")
+		return nil
+	}
+
+	log.Println("========================================")
+	log.Printf("Enabling webclient override (current backend: %s)", currentBackend)
+
+	// Store original backend name
+	a.webclientOverrideOriginal = currentBackend
+
+	// Get current config
+	cfg := a.lifecycle.GetLastGoodConfig()
+	if cfg == nil {
+		return fmt.Errorf("no configuration loaded")
+	}
+
+	// Stop current compositor first (so it stops sending frames)
+	log.Println("Stopping current compositor...")
+	a.lifecycle.Stop()
+
+	// Show "WEB CLIENT" message on hardware (now nothing will overwrite it)
+	a.lifecycle.ShowWebClientModeMessage()
+
+	// Create a modified config with webclient backend
+	webclientCfg := *cfg
+	webclientCfg.Backend = "webclient"
+
+	// Start with webclient backend
+	log.Println("Starting with webclient backend...")
+	if err := a.lifecycle.Start(&webclientCfg); err != nil {
+		log.Printf("ERROR: Failed to start webclient backend: %v", err)
+		// Try to restore original backend
+		log.Println("Attempting to restore original backend...")
+		if restoreErr := a.lifecycle.Start(cfg); restoreErr != nil {
+			log.Printf("ERROR: Failed to restore original backend: %v", restoreErr)
+		}
+		return fmt.Errorf("failed to enable webclient override: %w", err)
+	}
+
+	a.webclientOverrideActive = true
+
+	// Update webclient provider
+	a.updateWebClientProviderUnlocked()
+
+	log.Println("WebClient override enabled")
+	log.Println("========================================")
+	return nil
+}
+
+// disableWebClientOverride restores the original backend
+func (a *App) disableWebClientOverride() error {
+	if !a.webclientOverrideActive {
+		log.Println("WebClient override not active")
+		return nil
+	}
+
+	log.Println("========================================")
+	log.Printf("Disabling webclient override (restoring backend: %s)", a.webclientOverrideOriginal)
+
+	// Get current config (with webclient backend)
+	cfg := a.lifecycle.GetLastGoodConfig()
+	if cfg == nil {
+		return fmt.Errorf("no configuration loaded")
+	}
+
+	// Create config with original backend
+	originalCfg := *cfg
+	originalCfg.Backend = a.webclientOverrideOriginal
+
+	// Stop webclient compositor
+	log.Println("Stopping webclient compositor...")
+	a.lifecycle.Stop()
+
+	// Start with original backend
+	log.Printf("Starting with original backend: %s", a.webclientOverrideOriginal)
+	if err := a.lifecycle.Start(&originalCfg); err != nil {
+		log.Printf("ERROR: Failed to restore original backend: %v", err)
+		return fmt.Errorf("failed to disable webclient override: %w", err)
+	}
+
+	a.webclientOverrideActive = false
+	a.webclientOverrideOriginal = ""
+
+	// Clear webclient provider since we're no longer using webclient backend
+	if a.webEditor != nil {
+		a.webEditor.SetPreviewProvider(nil)
+	}
+
+	log.Println("WebClient override disabled, original backend restored")
+	log.Println("========================================")
+	return nil
+}
+
+// updateWebClientProviderUnlocked updates webclient provider without acquiring configMu
+// (caller must hold configMu)
+func (a *App) updateWebClientProviderUnlocked() {
+	if a.webEditor == nil {
+		return
+	}
+
+	webClient := a.lifecycle.GetWebClient()
+	if webClient != nil {
+		adapter := NewWebClientProviderAdapter(webClient)
+		a.webEditor.SetPreviewProvider(adapter)
+		log.Println("WebClient provider connected to web editor")
+	} else {
+		a.webEditor.SetPreviewProvider(nil)
+	}
+}
+
+// ReloadConfig reloads configuration and restarts components.
+// This operation is serialized with other config operations via configMu.
 func (a *App) ReloadConfig() error {
+	a.configMu.Lock()
+	defer a.configMu.Unlock()
+
 	log.Println("========================================")
 	log.Println("Reloading configuration...")
 
@@ -161,14 +442,21 @@ func (a *App) ReloadConfig() error {
 		return a.handleStartupError(err, newCfg)
 	}
 
+	// Update webclient provider if webclient backend is active
+	a.updateWebClientProvider()
+
 	log.Println("Configuration reloaded successfully!")
 	log.Printf("Running with: %s (%s)", newCfg.GameName, newCfg.GameDisplayName)
 	log.Println("========================================")
 	return nil
 }
 
-// SwitchProfile switches to a different configuration profile
+// SwitchProfile switches to a different configuration profile.
+// This operation is serialized with other config operations via configMu.
 func (a *App) SwitchProfile(path string) error {
+	a.configMu.Lock()
+	defer a.configMu.Unlock()
+
 	if !a.configMgr.HasProfiles() {
 		return fmt.Errorf("profile manager not available")
 	}
@@ -211,8 +499,26 @@ func (a *App) SwitchProfile(path string) error {
 		return a.handleStartupError(err, newCfg)
 	}
 
+	// Update webclient provider if webclient backend is active
+	a.updateWebClientProvider()
+
 	log.Printf("Profile switched successfully to: %s", profileName)
 	log.Println("========================================")
+	return nil
+}
+
+// switchProfileAndUpdateTray switches profile and updates the tray menu
+// This is used by the web editor to ensure UI consistency
+func (a *App) switchProfileAndUpdateTray(path string) error {
+	if err := a.SwitchProfile(path); err != nil {
+		return err
+	}
+
+	// Update tray menu to reflect the new active profile
+	if a.trayMgr != nil {
+		a.trayMgr.UpdateActiveProfile()
+	}
+
 	return nil
 }
 

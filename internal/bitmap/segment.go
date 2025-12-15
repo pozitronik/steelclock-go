@@ -43,9 +43,9 @@ var SegmentPatterns = [10]byte{
 // digit: 0-9 (values outside this range will display nothing)
 // style: segment shape style (rectangle, hexagon, rounded)
 // thickness: segment thickness in pixels
-// onColor: color for lit segments
-// offColor: color for unlit segments (use same as background to hide)
-func DrawSegmentDigit(img *image.Gray, x, y, width, height int, digit int, style SegmentStyle, thickness int, onColor, offColor uint8) {
+// onColor: color for lit segments (-1 = transparent/none, 0-255 = grayscale)
+// offColor: color for unlit segments (-1 = transparent/none, 0-255 = grayscale)
+func DrawSegmentDigit(img *image.Gray, x, y, width, height int, digit int, style SegmentStyle, thickness int, onColor, offColor int) {
 	if digit < 0 || digit > 9 {
 		return
 	}
@@ -84,16 +84,31 @@ func DrawSegmentDigit(img *image.Gray, x, y, width, height int, digit int, style
 
 // DrawSegmentDigitAnimated draws a seven-segment digit with animation support
 // animProgress: 0.0-1.0 for fade-in effect (multiplied with onColor)
-func DrawSegmentDigitAnimated(img *image.Gray, x, y, width, height int, digit int, style SegmentStyle, thickness int, onColor, offColor uint8, animProgress float64) {
-	adjustedOnColor := uint8(float64(onColor) * animProgress)
+// onColor, offColor: -1 = transparent/none, 0-255 = grayscale
+func DrawSegmentDigitAnimated(img *image.Gray, x, y, width, height int, digit int, style SegmentStyle, thickness int, onColor, offColor int, animProgress float64) {
+	adjustedOnColor := onColor
+	if onColor >= 0 {
+		adjustedOnColor = int(float64(onColor) * animProgress)
+	}
 	DrawSegmentDigit(img, x, y, width, height, digit, style, thickness, adjustedOnColor, offColor)
 }
 
 // drawHSegment draws a horizontal segment with the specified style
-func drawHSegment(img *image.Gray, x, y, length, thickness int, on bool, onColor, offColor uint8, style SegmentStyle) {
-	c := offColor
+// onColor, offColor: -1 = transparent/none (skip drawing)
+func drawHSegment(img *image.Gray, x, y, length, thickness int, on bool, onColor, offColor int, style SegmentStyle) {
+	// Skip drawing if color is transparent
+	if on && onColor < 0 {
+		return
+	}
+	if !on && offColor < 0 {
+		return
+	}
+
+	var c uint8
 	if on {
-		c = onColor
+		c = uint8(onColor)
+	} else {
+		c = uint8(offColor)
 	}
 	col := color.Gray{Y: c}
 
@@ -108,10 +123,21 @@ func drawHSegment(img *image.Gray, x, y, length, thickness int, on bool, onColor
 }
 
 // drawVSegment draws a vertical segment with the specified style
-func drawVSegment(img *image.Gray, x, y, length, thickness int, on bool, onColor, offColor uint8, style SegmentStyle) {
-	c := offColor
+// onColor, offColor: -1 = transparent/none (skip drawing)
+func drawVSegment(img *image.Gray, x, y, length, thickness int, on bool, onColor, offColor int, style SegmentStyle) {
+	// Skip drawing if color is transparent
+	if on && onColor < 0 {
+		return
+	}
+	if !on && offColor < 0 {
+		return
+	}
+
+	var c uint8
 	if on {
-		c = onColor
+		c = uint8(onColor)
+	} else {
+		c = uint8(offColor)
 	}
 	col := color.Gray{Y: c}
 

@@ -176,7 +176,7 @@ func (r *SegmentRenderer) drawSegmentDigit(img *image.Gray, x, y, width, height 
 	}
 
 	bitmap.DrawSegmentDigitAnimated(img, x, y, width, height, digit, style,
-		r.config.SegmentThickness, uint8(r.config.OnColor), uint8(r.config.OffColor), animProgress)
+		r.config.SegmentThickness, r.config.OnColor, r.config.OffColor, animProgress)
 }
 
 // drawColon draws the colon separator between digit pairs

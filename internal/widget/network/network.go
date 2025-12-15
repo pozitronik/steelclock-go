@@ -22,7 +22,7 @@ func init() {
 
 // Widget displays network I/O (RX/TX)
 type Widget struct {
-	*widgetbase.BaseDualIOWidget
+	*widgetbase.DualIOWidget
 	base            *widget.BaseWidget
 	interfaceName   *string
 	networkProvider metrics.NetworkProvider
@@ -151,7 +151,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	)
 
 	// Create base dual I/O widget
-	baseDualIO := widgetbase.NewBaseDualIOWidget(widgetbase.BaseDualIOConfig{
+	baseDualIO := widgetbase.NewDualIOWidget(widgetbase.DualIOConfig{
 		Base:          base,
 		DisplayMode:   displayMode,
 		Padding:       padding,
@@ -169,10 +169,10 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	})
 
 	return &Widget{
-		BaseDualIOWidget: baseDualIO,
-		base:             base,
-		interfaceName:    cfg.Interface,
-		networkProvider:  metrics.DefaultNetwork,
+		DualIOWidget:    baseDualIO,
+		base:            base,
+		interfaceName:   cfg.Interface,
+		networkProvider: metrics.DefaultNetwork,
 	}, nil
 }
 

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelClock Configuration Editor</title>
+    <link rel="stylesheet" href="pico.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="container">
+        <header>
+            <div class="header-row">
+                <h1>
+                    <a href="https://github.com/pozitronik/steelclock-go" target="_blank" rel="noopener" title="GitHub Repository" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3em;">
+                        <svg height="24" width="24" viewBox="0 0 16 16" style="fill: currentColor;">
+                            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                        </svg>
+                        <span>SteelClock</span>
+                    </a>
+                </h1>
+                <div id="profile-selector" style="display: none;">
+                    <select id="profile-select" aria-label="Select profile"></select>
+                    <button id="btn-rename-profile" class="outline secondary" title="Rename profile">✎</button>
+                    <button id="btn-new-profile" class="outline secondary" title="Create new profile">+</button>
+                </div>
+                <div class="header-actions">
+                    <button id="btn-reload" class="secondary outline">Reload</button>
+                    <button id="btn-save" class="primary outline">Save</button>
+                    <button id="btn-apply" class="primary">Apply</button>
+                </div>
+                <div class="view-toggle">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="view-toggle-checkbox">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="view-toggle-label" data-view="json">JSON</span>
+                </div>
+                <div class="toggle-divider"></div>
+                <div class="preview-toggle" title="Toggle display preview">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="preview-toggle-checkbox">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="preview-toggle-label">Preview</span>
+                </div>
+                <span id="status" class="status-indicator">Ready</span>
+            </div>
+        </header>
+
+        <!-- Form View -->
+        <article id="form-container">
+            <div id="form-content">
+                <p class="loading">Loading schema...</p>
+            </div>
+        </article>
+
+        <!-- JSON View (hidden by default) -->
+        <article id="json-container" style="display: none;">
+            <label for="config-editor">
+                Configuration JSON
+                <small>Edit the raw JSON configuration. Changes will be applied when you click "Save &amp; Apply".</small>
+            </label>
+            <textarea id="config-editor" rows="30" spellcheck="false"></textarea>
+        </article>
+
+        <footer>
+            <small>
+                <a href="#" id="toggle-theme">Toggle Dark Mode</a>
+            </small>
+        </footer>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/schema.js"></script>
+    <script src="js/form.js"></script>
+    <script src="js/widgets.js"></script>
+    <script src="js/preview.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

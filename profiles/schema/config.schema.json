@@ -40,8 +40,8 @@
     },
     "backend": {
       "type": "string",
-      "description": "Backend: 'gamesense' (requires SteelSeries GG), 'direct' (USB HID). If omitted, auto-selects (tries gamesense first, then direct)",
-      "enum": ["gamesense", "direct", ""]
+      "description": "Backend: 'gamesense' (requires SteelSeries GG), 'direct' (USB HID), 'webclient' (web browser display). If omitted, auto-selects (tries gamesense first, then direct)",
+      "enum": ["gamesense", "direct", "webclient", ""]
     },
     "direct_driver": {
       "type": "object",
@@ -61,6 +61,19 @@
           "type": "string",
           "description": "USB interface identifier",
           "default": "mi_01"
+        }
+      }
+    },
+    "webclient": {
+      "type": "object",
+      "description": "Web client backend configuration (only used when backend is 'webclient')",
+      "properties": {
+        "target_fps": {
+          "type": "integer",
+          "description": "Target frame rate for streaming to web browser (frames per second)",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 30
         }
       }
     },
@@ -124,58 +137,69 @@
   "definitions": {
     "position": {
       "type": "object",
-      "description": "Widget position and size",
+      "description": "Widget location and dimensions on the display",
       "required": ["x", "y", "w", "h"],
       "properties": {
-        "x": { "type": "integer", "description": "X coordinate", "minimum": 0 },
-        "y": { "type": "integer", "description": "Y coordinate" },
-        "w": { "type": "integer", "description": "Width in pixels", "minimum": 1 },
-        "h": { "type": "integer", "description": "Height in pixels", "minimum": 1 },
-        "z": { "type": "integer", "description": "Z-order (higher = on top)", "default": 0 }
+        "x": { "type": "integer", "description": "Horizontal offset from left edge in pixels", "minimum": 0 },
+        "y": { "type": "integer", "description": "Vertical offset from top edge in pixels" },
+        "w": { "type": "integer", "description": "Widget width in pixels", "minimum": 1 },
+        "h": { "type": "integer", "description": "Widget height in pixels", "minimum": 1 },
+        "z": { "type": "integer", "description": "Layer order (higher values render on top)", "default": 0 }
       }
     },
     "style": {
       "type": "object",
-      "description": "Widget visual styling",
+      "description": "Widget visual appearance",
       "properties": {
         "background": {
           "type": "integer",
-          "description": "Background color (-1=transparent, 0-255=grayscale)",
+          "description": "Fill density (-1=none, 0=black, 255=white)",
           "minimum": -1,
           "maximum": 255,
           "default": 0
         },
         "border": {
           "type": "integer",
-          "description": "Border: -1=disabled, 0-255=enabled with that color",
+          "description": "Border density (-1=none, 0=black, 255=white)",
           "minimum": -1,
           "maximum": 255,
           "default": -1
         },
         "padding": {
           "type": "integer",
-          "description": "Padding from widget edges in pixels",
+          "description": "Inner padding from edges in pixels",
           "minimum": 0,
           "default": 0
         }
       }
     },
-    "textObject": {
+    "textStyle": {
       "type": "object",
-      "description": "Text rendering properties",
+      "description": "Text styling properties (font, size, alignment)",
       "properties": {
-        "format": { "type": "string", "description": "Format string (widget-specific)" },
-        "font": { "type": ["string", "null"], "description": "Font name or TTF path (null = bundled font)", "default": null },
+        "font": { "type": ["string", "null"], "description": "Font name (pixel3x5, pixel5x7) or TTF path. Null = bundled font", "default": null },
         "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 10 },
         "align": {
           "type": "object",
+          "description": "Text alignment within the widget content area",
           "properties": {
-            "h": { "type": "string", "enum": ["left", "center", "right"], "default": "center" },
-            "v": { "type": "string", "enum": ["top", "center", "bottom"], "default": "center" }
+            "h": { "type": "string", "description": "Horizontal alignment", "enum": ["left", "center", "right"], "default": "center" },
+            "v": { "type": "string", "description": "Vertical alignment", "enum": ["top", "center", "bottom"], "default": "center" }
           }
-        },
-        "unit": { "type": "string", "description": "Display unit (widget-specific)" }
+        }
       }
+    },
+    "textObject": {
+      "type": "object",
+      "description": "Text rendering properties with format string",
+      "allOf": [
+        { "$ref": "#/definitions/textStyle" },
+        {
+          "properties": {
+            "format": { "type": "string", "description": "Format string (widget-specific)" }
+          }
+        }
+      ]
     },
     "autoHide": {
       "type": "object",
@@ -202,8 +226,8 @@
       "type": "object",
       "description": "Separator line between elements",
       "properties": {
-        "color": { "type": "integer", "description": "Separator color (-1=disabled, 0-255=grayscale)", "minimum": -1, "maximum": 255, "default": 128 },
-        "thickness": { "type": "integer", "description": "Separator thickness in pixels (0=disabled)", "minimum": 0, "default": 1 }
+        "color": { "type": "integer", "description": "Separator density (-1 = none, 0-255 = grayscale)", "minimum": -1, "maximum": 255, "default": 128 },
+        "thickness": { "type": "integer", "description": "Separator thickness in pixels (0 = disabled)", "minimum": 0, "default": 1 }
       }
     },
     "transitionConfig": {
@@ -262,21 +286,20 @@
       "properties": {
         "type": {
           "type": "string",
+          "description": "Widget type to display",
           "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life", "hyperspace", "starwars_intro", "telegram", "telegram_counter"]
         },
-        "enabled": { "type": "boolean", "default": true },
+        "enabled": { "type": "boolean", "description": "Show or hide this widget", "default": true },
         "position": { "$ref": "#/definitions/position" },
         "style": { "$ref": "#/definitions/style" },
-        "update_interval": { "type": "number", "description": "Update interval in seconds", "minimum": 0.01 },
-        "poll_interval": { "type": "number", "description": "Internal polling interval for volume/volume_meter widgets (seconds)", "minimum": 0.01, "default": 0.1 },
-        "text": { "$ref": "#/definitions/textObject" },
-        "auto_hide": { "$ref": "#/definitions/autoHide" }
+        "update_interval": { "type": "number", "description": "Update interval in seconds", "minimum": 0.01 }
       },
       "allOf": [
         {
           "if": { "properties": { "type": { "const": "clock" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "text": { "$ref": "#/definitions/textObject" },
               "mode": { "type": "string", "description": "Display mode: text, analog clock face, binary clock, or seven-segment display", "enum": ["text", "analog", "binary", "segment"], "default": "text" },
               "analog": {
                 "type": "object",
@@ -286,13 +309,13 @@
                   "show_ticks": { "type": "boolean", "description": "Show hour tick marks", "default": true },
                   "colors": {
                     "type": "object",
-                    "description": "Analog clock colors (-1 = transparent/hidden)",
+                    "description": "Analog clock density values (-1 = none)",
                     "properties": {
-                      "face": { "type": "integer", "description": "Clock face outline color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "hour": { "type": "integer", "description": "Hour hand color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "minute": { "type": "integer", "description": "Minute hand color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "second": { "type": "integer", "description": "Second hand color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "ticks": { "type": "integer", "description": "Hour tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
+                      "face": { "type": "integer", "description": "Clock face outline density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "hour": { "type": "integer", "description": "Hour hand density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "minute": { "type": "integer", "description": "Minute hand density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "second": { "type": "integer", "description": "Second hand density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "ticks": { "type": "integer", "description": "Hour tick marks density", "minimum": 0, "maximum": 255, "default": 150 }
                     }
                   }
                 }
@@ -309,8 +332,8 @@
                   "dot_size": { "type": "integer", "description": "Dot diameter in pixels", "minimum": 1, "default": 4 },
                   "dot_spacing": { "type": "integer", "description": "Gap between dots in pixels", "minimum": 0, "default": 2 },
                   "dot_style": { "type": "string", "description": "Dot shape", "enum": ["circle", "square"], "default": "circle" },
-                  "on_color": { "type": "integer", "description": "Color for 'on' bits (1)", "minimum": 0, "maximum": 255, "default": 255 },
-                  "off_color": { "type": "integer", "description": "Color for 'off' bits (0), 0 = invisible", "minimum": 0, "maximum": 255, "default": 40 }
+                  "on_color": { "type": "integer", "description": "Density for 'on' bits (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                  "off_color": { "type": "integer", "description": "Density for 'off' bits (-1 = none)", "minimum": -1, "maximum": 255, "default": 40 }
                 }
               },
               "segment": {
@@ -324,8 +347,8 @@
                   "digit_spacing": { "type": "integer", "description": "Space between digits in pixels", "minimum": 0, "default": 2 },
                   "colon_style": { "type": "string", "description": "Colon separator style", "enum": ["dots", "bar", "none"], "default": "dots" },
                   "colon_blink": { "type": "boolean", "description": "Blink colon separators", "default": true },
-                  "on_color": { "type": "integer", "description": "Color for active segments", "minimum": 0, "maximum": 255, "default": 255 },
-                  "off_color": { "type": "integer", "description": "Color for inactive segments (0 = invisible)", "minimum": 0, "maximum": 255, "default": 30 },
+                  "on_color": { "type": "integer", "description": "Density for active segments (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                  "off_color": { "type": "integer", "description": "Density for inactive segments (-1 = none)", "minimum": -1, "maximum": 255, "default": 30 },
                   "flip": {
                     "type": "object",
                     "description": "Digit flip animation settings",
@@ -343,6 +366,7 @@
           "if": { "properties": { "type": { "const": "cpu" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "text": { "$ref": "#/definitions/textObject" },
               "mode": { "type": "string", "description": "Display mode for CPU usage", "enum": ["text", "bar", "graph", "gauge"], "default": "bar" },
               "bar": {
                 "type": "object",
@@ -368,8 +392,8 @@
                     "type": "object",
                     "description": "Graph colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Graph fill color (-1 = no fill)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "line": { "type": "integer", "description": "Graph line color", "minimum": 0, "maximum": 255, "default": 255 }
+                      "fill": { "type": "integer", "description": "Graph fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "line": { "type": "integer", "description": "Graph line density", "minimum": 0, "maximum": 255, "default": 255 }
                     }
                   }
                 }
@@ -407,6 +431,7 @@
           "if": { "properties": { "type": { "const": "memory" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "text": { "$ref": "#/definitions/textObject" },
               "mode": { "type": "string", "description": "Display mode for memory usage", "enum": ["text", "bar", "graph", "gauge"], "default": "bar" },
               "bar": {
                 "type": "object",
@@ -432,8 +457,8 @@
                     "type": "object",
                     "description": "Graph colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Graph fill color (-1 = no fill)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "line": { "type": "integer", "description": "Graph line color", "minimum": 0, "maximum": 255, "default": 255 }
+                      "fill": { "type": "integer", "description": "Graph fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "line": { "type": "integer", "description": "Graph line density", "minimum": 0, "maximum": 255, "default": 255 }
                     }
                   }
                 }
@@ -469,18 +494,14 @@
               "text": {
                 "type": "object",
                 "description": "Text mode settings",
-                "properties": {
-                  "font": { "type": ["string", "null"], "description": "Font name or TTF path", "default": null },
-                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 10 },
-                  "align": {
-                    "type": "object",
+                "allOf": [
+                  { "$ref": "#/definitions/textStyle" },
+                  {
                     "properties": {
-                      "h": { "type": "string", "enum": ["left", "center", "right"], "default": "center" },
-                      "v": { "type": "string", "enum": ["top", "center", "bottom"], "default": "center" }
+                      "show_unit": { "type": "boolean", "description": "Show unit suffix (e.g., 'Mbps') in text mode", "default": false }
                     }
-                  },
-                  "show_unit": { "type": "boolean", "description": "Show unit suffix (e.g., 'Mbps') in text mode", "default": false }
-                }
+                  }
+                ]
               },
               "bar": {
                 "type": "object",
@@ -490,10 +511,10 @@
                   "border": { "type": "boolean", "description": "Draw border around bars", "default": false },
                   "colors": {
                     "type": "object",
-                    "description": "Bar colors for RX/TX (-1 = transparent/hidden)",
+                    "description": "Bar density values for RX/TX (-1 = none)",
                     "properties": {
-                      "rx": { "type": "integer", "description": "Receive (download) bar color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "tx": { "type": "integer", "description": "Transmit (upload) bar color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 128 }
+                      "rx": { "type": "integer", "description": "Receive (download) bar density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "description": "Transmit (upload) bar density (-1 = none)", "minimum": -1, "maximum": 255, "default": 128 }
                     }
                   }
                 }
@@ -505,10 +526,10 @@
                   "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
                   "colors": {
                     "type": "object",
-                    "description": "Graph colors for RX/TX (-1 = line only/no fill)",
+                    "description": "Graph density values for RX/TX (-1 = none)",
                     "properties": {
-                      "rx": { "type": "integer", "description": "Receive (download) line/fill color (-1 = line only)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "tx": { "type": "integer", "description": "Transmit (upload) line/fill color (-1 = line only)", "minimum": -1, "maximum": 255, "default": 128 }
+                      "rx": { "type": "integer", "description": "Receive (download) fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "description": "Transmit (upload) fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 128 }
                     }
                   }
                 }
@@ -519,12 +540,12 @@
                 "properties": {
                   "colors": {
                     "type": "object",
-                    "description": "Gauge colors for RX/TX (-1 = transparent/hidden)",
+                    "description": "Gauge density values for RX/TX (-1 = none)",
                     "properties": {
-                      "rx": { "type": "integer", "description": "Receive (download) arc color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "tx": { "type": "integer", "description": "Transmit (upload) arc color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 128 },
-                      "rx_needle": { "type": "integer", "description": "Receive needle color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "tx_needle": { "type": "integer", "description": "Transmit needle color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 180 }
+                      "rx": { "type": "integer", "description": "Receive (download) arc density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "tx": { "type": "integer", "description": "Transmit (upload) arc density (-1 = none)", "minimum": -1, "maximum": 255, "default": 128 },
+                      "rx_needle": { "type": "integer", "description": "Receive needle density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "tx_needle": { "type": "integer", "description": "Transmit needle density (-1 = none)", "minimum": -1, "maximum": 255, "default": 180 }
                     }
                   }
                 }
@@ -543,18 +564,14 @@
               "text": {
                 "type": "object",
                 "description": "Text mode settings",
-                "properties": {
-                  "font": { "type": ["string", "null"], "description": "Font name or TTF path", "default": null },
-                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 10 },
-                  "align": {
-                    "type": "object",
+                "allOf": [
+                  { "$ref": "#/definitions/textStyle" },
+                  {
                     "properties": {
-                      "h": { "type": "string", "enum": ["left", "center", "right"], "default": "center" },
-                      "v": { "type": "string", "enum": ["top", "center", "bottom"], "default": "center" }
+                      "show_unit": { "type": "boolean", "description": "Show unit suffix (e.g., 'MB/s') in text mode", "default": false }
                     }
-                  },
-                  "show_unit": { "type": "boolean", "description": "Show unit suffix (e.g., 'MB/s') in text mode", "default": false }
-                }
+                  }
+                ]
               },
               "bar": {
                 "type": "object",
@@ -564,10 +581,10 @@
                   "border": { "type": "boolean", "description": "Draw border around bars", "default": false },
                   "colors": {
                     "type": "object",
-                    "description": "Bar colors for read/write (-1 = transparent/hidden)",
+                    "description": "Bar density values for read/write (-1 = none)",
                     "properties": {
-                      "read": { "type": "integer", "description": "Read bar color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "write": { "type": "integer", "description": "Write bar color (-1 to hide)", "minimum": -1, "maximum": 255, "default": 200 }
+                      "read": { "type": "integer", "description": "Read bar density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "write": { "type": "integer", "description": "Write bar density (-1 = none)", "minimum": -1, "maximum": 255, "default": 200 }
                     }
                   }
                 }
@@ -579,10 +596,10 @@
                   "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
                   "colors": {
                     "type": "object",
-                    "description": "Graph colors for read/write (-1 = line only/no fill)",
+                    "description": "Graph density values for read/write (-1 = none)",
                     "properties": {
-                      "read": { "type": "integer", "description": "Read line/fill color (-1 = line only)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "write": { "type": "integer", "description": "Write line/fill color (-1 = line only)", "minimum": -1, "maximum": 255, "default": 200 }
+                      "read": { "type": "integer", "description": "Read fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "write": { "type": "integer", "description": "Write fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 200 }
                     }
                   }
                 }
@@ -594,6 +611,9 @@
           "if": { "properties": { "type": { "const": "volume" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "text": { "$ref": "#/definitions/textObject" },
+              "auto_hide": { "$ref": "#/definitions/autoHide" },
+              "poll_interval": { "type": "number", "description": "Internal polling interval in seconds", "minimum": 0.01, "default": 0.1 },
               "mode": { "type": "string", "description": "Display mode for system volume", "enum": ["text", "bar", "gauge"], "default": "bar" },
               "bar": {
                 "type": "object",
@@ -633,6 +653,8 @@
           "if": { "properties": { "type": { "const": "volume_meter" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "auto_hide": { "$ref": "#/definitions/autoHide" },
+              "poll_interval": { "type": "number", "description": "Internal polling interval in seconds", "minimum": 0.01, "default": 0.1 },
               "mode": { "type": "string", "description": "Display mode for audio peak meter", "enum": ["text", "bar", "gauge"], "default": "bar" },
               "bar": {
                 "type": "object",
@@ -669,28 +691,21 @@
                 }
               },
               "text": {
-                "type": "object",
-                "description": "Text mode settings",
-                "properties": {
-                  "format": { "type": "string", "description": "Text format string", "default": "%d%%" },
-                  "font": { "type": ["string", "null"], "description": "Font file path (null = default)", "default": null },
-                  "size": { "type": "integer", "description": "Font size in points", "minimum": 6, "maximum": 72, "default": 10 },
-                  "align": {
-                    "type": "object",
-                    "description": "Text alignment",
+                "allOf": [
+                  { "$ref": "#/definitions/textObject" },
+                  {
                     "properties": {
-                      "h": { "type": "string", "description": "Horizontal alignment", "enum": ["left", "center", "right"], "default": "center" },
-                      "v": { "type": "string", "description": "Vertical alignment", "enum": ["top", "center", "bottom"], "default": "center" }
+                      "format": { "description": "Text format string (e.g., '%d%%')", "default": "%d%%" }
                     }
                   }
-                }
+                ]
               },
               "stereo": {
                 "type": "object",
                 "description": "Stereo channel settings",
                 "properties": {
                   "enabled": { "type": "boolean", "description": "Show separate left/right channels", "default": false },
-                  "divider": { "type": "integer", "description": "Divider line color between left/right channels (-1=disabled, 0-255=color)", "minimum": -1, "maximum": 255, "default": 64 }
+                  "divider": { "type": "integer", "description": "Divider line density between left/right channels (-1 = none, 0-255 = grayscale)", "minimum": -1, "maximum": 255, "default": 64 }
                 }
               },
               "metering": {
@@ -788,6 +803,7 @@
           "if": { "properties": { "type": { "const": "keyboard" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "text": { "$ref": "#/definitions/textStyle" },
               "indicators": {
                 "type": "object",
                 "description": "Keyboard lock indicator settings",
@@ -828,10 +844,10 @@
               },
               "colors": {
                 "type": "object",
-                "description": "Indicator colors (-1 = transparent/hidden)",
+                "description": "Indicator density values (-1 = none)",
                 "properties": {
-                  "on": { "type": "integer", "description": "Color when indicator is active (-1 to hide)", "minimum": -1, "maximum": 255, "default": 255 },
-                  "off": { "type": "integer", "description": "Color when indicator is inactive (-1 to hide)", "minimum": -1, "maximum": 255, "default": 100 }
+                  "on": { "type": "integer", "description": "Density when indicator is active (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                  "off": { "type": "integer", "description": "Density when indicator is inactive (-1 = none)", "minimum": -1, "maximum": 255, "default": 100 }
                 }
               }
             }
@@ -841,6 +857,7 @@
           "if": { "properties": { "type": { "const": "keyboard_layout" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "text": { "$ref": "#/definitions/textStyle" },
               "format": { "type": "string", "description": "Language code format: iso639-1 (EN), iso639-2 (ENG), or full (English)", "enum": ["iso639-1", "iso639-2", "full"], "default": "iso639-1" }
             }
           }
@@ -904,25 +921,19 @@
           "if": { "properties": { "type": { "const": "winamp" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "auto_hide": { "$ref": "#/definitions/autoHide" },
               "text": {
-                "type": "object",
-                "description": "Text rendering properties for Winamp widget",
-                "properties": {
-                  "format": {
-                    "type": "string",
-                    "description": "Format string with placeholders: {title} (track title), {filename} (file name), {filepath} (full path), {position} (MM:SS), {duration} (MM:SS), {position_ms} (ms), {duration_s} (seconds), {bitrate} (kbps), {samplerate} (Hz), {channels} (count), {status} (Playing/Paused/Stopped), {track_num} (current track number in playlist), {playlist_length} (total tracks in playlist), {shuffle} ('S' if enabled, empty otherwise), {repeat} ('R' if enabled, empty otherwise), {version} (Winamp version string)",
-                    "default": "{title}"
-                  },
-                  "font": { "type": ["string", "null"], "description": "Font name or TTF path", "default": null },
-                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 10 },
-                  "align": {
-                    "type": "object",
+                "allOf": [
+                  { "$ref": "#/definitions/textObject" },
+                  {
                     "properties": {
-                      "h": { "type": "string", "enum": ["left", "center", "right"], "default": "center" },
-                      "v": { "type": "string", "enum": ["top", "center", "bottom"], "default": "center" }
+                      "format": {
+                        "description": "Format string with placeholders: {title} (track title), {filename} (file name), {filepath} (full path), {position} (MM:SS), {duration} (MM:SS), {position_ms} (ms), {duration_s} (seconds), {bitrate} (kbps), {samplerate} (Hz), {channels} (count), {status} (Playing/Paused/Stopped), {track_num} (current track number in playlist), {playlist_length} (total tracks in playlist), {shuffle} ('S' if enabled, empty otherwise), {repeat} ('R' if enabled, empty otherwise), {version} (Winamp version string)",
+                        "default": "{title}"
+                      }
                     }
                   }
-                }
+                ]
               },
               "winamp": {
                 "type": "object",
@@ -1103,6 +1114,7 @@
           "if": { "properties": { "type": { "const": "weather" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "text": { "$ref": "#/definitions/textObject" },
               "weather": {
                 "type": "object",
                 "description": "Weather widget settings",
@@ -1347,8 +1359,8 @@
                     "type": "object",
                     "description": "Graph colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Graph fill color (-1 = no fill)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "line": { "type": "integer", "description": "Graph line color", "minimum": 0, "maximum": 255, "default": 255 }
+                      "fill": { "type": "integer", "description": "Graph fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
+                      "line": { "type": "integer", "description": "Graph line density", "minimum": 0, "maximum": 255, "default": 255 }
                     }
                   }
                 }
@@ -1361,24 +1373,18 @@
                 }
               },
               "text": {
-                "type": "object",
-                "description": "Text mode settings",
-                "properties": {
-                  "format": {
-                    "type": "string",
-                    "description": "Format string with tokens: {percent}/{pct} (value), {status} (CHG/AC/ECO), {status_full} (Charging/AC Power/Economy), {time} (smart remaining), {time_left}, {time_to_full}, {time_left_min} (minutes), {level} (critical/low/normal), {charging}/{plugged}/{economy} (boolean indicators)",
-                    "default": "{percent}%"
-                  },
-                  "font": { "type": ["string", "null"], "description": "Font name or TTF path", "default": null },
-                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 16 },
-                  "align": {
-                    "type": "object",
+                "allOf": [
+                  { "$ref": "#/definitions/textObject" },
+                  {
                     "properties": {
-                      "h": { "type": "string", "enum": ["left", "center", "right"], "default": "center" },
-                      "v": { "type": "string", "enum": ["top", "center", "bottom"], "default": "center" }
+                      "format": {
+                        "description": "Format string with tokens: {percent}/{pct} (value), {status} (CHG/AC/ECO), {status_full} (Charging/AC Power/Economy), {time} (smart remaining), {time_left}, {time_to_full}, {time_left_min} (minutes), {level} (critical/low/normal), {charging}/{plugged}/{economy} (boolean indicators)",
+                        "default": "{percent}%"
+                      },
+                      "size": { "default": 16 }
                     }
                   }
-                }
+                ]
               }
             }
           }
@@ -1738,6 +1744,7 @@
           "if": { "properties": { "type": { "const": "telegram" } }, "required": ["type"] },
           "then": {
             "properties": {
+              "auto_hide": { "$ref": "#/definitions/autoHide" },
               "auth": {
                 "type": "object",
                 "description": "Telegram API authentication (required)",
@@ -1832,14 +1839,14 @@
                     "properties": {
                       "foreground": {
                         "type": "integer",
-                        "description": "Icon foreground color (0-255, or -1 for transparent)",
+                        "description": "Icon foreground color (0-255, or -1 for none)",
                         "minimum": -1,
                         "maximum": 255,
                         "default": 255
                       },
                       "background": {
                         "type": "integer",
-                        "description": "Icon background color (0-255, or -1 for transparent)",
+                        "description": "Icon background color (0-255, or -1 for none)",
                         "minimum": -1,
                         "maximum": 255,
                         "default": 0
@@ -1849,24 +1856,18 @@
                 }
               },
               "text": {
-                "type": "object",
-                "description": "Text mode settings",
-                "properties": {
-                  "format": {
-                    "type": "string",
-                    "description": "Format string with tokens: {icon}, {unread}/{total}, {mentions}, {reactions}, {private}, {groups}, {channels}, {muted}, {private_muted}, {groups_muted}, {channels_muted}",
-                    "default": "{unread} unread"
-                  },
-                  "font": { "type": ["string", "null"], "description": "Font name or TTF path (null = bundled font)", "default": null },
-                  "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 16 },
-                  "align": {
-                    "type": "object",
+                "allOf": [
+                  { "$ref": "#/definitions/textObject" },
+                  {
                     "properties": {
-                      "h": { "type": "string", "enum": ["left", "center", "right"], "default": "center" },
-                      "v": { "type": "string", "enum": ["top", "center", "bottom"], "default": "center" }
+                      "format": {
+                        "description": "Format string with tokens: {icon}, {unread}/{total}, {mentions}, {reactions}, {private}, {groups}, {channels}, {muted}, {private_muted}, {groups_muted}, {channels_muted}",
+                        "default": "{unread} unread"
+                      },
+                      "size": { "default": 16 }
                     }
                   }
-                }
+                ]
               }
             }
           }

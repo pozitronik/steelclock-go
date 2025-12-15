@@ -31,6 +31,7 @@ func NewClient(cfg Config) (*Client, error) {
 	driver := NewDriver(cfg)
 
 	if err := driver.Open(); err != nil {
+		_ = driver.Close() // Clean up any partial resources
 		return nil, fmt.Errorf("failed to open device: %w", err)
 	}
 
