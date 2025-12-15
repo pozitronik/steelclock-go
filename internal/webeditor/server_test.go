@@ -495,7 +495,10 @@ func TestHandleConfig_Post_WrappedFormat(t *testing.T) {
 	tmpDir := t.TempDir()
 	savePath := filepath.Join(tmpDir, "save.json")
 
-	body := `{"path": "` + savePath + `", "config": {"config_name": "wrapped"}}`
+	// Use filepath.ToSlash for cross-platform JSON compatibility
+	savePathJSON := filepath.ToSlash(savePath)
+
+	body := `{"path": "` + savePathJSON + `", "config": {"config_name": "wrapped"}}`
 	req := httptest.NewRequest(http.MethodPost, "/api/config", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Origin", "http://127.0.0.1:8384")
@@ -505,8 +508,8 @@ func TestHandleConfig_Post_WrappedFormat(t *testing.T) {
 
 	resp := w.Result()
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		t.Errorf("Expected status 200, got %d: %s", resp.StatusCode, string(body))
+		respBody, _ := io.ReadAll(resp.Body)
+		t.Errorf("Expected status 200, got %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	// Verify file was saved
@@ -548,7 +551,10 @@ func TestHandleLoadConfigByPath_Success(t *testing.T) {
 		t.Fatalf("Failed to create config file: %v", err)
 	}
 
-	body := `{"path": "` + configPath + `"}`
+	// Use filepath.ToSlash for cross-platform JSON compatibility
+	configPathJSON := filepath.ToSlash(configPath)
+
+	body := `{"path": "` + configPathJSON + `"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/config/load", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
