@@ -11,6 +11,10 @@
       "description": "Schema version (2 for this schema)",
       "const": 2
     },
+    "config_name": {
+      "type": "string",
+      "description": "Display name shown in profile selection menu (defaults to filename if not set)"
+    },
     "game_name": {
       "type": "string",
       "description": "Internal game name for GameSense registration",
