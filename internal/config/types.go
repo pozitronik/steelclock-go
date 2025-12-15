@@ -170,6 +170,9 @@ type WidgetConfig struct {
 	// Star Wars intro crawl widget
 	StarWarsIntro *StarWarsIntroConfig `json:"starwars_intro,omitempty"` // Star Wars intro crawl settings
 
+	// Clipboard widget
+	Clipboard *ClipboardWidgetConfig `json:"clipboard,omitempty"` // Clipboard widget settings
+
 	// Telegram widgets (shared auth config)
 	Auth *TelegramAuthConfig `json:"auth,omitempty"` // Telegram API authentication (shared by telegram and telegram_counter)
 
@@ -803,6 +806,21 @@ type StarWarsStarsConfig struct {
 	Count int `json:"count,omitempty"`
 	// Brightness: maximum star brightness (1-255, default: 200)
 	Brightness int `json:"brightness,omitempty"`
+}
+
+// ClipboardWidgetConfig contains settings for the clipboard widget
+type ClipboardWidgetConfig struct {
+	// MaxLength: maximum characters to display (default: 100)
+	MaxLength int `json:"max_length,omitempty"`
+	// ShowType: show content type prefix (default: true)
+	ShowType *bool `json:"show_type,omitempty"`
+	// ScrollLongText: enable horizontal scrolling for long text (default: true)
+	ScrollLongText *bool `json:"scroll_long_text,omitempty"`
+	// PollIntervalMs: clipboard check interval in milliseconds (default: 500)
+	PollIntervalMs int `json:"poll_interval_ms,omitempty"`
+	// ShowInvisible: show invisible characters as escape sequences (default: false)
+	// \n -> \n, \r -> \r, \t -> \t (literal backslash sequences)
+	ShowInvisible bool `json:"show_invisible,omitempty"`
 }
 
 // SeparatorConfig represents a separator line between elements

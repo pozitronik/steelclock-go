@@ -287,7 +287,7 @@
         "type": {
           "type": "string",
           "description": "Widget type to display",
-          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life", "hyperspace", "starwars_intro", "telegram", "telegram_counter"]
+          "enum": ["clipboard", "clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life", "hyperspace", "starwars_intro", "telegram", "telegram_counter"]
         },
         "enabled": { "type": "boolean", "description": "Show or hide this widget", "default": true },
         "position": { "$ref": "#/definitions/position" },
@@ -295,6 +295,63 @@
         "update_interval": { "type": "number", "description": "Update interval in seconds", "minimum": 0.01 }
       },
       "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "clipboard" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "auto_hide": { "$ref": "#/definitions/autoHide" },
+              "text": {
+                "allOf": [
+                  { "$ref": "#/definitions/textObject" },
+                  {
+                    "properties": {
+                      "format": {
+                        "description": "Format string with tokens: {content} (clipboard content or type description), {type} (content type label: Text/Image/Files/HTML/Empty/Unknown), {length} (content length), {preview} (first 20 chars of text)",
+                        "default": "{content}"
+                      }
+                    }
+                  }
+                ]
+              },
+              "scroll": { "$ref": "#/definitions/scrollConfig" },
+              "clipboard": {
+                "type": "object",
+                "description": "Clipboard widget settings",
+                "properties": {
+                  "max_length": {
+                    "type": "integer",
+                    "description": "Maximum characters to display (longer content is truncated)",
+                    "minimum": 10,
+                    "maximum": 1000,
+                    "default": 100
+                  },
+                  "show_type": {
+                    "type": "boolean",
+                    "description": "Show content type prefix in format",
+                    "default": true
+                  },
+                  "scroll_long_text": {
+                    "type": "boolean",
+                    "description": "Enable horizontal scrolling for long text",
+                    "default": true
+                  },
+                  "poll_interval_ms": {
+                    "type": "integer",
+                    "description": "Clipboard check interval in milliseconds",
+                    "minimum": 100,
+                    "maximum": 5000,
+                    "default": 500
+                  },
+                  "show_invisible": {
+                    "type": "boolean",
+                    "description": "Show invisible characters as escape sequences: newline as \\n, tab as \\t, carriage return as \\r",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
         {
           "if": { "properties": { "type": { "const": "clock" } }, "required": ["type"] },
           "then": {

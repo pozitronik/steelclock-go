@@ -1,0 +1,38 @@
+{
+  "$schema": "schema/config.schema.json",
+  "schema_version": 2,
+  "config_name": "Clipboard Monitor",
+  "refresh_rate_ms": 100,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "clipboard",
+      "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+      "update_interval": 0.1,
+      "auto_hide": {
+        "enabled": false,
+        "timeout": 5.0
+      },
+      "clipboard": {
+        "show_invisible": true,
+        "poll_interval_ms": 500
+      },
+      "text": {
+        "format": "{content}",
+        "font": "5x7",
+        "align": {"h": "left", "v": "center"}
+      },
+      "scroll": {
+        "enabled": true,
+        "direction": "left",
+        "speed": 30,
+        "mode": "pause_ends",
+        "pause_ms": 1000
+      }
+    }
+  ]
+}

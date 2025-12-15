@@ -146,6 +146,7 @@ SteelClock supports these widget types:
 
 | Type               | Description             | Modes                         |
 |--------------------|-------------------------|-------------------------------|
+| `clipboard`        | Clipboard content       | text                          |
 | `clock`            | Time display            | text, analog, binary, segment |
 | `cpu`              | CPU usage monitor       | text, bar, graph, gauge       |
 | `memory`           | RAM usage monitor       | text, bar, graph, gauge       |
@@ -302,6 +303,156 @@ Widgets with multiple modes use mode-named objects:
 **Note:** Colors are now nested within mode-specific objects (e.g., `bar.colors.fill` instead of `colors.fill`).
 
 ## Widget-Specific Properties
+
+### Clipboard Widget
+
+Displays clipboard content or content type description. Supports auto-show mode that shows the widget briefly when clipboard changes - useful as a "copy notification".
+
+```json
+{
+  "type": "clipboard",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 20},
+  "auto_hide": {
+    "enabled": true,
+    "timeout": 3.0
+  },
+  "text": {
+    "format": "{content}",
+    "font": "5x7",
+    "align": {"h": "left", "v": "center"}
+  },
+  "scroll": {
+    "enabled": true,
+    "speed": 30
+  }
+}
+```
+
+#### Content Types
+
+The widget automatically detects clipboard content type:
+
+| Content Type | Display Behavior |
+|--------------|------------------|
+| Plain text | Shows text content (scrolled if long) |
+| Image | Shows `[Image]` (metadata only) |
+| Files | Shows `filename.ext (+N more)` |
+| HTML | Shows `[HTML]` |
+| Empty | Shows `[Empty]` |
+| Unknown | Shows `[Unknown]` |
+
+#### Format Tokens
+
+Use these tokens in `text.format`:
+
+| Token | Description | Example |
+|-------|-------------|---------|
+| `{content}` | Clipboard content or type description | "Hello World" or "[Image]" |
+| `{type}` | Content type label | "Text", "Image", "Files" |
+| `{length}` | Content length (chars for text) | "42" |
+| `{preview}` | First 20 characters of text | "Hello Wor..." |
+
+**Examples:**
+- `"{content}"` - Just the content (default)
+- `"{type}: {content}"` - "Text: Hello World"
+- `"{type} ({length})"` - "Text (42)"
+
+#### Auto-Show Mode
+
+Use `auto_hide` to create a notification-style widget that appears when clipboard changes:
+
+```json
+{
+  "auto_hide": {
+    "enabled": true,
+    "timeout": 3.0
+  }
+}
+```
+
+The widget:
+1. Starts hidden
+2. Shows when clipboard changes (triggers `auto_hide`)
+3. Hides after `timeout` seconds
+4. Shows again on next clipboard change
+
+#### Clipboard Configuration
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `clipboard.max_length` | int | 100 | Max characters to display |
+| `clipboard.show_type` | bool | true | Show content type prefix |
+| `clipboard.scroll_long_text` | bool | true | Enable horizontal scroll |
+| `clipboard.poll_interval_ms` | int | 500 | Clipboard check interval |
+| `clipboard.show_invisible` | bool | false | Show invisible characters as symbols |
+
+#### Invisible Characters
+
+When `show_invisible` is enabled, invisible characters are displayed as escape sequences:
+
+| Character | Display | Description |
+|-----------|---------|-------------|
+| `\r\n` | `\n` | Windows line ending |
+| `\n` | `\n` | Unix line ending |
+| `\r` | `\r` | Old Mac line ending |
+| `\t` | `\t` | Tab character |
+
+#### Platform Support
+
+| Platform | Implementation | Change Detection |
+|----------|----------------|------------------|
+| Windows | Win32 API | Sequence number (efficient) |
+| Linux | wl-paste / xclip / xsel | Content hash comparison |
+| Other | Not supported | - |
+
+**Linux requirements:** Install `wl-paste` (Wayland) or `xclip`/`xsel` (X11).
+
+#### Examples
+
+**Simple notification on copy:**
+```json
+{
+  "type": "clipboard",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 20},
+  "auto_hide": {
+    "enabled": true,
+    "timeout": 3.0
+  },
+  "text": {
+    "format": "{content}"
+  }
+}
+```
+
+**Show content type with text:**
+```json
+{
+  "type": "clipboard",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "text": {
+    "format": "{type}: {content}"
+  },
+  "scroll": {
+    "enabled": true,
+    "speed": 30
+  }
+}
+```
+
+**Always visible clipboard monitor:**
+```json
+{
+  "type": "clipboard",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "style": {"border": 255},
+  "text": {
+    "format": "{preview}",
+    "font": "5x7"
+  }
+}
+```
+
+---
 
 ### Clock Widget
 

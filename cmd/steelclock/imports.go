@@ -11,6 +11,7 @@ import (
 	// Widget packages (blank imports for registration)
 	_ "github.com/pozitronik/steelclock-go/internal/widget/audiovisualizer"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/battery"
+	_ "github.com/pozitronik/steelclock-go/internal/widget/clipboard"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/clock"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/cpu"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/disk"
