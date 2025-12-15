@@ -36,14 +36,13 @@ func ImageToBytes(img image.Image, width, height int, buffer []byte) ([]byte, er
 	}
 
 	// Validate or allocate buffer
-	var data []byte
 	if buffer == nil {
-		data = make([]byte, expectedSize)
+		buffer = make([]byte, expectedSize)
 	} else if len(buffer) < expectedSize {
 		return nil, fmt.Errorf("buffer too small: got %d, need %d", len(buffer), expectedSize)
 	}
 
-	data = buffer[:expectedSize]
+	data := buffer[:expectedSize]
 	// Clear the buffer for reuse
 	clear(data)
 
