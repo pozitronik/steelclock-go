@@ -533,7 +533,6 @@ main.container {
     border: 1px solid var(--muted-border-color);
     background: #000;
     image-rendering: pixelated;
-    image-rendering: crisp-edges;
 }
 
 .preview-status {
