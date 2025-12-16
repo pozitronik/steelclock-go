@@ -1,0 +1,22 @@
+{
+  "$schema": "schema/config.schema.json",
+  "config_name": "Screen mirror",
+  "refresh_rate_ms": 66,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "screen_mirror",
+      "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+      "screen_mirror": {
+        "scale_mode": "fit",
+        "fps": 15,
+        "dither_mode": "floyd_steinberg",
+        "display": null
+      }
+    }
+  ]
+}

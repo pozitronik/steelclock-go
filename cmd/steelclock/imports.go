@@ -24,6 +24,7 @@ import (
 	_ "github.com/pozitronik/steelclock-go/internal/widget/matrix"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/memory"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/network"
+	_ "github.com/pozitronik/steelclock-go/internal/widget/screenmirror"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/starwarsintro"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/telegramcounter"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/telegramwidget"
