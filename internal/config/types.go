@@ -32,6 +32,59 @@ func (s *StringOrSlice) MarshalJSON() ([]byte, error) {
 	return json.Marshal([]string(*s))
 }
 
+// IntOrRange represents a value that can be either a single integer or a range {min, max}.
+// When unmarshaling a single integer, Min and Max are set to the same value.
+// When unmarshaling an object with min/max, those values are used.
+type IntOrRange struct {
+	Min int `json:"min"`
+	Max int `json:"max"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler for IntOrRange
+func (r *IntOrRange) UnmarshalJSON(data []byte) error {
+	// Try to unmarshal as an integer first
+	var val int
+	if err := json.Unmarshal(data, &val); err == nil {
+		r.Min = val
+		r.Max = val
+		return nil
+	}
+
+	// Try to unmarshal as an object with min/max
+	type rangeObj struct {
+		Min int `json:"min"`
+		Max int `json:"max"`
+	}
+	var obj rangeObj
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return err
+	}
+	r.Min = obj.Min
+	r.Max = obj.Max
+	return nil
+}
+
+// MarshalJSON implements json.Marshaler for IntOrRange
+func (r *IntOrRange) MarshalJSON() ([]byte, error) {
+	if r.Min == r.Max {
+		return json.Marshal(r.Min)
+	}
+	return json.Marshal(map[string]int{"min": r.Min, "max": r.Max})
+}
+
+// IsRange returns true if this represents a range (min != max)
+func (r *IntOrRange) IsRange() bool {
+	return r.Min != r.Max
+}
+
+// Value returns the single value if not a range, or 0 if it is a range
+func (r *IntOrRange) Value() int {
+	if r.Min == r.Max {
+		return r.Min
+	}
+	return 0
+}
+
 // Config represents the complete SteelClock configuration (v2 schema)
 type Config struct {
 	SchemaVersion        int                 `json:"schema_version,omitempty"`
@@ -172,6 +225,12 @@ type WidgetConfig struct {
 
 	// Clipboard widget
 	Clipboard *ClipboardWidgetConfig `json:"clipboard,omitempty"` // Clipboard widget settings
+
+	// Screen mirror widget
+	ScreenMirror *ScreenMirrorConfig `json:"screen_mirror,omitempty"` // Screen mirror widget settings
+
+	// Hacker code widget
+	HackerCode *HackerCodeConfig `json:"hacker_code,omitempty"` // Hacker code widget settings
 
 	// Telegram widgets (shared auth config)
 	Auth *TelegramAuthConfig `json:"auth,omitempty"` // Telegram API authentication (shared by telegram and telegram_counter)
@@ -821,6 +880,63 @@ type ClipboardWidgetConfig struct {
 	// ShowInvisible: show invisible characters as escape sequences (default: false)
 	// \n -> \n, \r -> \r, \t -> \t (literal backslash sequences)
 	ShowInvisible bool `json:"show_invisible,omitempty"`
+}
+
+// ScreenMirrorConfig contains settings for the screen mirror widget
+type ScreenMirrorConfig struct {
+	// Display: display index to capture (nil = primary display)
+	Display *int `json:"display,omitempty"`
+	// DisplayName: alternative display selection by name
+	DisplayName string `json:"display_name,omitempty"`
+	// Region: rectangular region to capture (nil = full display)
+	Region *ScreenMirrorRegionConfig `json:"region,omitempty"`
+	// Window: window to capture (nil = capture display/region)
+	Window *ScreenMirrorWindowConfig `json:"window,omitempty"`
+	// ScaleMode: how to scale captured content - "fit", "stretch", "crop" (default: "fit")
+	ScaleMode string `json:"scale_mode,omitempty"`
+	// FPS: capture framerate, 1-30 (default: 15)
+	FPS int `json:"fps,omitempty"`
+	// DitherMode: dithering for monochrome output - "floyd_steinberg", "ordered", "none" (default: "floyd_steinberg")
+	DitherMode string `json:"dither_mode,omitempty"`
+}
+
+// ScreenMirrorRegionConfig defines a rectangular region to capture
+type ScreenMirrorRegionConfig struct {
+	// X: left edge in screen coordinates
+	X int `json:"x"`
+	// Y: top edge in screen coordinates
+	Y int `json:"y"`
+	// Width: region width in pixels
+	Width int `json:"width"`
+	// Height: region height in pixels
+	Height int `json:"height"`
+}
+
+// ScreenMirrorWindowConfig defines which window to capture
+type ScreenMirrorWindowConfig struct {
+	// Title: substring to match in window title
+	Title string `json:"title,omitempty"`
+	// Class: window class name to match (Windows-specific)
+	Class string `json:"class,omitempty"`
+	// Active: capture the currently active/focused window
+	Active bool `json:"active,omitempty"`
+}
+
+// HackerCodeConfig contains settings for the hacker code widget.
+// Font is configured via standard text.font setting ("3x5", "5x7", "pixel3x5", "pixel5x7").
+type HackerCodeConfig struct {
+	// Style: code generation style - "c", "asm", "mixed" (default: "c")
+	Style string `json:"style,omitempty"`
+	// TypingSpeed: characters per second, either integer or {"min": N, "max": M} for random range (default: 50)
+	TypingSpeed *IntOrRange `json:"typing_speed,omitempty"`
+	// LineDelay: milliseconds pause at end of line (default: 200)
+	LineDelay int `json:"line_delay,omitempty"`
+	// ShowCursor: show blinking cursor (default: true)
+	ShowCursor *bool `json:"show_cursor,omitempty"`
+	// CursorBlinkMs: cursor blink interval in milliseconds (default: 500)
+	CursorBlinkMs int `json:"cursor_blink_ms,omitempty"`
+	// IndentSize: spaces per indent level (default: 2)
+	IndentSize int `json:"indent_size,omitempty"`
 }
 
 // SeparatorConfig represents a separator line between elements

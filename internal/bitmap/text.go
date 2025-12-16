@@ -196,6 +196,34 @@ func DrawTextAtPosition(img *image.Gray, text string, face font.Face, x, y, clip
 	}
 }
 
+// DrawTextAt draws text at a specific position (x is left edge, y is top of text area).
+// This is useful for code-like displays where text needs to be positioned precisely.
+func DrawTextAt(img *image.Gray, text string, face font.Face, x, y int) {
+	fontMutex.Lock()
+	defer fontMutex.Unlock()
+
+	// Get font metrics for baseline calculation
+	metrics := face.Metrics()
+	ascent := metrics.Ascent.Ceil()
+
+	// Convert top-left y to baseline y
+	baselineY := y + ascent
+
+	point := fixed.Point26_6{
+		X: fixed.Int26_6(x << 6),
+		Y: fixed.Int26_6(baselineY << 6),
+	}
+
+	drawer := &font.Drawer{
+		Dst:  img,
+		Src:  image.White,
+		Face: face,
+		Dot:  point,
+	}
+
+	drawer.DrawString(text)
+}
+
 // DrawBorder draws a border around the image
 func DrawBorder(img *image.Gray, borderColor uint8) {
 	if img == nil {

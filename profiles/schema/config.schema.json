@@ -357,6 +357,68 @@
           }
         },
         {
+          "if": { "properties": { "type": { "const": "screen_mirror" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "screen_mirror": {
+                "type": "object",
+                "description": "Screen mirror widget settings",
+                "properties": {
+                  "display": {
+                    "type": ["integer", "null"],
+                    "description": "Display index to capture (null = primary display)",
+                    "minimum": 0,
+                    "default": null
+                  },
+                  "display_name": {
+                    "type": "string",
+                    "description": "Display name to capture (alternative to display index)"
+                  },
+                  "region": {
+                    "type": ["object", "null"],
+                    "description": "Rectangular region to capture (null = full display)",
+                    "properties": {
+                      "x": { "type": "integer", "description": "Left edge in screen coordinates" },
+                      "y": { "type": "integer", "description": "Top edge in screen coordinates" },
+                      "width": { "type": "integer", "description": "Region width in pixels", "minimum": 1 },
+                      "height": { "type": "integer", "description": "Region height in pixels", "minimum": 1 }
+                    },
+                    "required": ["x", "y", "width", "height"]
+                  },
+                  "window": {
+                    "type": ["object", "null"],
+                    "description": "Window to capture (null = capture display/region)",
+                    "properties": {
+                      "title": { "type": "string", "description": "Substring to match in window title" },
+                      "class": { "type": "string", "description": "Window class name to match (Windows-specific)" },
+                      "active": { "type": "boolean", "description": "Capture the currently active/focused window", "default": false }
+                    }
+                  },
+                  "scale_mode": {
+                    "type": "string",
+                    "description": "How to scale captured content to fit widget",
+                    "enum": ["fit", "stretch", "crop"],
+                    "default": "fit"
+                  },
+                  "fps": {
+                    "type": "integer",
+                    "description": "Capture framerate (frames per second)",
+                    "minimum": 1,
+                    "maximum": 30,
+                    "default": 15
+                  },
+                  "dither_mode": {
+                    "type": "string",
+                    "description": "Dithering algorithm for monochrome conversion",
+                    "enum": ["floyd_steinberg", "ordered", "none"],
+                    "default": "floyd_steinberg"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
           "if": { "properties": { "type": { "const": "clock" } }, "required": ["type"] },
           "then": {
             "properties": {
@@ -1929,6 +1991,82 @@
                     }
                   }
                 ]
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "hacker_code" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "hacker_code": {
+                "type": "object",
+                "description": "Hacker code widget settings - procedurally generated code with typewriter effect",
+                "properties": {
+                  "style": {
+                    "type": "string",
+                    "description": "Code generation style",
+                    "enum": ["c", "asm", "mixed"],
+                    "default": "c"
+                  },
+                  "typing_speed": {
+                    "oneOf": [
+                      {
+                        "type": "integer",
+                        "description": "Fixed characters per second",
+                        "minimum": 1,
+                        "maximum": 500
+                      },
+                      {
+                        "type": "object",
+                        "description": "Random range for characters per second (new speed picked each line)",
+                        "properties": {
+                          "min": {
+                            "type": "integer",
+                            "description": "Minimum characters per second",
+                            "minimum": 1,
+                            "maximum": 500
+                          },
+                          "max": {
+                            "type": "integer",
+                            "description": "Maximum characters per second",
+                            "minimum": 1,
+                            "maximum": 500
+                          }
+                        },
+                        "required": ["min", "max"]
+                      }
+                    ],
+                    "description": "Characters per second - either a fixed integer or an object {min, max} for random range",
+                    "default": 50
+                  },
+                  "line_delay": {
+                    "type": "integer",
+                    "description": "Milliseconds pause at end of each line",
+                    "minimum": 0,
+                    "maximum": 5000,
+                    "default": 200
+                  },
+                  "show_cursor": {
+                    "type": "boolean",
+                    "description": "Show blinking cursor at typing position",
+                    "default": true
+                  },
+                  "cursor_blink_ms": {
+                    "type": "integer",
+                    "description": "Cursor blink interval in milliseconds",
+                    "minimum": 100,
+                    "maximum": 2000,
+                    "default": 500
+                  },
+                  "indent_size": {
+                    "type": "integer",
+                    "description": "Spaces per indent level",
+                    "minimum": 1,
+                    "maximum": 8,
+                    "default": 2
+                  }
+                }
               }
             }
           }

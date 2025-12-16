@@ -1,0 +1,27 @@
+{
+  "$schema": "schema/config.schema.json",
+  "config_name": "Hacker Code",
+  "refresh_rate_ms": 30,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "hacker_code",
+      "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+      "text": {
+        "font": null,
+        "size": 16
+      },
+      "hacker_code": {
+        "style": "c",
+        "typing_speed": {"min": 1, "max": 80},
+        "line_delay": 150,
+        "show_cursor": true,
+        "cursor_blink_ms": 400
+      }
+    }
+  ]
+}
