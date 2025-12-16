@@ -162,7 +162,9 @@ SteelClock supports these widget types:
 | `matrix`           | Matrix digital rain     | -                             |
 | `weather`          | Current weather         | icon, text                    |
 | `game_of_life`     | Conway's Game of Life   | -                             |
+| `hacker_code`      | Procedural code typing  | c, asm, mixed                 |
 | `hyperspace`       | Star Wars lightspeed    | continuous, cycle             |
+| `screen_mirror`    | Screen capture display  | -                             |
 
 ## Common Properties
 
@@ -448,6 +450,249 @@ When `show_invisible` is enabled, invisible characters are displayed as escape s
   "text": {
     "format": "{preview}",
     "font": "5x7"
+  }
+}
+```
+
+---
+
+### Hacker Code Widget
+
+Displays procedurally generated code being "typed" in real-time, creating an authentic hacking/coding visual effect. The code looks realistic but is generated on-the-fly using templates for C-like code or x86 assembly.
+
+#### Code Styles
+
+| Style | Description |
+|-------|-------------|
+| `c` | C-like code with functions, variables, pointers, control flow |
+| `asm` | x86-style assembly with MOV, XOR, JMP, CALL, etc. |
+| `mixed` | Alternates between C and assembly blocks |
+
+#### Basic Usage
+
+**C-style hacker effect:**
+```json
+{
+  "type": "hacker_code",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "hacker_code": {
+    "style": "c",
+    "typing_speed": 60,
+    "show_cursor": true
+  }
+}
+```
+
+**Assembly code:**
+```json
+{
+  "type": "hacker_code",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "hacker_code": {
+    "style": "asm",
+    "typing_speed": 100,
+    "line_delay": 100
+  }
+}
+```
+
+**Mixed mode:**
+```json
+{
+  "type": "hacker_code",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "hacker_code": {
+    "style": "mixed",
+    "typing_speed": 50
+  }
+}
+```
+
+#### Animation Behavior
+
+The widget simulates a typewriter effect:
+1. Characters appear one at a time at the cursor position
+2. When a line completes, the cursor moves to the next line after a brief delay
+3. When the screen fills, all lines scroll up by one
+4. A new line starts at the bottom
+5. The process repeats infinitely with procedurally generated code
+
+#### Configuration
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `hacker_code.style` | string | "c" | Code style: c, asm, mixed |
+| `hacker_code.typing_speed` | int | 50 | Characters per second (char-by-char) |
+| `hacker_code.line_delay` | int | 200 | Milliseconds pause at end of line |
+| `hacker_code.show_cursor` | bool | true | Show blinking cursor |
+| `hacker_code.cursor_blink_ms` | int | 500 | Cursor blink interval (ms) |
+| `hacker_code.indent_size` | int | 2 | Spaces per indent level |
+| `text.font` | string | (auto) | Font: "3x5", "5x7", "pixel3x5", "pixel5x7" |
+
+**Font Selection:** Use standard `text.font` setting. If not specified, auto-selects based on display height (3x5 for small displays, 5x7 for larger).
+
+**Scroll Behavior:** Lines scroll up only when the typing cursor needs space beyond the visible area (when the first character is typed on a new line that would be off-screen).
+
+#### Examples
+
+**Fast assembly scrolling (no cursor):**
+```json
+{
+  "type": "hacker_code",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "hacker_code": {
+    "style": "asm",
+    "typing_speed": 150,
+    "line_delay": 50,
+    "show_cursor": false
+  }
+}
+```
+
+**Slow typing with visible cursor:**
+```json
+{
+  "type": "hacker_code",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "hacker_code": {
+    "style": "c",
+    "typing_speed": 30,
+    "cursor_blink_ms": 300
+  }
+}
+```
+
+---
+
+### Screen Mirror Widget
+
+Captures and displays screen content on the OLED. Supports full screen capture, region capture, and window capture. The captured image is scaled to fit the widget and converted to grayscale with optional dithering.
+
+**Platform Support:**
+- **Windows**: Uses GDI BitBlt (works in VMs, RDP, etc.)
+- **Linux**: Uses ffmpeg x11grab (requires `ffmpeg`, window capture requires `xdotool`)
+
+#### Basic Usage
+
+**Full screen capture:**
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "scale_mode": "fit",
+    "fps": 15,
+    "dither_mode": "floyd_steinberg"
+  }
+}
+```
+
+#### Capture Modes
+
+**Region capture** - capture a specific area of the screen:
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "region": {
+      "x": 100,
+      "y": 100,
+      "width": 400,
+      "height": 300
+    },
+    "scale_mode": "crop"
+  }
+}
+```
+
+**Window capture by title** - capture a specific window:
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "window": {
+      "title": "Calculator"
+    },
+    "scale_mode": "fit"
+  }
+}
+```
+
+**Active window capture** - always capture the focused window:
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "window": {
+      "active": true
+    },
+    "scale_mode": "stretch"
+  }
+}
+```
+
+#### Scale Modes
+
+| Mode | Behavior |
+|------|----------|
+| `fit` | Preserve aspect ratio, add black bars (letterbox) |
+| `stretch` | Fill entire widget, may distort aspect ratio |
+| `crop` | Preserve aspect ratio, crop edges to fill |
+
+#### Dither Modes
+
+| Mode | Description |
+|------|-------------|
+| `floyd_steinberg` | Error diffusion dithering (best quality, default) |
+| `ordered` | Bayer matrix ordered dithering (faster, patterned) |
+| `none` | No dithering (simple threshold) |
+
+#### Configuration
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `screen_mirror.display` | int/null | null | Display index (null = primary) |
+| `screen_mirror.display_name` | string | "" | Display name (alternative to index) |
+| `screen_mirror.region` | object | null | Capture region {x, y, width, height} |
+| `screen_mirror.window` | object | null | Window capture {title, class, active} |
+| `screen_mirror.scale_mode` | string | "fit" | Scale mode: fit, stretch, crop |
+| `screen_mirror.fps` | int | 15 | Capture framerate (1-30) |
+| `screen_mirror.dither_mode` | string | "floyd_steinberg" | Dithering algorithm |
+
+#### Window Configuration
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `window.title` | string | Substring to match in window title |
+| `window.class` | string | Window class name (Windows-specific) |
+| `window.active` | bool | Capture currently focused window |
+
+#### Examples
+
+**Mini screen preview in corner:**
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 88, "y": 0, "w": 40, "h": 40},
+  "screen_mirror": {
+    "fps": 10,
+    "scale_mode": "fit"
+  }
+}
+```
+
+**High FPS for active window:**
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "window": {"active": true},
+    "fps": 30,
+    "dither_mode": "ordered"
   }
 }
 ```

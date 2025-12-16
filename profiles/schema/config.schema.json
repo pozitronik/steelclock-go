@@ -291,7 +291,7 @@
         "type": {
           "type": "string",
           "description": "Widget type to display",
-          "enum": ["clipboard", "clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life", "hyperspace", "starwars_intro", "telegram", "telegram_counter"]
+          "enum": ["clipboard", "clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life", "hyperspace", "starwars_intro", "telegram", "telegram_counter", "screen_mirror", "hacker_code"]
         },
         "enabled": { "type": "boolean", "description": "Show or hide this widget", "default": true },
         "position": { "$ref": "#/definitions/position" },
