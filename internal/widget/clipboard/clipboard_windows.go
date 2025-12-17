@@ -141,6 +141,7 @@ func getUnicodeText() (string, error) {
 
 	// Convert UTF-16 to string
 	// nolint:govet // ptr is a valid uintptr from GlobalLock syscall, conversion to unsafe.Pointer is correct
+	//goland:noinspection GoVetUnsafePointer
 	text := utf16PtrToString((*uint16)(unsafe.Pointer(ptr)))
 	return text, nil
 }
