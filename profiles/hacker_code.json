@@ -10,15 +10,22 @@
   "widgets": [
     {
       "type": "hacker_code",
-      "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40
+      },
       "text": {
-        "font": null,
-        "size": 16
+        "font": "5x7"
       },
       "hacker_code": {
         "style": "c",
-        "typing_speed": {"min": 1, "max": 80},
-        "line_delay": 150,
+        "typing_speed": {
+          "min": 3,
+          "max": 10
+        },
+        "line_delay": 0,
         "show_cursor": true,
         "cursor_blink_ms": 400
       }
