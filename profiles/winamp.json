@@ -10,13 +10,21 @@
   "widgets": [
     {
       "type": "winamp",
-      "position": { "x": 0, "y": 0, "w": 128, "h": 40 },
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40
+      },
       "update_interval": 0.2,
       "text": {
         "format": "{title}",
         "font": null,
         "size": 16,
-        "align": { "h": "center", "v": "center" }
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
       },
       "winamp": {
         "placeholder": {

@@ -4,7 +4,10 @@
   "title": "SteelClock Configuration",
   "description": "Configuration schema for SteelClock v2 - display manager for SteelSeries devices",
   "type": "object",
-  "required": ["display", "widgets"],
+  "required": [
+    "display",
+    "widgets"
+  ],
   "properties": {
     "schema_version": {
       "type": "integer",
@@ -45,7 +48,12 @@
     "backend": {
       "type": "string",
       "description": "Backend: 'gamesense' (requires SteelSeries GG), 'direct' (USB HID), 'webclient' (web browser display). If omitted, auto-selects (tries gamesense first, then direct)",
-      "enum": ["gamesense", "direct", "webclient", ""]
+      "enum": [
+        "gamesense",
+        "direct",
+        "webclient",
+        ""
+      ]
     },
     "direct_driver": {
       "type": "object",
@@ -82,14 +90,20 @@
       }
     },
     "bundled_font_url": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Custom URL for downloading bundled font (null = use default)",
       "default": null
     },
     "display": {
       "type": "object",
       "description": "Physical display configuration",
-      "required": ["width", "height"],
+      "required": [
+        "width",
+        "height"
+      ],
       "properties": {
         "width": {
           "type": "integer",
@@ -123,7 +137,9 @@
             "maximum": 255
           }
         },
-        "text": { "$ref": "#/definitions/textObject" },
+        "text": {
+          "$ref": "#/definitions/textObject"
+        },
         "update_interval": {
           "type": "number",
           "description": "Default update interval in seconds",
@@ -135,20 +151,46 @@
     "widgets": {
       "type": "array",
       "description": "Array of widget configurations",
-      "items": { "$ref": "#/definitions/widget" }
+      "items": {
+        "$ref": "#/definitions/widget"
+      }
     }
   },
   "definitions": {
     "position": {
       "type": "object",
       "description": "Widget location and dimensions on the display",
-      "required": ["x", "y", "w", "h"],
+      "required": [
+        "x",
+        "y",
+        "w",
+        "h"
+      ],
       "properties": {
-        "x": { "type": "integer", "description": "Horizontal offset from left edge in pixels", "minimum": 0 },
-        "y": { "type": "integer", "description": "Vertical offset from top edge in pixels" },
-        "w": { "type": "integer", "description": "Widget width in pixels", "minimum": 1 },
-        "h": { "type": "integer", "description": "Widget height in pixels", "minimum": 1 },
-        "z": { "type": "integer", "description": "Layer order (higher values render on top)", "default": 0 }
+        "x": {
+          "type": "integer",
+          "description": "Horizontal offset from left edge in pixels",
+          "minimum": 0
+        },
+        "y": {
+          "type": "integer",
+          "description": "Vertical offset from top edge in pixels"
+        },
+        "w": {
+          "type": "integer",
+          "description": "Widget width in pixels",
+          "minimum": 1
+        },
+        "h": {
+          "type": "integer",
+          "description": "Widget height in pixels",
+          "minimum": 1
+        },
+        "z": {
+          "type": "integer",
+          "description": "Layer order (higher values render on top)",
+          "default": 0
+        }
       }
     },
     "style": {
@@ -181,14 +223,44 @@
       "type": "object",
       "description": "Text styling properties (font, size, alignment)",
       "properties": {
-        "font": { "type": ["string", "null"], "description": "Font name (pixel3x5, pixel5x7) or TTF path. Null = bundled font", "default": null },
-        "size": { "type": "integer", "description": "Font size in pixels", "minimum": 1, "default": 10 },
+        "font": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Font name (pixel3x5, pixel5x7) or TTF path. Null = bundled font",
+          "default": null
+        },
+        "size": {
+          "type": "integer",
+          "description": "Font size in pixels",
+          "minimum": 1,
+          "default": 10
+        },
         "align": {
           "type": "object",
           "description": "Text alignment within the widget content area",
           "properties": {
-            "h": { "type": "string", "description": "Horizontal alignment", "enum": ["left", "center", "right"], "default": "center" },
-            "v": { "type": "string", "description": "Vertical alignment", "enum": ["top", "center", "bottom"], "default": "center" }
+            "h": {
+              "type": "string",
+              "description": "Horizontal alignment",
+              "enum": [
+                "left",
+                "center",
+                "right"
+              ],
+              "default": "center"
+            },
+            "v": {
+              "type": "string",
+              "description": "Vertical alignment",
+              "enum": [
+                "top",
+                "center",
+                "bottom"
+              ],
+              "default": "center"
+            }
           }
         }
       }
@@ -197,10 +269,15 @@
       "type": "object",
       "description": "Text rendering properties with format string",
       "allOf": [
-        { "$ref": "#/definitions/textStyle" },
+        {
+          "$ref": "#/definitions/textStyle"
+        },
         {
           "properties": {
-            "format": { "type": "string", "description": "Format string (widget-specific)" }
+            "format": {
+              "type": "string",
+              "description": "Format string (widget-specific)"
+            }
           }
         }
       ]
@@ -209,104 +286,317 @@
       "type": "object",
       "description": "Auto-hide behavior",
       "properties": {
-        "enabled": { "type": "boolean", "description": "Enable auto-hide", "default": false },
-        "timeout": { "type": "number", "description": "Seconds before hiding", "minimum": 0.1, "default": 2.0 },
-        "on_silence": { "type": "boolean", "description": "Hide on audio silence (audio widgets)", "default": false },
-        "silence_time": { "type": "number", "description": "Silence duration before hiding", "minimum": 0.1, "default": 2.0 }
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable auto-hide",
+          "default": false
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Seconds before hiding",
+          "minimum": 0.1,
+          "default": 2.0
+        },
+        "on_silence": {
+          "type": "boolean",
+          "description": "Hide on audio silence (audio widgets)",
+          "default": false
+        },
+        "silence_time": {
+          "type": "number",
+          "description": "Silence duration before hiding",
+          "minimum": 0.1,
+          "default": 2.0
+        }
       }
     },
     "scrollConfig": {
       "type": "object",
       "description": "Text scrolling settings",
       "properties": {
-        "enabled": { "type": "boolean", "description": "Enable text scrolling", "default": true },
-        "direction": { "type": "string", "enum": ["left", "right", "up", "down"], "description": "Scroll direction", "default": "left" },
-        "speed": { "type": "number", "description": "Scroll speed in pixels per second", "minimum": 1, "default": 30 },
-        "mode": { "type": "string", "enum": ["continuous", "bounce", "pause_ends"], "description": "Scroll mode", "default": "continuous" },
-        "gap": { "type": "integer", "description": "Gap in pixels between text repetitions (continuous mode)", "minimum": 0, "default": 20 }
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable text scrolling",
+          "default": true
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "left",
+            "right",
+            "up",
+            "down"
+          ],
+          "description": "Scroll direction",
+          "default": "left"
+        },
+        "speed": {
+          "type": "number",
+          "description": "Scroll speed in pixels per second",
+          "minimum": 1,
+          "default": 30
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "continuous",
+            "bounce",
+            "pause_ends"
+          ],
+          "description": "Scroll mode",
+          "default": "continuous"
+        },
+        "gap": {
+          "type": "integer",
+          "description": "Gap in pixels between text repetitions (continuous mode)",
+          "minimum": 0,
+          "default": 20
+        }
       }
     },
     "separatorConfig": {
       "type": "object",
       "description": "Separator line between elements",
       "properties": {
-        "color": { "type": "integer", "description": "Separator density (-1 = none, 0-255 = grayscale)", "minimum": -1, "maximum": 255, "default": 128 },
-        "thickness": { "type": "integer", "description": "Separator thickness in pixels (0 = disabled)", "minimum": 0, "default": 1 }
+        "color": {
+          "type": "integer",
+          "description": "Separator density (-1 = none, 0-255 = grayscale)",
+          "minimum": -1,
+          "maximum": 255,
+          "default": 128
+        },
+        "thickness": {
+          "type": "integer",
+          "description": "Separator thickness in pixels (0 = disabled)",
+          "minimum": 0,
+          "default": 1
+        }
       }
     },
     "transitionConfig": {
       "type": "object",
       "description": "Transition effects for showing/hiding",
       "properties": {
-        "in": { "type": "string", "enum": ["none", "push_left", "push_right", "push_up", "push_down", "slide_left", "slide_right", "slide_up", "slide_down", "dissolve_fade", "dissolve_pixel", "dissolve_dither", "box_in", "box_out", "clock_wipe", "random"], "description": "Transition effect when showing", "default": "none" },
-        "in_speed": { "type": "number", "description": "Transition in duration in seconds", "minimum": 0.1, "maximum": 5.0, "default": 0.5 },
-        "out": { "type": "string", "enum": ["none", "push_left", "push_right", "push_up", "push_down", "slide_left", "slide_right", "slide_up", "slide_down", "dissolve_fade", "dissolve_pixel", "dissolve_dither", "box_in", "box_out", "clock_wipe", "random"], "description": "Transition effect when hiding", "default": "none" },
-        "out_speed": { "type": "number", "description": "Transition out duration in seconds", "minimum": 0.1, "maximum": 5.0, "default": 0.5 }
+        "in": {
+          "type": "string",
+          "enum": [
+            "none",
+            "push_left",
+            "push_right",
+            "push_up",
+            "push_down",
+            "slide_left",
+            "slide_right",
+            "slide_up",
+            "slide_down",
+            "dissolve_fade",
+            "dissolve_pixel",
+            "dissolve_dither",
+            "box_in",
+            "box_out",
+            "clock_wipe",
+            "random"
+          ],
+          "description": "Transition effect when showing",
+          "default": "none"
+        },
+        "in_speed": {
+          "type": "number",
+          "description": "Transition in duration in seconds",
+          "minimum": 0.1,
+          "maximum": 5.0,
+          "default": 0.5
+        },
+        "out": {
+          "type": "string",
+          "enum": [
+            "none",
+            "push_left",
+            "push_right",
+            "push_up",
+            "push_down",
+            "slide_left",
+            "slide_right",
+            "slide_up",
+            "slide_down",
+            "dissolve_fade",
+            "dissolve_pixel",
+            "dissolve_dither",
+            "box_in",
+            "box_out",
+            "clock_wipe",
+            "random"
+          ],
+          "description": "Transition effect when hiding",
+          "default": "none"
+        },
+        "out_speed": {
+          "type": "number",
+          "description": "Transition out duration in seconds",
+          "minimum": 0.1,
+          "maximum": 5.0,
+          "default": 0.5
+        }
       }
     },
     "telegramElementConfig": {
       "type": "object",
       "description": "Telegram notification element (header or message)",
       "properties": {
-        "enabled": { "type": "boolean", "description": "Show this element", "default": true },
-        "blink": { "type": "boolean", "description": "Make element blink", "default": false },
-        "text": { "$ref": "#/definitions/textObject" },
-        "scroll": { "$ref": "#/definitions/scrollConfig" },
-        "word_break": { "type": "string", "enum": ["normal", "break-all"], "description": "How to break lines: normal (break on spaces) or break-all (break anywhere)", "default": "normal" }
+        "enabled": {
+          "type": "boolean",
+          "description": "Show this element",
+          "default": true
+        },
+        "blink": {
+          "type": "boolean",
+          "description": "Make element blink",
+          "default": false
+        },
+        "text": {
+          "$ref": "#/definitions/textObject"
+        },
+        "scroll": {
+          "$ref": "#/definitions/scrollConfig"
+        },
+        "word_break": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "break-all"
+          ],
+          "description": "How to break lines: normal (break on spaces) or break-all (break anywhere)",
+          "default": "normal"
+        }
       }
     },
     "telegramAppearanceConfig": {
       "type": "object",
       "description": "Appearance settings for telegram notifications",
       "properties": {
-        "header": { "$ref": "#/definitions/telegramElementConfig" },
-        "message": { "$ref": "#/definitions/telegramElementConfig" },
-        "separator": { "$ref": "#/definitions/separatorConfig" },
-        "timeout": { "type": "integer", "description": "Seconds to show notification (0 = until next message)", "minimum": 0, "default": 0 },
-        "transitions": { "$ref": "#/definitions/transitionConfig" }
+        "header": {
+          "$ref": "#/definitions/telegramElementConfig"
+        },
+        "message": {
+          "$ref": "#/definitions/telegramElementConfig"
+        },
+        "separator": {
+          "$ref": "#/definitions/separatorConfig"
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Seconds to show notification (0 = until next message)",
+          "minimum": 0,
+          "default": 0
+        },
+        "transitions": {
+          "$ref": "#/definitions/transitionConfig"
+        }
       }
     },
     "telegramChatFilterConfig": {
       "type": "object",
       "description": "Filter settings for a chat type (private/group/channel)",
       "properties": {
-        "enabled": { "type": "boolean", "description": "Enable messages from this chat type (default: true for private, false for groups/channels)" },
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable messages from this chat type (default: true for private, false for groups/channels)"
+        },
         "whitelist": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Always include these chat IDs, even if this chat type is disabled"
         },
         "blacklist": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Never include these chat IDs, even if this chat type is enabled"
         },
-        "pinned_messages": { "type": "boolean", "description": "Include pinned message notifications (default: true)" }
+        "pinned_messages": {
+          "type": "boolean",
+          "description": "Include pinned message notifications (default: true)"
+        }
       }
     },
     "widget": {
       "type": "object",
-      "required": ["type", "position"],
+      "required": [
+        "type",
+        "position"
+      ],
       "properties": {
         "type": {
           "type": "string",
           "description": "Widget type to display",
-          "enum": ["clipboard", "clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life", "hyperspace", "starwars_intro", "telegram", "telegram_counter", "screen_mirror", "hacker_code"]
+          "enum": [
+            "clipboard",
+            "clock",
+            "cpu",
+            "memory",
+            "network",
+            "disk",
+            "keyboard",
+            "keyboard_layout",
+            "volume",
+            "volume_meter",
+            "audio_visualizer",
+            "doom",
+            "winamp",
+            "matrix",
+            "weather",
+            "battery",
+            "game_of_life",
+            "hyperspace",
+            "starwars_intro",
+            "telegram",
+            "telegram_counter",
+            "screen_mirror",
+            "hacker_code"
+          ]
         },
-        "enabled": { "type": "boolean", "description": "Show or hide this widget", "default": true },
-        "position": { "$ref": "#/definitions/position" },
-        "style": { "$ref": "#/definitions/style" },
-        "update_interval": { "type": "number", "description": "Update interval in seconds", "minimum": 0.01 }
+        "enabled": {
+          "type": "boolean",
+          "description": "Show or hide this widget",
+          "default": true
+        },
+        "position": {
+          "$ref": "#/definitions/position"
+        },
+        "style": {
+          "$ref": "#/definitions/style"
+        },
+        "update_interval": {
+          "type": "number",
+          "description": "Update interval in seconds",
+          "minimum": 0.01
+        }
       },
       "allOf": [
         {
-          "if": { "properties": { "type": { "const": "clipboard" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "clipboard"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "auto_hide": { "$ref": "#/definitions/autoHide" },
+              "auto_hide": {
+                "$ref": "#/definitions/autoHide"
+              },
               "text": {
                 "allOf": [
-                  { "$ref": "#/definitions/textObject" },
+                  {
+                    "$ref": "#/definitions/textObject"
+                  },
                   {
                     "properties": {
                       "format": {
@@ -317,7 +607,9 @@
                   }
                 ]
               },
-              "scroll": { "$ref": "#/definitions/scrollConfig" },
+              "scroll": {
+                "$ref": "#/definitions/scrollConfig"
+              },
               "clipboard": {
                 "type": "object",
                 "description": "Clipboard widget settings",
@@ -357,7 +649,16 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "screen_mirror" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "screen_mirror"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
               "screen_mirror": {
@@ -366,37 +667,84 @@
                 "properties": {
                   "display": {
                     "oneOf": [
-                      { "type": "null" },
-                      { "type": "integer", "minimum": -1 },
-                      { "type": "string", "minLength": 1 }
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "integer",
+                        "minimum": -1
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      }
                     ],
                     "description": "Display to capture: null = primary (default), 0-N = monitor by index, -1 = all monitors, string = match by name",
                     "default": null
                   },
                   "region": {
-                    "type": ["object", "null"],
+                    "type": [
+                      "object",
+                      "null"
+                    ],
                     "description": "Rectangular region to capture (null = full display)",
                     "properties": {
-                      "x": { "type": "integer", "description": "Left edge in screen coordinates" },
-                      "y": { "type": "integer", "description": "Top edge in screen coordinates" },
-                      "w": { "type": "integer", "description": "Region width in pixels", "minimum": 1 },
-                      "h": { "type": "integer", "description": "Region height in pixels", "minimum": 1 }
+                      "x": {
+                        "type": "integer",
+                        "description": "Left edge in screen coordinates"
+                      },
+                      "y": {
+                        "type": "integer",
+                        "description": "Top edge in screen coordinates"
+                      },
+                      "w": {
+                        "type": "integer",
+                        "description": "Region width in pixels",
+                        "minimum": 1
+                      },
+                      "h": {
+                        "type": "integer",
+                        "description": "Region height in pixels",
+                        "minimum": 1
+                      }
                     },
-                    "required": ["x", "y", "w", "h"]
+                    "required": [
+                      "x",
+                      "y",
+                      "w",
+                      "h"
+                    ]
                   },
                   "window": {
-                    "type": ["object", "null"],
+                    "type": [
+                      "object",
+                      "null"
+                    ],
                     "description": "Window to capture (null = capture display/region)",
                     "properties": {
-                      "title": { "type": "string", "description": "Substring to match in window title" },
-                      "class": { "type": "string", "description": "Window class name to match (Windows-specific)" },
-                      "active": { "type": "boolean", "description": "Capture the currently active/focused window", "default": false }
+                      "title": {
+                        "type": "string",
+                        "description": "Substring to match in window title"
+                      },
+                      "class": {
+                        "type": "string",
+                        "description": "Window class name to match (Windows-specific)"
+                      },
+                      "active": {
+                        "type": "boolean",
+                        "description": "Capture the currently active/focused window",
+                        "default": false
+                      }
                     }
                   },
                   "scale_mode": {
                     "type": "string",
                     "description": "How to scale captured content to fit widget",
-                    "enum": ["fit", "stretch", "crop"],
+                    "enum": [
+                      "fit",
+                      "stretch",
+                      "crop"
+                    ],
                     "default": "fit"
                   },
                   "fps": {
@@ -409,7 +757,11 @@
                   "dither_mode": {
                     "type": "string",
                     "description": "Dithering algorithm for monochrome conversion",
-                    "enum": ["floyd_steinberg", "ordered", "none"],
+                    "enum": [
+                      "floyd_steinberg",
+                      "ordered",
+                      "none"
+                    ],
                     "default": "floyd_steinberg"
                   }
                 }
@@ -418,26 +770,85 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "clock" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "clock"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "text": { "$ref": "#/definitions/textObject" },
-              "mode": { "type": "string", "description": "Display mode: text, analog clock face, binary clock, or seven-segment display", "enum": ["text", "analog", "binary", "segment"], "default": "text" },
+              "text": {
+                "$ref": "#/definitions/textObject"
+              },
+              "mode": {
+                "type": "string",
+                "description": "Display mode: text, analog clock face, binary clock, or seven-segment display",
+                "enum": [
+                  "text",
+                  "analog",
+                  "binary",
+                  "segment"
+                ],
+                "default": "text"
+              },
               "analog": {
                 "type": "object",
                 "description": "Analog clock face settings",
                 "properties": {
-                  "show_seconds": { "type": "boolean", "description": "Show seconds hand", "default": true },
-                  "show_ticks": { "type": "boolean", "description": "Show hour tick marks", "default": true },
+                  "show_seconds": {
+                    "type": "boolean",
+                    "description": "Show seconds hand",
+                    "default": true
+                  },
+                  "show_ticks": {
+                    "type": "boolean",
+                    "description": "Show hour tick marks",
+                    "default": true
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Analog clock density values (-1 = none)",
                     "properties": {
-                      "face": { "type": "integer", "description": "Clock face outline density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "hour": { "type": "integer", "description": "Hour hand density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "minute": { "type": "integer", "description": "Minute hand density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "second": { "type": "integer", "description": "Second hand density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "ticks": { "type": "integer", "description": "Hour tick marks density", "minimum": 0, "maximum": 255, "default": 150 }
+                      "face": {
+                        "type": "integer",
+                        "description": "Clock face outline density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "hour": {
+                        "type": "integer",
+                        "description": "Hour hand density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "minute": {
+                        "type": "integer",
+                        "description": "Minute hand density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "second": {
+                        "type": "integer",
+                        "description": "Second hand density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "ticks": {
+                        "type": "integer",
+                        "description": "Hour tick marks density",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 150
+                      }
                     }
                   }
                 }
@@ -446,37 +857,162 @@
                 "type": "object",
                 "description": "Binary clock settings",
                 "properties": {
-                  "format": { "type": "string", "description": "Time format: %H (hours), %M (minutes), %S (seconds)", "default": "%H:%M:%S" },
-                  "style": { "type": "string", "description": "Binary style: BCD (per-digit 4-bit) or true binary (whole number)", "enum": ["bcd", "true"], "default": "bcd" },
-                  "layout": { "type": "string", "description": "Layout: vertical (bits top-to-bottom) or horizontal (bits left-to-right)", "enum": ["vertical", "horizontal"], "default": "vertical" },
-                  "show_labels": { "type": "boolean", "description": "Show H:M:S labels", "default": false },
-                  "show_hint": { "type": "boolean", "description": "Show decimal values alongside binary", "default": false },
-                  "dot_size": { "type": "integer", "description": "Dot diameter in pixels", "minimum": 1, "default": 4 },
-                  "dot_spacing": { "type": "integer", "description": "Gap between dots in pixels", "minimum": 0, "default": 2 },
-                  "dot_style": { "type": "string", "description": "Dot shape", "enum": ["circle", "square"], "default": "circle" },
-                  "on_color": { "type": "integer", "description": "Density for 'on' bits (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                  "off_color": { "type": "integer", "description": "Density for 'off' bits (-1 = none)", "minimum": -1, "maximum": 255, "default": 40 }
+                  "format": {
+                    "type": "string",
+                    "description": "Time format: %H (hours), %M (minutes), %S (seconds)",
+                    "default": "%H:%M:%S"
+                  },
+                  "style": {
+                    "type": "string",
+                    "description": "Binary style: BCD (per-digit 4-bit) or true binary (whole number)",
+                    "enum": [
+                      "bcd",
+                      "true"
+                    ],
+                    "default": "bcd"
+                  },
+                  "layout": {
+                    "type": "string",
+                    "description": "Layout: vertical (bits top-to-bottom) or horizontal (bits left-to-right)",
+                    "enum": [
+                      "vertical",
+                      "horizontal"
+                    ],
+                    "default": "vertical"
+                  },
+                  "show_labels": {
+                    "type": "boolean",
+                    "description": "Show H:M:S labels",
+                    "default": false
+                  },
+                  "show_hint": {
+                    "type": "boolean",
+                    "description": "Show decimal values alongside binary",
+                    "default": false
+                  },
+                  "dot_size": {
+                    "type": "integer",
+                    "description": "Dot diameter in pixels",
+                    "minimum": 1,
+                    "default": 4
+                  },
+                  "dot_spacing": {
+                    "type": "integer",
+                    "description": "Gap between dots in pixels",
+                    "minimum": 0,
+                    "default": 2
+                  },
+                  "dot_style": {
+                    "type": "string",
+                    "description": "Dot shape",
+                    "enum": [
+                      "circle",
+                      "square"
+                    ],
+                    "default": "circle"
+                  },
+                  "on_color": {
+                    "type": "integer",
+                    "description": "Density for 'on' bits (-1 = none)",
+                    "minimum": -1,
+                    "maximum": 255,
+                    "default": 255
+                  },
+                  "off_color": {
+                    "type": "integer",
+                    "description": "Density for 'off' bits (-1 = none)",
+                    "minimum": -1,
+                    "maximum": 255,
+                    "default": 40
+                  }
                 }
               },
               "segment": {
                 "type": "object",
                 "description": "Seven-segment display settings",
                 "properties": {
-                  "format": { "type": "string", "description": "Time format: %H (hours), %M (minutes), %S (seconds)", "default": "%H:%M:%S" },
-                  "digit_height": { "type": "integer", "description": "Digit height in pixels (0 = auto-fit)", "minimum": 0, "default": 0 },
-                  "segment_thickness": { "type": "integer", "description": "Segment line thickness in pixels", "minimum": 1, "default": 2 },
-                  "segment_style": { "type": "string", "description": "Segment shape style", "enum": ["rectangle", "hexagon", "rounded"], "default": "rectangle" },
-                  "digit_spacing": { "type": "integer", "description": "Space between digits in pixels", "minimum": 0, "default": 2 },
-                  "colon_style": { "type": "string", "description": "Colon separator style", "enum": ["dots", "bar", "none"], "default": "dots" },
-                  "colon_blink": { "type": "boolean", "description": "Blink colon separators", "default": true },
-                  "on_color": { "type": "integer", "description": "Density for active segments (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                  "off_color": { "type": "integer", "description": "Density for inactive segments (-1 = none)", "minimum": -1, "maximum": 255, "default": 30 },
+                  "format": {
+                    "type": "string",
+                    "description": "Time format: %H (hours), %M (minutes), %S (seconds)",
+                    "default": "%H:%M:%S"
+                  },
+                  "digit_height": {
+                    "type": "integer",
+                    "description": "Digit height in pixels (0 = auto-fit)",
+                    "minimum": 0,
+                    "default": 0
+                  },
+                  "segment_thickness": {
+                    "type": "integer",
+                    "description": "Segment line thickness in pixels",
+                    "minimum": 1,
+                    "default": 2
+                  },
+                  "segment_style": {
+                    "type": "string",
+                    "description": "Segment shape style",
+                    "enum": [
+                      "rectangle",
+                      "hexagon",
+                      "rounded"
+                    ],
+                    "default": "rectangle"
+                  },
+                  "digit_spacing": {
+                    "type": "integer",
+                    "description": "Space between digits in pixels",
+                    "minimum": 0,
+                    "default": 2
+                  },
+                  "colon_style": {
+                    "type": "string",
+                    "description": "Colon separator style",
+                    "enum": [
+                      "dots",
+                      "bar",
+                      "none"
+                    ],
+                    "default": "dots"
+                  },
+                  "colon_blink": {
+                    "type": "boolean",
+                    "description": "Blink colon separators",
+                    "default": true
+                  },
+                  "on_color": {
+                    "type": "integer",
+                    "description": "Density for active segments (-1 = none)",
+                    "minimum": -1,
+                    "maximum": 255,
+                    "default": 255
+                  },
+                  "off_color": {
+                    "type": "integer",
+                    "description": "Density for inactive segments (-1 = none)",
+                    "minimum": -1,
+                    "maximum": 255,
+                    "default": 30
+                  },
                   "flip": {
                     "type": "object",
                     "description": "Digit flip animation settings",
                     "properties": {
-                      "style": { "type": "string", "description": "Animation style: none (disabled), fade (crossfade)", "enum": ["none", "fade"], "default": "none" },
-                      "speed": { "type": "number", "description": "Animation duration in seconds", "minimum": 0.05, "maximum": 1.0, "default": 0.15 }
+                      "style": {
+                        "type": "string",
+                        "description": "Animation style: none (disabled), fade (crossfade)",
+                        "enum": [
+                          "none",
+                          "fade"
+                        ],
+                        "default": "none"
+                      },
+                      "speed": {
+                        "type": "number",
+                        "description": "Animation duration in seconds",
+                        "minimum": 0.05,
+                        "maximum": 1.0,
+                        "default": 0.15
+                      }
                     }
                   }
                 }
@@ -485,22 +1021,61 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "cpu" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "cpu"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "text": { "$ref": "#/definitions/textObject" },
-              "mode": { "type": "string", "description": "Display mode for CPU usage", "enum": ["text", "bar", "graph", "gauge"], "default": "bar" },
+              "text": {
+                "$ref": "#/definitions/textObject"
+              },
+              "mode": {
+                "type": "string",
+                "description": "Display mode for CPU usage",
+                "enum": [
+                  "text",
+                  "bar",
+                  "graph",
+                  "gauge"
+                ],
+                "default": "bar"
+              },
               "bar": {
                 "type": "object",
                 "description": "Bar mode settings",
                 "properties": {
-                  "direction": { "type": "string", "description": "Bar orientation", "enum": ["horizontal", "vertical"], "default": "horizontal" },
-                  "border": { "type": "boolean", "description": "Draw border around bars", "default": false },
+                  "direction": {
+                    "type": "string",
+                    "description": "Bar orientation",
+                    "enum": [
+                      "horizontal",
+                      "vertical"
+                    ],
+                    "default": "horizontal"
+                  },
+                  "border": {
+                    "type": "boolean",
+                    "description": "Draw border around bars",
+                    "default": false
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Bar colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Bar fill color", "minimum": 0, "maximum": 255, "default": 255 }
+                      "fill": {
+                        "type": "integer",
+                        "description": "Bar fill color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      }
                     }
                   }
                 }
@@ -509,13 +1084,30 @@
                 "type": "object",
                 "description": "Graph mode settings",
                 "properties": {
-                  "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
+                  "history": {
+                    "type": "integer",
+                    "description": "Number of data points to display",
+                    "minimum": 2,
+                    "default": 60
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Graph colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Graph fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "line": { "type": "integer", "description": "Graph line density", "minimum": 0, "maximum": 255, "default": 255 }
+                      "fill": {
+                        "type": "integer",
+                        "description": "Graph fill density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "line": {
+                        "type": "integer",
+                        "description": "Graph line density",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      }
                     }
                   }
                 }
@@ -524,15 +1116,43 @@
                 "type": "object",
                 "description": "Gauge mode settings",
                 "properties": {
-                  "show_ticks": { "type": "boolean", "description": "Show gauge tick marks", "default": true },
+                  "show_ticks": {
+                    "type": "boolean",
+                    "description": "Show gauge tick marks",
+                    "default": true
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Gauge colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Gauge fill color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "arc": { "type": "integer", "description": "Gauge arc outline color", "minimum": 0, "maximum": 255, "default": 200 },
-                      "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "ticks": { "type": "integer", "description": "Gauge tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
+                      "fill": {
+                        "type": "integer",
+                        "description": "Gauge fill color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "arc": {
+                        "type": "integer",
+                        "description": "Gauge arc outline color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 200
+                      },
+                      "needle": {
+                        "type": "integer",
+                        "description": "Gauge needle color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "ticks": {
+                        "type": "integer",
+                        "description": "Gauge tick marks color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 150
+                      }
                     }
                   }
                 }
@@ -541,31 +1161,83 @@
                 "type": "object",
                 "description": "Per-core display settings",
                 "properties": {
-                  "enabled": { "type": "boolean", "description": "Show individual CPU cores", "default": false },
-                  "margin": { "type": "integer", "description": "Margin between core bars in pixels", "minimum": 0, "default": 0 },
-                  "border": { "type": "boolean", "description": "Draw border around each core bar", "default": false }
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Show individual CPU cores",
+                    "default": false
+                  },
+                  "margin": {
+                    "type": "integer",
+                    "description": "Margin between core bars in pixels",
+                    "minimum": 0,
+                    "default": 0
+                  },
+                  "border": {
+                    "type": "boolean",
+                    "description": "Draw border around each core bar",
+                    "default": false
+                  }
                 }
               }
             }
           }
         },
         {
-          "if": { "properties": { "type": { "const": "memory" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "memory"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "text": { "$ref": "#/definitions/textObject" },
-              "mode": { "type": "string", "description": "Display mode for memory usage", "enum": ["text", "bar", "graph", "gauge"], "default": "bar" },
+              "text": {
+                "$ref": "#/definitions/textObject"
+              },
+              "mode": {
+                "type": "string",
+                "description": "Display mode for memory usage",
+                "enum": [
+                  "text",
+                  "bar",
+                  "graph",
+                  "gauge"
+                ],
+                "default": "bar"
+              },
               "bar": {
                 "type": "object",
                 "description": "Bar mode settings",
                 "properties": {
-                  "direction": { "type": "string", "description": "Bar orientation", "enum": ["horizontal", "vertical"], "default": "horizontal" },
-                  "border": { "type": "boolean", "description": "Draw border around bar", "default": false },
+                  "direction": {
+                    "type": "string",
+                    "description": "Bar orientation",
+                    "enum": [
+                      "horizontal",
+                      "vertical"
+                    ],
+                    "default": "horizontal"
+                  },
+                  "border": {
+                    "type": "boolean",
+                    "description": "Draw border around bar",
+                    "default": false
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Bar colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Bar fill color", "minimum": 0, "maximum": 255, "default": 255 }
+                      "fill": {
+                        "type": "integer",
+                        "description": "Bar fill color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      }
                     }
                   }
                 }
@@ -574,13 +1246,30 @@
                 "type": "object",
                 "description": "Graph mode settings",
                 "properties": {
-                  "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
+                  "history": {
+                    "type": "integer",
+                    "description": "Number of data points to display",
+                    "minimum": 2,
+                    "default": 60
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Graph colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Graph fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "line": { "type": "integer", "description": "Graph line density", "minimum": 0, "maximum": 255, "default": 255 }
+                      "fill": {
+                        "type": "integer",
+                        "description": "Graph fill density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "line": {
+                        "type": "integer",
+                        "description": "Graph line density",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      }
                     }
                   }
                 }
@@ -589,15 +1278,43 @@
                 "type": "object",
                 "description": "Gauge mode settings",
                 "properties": {
-                  "show_ticks": { "type": "boolean", "description": "Show gauge tick marks", "default": true },
+                  "show_ticks": {
+                    "type": "boolean",
+                    "description": "Show gauge tick marks",
+                    "default": true
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Gauge colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Gauge fill color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "arc": { "type": "integer", "description": "Gauge arc outline color", "minimum": 0, "maximum": 255, "default": 200 },
-                      "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "ticks": { "type": "integer", "description": "Gauge tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
+                      "fill": {
+                        "type": "integer",
+                        "description": "Gauge fill color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "arc": {
+                        "type": "integer",
+                        "description": "Gauge arc outline color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 200
+                      },
+                      "needle": {
+                        "type": "integer",
+                        "description": "Gauge needle color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "ticks": {
+                        "type": "integer",
+                        "description": "Gauge tick marks color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 150
+                      }
                     }
                   }
                 }
@@ -606,21 +1323,75 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "network" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "network"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "mode": { "type": "string", "description": "Display mode for network I/O", "enum": ["text", "bar", "graph", "gauge"], "default": "bar" },
-              "interface": { "type": ["string", "null"], "description": "Network interface name (sum all interfaces if omitted)", "default": null },
-              "max_speed_mbps": { "type": "number", "description": "Maximum speed in Mbps for scaling", "default": 100 },
-              "unit": { "type": "string", "description": "Speed unit for display", "enum": ["auto", "bps", "Kbps", "Mbps", "Gbps", "B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s"], "default": "Mbps" },
+              "mode": {
+                "type": "string",
+                "description": "Display mode for network I/O",
+                "enum": [
+                  "text",
+                  "bar",
+                  "graph",
+                  "gauge"
+                ],
+                "default": "bar"
+              },
+              "interface": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Network interface name (sum all interfaces if omitted)",
+                "default": null
+              },
+              "max_speed_mbps": {
+                "type": "number",
+                "description": "Maximum speed in Mbps for scaling",
+                "default": 100
+              },
+              "unit": {
+                "type": "string",
+                "description": "Speed unit for display",
+                "enum": [
+                  "auto",
+                  "bps",
+                  "Kbps",
+                  "Mbps",
+                  "Gbps",
+                  "B/s",
+                  "KB/s",
+                  "MB/s",
+                  "GB/s",
+                  "KiB/s",
+                  "MiB/s",
+                  "GiB/s"
+                ],
+                "default": "Mbps"
+              },
               "text": {
                 "type": "object",
                 "description": "Text mode settings",
                 "allOf": [
-                  { "$ref": "#/definitions/textStyle" },
+                  {
+                    "$ref": "#/definitions/textStyle"
+                  },
                   {
                     "properties": {
-                      "show_unit": { "type": "boolean", "description": "Show unit suffix (e.g., 'Mbps') in text mode", "default": false }
+                      "show_unit": {
+                        "type": "boolean",
+                        "description": "Show unit suffix (e.g., 'Mbps') in text mode",
+                        "default": false
+                      }
                     }
                   }
                 ]
@@ -629,14 +1400,38 @@
                 "type": "object",
                 "description": "Bar mode settings",
                 "properties": {
-                  "direction": { "type": "string", "description": "Bar orientation", "enum": ["horizontal", "vertical"], "default": "horizontal" },
-                  "border": { "type": "boolean", "description": "Draw border around bars", "default": false },
+                  "direction": {
+                    "type": "string",
+                    "description": "Bar orientation",
+                    "enum": [
+                      "horizontal",
+                      "vertical"
+                    ],
+                    "default": "horizontal"
+                  },
+                  "border": {
+                    "type": "boolean",
+                    "description": "Draw border around bars",
+                    "default": false
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Bar density values for RX/TX (-1 = none)",
                     "properties": {
-                      "rx": { "type": "integer", "description": "Receive (download) bar density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "tx": { "type": "integer", "description": "Transmit (upload) bar density (-1 = none)", "minimum": -1, "maximum": 255, "default": 128 }
+                      "rx": {
+                        "type": "integer",
+                        "description": "Receive (download) bar density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "tx": {
+                        "type": "integer",
+                        "description": "Transmit (upload) bar density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 128
+                      }
                     }
                   }
                 }
@@ -645,13 +1440,30 @@
                 "type": "object",
                 "description": "Graph mode settings",
                 "properties": {
-                  "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
+                  "history": {
+                    "type": "integer",
+                    "description": "Number of data points to display",
+                    "minimum": 2,
+                    "default": 60
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Graph density values for RX/TX (-1 = none)",
                     "properties": {
-                      "rx": { "type": "integer", "description": "Receive (download) fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "tx": { "type": "integer", "description": "Transmit (upload) fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 128 }
+                      "rx": {
+                        "type": "integer",
+                        "description": "Receive (download) fill density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "tx": {
+                        "type": "integer",
+                        "description": "Transmit (upload) fill density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 128
+                      }
                     }
                   }
                 }
@@ -664,10 +1476,34 @@
                     "type": "object",
                     "description": "Gauge density values for RX/TX (-1 = none)",
                     "properties": {
-                      "rx": { "type": "integer", "description": "Receive (download) arc density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "tx": { "type": "integer", "description": "Transmit (upload) arc density (-1 = none)", "minimum": -1, "maximum": 255, "default": 128 },
-                      "rx_needle": { "type": "integer", "description": "Receive needle density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "tx_needle": { "type": "integer", "description": "Transmit needle density (-1 = none)", "minimum": -1, "maximum": 255, "default": 180 }
+                      "rx": {
+                        "type": "integer",
+                        "description": "Receive (download) arc density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "tx": {
+                        "type": "integer",
+                        "description": "Transmit (upload) arc density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 128
+                      },
+                      "rx_needle": {
+                        "type": "integer",
+                        "description": "Receive needle density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "tx_needle": {
+                        "type": "integer",
+                        "description": "Transmit needle density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 180
+                      }
                     }
                   }
                 }
@@ -676,21 +1512,69 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "disk" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "disk"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "mode": { "type": "string", "description": "Display mode for disk I/O", "enum": ["text", "bar", "graph"], "default": "bar" },
-              "disk": { "type": ["string", "null"], "description": "Disk/drive to monitor (sum all disks if omitted)" },
-              "max_speed_mbps": { "type": "number", "description": "Maximum speed in MB/s for scaling (-1 for auto)", "default": -1 },
-              "unit": { "type": "string", "description": "Speed unit for display", "enum": ["auto", "B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s"], "default": "MB/s" },
+              "mode": {
+                "type": "string",
+                "description": "Display mode for disk I/O",
+                "enum": [
+                  "text",
+                  "bar",
+                  "graph"
+                ],
+                "default": "bar"
+              },
+              "disk": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Disk/drive to monitor (sum all disks if omitted)"
+              },
+              "max_speed_mbps": {
+                "type": "number",
+                "description": "Maximum speed in MB/s for scaling (-1 for auto)",
+                "default": -1
+              },
+              "unit": {
+                "type": "string",
+                "description": "Speed unit for display",
+                "enum": [
+                  "auto",
+                  "B/s",
+                  "KB/s",
+                  "MB/s",
+                  "GB/s",
+                  "KiB/s",
+                  "MiB/s",
+                  "GiB/s"
+                ],
+                "default": "MB/s"
+              },
               "text": {
                 "type": "object",
                 "description": "Text mode settings",
                 "allOf": [
-                  { "$ref": "#/definitions/textStyle" },
+                  {
+                    "$ref": "#/definitions/textStyle"
+                  },
                   {
                     "properties": {
-                      "show_unit": { "type": "boolean", "description": "Show unit suffix (e.g., 'MB/s') in text mode", "default": false }
+                      "show_unit": {
+                        "type": "boolean",
+                        "description": "Show unit suffix (e.g., 'MB/s') in text mode",
+                        "default": false
+                      }
                     }
                   }
                 ]
@@ -699,14 +1583,38 @@
                 "type": "object",
                 "description": "Bar mode settings",
                 "properties": {
-                  "direction": { "type": "string", "description": "Bar orientation", "enum": ["horizontal", "vertical"], "default": "horizontal" },
-                  "border": { "type": "boolean", "description": "Draw border around bars", "default": false },
+                  "direction": {
+                    "type": "string",
+                    "description": "Bar orientation",
+                    "enum": [
+                      "horizontal",
+                      "vertical"
+                    ],
+                    "default": "horizontal"
+                  },
+                  "border": {
+                    "type": "boolean",
+                    "description": "Draw border around bars",
+                    "default": false
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Bar density values for read/write (-1 = none)",
                     "properties": {
-                      "read": { "type": "integer", "description": "Read bar density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "write": { "type": "integer", "description": "Write bar density (-1 = none)", "minimum": -1, "maximum": 255, "default": 200 }
+                      "read": {
+                        "type": "integer",
+                        "description": "Read bar density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "write": {
+                        "type": "integer",
+                        "description": "Write bar density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 200
+                      }
                     }
                   }
                 }
@@ -715,13 +1623,30 @@
                 "type": "object",
                 "description": "Graph mode settings",
                 "properties": {
-                  "history": { "type": "integer", "description": "Number of data points to display", "minimum": 2, "default": 60 },
+                  "history": {
+                    "type": "integer",
+                    "description": "Number of data points to display",
+                    "minimum": 2,
+                    "default": 60
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Graph density values for read/write (-1 = none)",
                     "properties": {
-                      "read": { "type": "integer", "description": "Read fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "write": { "type": "integer", "description": "Write fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 200 }
+                      "read": {
+                        "type": "integer",
+                        "description": "Read fill density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "write": {
+                        "type": "integer",
+                        "description": "Write fill density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 200
+                      }
                     }
                   }
                 }
@@ -730,24 +1655,69 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "volume" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "volume"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "text": { "$ref": "#/definitions/textObject" },
-              "auto_hide": { "$ref": "#/definitions/autoHide" },
-              "poll_interval": { "type": "number", "description": "Internal polling interval in seconds", "minimum": 0.01, "default": 0.1 },
-              "mode": { "type": "string", "description": "Display mode for system volume", "enum": ["text", "bar", "gauge"], "default": "bar" },
+              "text": {
+                "$ref": "#/definitions/textObject"
+              },
+              "auto_hide": {
+                "$ref": "#/definitions/autoHide"
+              },
+              "poll_interval": {
+                "type": "number",
+                "description": "Internal polling interval in seconds",
+                "minimum": 0.01,
+                "default": 0.1
+              },
+              "mode": {
+                "type": "string",
+                "description": "Display mode for system volume",
+                "enum": [
+                  "text",
+                  "bar",
+                  "gauge"
+                ],
+                "default": "bar"
+              },
               "bar": {
                 "type": "object",
                 "description": "Bar mode settings",
                 "properties": {
-                  "direction": { "type": "string", "description": "Bar orientation", "enum": ["horizontal", "vertical"], "default": "horizontal" },
-                  "border": { "type": "boolean", "description": "Draw border around bar", "default": false },
+                  "direction": {
+                    "type": "string",
+                    "description": "Bar orientation",
+                    "enum": [
+                      "horizontal",
+                      "vertical"
+                    ],
+                    "default": "horizontal"
+                  },
+                  "border": {
+                    "type": "boolean",
+                    "description": "Draw border around bar",
+                    "default": false
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Bar colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Bar fill color", "minimum": 0, "maximum": 255, "default": 255 }
+                      "fill": {
+                        "type": "integer",
+                        "description": "Bar fill color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      }
                     }
                   }
                 }
@@ -756,14 +1726,36 @@
                 "type": "object",
                 "description": "Gauge mode settings",
                 "properties": {
-                  "show_ticks": { "type": "boolean", "description": "Show gauge tick marks", "default": true },
+                  "show_ticks": {
+                    "type": "boolean",
+                    "description": "Show gauge tick marks",
+                    "default": true
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Gauge colors",
                     "properties": {
-                      "arc": { "type": "integer", "description": "Gauge arc outline color", "minimum": 0, "maximum": 255, "default": 200 },
-                      "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "ticks": { "type": "integer", "description": "Gauge tick marks color", "minimum": 0, "maximum": 255, "default": 150 }
+                      "arc": {
+                        "type": "integer",
+                        "description": "Gauge arc outline color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 200
+                      },
+                      "needle": {
+                        "type": "integer",
+                        "description": "Gauge needle color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "ticks": {
+                        "type": "integer",
+                        "description": "Gauge tick marks color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 150
+                      }
                     }
                   }
                 }
@@ -772,24 +1764,75 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "volume_meter" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "volume_meter"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "auto_hide": { "$ref": "#/definitions/autoHide" },
-              "poll_interval": { "type": "number", "description": "Internal polling interval in seconds", "minimum": 0.01, "default": 0.1 },
-              "mode": { "type": "string", "description": "Display mode for audio peak meter", "enum": ["text", "bar", "gauge"], "default": "bar" },
+              "auto_hide": {
+                "$ref": "#/definitions/autoHide"
+              },
+              "poll_interval": {
+                "type": "number",
+                "description": "Internal polling interval in seconds",
+                "minimum": 0.01,
+                "default": 0.1
+              },
+              "mode": {
+                "type": "string",
+                "description": "Display mode for audio peak meter",
+                "enum": [
+                  "text",
+                  "bar",
+                  "gauge"
+                ],
+                "default": "bar"
+              },
               "bar": {
                 "type": "object",
                 "description": "Bar mode settings",
                 "properties": {
-                  "direction": { "type": "string", "description": "Bar orientation", "enum": ["horizontal", "vertical"], "default": "horizontal" },
+                  "direction": {
+                    "type": "string",
+                    "description": "Bar orientation",
+                    "enum": [
+                      "horizontal",
+                      "vertical"
+                    ],
+                    "default": "horizontal"
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Bar colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Bar fill color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "clipping": { "type": "integer", "description": "Clipping indicator color", "minimum": 0, "maximum": 255, "default": 200 },
-                      "peak": { "type": "integer", "description": "Peak hold indicator color", "minimum": 0, "maximum": 255, "default": 180 }
+                      "fill": {
+                        "type": "integer",
+                        "description": "Bar fill color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "clipping": {
+                        "type": "integer",
+                        "description": "Clipping indicator color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 200
+                      },
+                      "peak": {
+                        "type": "integer",
+                        "description": "Peak hold indicator color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 180
+                      }
                     }
                   }
                 }
@@ -798,26 +1841,65 @@
                 "type": "object",
                 "description": "Gauge mode settings",
                 "properties": {
-                  "show_ticks": { "type": "boolean", "description": "Show gauge tick marks", "default": true },
+                  "show_ticks": {
+                    "type": "boolean",
+                    "description": "Show gauge tick marks",
+                    "default": true
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Gauge colors",
                     "properties": {
-                      "arc": { "type": "integer", "description": "Gauge arc outline color", "minimum": 0, "maximum": 255, "default": 200 },
-                      "needle": { "type": "integer", "description": "Gauge needle color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "ticks": { "type": "integer", "description": "Gauge tick marks color", "minimum": 0, "maximum": 255, "default": 150 },
-                      "clipping": { "type": "integer", "description": "Clipping needle color", "minimum": 0, "maximum": 255, "default": 200 },
-                      "peak": { "type": "integer", "description": "Peak hold indicator color", "minimum": 0, "maximum": 255, "default": 180 }
+                      "arc": {
+                        "type": "integer",
+                        "description": "Gauge arc outline color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 200
+                      },
+                      "needle": {
+                        "type": "integer",
+                        "description": "Gauge needle color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "ticks": {
+                        "type": "integer",
+                        "description": "Gauge tick marks color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 150
+                      },
+                      "clipping": {
+                        "type": "integer",
+                        "description": "Clipping needle color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 200
+                      },
+                      "peak": {
+                        "type": "integer",
+                        "description": "Peak hold indicator color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 180
+                      }
                     }
                   }
                 }
               },
               "text": {
                 "allOf": [
-                  { "$ref": "#/definitions/textObject" },
+                  {
+                    "$ref": "#/definitions/textObject"
+                  },
                   {
                     "properties": {
-                      "format": { "description": "Text format string (e.g., '%d%%')", "default": "%d%%" }
+                      "format": {
+                        "description": "Text format string (e.g., '%d%%')",
+                        "default": "%d%%"
+                      }
                     }
                   }
                 ]
@@ -826,75 +1908,207 @@
                 "type": "object",
                 "description": "Stereo channel settings",
                 "properties": {
-                  "enabled": { "type": "boolean", "description": "Show separate left/right channels", "default": false },
-                  "divider": { "type": "integer", "description": "Divider line density between left/right channels (-1 = none, 0-255 = grayscale)", "minimum": -1, "maximum": 255, "default": 64 }
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Show separate left/right channels",
+                    "default": false
+                  },
+                  "divider": {
+                    "type": "integer",
+                    "description": "Divider line density between left/right channels (-1 = none, 0-255 = grayscale)",
+                    "minimum": -1,
+                    "maximum": 255,
+                    "default": 64
+                  }
                 }
               },
               "metering": {
                 "type": "object",
                 "description": "Audio metering settings",
                 "properties": {
-                  "db_scale": { "type": "boolean", "description": "Use logarithmic dB scale instead of linear", "default": false },
-                  "decay_rate": { "type": "number", "description": "Peak decay rate in dB/second", "minimum": 0.1, "default": 2.0 },
-                  "silence_threshold": { "type": "number", "description": "Threshold below which audio is considered silent", "minimum": 0, "maximum": 1, "default": 0.01 }
+                  "db_scale": {
+                    "type": "boolean",
+                    "description": "Use logarithmic dB scale instead of linear",
+                    "default": false
+                  },
+                  "decay_rate": {
+                    "type": "number",
+                    "description": "Peak decay rate in dB/second",
+                    "minimum": 0.1,
+                    "default": 2.0
+                  },
+                  "silence_threshold": {
+                    "type": "number",
+                    "description": "Threshold below which audio is considered silent",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0.01
+                  }
                 }
               },
               "peak": {
                 "type": "object",
                 "description": "Peak hold indicator settings",
                 "properties": {
-                  "enabled": { "type": "boolean", "description": "Show peak hold indicators", "default": true },
-                  "hold_time": { "type": "number", "description": "Peak hold duration in seconds", "minimum": 0.1, "default": 1.0 }
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Show peak hold indicators",
+                    "default": true
+                  },
+                  "hold_time": {
+                    "type": "number",
+                    "description": "Peak hold duration in seconds",
+                    "minimum": 0.1,
+                    "default": 1.0
+                  }
                 }
               },
               "clipping": {
                 "type": "object",
                 "description": "Clipping detection settings",
                 "properties": {
-                  "enabled": { "type": "boolean", "description": "Enable clipping detection", "default": true },
-                  "threshold": { "type": "number", "description": "Clipping threshold (0.0-1.0)", "minimum": 0, "maximum": 1, "default": 0.99 }
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Enable clipping detection",
+                    "default": true
+                  },
+                  "threshold": {
+                    "type": "number",
+                    "description": "Clipping threshold (0.0-1.0)",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0.99
+                  }
                 }
               }
             }
           }
         },
         {
-          "if": { "properties": { "type": { "const": "audio_visualizer" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "audio_visualizer"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "mode": { "type": "string", "description": "Display mode: spectrum analyzer or oscilloscope", "enum": ["spectrum", "oscilloscope"], "default": "spectrum" },
+              "mode": {
+                "type": "string",
+                "description": "Display mode: spectrum analyzer or oscilloscope",
+                "enum": [
+                  "spectrum",
+                  "oscilloscope"
+                ],
+                "default": "spectrum"
+              },
               "spectrum": {
                 "type": "object",
                 "description": "Spectrum analyzer settings",
                 "properties": {
-                  "bars": { "type": "integer", "description": "Number of frequency bars", "minimum": 8, "maximum": 128, "default": 32 },
-                  "scale": { "type": "string", "description": "Frequency scale distribution", "enum": ["logarithmic", "linear"], "default": "logarithmic" },
-                  "style": { "type": "string", "description": "Rendering style", "enum": ["bars", "line"], "default": "bars" },
-                  "smoothing": { "type": "number", "description": "Fall-off smoothing factor (0=instant, 1=max smooth)", "minimum": 0, "maximum": 1, "default": 0.7 },
-                  "frequency_compensation": { "type": "boolean", "description": "Boost high frequencies for visual balance", "default": false },
+                  "bars": {
+                    "type": "integer",
+                    "description": "Number of frequency bars",
+                    "minimum": 8,
+                    "maximum": 128,
+                    "default": 32
+                  },
+                  "scale": {
+                    "type": "string",
+                    "description": "Frequency scale distribution",
+                    "enum": [
+                      "logarithmic",
+                      "linear"
+                    ],
+                    "default": "logarithmic"
+                  },
+                  "style": {
+                    "type": "string",
+                    "description": "Rendering style",
+                    "enum": [
+                      "bars",
+                      "line"
+                    ],
+                    "default": "bars"
+                  },
+                  "smoothing": {
+                    "type": "number",
+                    "description": "Fall-off smoothing factor (0=instant, 1=max smooth)",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0.7
+                  },
+                  "frequency_compensation": {
+                    "type": "boolean",
+                    "description": "Boost high frequencies for visual balance",
+                    "default": false
+                  },
                   "dynamic_scaling": {
                     "type": "object",
                     "description": "Automatic amplitude scaling",
                     "properties": {
-                      "strength": { "type": "number", "description": "Scaling strength (0=disabled)", "minimum": 0, "maximum": 2, "default": 0 },
-                      "window": { "type": "number", "description": "Rolling average window in seconds", "minimum": 0.1, "maximum": 5, "default": 0.5 }
+                      "strength": {
+                        "type": "number",
+                        "description": "Scaling strength (0=disabled)",
+                        "minimum": 0,
+                        "maximum": 2,
+                        "default": 0
+                      },
+                      "window": {
+                        "type": "number",
+                        "description": "Rolling average window in seconds",
+                        "minimum": 0.1,
+                        "maximum": 5,
+                        "default": 0.5
+                      }
                     }
                   },
                   "peak": {
                     "type": "object",
                     "description": "Peak hold indicator settings",
                     "properties": {
-                      "enabled": { "type": "boolean", "description": "Show peak hold indicators on bars", "default": true },
-                      "hold_time": { "type": "number", "description": "Peak hold duration in seconds", "minimum": 0.1, "default": 1.0 }
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Show peak hold indicators on bars",
+                        "default": true
+                      },
+                      "hold_time": {
+                        "type": "number",
+                        "description": "Peak hold duration in seconds",
+                        "minimum": 0.1,
+                        "default": 1.0
+                      }
                     }
                   },
                   "colors": {
                     "type": "object",
                     "description": "Spectrum colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Bar/line fill color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "left": { "type": "integer", "description": "Left channel color (stereo_separated)", "minimum": 0, "maximum": 255, "default": 255 },
-                      "right": { "type": "integer", "description": "Right channel color (stereo_separated)", "minimum": 0, "maximum": 255, "default": 200 }
+                      "fill": {
+                        "type": "integer",
+                        "description": "Bar/line fill color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "left": {
+                        "type": "integer",
+                        "description": "Left channel color (stereo_separated)",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "right": {
+                        "type": "integer",
+                        "description": "Right channel color (stereo_separated)",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 200
+                      }
                     }
                   }
                 }
@@ -903,29 +2117,86 @@
                 "type": "object",
                 "description": "Oscilloscope settings",
                 "properties": {
-                  "style": { "type": "string", "description": "Waveform rendering style", "enum": ["line", "filled"], "default": "line" },
-                  "samples": { "type": "integer", "description": "Number of samples to display", "minimum": 32, "maximum": 512, "default": 128 },
+                  "style": {
+                    "type": "string",
+                    "description": "Waveform rendering style",
+                    "enum": [
+                      "line",
+                      "filled"
+                    ],
+                    "default": "line"
+                  },
+                  "samples": {
+                    "type": "integer",
+                    "description": "Number of samples to display",
+                    "minimum": 32,
+                    "maximum": 512,
+                    "default": 128
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Oscilloscope colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Waveform color", "minimum": 0, "maximum": 255, "default": 255 },
-                      "left": { "type": "integer", "description": "Left channel color (stereo_separated)", "minimum": 0, "maximum": 255, "default": 255 },
-                      "right": { "type": "integer", "description": "Right channel color (stereo_separated)", "minimum": 0, "maximum": 255, "default": 200 }
+                      "fill": {
+                        "type": "integer",
+                        "description": "Waveform color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "left": {
+                        "type": "integer",
+                        "description": "Left channel color (stereo_separated)",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "right": {
+                        "type": "integer",
+                        "description": "Right channel color (stereo_separated)",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 200
+                      }
                     }
                   }
                 }
               },
-              "channel": { "type": "string", "description": "Audio channel mode", "enum": ["mono", "stereo_combined", "stereo_separated"], "default": "stereo_combined" },
-              "error_threshold": { "type": "integer", "description": "Consecutive errors before audio failure (default: 30, ~3 seconds)", "minimum": 1, "default": 30 }
+              "channel": {
+                "type": "string",
+                "description": "Audio channel mode",
+                "enum": [
+                  "mono",
+                  "stereo_combined",
+                  "stereo_separated"
+                ],
+                "default": "stereo_combined"
+              },
+              "error_threshold": {
+                "type": "integer",
+                "description": "Consecutive errors before audio failure (default: 30, ~3 seconds)",
+                "minimum": 1,
+                "default": 30
+              }
             }
           }
         },
         {
-          "if": { "properties": { "type": { "const": "keyboard" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "keyboard"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "text": { "$ref": "#/definitions/textStyle" },
+              "text": {
+                "$ref": "#/definitions/textStyle"
+              },
               "indicators": {
                 "type": "object",
                 "description": "Keyboard lock indicator settings",
@@ -934,24 +2205,66 @@
                     "type": "object",
                     "description": "Caps Lock indicator",
                     "properties": {
-                      "on": { "type": ["string", "null"], "description": "Text when Caps Lock is on (null = embedded glyph)", "default": null },
-                      "off": { "type": ["string", "null"], "description": "Text when Caps Lock is off (null = embedded glyph)", "default": null }
+                      "on": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Text when Caps Lock is on (null = embedded glyph)",
+                        "default": null
+                      },
+                      "off": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Text when Caps Lock is off (null = embedded glyph)",
+                        "default": null
+                      }
                     }
                   },
                   "num": {
                     "type": "object",
                     "description": "Num Lock indicator",
                     "properties": {
-                      "on": { "type": ["string", "null"], "description": "Text when Num Lock is on (null = embedded glyph)", "default": null },
-                      "off": { "type": ["string", "null"], "description": "Text when Num Lock is off (null = embedded glyph)", "default": null }
+                      "on": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Text when Num Lock is on (null = embedded glyph)",
+                        "default": null
+                      },
+                      "off": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Text when Num Lock is off (null = embedded glyph)",
+                        "default": null
+                      }
                     }
                   },
                   "scroll": {
                     "type": "object",
                     "description": "Scroll Lock indicator",
                     "properties": {
-                      "on": { "type": ["string", "null"], "description": "Text when Scroll Lock is on (null = embedded glyph)", "default": null },
-                      "off": { "type": ["string", "null"], "description": "Text when Scroll Lock is off (null = embedded glyph)", "default": null }
+                      "on": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Text when Scroll Lock is on (null = embedded glyph)",
+                        "default": null
+                      },
+                      "off": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Text when Scroll Lock is off (null = embedded glyph)",
+                        "default": null
+                      }
                     }
                   }
                 }
@@ -960,36 +2273,97 @@
                 "type": "object",
                 "description": "Indicator layout settings",
                 "properties": {
-                  "spacing": { "type": "integer", "description": "Spacing between indicators in pixels", "minimum": 0, "default": 3 },
-                  "separator": { "type": "string", "description": "Separator character between indicators", "default": "" }
+                  "spacing": {
+                    "type": "integer",
+                    "description": "Spacing between indicators in pixels",
+                    "minimum": 0,
+                    "default": 3
+                  },
+                  "separator": {
+                    "type": "string",
+                    "description": "Separator character between indicators",
+                    "default": ""
+                  }
                 }
               },
               "colors": {
                 "type": "object",
                 "description": "Indicator density values (-1 = none)",
                 "properties": {
-                  "on": { "type": "integer", "description": "Density when indicator is active (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                  "off": { "type": "integer", "description": "Density when indicator is inactive (-1 = none)", "minimum": -1, "maximum": 255, "default": 100 }
+                  "on": {
+                    "type": "integer",
+                    "description": "Density when indicator is active (-1 = none)",
+                    "minimum": -1,
+                    "maximum": 255,
+                    "default": 255
+                  },
+                  "off": {
+                    "type": "integer",
+                    "description": "Density when indicator is inactive (-1 = none)",
+                    "minimum": -1,
+                    "maximum": 255,
+                    "default": 100
+                  }
                 }
               }
             }
           }
         },
         {
-          "if": { "properties": { "type": { "const": "keyboard_layout" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "keyboard_layout"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "text": { "$ref": "#/definitions/textStyle" },
-              "format": { "type": "string", "description": "Language code format: iso639-1 (EN), iso639-2 (ENG), or full (English)", "enum": ["iso639-1", "iso639-2", "full"], "default": "iso639-1" }
+              "text": {
+                "$ref": "#/definitions/textStyle"
+              },
+              "format": {
+                "type": "string",
+                "description": "Language code format: iso639-1 (EN), iso639-2 (ENG), or full (English)",
+                "enum": [
+                  "iso639-1",
+                  "iso639-2",
+                  "full"
+                ],
+                "default": "iso639-1"
+              }
             }
           }
         },
         {
-          "if": { "properties": { "type": { "const": "doom" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "doom"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "wad": { "type": "string", "description": "WAD file name (auto-downloads doom1.wad if not found)", "default": "doom1.wad" },
-              "bundled_wad_url": { "type": ["string", "null"], "description": "Custom URL for downloading DOOM shareware WAD (null = use default distro.ibiblio.org)", "default": null },
+              "wad": {
+                "type": "string",
+                "description": "WAD file name (auto-downloads doom1.wad if not found)",
+                "default": "doom1.wad"
+              },
+              "bundled_wad_url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Custom URL for downloading DOOM shareware WAD (null = use default distro.ibiblio.org)",
+                "default": null
+              },
               "doom": {
                 "type": "object",
                 "description": "DOOM display rendering settings",
@@ -997,7 +2371,14 @@
                   "render_mode": {
                     "type": "string",
                     "description": "Grayscale conversion mode for OLED display",
-                    "enum": ["normal", "contrast", "posterize", "threshold", "dither", "gamma"],
+                    "enum": [
+                      "normal",
+                      "contrast",
+                      "posterize",
+                      "threshold",
+                      "dither",
+                      "gamma"
+                    ],
                     "default": "normal"
                   },
                   "posterize_levels": {
@@ -1031,7 +2412,11 @@
                   "dither_size": {
                     "type": "integer",
                     "description": "Bayer matrix size for dither mode (2, 4, or 8)",
-                    "enum": [2, 4, 8],
+                    "enum": [
+                      2,
+                      4,
+                      8
+                    ],
                     "default": 4
                   }
                 }
@@ -1040,13 +2425,26 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "winamp" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "winamp"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "auto_hide": { "$ref": "#/definitions/autoHide" },
+              "auto_hide": {
+                "$ref": "#/definitions/autoHide"
+              },
               "text": {
                 "allOf": [
-                  { "$ref": "#/definitions/textObject" },
+                  {
+                    "$ref": "#/definitions/textObject"
+                  },
                   {
                     "properties": {
                       "format": {
@@ -1068,7 +2466,10 @@
                       "mode": {
                         "type": "string",
                         "description": "Placeholder mode",
-                        "enum": ["text", "icon"],
+                        "enum": [
+                          "text",
+                          "icon"
+                        ],
                         "default": "icon"
                       },
                       "text": {
@@ -1123,7 +2524,12 @@
                   "direction": {
                     "type": "string",
                     "description": "Scroll direction",
-                    "enum": ["left", "right", "up", "down"],
+                    "enum": [
+                      "left",
+                      "right",
+                      "up",
+                      "down"
+                    ],
                     "default": "left"
                   },
                   "speed": {
@@ -1135,7 +2541,11 @@
                   "mode": {
                     "type": "string",
                     "description": "Scroll mode: continuous (loop), bounce (reverse at edges), pause_ends (pause at start/end)",
-                    "enum": ["continuous", "bounce", "pause_ends"],
+                    "enum": [
+                      "continuous",
+                      "bounce",
+                      "pause_ends"
+                    ],
                     "default": "continuous"
                   },
                   "pause_ms": {
@@ -1156,7 +2566,16 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "matrix" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "matrix"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
               "matrix": {
@@ -1166,7 +2585,13 @@
                   "charset": {
                     "type": "string",
                     "description": "Character set to use for the rain effect",
-                    "enum": ["ascii", "katakana", "binary", "digits", "hex"],
+                    "enum": [
+                      "ascii",
+                      "katakana",
+                      "binary",
+                      "digits",
+                      "hex"
+                    ],
                     "default": "ascii"
                   },
                   "density": {
@@ -1224,7 +2649,11 @@
                   "font_size": {
                     "type": "string",
                     "description": "Font size: 'small' (3x5 pixels), 'large' (5x7 pixels), or 'auto' (based on display height)",
-                    "enum": ["auto", "small", "large"],
+                    "enum": [
+                      "auto",
+                      "small",
+                      "large"
+                    ],
                     "default": "auto"
                   }
                 }
@@ -1233,10 +2662,21 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "weather" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "weather"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "text": { "$ref": "#/definitions/textObject" },
+              "text": {
+                "$ref": "#/definitions/textObject"
+              },
               "weather": {
                 "type": "object",
                 "description": "Weather widget settings",
@@ -1244,7 +2684,10 @@
                   "provider": {
                     "type": "string",
                     "description": "Weather data provider",
-                    "enum": ["open-meteo", "openweathermap"],
+                    "enum": [
+                      "open-meteo",
+                      "openweathermap"
+                    ],
                     "default": "open-meteo"
                   },
                   "api_key": {
@@ -1276,19 +2719,32 @@
                   "units": {
                     "type": "string",
                     "description": "Temperature units",
-                    "enum": ["metric", "imperial"],
+                    "enum": [
+                      "metric",
+                      "imperial"
+                    ],
                     "default": "metric"
                   },
                   "icon_size": {
                     "type": "integer",
                     "description": "Weather icon size in pixels (16 or 24)",
-                    "enum": [16, 24],
+                    "enum": [
+                      16,
+                      24
+                    ],
                     "default": 16
                   },
                   "format": {
                     "oneOf": [
-                      { "type": "string" },
-                      { "type": "array", "items": { "type": "string" } }
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
                     ],
                     "description": "Display format string(s) with tokens. Can be a single string or array of strings (for cycling). Available tokens: {icon} (weather icon), {temp} (temperature), {feels} (feels like temp), {humidity} (humidity %), {wind} (wind speed), {wind_dir} (wind direction), {pressure} (pressure), {visibility} (visibility), {condition} (weather condition text), {description} (detailed description), {aqi} (air quality index), {aqi_level} (AQI level text), {uv} (UV index), {uv_level} (UV level text), {forecast:graph} (temperature graph), {forecast:icons} (forecast day icons), {forecast:scroll} (scrolling forecast). Use \\n for multi-line layouts.",
                     "default": "{icon} {temp}"
@@ -1306,7 +2762,24 @@
                       "transition": {
                         "type": "string",
                         "description": "Transition effect between formats",
-                        "enum": ["none", "push_left", "push_right", "push_up", "push_down", "slide_left", "slide_right", "slide_up", "slide_down", "dissolve_fade", "dissolve_pixel", "dissolve_dither", "box_in", "box_out", "clock_wipe", "random"],
+                        "enum": [
+                          "none",
+                          "push_left",
+                          "push_right",
+                          "push_up",
+                          "push_down",
+                          "slide_left",
+                          "slide_right",
+                          "slide_up",
+                          "slide_down",
+                          "dissolve_fade",
+                          "dissolve_pixel",
+                          "dissolve_dither",
+                          "box_in",
+                          "box_out",
+                          "clock_wipe",
+                          "random"
+                        ],
                         "default": "none"
                       },
                       "speed": {
@@ -1351,13 +2824,28 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "battery" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "battery"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
               "mode": {
                 "type": "string",
                 "description": "Display mode: battery (progressbar in battery shape), text, bar, gauge, graph",
-                "enum": ["battery", "text", "bar", "gauge", "graph"],
+                "enum": [
+                  "battery",
+                  "text",
+                  "bar",
+                  "gauge",
+                  "graph"
+                ],
                 "default": "battery"
               },
               "battery": {
@@ -1367,7 +2855,10 @@
                   "orientation": {
                     "type": "string",
                     "description": "Battery orientation",
-                    "enum": ["horizontal", "vertical"],
+                    "enum": [
+                      "horizontal",
+                      "vertical"
+                    ],
                     "default": "horizontal"
                   },
                   "low_threshold": {
@@ -1441,19 +2932,37 @@
                   "show_economy": {
                     "type": "string",
                     "description": "Display mode for economy/power saver indicator",
-                    "enum": ["always", "never", "notify", "blink", "notify_blink"],
+                    "enum": [
+                      "always",
+                      "never",
+                      "notify",
+                      "blink",
+                      "notify_blink"
+                    ],
                     "default": "blink"
                   },
                   "show_charging": {
                     "type": "string",
                     "description": "Display mode for charging indicator",
-                    "enum": ["always", "never", "notify", "blink", "notify_blink"],
+                    "enum": [
+                      "always",
+                      "never",
+                      "notify",
+                      "blink",
+                      "notify_blink"
+                    ],
                     "default": "always"
                   },
                   "show_plugged": {
                     "type": "string",
                     "description": "Display mode for AC power indicator",
-                    "enum": ["always", "never", "notify", "blink", "notify_blink"],
+                    "enum": [
+                      "always",
+                      "never",
+                      "notify",
+                      "blink",
+                      "notify_blink"
+                    ],
                     "default": "always"
                   },
                   "notify_duration": {
@@ -1468,21 +2977,50 @@
                 "type": "object",
                 "description": "Bar mode settings (use direction: up/down for vertical orientation)",
                 "properties": {
-                  "direction": { "type": "string", "enum": ["left", "right", "up", "down"], "default": "left" },
-                  "border": { "type": "boolean", "default": false }
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "left",
+                      "right",
+                      "up",
+                      "down"
+                    ],
+                    "default": "left"
+                  },
+                  "border": {
+                    "type": "boolean",
+                    "default": false
+                  }
                 }
               },
               "graph": {
                 "type": "object",
                 "description": "Graph mode settings",
                 "properties": {
-                  "history": { "type": "integer", "minimum": 10, "maximum": 500, "default": 60 },
+                  "history": {
+                    "type": "integer",
+                    "minimum": 10,
+                    "maximum": 500,
+                    "default": 60
+                  },
                   "colors": {
                     "type": "object",
                     "description": "Graph colors",
                     "properties": {
-                      "fill": { "type": "integer", "description": "Graph fill density (-1 = none)", "minimum": -1, "maximum": 255, "default": 255 },
-                      "line": { "type": "integer", "description": "Graph line density", "minimum": 0, "maximum": 255, "default": 255 }
+                      "fill": {
+                        "type": "integer",
+                        "description": "Graph fill density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "line": {
+                        "type": "integer",
+                        "description": "Graph line density",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      }
                     }
                   }
                 }
@@ -1491,19 +3029,26 @@
                 "type": "object",
                 "description": "Gauge mode settings",
                 "properties": {
-                  "show_ticks": { "type": "boolean", "default": true }
+                  "show_ticks": {
+                    "type": "boolean",
+                    "default": true
+                  }
                 }
               },
               "text": {
                 "allOf": [
-                  { "$ref": "#/definitions/textObject" },
+                  {
+                    "$ref": "#/definitions/textObject"
+                  },
                   {
                     "properties": {
                       "format": {
                         "description": "Format string with tokens: {percent}/{pct} (value), {status} (CHG/AC/ECO), {status_full} (Charging/AC Power/Economy), {time} (smart remaining), {time_left}, {time_to_full}, {time_left_min} (minutes), {level} (critical/low/normal), {charging}/{plugged}/{economy} (boolean indicators)",
                         "default": "{percent}%"
                       },
-                      "size": { "default": 16 }
+                      "size": {
+                        "default": 16
+                      }
                     }
                   }
                 ]
@@ -1512,7 +3057,16 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "game_of_life" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "game_of_life"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
               "game_of_life": {
@@ -1532,7 +3086,17 @@
                   "initial_pattern": {
                     "type": "string",
                     "description": "Starting pattern for the simulation",
-                    "enum": ["random", "clear", "glider", "r_pentomino", "acorn", "diehard", "lwss", "pulsar", "glider_gun"],
+                    "enum": [
+                      "random",
+                      "clear",
+                      "glider",
+                      "r_pentomino",
+                      "acorn",
+                      "diehard",
+                      "lwss",
+                      "pulsar",
+                      "glider_gun"
+                    ],
                     "default": "random"
                   },
                   "random_density": {
@@ -1577,7 +3141,11 @@
                   "restart_mode": {
                     "type": "string",
                     "description": "How to restart: 'reset' = use initial_pattern, 'inject' = add random cells to existing grid (keeps survivors), 'random' = always use fresh random pattern",
-                    "enum": ["reset", "inject", "random"],
+                    "enum": [
+                      "reset",
+                      "inject",
+                      "random"
+                    ],
                     "default": "reset"
                   }
                 }
@@ -1586,7 +3154,16 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "hyperspace" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "hyperspace"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
               "hyperspace": {
@@ -1639,7 +3216,10 @@
                   "mode": {
                     "type": "string",
                     "description": "Animation mode: 'continuous' (always in hyperspace), 'cycle' (phases: idle -> jump -> travel -> exit)",
-                    "enum": ["continuous", "cycle"],
+                    "enum": [
+                      "continuous",
+                      "cycle"
+                    ],
                     "default": "continuous"
                   },
                   "idle_time": {
@@ -1669,7 +3249,16 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "starwars_intro" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "starwars_intro"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
               "starwars_intro": {
@@ -1863,14 +3452,29 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "telegram" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "telegram"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
-              "auto_hide": { "$ref": "#/definitions/autoHide" },
+              "auto_hide": {
+                "$ref": "#/definitions/autoHide"
+              },
               "auth": {
                 "type": "object",
                 "description": "Telegram API authentication (required)",
-                "required": ["api_id", "api_hash", "phone_number"],
+                "required": [
+                  "api_id",
+                  "api_hash",
+                  "phone_number"
+                ],
                 "properties": {
                   "api_id": {
                     "type": "integer",
@@ -1894,23 +3498,44 @@
                 "type": "object",
                 "description": "Message filter settings by chat type",
                 "properties": {
-                  "private_chats": { "$ref": "#/definitions/telegramChatFilterConfig" },
-                  "groups": { "$ref": "#/definitions/telegramChatFilterConfig" },
-                  "channels": { "$ref": "#/definitions/telegramChatFilterConfig" }
+                  "private_chats": {
+                    "$ref": "#/definitions/telegramChatFilterConfig"
+                  },
+                  "groups": {
+                    "$ref": "#/definitions/telegramChatFilterConfig"
+                  },
+                  "channels": {
+                    "$ref": "#/definitions/telegramChatFilterConfig"
+                  }
                 }
               },
-              "appearance": { "$ref": "#/definitions/telegramAppearanceConfig" }
+              "appearance": {
+                "$ref": "#/definitions/telegramAppearanceConfig"
+              }
             }
           }
         },
         {
-          "if": { "properties": { "type": { "const": "telegram_counter" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "telegram_counter"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
               "auth": {
                 "type": "object",
                 "description": "Telegram API authentication (required)",
-                "required": ["api_id", "api_hash", "phone_number"],
+                "required": [
+                  "api_id",
+                  "api_hash",
+                  "phone_number"
+                ],
                 "properties": {
                   "api_id": {
                     "type": "integer",
@@ -1934,14 +3559,23 @@
                 "type": "object",
                 "description": "Message filter settings by chat type (independent from telegram widget)",
                 "properties": {
-                  "private_chats": { "$ref": "#/definitions/telegramChatFilterConfig" },
-                  "groups": { "$ref": "#/definitions/telegramChatFilterConfig" },
-                  "channels": { "$ref": "#/definitions/telegramChatFilterConfig" }
+                  "private_chats": {
+                    "$ref": "#/definitions/telegramChatFilterConfig"
+                  },
+                  "groups": {
+                    "$ref": "#/definitions/telegramChatFilterConfig"
+                  },
+                  "channels": {
+                    "$ref": "#/definitions/telegramChatFilterConfig"
+                  }
                 }
               },
               "mode": {
                 "type": "string",
-                "enum": ["badge", "text"],
+                "enum": [
+                  "badge",
+                  "text"
+                ],
                 "description": "Display mode: badge (Telegram paper airplane icon) or text (formatted text with tokens)",
                 "default": "badge"
               },
@@ -1951,7 +3585,11 @@
                 "properties": {
                   "blink": {
                     "type": "string",
-                    "enum": ["never", "always", "progressive"],
+                    "enum": [
+                      "never",
+                      "always",
+                      "progressive"
+                    ],
                     "description": "Blink mode: never (no blinking), always (constant 2Hz blink), progressive (1-10Hz based on unread count)",
                     "default": "never"
                   },
@@ -1979,14 +3617,18 @@
               },
               "text": {
                 "allOf": [
-                  { "$ref": "#/definitions/textObject" },
+                  {
+                    "$ref": "#/definitions/textObject"
+                  },
                   {
                     "properties": {
                       "format": {
                         "description": "Format string with tokens: {icon}, {unread}/{total}, {mentions}, {reactions}, {private}, {groups}, {channels}, {muted}, {private_muted}, {groups_muted}, {channels_muted}",
                         "default": "{unread} unread"
                       },
-                      "size": { "default": 16 }
+                      "size": {
+                        "default": 16
+                      }
                     }
                   }
                 ]
@@ -1995,7 +3637,16 @@
           }
         },
         {
-          "if": { "properties": { "type": { "const": "hacker_code" } }, "required": ["type"] },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "hacker_code"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
           "then": {
             "properties": {
               "hacker_code": {
@@ -2005,7 +3656,11 @@
                   "style": {
                     "type": "string",
                     "description": "Code generation style",
-                    "enum": ["c", "asm", "mixed"],
+                    "enum": [
+                      "c",
+                      "asm",
+                      "mixed"
+                    ],
                     "default": "c"
                   },
                   "typing_speed": {
@@ -2033,7 +3688,10 @@
                             "maximum": 500
                           }
                         },
-                        "required": ["min", "max"]
+                        "required": [
+                          "min",
+                          "max"
+                        ]
                       }
                     ],
                     "description": "Characters per second - either a fixed integer or an object {min, max} for random range",

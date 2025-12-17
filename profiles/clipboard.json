@@ -11,7 +11,12 @@
   "widgets": [
     {
       "type": "clipboard",
-      "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40
+      },
       "update_interval": 0.1,
       "auto_hide": {
         "enabled": false,
@@ -24,7 +29,10 @@
       "text": {
         "format": "{content}",
         "font": "5x7",
-        "align": {"h": "left", "v": "center"}
+        "align": {
+          "h": "left",
+          "v": "center"
+        }
       },
       "scroll": {
         "enabled": true,

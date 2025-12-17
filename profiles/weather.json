@@ -11,12 +11,25 @@
     {
       "type": "weather",
       "enabled": true,
-      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": 255, "padding": 0},
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40,
+        "z": 0
+      },
+      "style": {
+        "background": 0,
+        "border": 255,
+        "padding": 0
+      },
       "text": {
         "font": null,
         "size": 16,
-        "align": {"h": "left", "v": "top"}
+        "align": {
+          "h": "left",
+          "v": "top"
+        }
       },
       "weather": {
         "provider": "open-meteo",

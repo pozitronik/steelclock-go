@@ -11,13 +11,26 @@
     {
       "type": "keyboard_layout",
       "enabled": true,
-      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": 255, "padding": 0},
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40,
+        "z": 0
+      },
+      "style": {
+        "background": 0,
+        "border": 255,
+        "padding": 0
+      },
       "format": "full",
       "text": {
         "font": null,
         "size": 16,
-        "align": {"h": "center", "v": "center"}
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
       },
       "update_interval": 0.2
     }

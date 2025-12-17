@@ -11,8 +11,18 @@
     {
       "type": "disk",
       "enabled": true,
-      "position": {"x": 0, "y": 0, "w": 128, "h": 40, "z": 0},
-      "style": {"background": 0, "border": -1, "padding": 0},
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40,
+        "z": 0
+      },
+      "style": {
+        "background": 0,
+        "border": -1,
+        "padding": 0
+      },
       "mode": "text",
       "disk": null,
       "max_speed_mbps": -1,
@@ -37,7 +47,10 @@
         "show_unit": true,
         "font": "pixel5x7",
         "size": 16,
-        "align": {"h": "center", "v": "center"}
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
       },
       "update_interval": 1.0
     }

@@ -9,7 +9,12 @@
   "widgets": [
     {
       "type": "matrix",
-      "position": { "x": 0, "y": 0, "w": 128, "h": 40 },
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40
+      },
       "update_interval": 0.033,
       "matrix": {
         "charset": "katakana",

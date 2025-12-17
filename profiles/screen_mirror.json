@@ -10,12 +10,17 @@
   "widgets": [
     {
       "type": "screen_mirror",
-      "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40
+      },
       "screen_mirror": {
         "scale_mode": "fit",
         "fps": 15,
         "dither_mode": "floyd_steinberg",
-        "display": null,
+        "display": null
       }
     }
   ]

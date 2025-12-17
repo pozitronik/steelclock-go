@@ -51,17 +51,17 @@ Use the provided `doom_example.json` or add to your existing config:
 
 ```json
 {
-  "type": "doom",
-  "enabled": true,
-  "position": {
-    "x": 0,
-    "y": 0,
-    "w": 128,
-    "h": 40
-  },
-  "properties": {
-    "wad_name": "doom1.wad"
-  }
+"type": "doom",
+"enabled": true,
+"position": {
+"x": 0,
+"y": 0,
+"w": 128,
+"h": 40
+},
+"properties": {
+"wad_name": "doom1.wad"
+}
 }
 ```
 
@@ -71,8 +71,8 @@ You can specify a custom WAD download URL in the main config:
 
 ```json
 {
-  "bundled_wad_url": "https://example.com/path/to/doom.wad",
-  ...
+"bundled_wad_url": "https://example.com/path/to/doom.wad",
+...
 }
 ```
 

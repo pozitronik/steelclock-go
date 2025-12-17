@@ -11,7 +11,12 @@
   "widgets": [
     {
       "type": "game_of_life",
-      "position": { "x": 0, "y": 0, "w": 128, "h": 40 },
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40
+      },
       "update_interval": 0.1,
       "game_of_life": {
         "rules": "B36/S23",
