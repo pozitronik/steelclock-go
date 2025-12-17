@@ -1,1 +1,61 @@
-{"$schema":"schema/config.schema.json","config_name":"DOOM","refresh_rate_ms":30,"display":{"width":128,"height":40,"background":0},"widgets":[{"type":"doom","enabled":true,"position":{"x":0,"y":0,"w":128,"h":40,"z":1},"style":{"background":0,"border":-1,"padding":0},"wad":"doom1.wad","bundled_wad_url":null,"update_interval":0.05,"doom":{"render_mode":"gamma","posterize_levels":4,"threshold_value":128,"gamma":1.5,"contrast_boost":1.2,"dither_size":4}}],"game_name":"STEELCLOCK","game_display_name":"SteelClock","unregister_on_exit":false,"direct_driver":{"interface":"mi_01"},"preview":{"target_fps":30},"bundled_font_url":null,"defaults":{"text":{"font":null,"size":16,"align":{"h":"center","v":"center"},"format":"{unread} unread"},"update_interval":1},"backend":"preview"}
+{
+  "$schema": "schema/config.schema.json",
+  "config_name": "DOOM",
+  "refresh_rate_ms": 30,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "doom",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40,
+        "z": 1
+      },
+      "style": {
+        "background": 0,
+        "border": -1,
+        "padding": 0
+      },
+      "wad": "doom1.wad",
+      "bundled_wad_url": null,
+      "update_interval": 0.05,
+      "doom": {
+        "render_mode": "gamma",
+        "posterize_levels": 4,
+        "threshold_value": 128,
+        "gamma": 1.5,
+        "contrast_boost": 1.2,
+        "dither_size": 4
+      }
+    }
+  ],
+  "game_name": "STEELCLOCK",
+  "game_display_name": "SteelClock",
+  "unregister_on_exit": false,
+  "direct_driver": {
+    "interface": "mi_01"
+  },
+  "preview": {
+    "target_fps": 30
+  },
+  "bundled_font_url": null,
+  "defaults": {
+    "text": {
+      "font": null,
+      "size": 16,
+      "align": {
+        "h": "center",
+        "v": "center"
+      },
+      "format": "{unread} unread"
+    },
+    "update_interval": 1
+  }
+}
