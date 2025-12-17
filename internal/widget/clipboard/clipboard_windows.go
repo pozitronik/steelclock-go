@@ -140,6 +140,7 @@ func getUnicodeText() (string, error) {
 	defer procGlobalUnlock.Call(hMem)
 
 	// Convert UTF-16 to string
+	// nolint:govet // ptr is a valid uintptr from GlobalLock syscall, conversion to unsafe.Pointer is correct
 	text := utf16PtrToString((*uint16)(unsafe.Pointer(ptr)))
 	return text, nil
 }
