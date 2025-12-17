@@ -365,14 +365,13 @@
                 "description": "Screen mirror widget settings",
                 "properties": {
                   "display": {
-                    "type": ["integer", "null"],
-                    "description": "Display index to capture (null = primary display)",
-                    "minimum": 0,
+                    "oneOf": [
+                      { "type": "null" },
+                      { "type": "integer", "minimum": -1 },
+                      { "type": "string", "minLength": 1 }
+                    ],
+                    "description": "Display to capture: null = primary (default), 0-N = monitor by index, -1 = all monitors, string = match by name",
                     "default": null
-                  },
-                  "display_name": {
-                    "type": "string",
-                    "description": "Display name to capture (alternative to display index)"
                   },
                   "region": {
                     "type": ["object", "null"],

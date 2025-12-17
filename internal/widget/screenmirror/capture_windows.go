@@ -25,7 +25,13 @@ const (
 	BI_RGB         = 0
 
 	BITSPIXEL = 12
+
+	// Monitor flags
+	MONITOR_DEFAULTTOPRIMARY = 1
 )
+
+// DisplayIndexAll is the special index value for capturing all monitors combined.
+const DisplayIndexAll = -1
 
 // Windows API functions
 var (
@@ -54,6 +60,10 @@ var (
 	procPrintWindow          = user32.NewProc("PrintWindow")
 	procGetClientRect        = user32.NewProc("GetClientRect")
 	procClientToScreen       = user32.NewProc("ClientToScreen")
+
+	// Monitor enumeration
+	procEnumDisplayMonitors = user32.NewProc("EnumDisplayMonitors")
+	procGetMonitorInfoW     = user32.NewProc("GetMonitorInfoW")
 )
 
 // BITMAPINFOHEADER structure for GetDIBits
@@ -79,6 +89,107 @@ type rect struct {
 // POINT structure
 type point struct {
 	X, Y int32
+}
+
+// MONITORINFOEXW structure for GetMonitorInfoW
+type monitorInfoExW struct {
+	Size     uint32
+	Monitor  rect   // Full monitor area
+	WorkArea rect   // Work area (excludes taskbar)
+	Flags    uint32 // MONITORINFOF_PRIMARY = 1 if primary
+	Device   [32]uint16
+}
+
+// monitorData holds information about a single monitor during enumeration.
+type monitorData struct {
+	info      DisplayInfo
+	hMonitor  uintptr
+	isPrimary bool
+}
+
+// enumerateMonitors returns a list of all connected monitors.
+func enumerateMonitors() []monitorData {
+	var monitors []monitorData
+	index := 0
+
+	// Callback for EnumDisplayMonitors
+	callback := syscall.NewCallback(func(hMonitor, hdcMonitor, lprcMonitor, dwData uintptr) uintptr {
+		// Get monitor info
+		var mi monitorInfoExW
+		mi.Size = uint32(unsafe.Sizeof(mi))
+
+		ret, _, _ := procGetMonitorInfoW.Call(hMonitor, uintptr(unsafe.Pointer(&mi)))
+		if ret == 0 {
+			return 1 // Continue enumeration
+		}
+
+		// Extract device name
+		deviceName := syscall.UTF16ToString(mi.Device[:])
+
+		// Calculate dimensions
+		width := int(mi.Monitor.Right - mi.Monitor.Left)
+		height := int(mi.Monitor.Bottom - mi.Monitor.Top)
+
+		isPrimary := mi.Flags&1 != 0 // MONITORINFOF_PRIMARY = 1
+
+		monitors = append(monitors, monitorData{
+			info: DisplayInfo{
+				Index:     index,
+				Name:      deviceName,
+				Width:     width,
+				Height:    height,
+				X:         int(mi.Monitor.Left),
+				Y:         int(mi.Monitor.Top),
+				IsPrimary: isPrimary,
+			},
+			hMonitor:  hMonitor,
+			isPrimary: isPrimary,
+		})
+		index++
+
+		return 1 // Continue enumeration
+	})
+
+	procEnumDisplayMonitors.Call(0, 0, callback, 0)
+	return monitors
+}
+
+// findMonitorByIndex finds a monitor by its index.
+// Returns nil if not found.
+func findMonitorByIndex(monitors []monitorData, index int) *monitorData {
+	for i := range monitors {
+		if monitors[i].info.Index == index {
+			return &monitors[i]
+		}
+	}
+	return nil
+}
+
+// findMonitorByName finds a monitor by partial name match (case-insensitive).
+// Returns nil if not found.
+func findMonitorByName(monitors []monitorData, name string) *monitorData {
+	nameLower := strings.ToLower(name)
+	for i := range monitors {
+		if strings.Contains(strings.ToLower(monitors[i].info.Name), nameLower) {
+			return &monitors[i]
+		}
+	}
+	return nil
+}
+
+// findPrimaryMonitor finds the primary monitor.
+// Returns nil if not found (shouldn't happen in practice).
+func findPrimaryMonitor(monitors []monitorData) *monitorData {
+	for i := range monitors {
+		if monitors[i].isPrimary {
+			return &monitors[i]
+		}
+	}
+	// Fallback to first monitor if no primary found
+	if len(monitors) > 0 {
+		return &monitors[0]
+	}
+	return nil
 }
 
 // windowsCapture implements ScreenCapture for Windows using GDI.
@@ -113,27 +224,6 @@ func newScreenCapture(cfg CaptureConfig) (ScreenCapture, error) {
 
 // initializeDisplay sets up display information and capture region.
 func (c *windowsCapture) initializeDisplay() error {
-	// Get virtual screen dimensions (all monitors)
-	virtualX, _, _ := procGetSystemMetrics.Call(SM_XVIRTUALSCREEN)
-	virtualY, _, _ := procGetSystemMetrics.Call(SM_YVIRTUALSCREEN)
-	virtualWidth, _, _ := procGetSystemMetrics.Call(SM_CXVIRTUALSCREEN)
-	virtualHeight, _, _ := procGetSystemMetrics.Call(SM_CYVIRTUALSCREEN)
-
-	// Get primary screen dimensions
-	primaryWidth, _, _ := procGetSystemMetrics.Call(SM_CXSCREEN)
-	primaryHeight, _, _ := procGetSystemMetrics.Call(SM_CYSCREEN)
-
-	// Set up display info (primary monitor for now)
-	c.displayInfo = DisplayInfo{
-		Index:     0,
-		Name:      "Primary",
-		Width:     int(primaryWidth),
-		Height:    int(primaryHeight),
-		X:         0,
-		Y:         0,
-		IsPrimary: true,
-	}
-
 	// Determine capture region
 	if c.cfg.Window != nil {
 		// Window capture mode - find the target window
@@ -150,30 +240,102 @@ func (c *windowsCapture) initializeDisplay() error {
 		c.captureY = int(r.Top)
 		c.captureWidth = int(r.Right - r.Left)
 		c.captureHeight = int(r.Bottom - r.Top)
-	} else if c.cfg.Region != nil {
+
+		c.displayInfo = DisplayInfo{
+			Index: -1,
+			Name:  "Window",
+		}
+		return nil
+	}
+
+	if c.cfg.Region != nil {
 		// Region capture mode
 		c.captureX = c.cfg.Region.X
 		c.captureY = c.cfg.Region.Y
 		c.captureWidth = c.cfg.Region.Width
 		c.captureHeight = c.cfg.Region.Height
-	} else {
-		// Full screen capture (primary monitor)
-		c.captureX = 0
-		c.captureY = 0
-		c.captureWidth = int(primaryWidth)
-		c.captureHeight = int(primaryHeight)
 
-		// If display index is specified and > 0, use virtual screen
-		if c.cfg.DisplayIndex != nil && *c.cfg.DisplayIndex > 0 {
-			c.captureX = int(virtualX)
-			c.captureY = int(virtualY)
-			c.captureWidth = int(virtualWidth)
-			c.captureHeight = int(virtualHeight)
-			c.displayInfo.Name = "Virtual"
+		c.displayInfo = DisplayInfo{
+			Index:  -1,
+			Name:   "Region",
+			Width:  c.captureWidth,
+			Height: c.captureHeight,
+			X:      c.captureX,
+			Y:      c.captureY,
 		}
+		return nil
+	}
+
+	// Display capture mode - enumerate monitors
+	monitors := enumerateMonitors()
+
+	// Check for "all monitors" mode (display index = -1)
+	if c.cfg.Display.Index != nil && *c.cfg.Display.Index == DisplayIndexAll {
+		return c.initializeVirtualScreen()
+	}
+
+	// Try to find monitor by name first (if specified)
+	if c.cfg.Display.Name != "" {
+		if monitor := findMonitorByName(monitors, c.cfg.Display.Name); monitor != nil {
+			c.setMonitorCapture(monitor)
+			return nil
+		}
+		// Name specified but not found - return error
+		return fmt.Errorf("display '%s' not found", c.cfg.Display.Name)
+	}
+
+	// Try to find monitor by index
+	if c.cfg.Display.Index != nil {
+		if monitor := findMonitorByIndex(monitors, *c.cfg.Display.Index); monitor != nil {
+			c.setMonitorCapture(monitor)
+			return nil
+		}
+		// Index specified but out of range - return error
+		return fmt.Errorf("display index %d not found (available: 0-%d)", *c.cfg.Display.Index, len(monitors)-1)
+	}
+
+	// Default: use primary monitor
+	if monitor := findPrimaryMonitor(monitors); monitor != nil {
+		c.setMonitorCapture(monitor)
+		return nil
+	}
+
+	// Fallback to virtual screen if no monitors found (shouldn't happen)
+	return c.initializeVirtualScreen()
+}
+
+// initializeVirtualScreen sets up capture for all monitors combined.
+func (c *windowsCapture) initializeVirtualScreen() error {
+	virtualX, _, _ := procGetSystemMetrics.Call(SM_XVIRTUALSCREEN)
+	virtualY, _, _ := procGetSystemMetrics.Call(SM_YVIRTUALSCREEN)
+	virtualWidth, _, _ := procGetSystemMetrics.Call(SM_CXVIRTUALSCREEN)
+	virtualHeight, _, _ := procGetSystemMetrics.Call(SM_CYVIRTUALSCREEN)
+
+	c.captureX = int(virtualX)
+	c.captureY = int(virtualY)
+	c.captureWidth = int(virtualWidth)
+	c.captureHeight = int(virtualHeight)
+
+	c.displayInfo = DisplayInfo{
+		Index:     DisplayIndexAll,
+		Name:      "All Monitors",
+		Width:     int(virtualWidth),
+		Height:    int(virtualHeight),
+		X:         int(virtualX),
+		Y:         int(virtualY),
+		IsPrimary: false,
 	}
 
 	return nil
+}
+
+// setMonitorCapture configures capture for a specific monitor.
+func (c *windowsCapture) setMonitorCapture(monitor *monitorData) {
+	c.captureX = monitor.info.X
+	c.captureY = monitor.info.Y
+	c.captureWidth = monitor.info.Width
+	c.captureHeight = monitor.info.Height
+	c.displayInfo = monitor.info
 }
 
 // findTargetWindow finds the window to capture based on configuration.

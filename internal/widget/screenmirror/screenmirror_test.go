@@ -157,8 +157,8 @@ func TestParseScreenMirrorConfig_Defaults(t *testing.T) {
 	if result.DitherMode != DitherFloydSteinberg {
 		t.Errorf("DitherMode = %v, want %v", result.DitherMode, DitherFloydSteinberg)
 	}
-	if result.DisplayIndex != nil {
-		t.Errorf("DisplayIndex = %v, want nil", result.DisplayIndex)
+	if result.Display.Index != nil || result.Display.Name != "" {
+		t.Errorf("Display = %+v, want empty", result.Display)
 	}
 	if result.Region != nil {
 		t.Errorf("Region = %v, want nil", result.Region)
@@ -169,12 +169,11 @@ func TestParseScreenMirrorConfig_Defaults(t *testing.T) {
 }
 
 func TestParseScreenMirrorConfig_CustomValues(t *testing.T) {
-	displayIdx := 1
 	cfg := config.WidgetConfig{
 		Type:     "screen_mirror",
 		Position: config.PositionConfig{W: 128, H: 40},
 		ScreenMirror: &config.ScreenMirrorConfig{
-			Display:    &displayIdx,
+			Display:    &config.IntOrString{IntValue: 1, IsString: false},
 			ScaleMode:  "stretch",
 			FPS:        30,
 			DitherMode: "ordered",
@@ -192,8 +191,8 @@ func TestParseScreenMirrorConfig_CustomValues(t *testing.T) {
 	if result.DitherMode != "ordered" {
 		t.Errorf("DitherMode = %v, want ordered", result.DitherMode)
 	}
-	if result.DisplayIndex == nil || *result.DisplayIndex != 1 {
-		t.Errorf("DisplayIndex = %v, want 1", result.DisplayIndex)
+	if result.Display.Index == nil || *result.Display.Index != 1 {
+		t.Errorf("Display.Index = %v, want 1", result.Display.Index)
 	}
 }
 

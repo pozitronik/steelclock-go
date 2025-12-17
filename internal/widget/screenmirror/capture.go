@@ -41,12 +41,21 @@ type WindowTarget struct {
 	Active bool
 }
 
+// DisplaySelector specifies which display to capture.
+// Either Index or Name should be set, not both.
+// If both are nil/empty, the primary display is used.
+type DisplaySelector struct {
+	// Index is the display index (nil = not specified).
+	// Use -1 for all monitors combined.
+	Index *int
+	// Name is the display name to match (partial, case-insensitive).
+	Name string
+}
+
 // CaptureConfig contains the configuration for screen capture.
 type CaptureConfig struct {
-	// DisplayIndex is the display to capture (nil = primary).
-	DisplayIndex *int
-	// DisplayName is an alternative way to select display by name.
-	DisplayName string
+	// Display specifies which display to capture.
+	Display DisplaySelector
 	// Region is the capture region (nil = full display).
 	Region *CaptureRegion
 	// Window is the window to capture (nil = capture display/region).

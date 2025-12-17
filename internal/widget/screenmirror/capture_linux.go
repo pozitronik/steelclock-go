@@ -8,10 +8,26 @@ import (
 	"image"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 )
+
+// DisplayIndexAll is the special index value for capturing all monitors combined.
+// Note: This must match the Windows constant value.
+const DisplayIndexAll = -1
+
+// linuxMonitorInfo holds information about a single monitor from xrandr.
+type linuxMonitorInfo struct {
+	Name      string
+	Width     int
+	Height    int
+	X         int
+	Y         int
+	IsPrimary bool
+	Index     int
+}
 
 // linuxCapture implements ScreenCapture for Linux using ffmpeg.
 type linuxCapture struct {
@@ -56,24 +72,6 @@ func newScreenCapture(cfg CaptureConfig) (ScreenCapture, error) {
 
 // initializeDisplay sets up display information and capture region.
 func (c *linuxCapture) initializeDisplay() error {
-	// Get screen resolution using xrandr or xdpyinfo
-	width, height := c.getScreenResolution()
-	if width == 0 || height == 0 {
-		// Default fallback
-		width = 1920
-		height = 1080
-	}
-
-	c.displayInfo = DisplayInfo{
-		Index:     0,
-		Name:      c.display,
-		Width:     width,
-		Height:    height,
-		X:         0,
-		Y:         0,
-		IsPrimary: true,
-	}
-
 	// Determine capture region
 	if c.cfg.Window != nil {
 		// Window capture mode
@@ -89,21 +87,223 @@ func (c *linuxCapture) initializeDisplay() error {
 		c.captureY = y
 		c.captureWidth = w
 		c.captureHeight = h
-	} else if c.cfg.Region != nil {
+
+		c.displayInfo = DisplayInfo{
+			Index: -1,
+			Name:  "Window",
+		}
+		return nil
+	}
+
+	if c.cfg.Region != nil {
 		// Region capture mode
 		c.captureX = c.cfg.Region.X
 		c.captureY = c.cfg.Region.Y
 		c.captureWidth = c.cfg.Region.Width
 		c.captureHeight = c.cfg.Region.Height
+
+		c.displayInfo = DisplayInfo{
+			Index:  -1,
+			Name:   "Region",
+			Width:  c.captureWidth,
+			Height: c.captureHeight,
+			X:      c.captureX,
+			Y:      c.captureY,
+		}
+		return nil
+	}
+
+	// Display capture mode - enumerate monitors
+	monitors := c.enumerateMonitors()
+
+	// Check for "all monitors" mode (display index = -1)
+	if c.cfg.Display.Index != nil && *c.cfg.Display.Index == DisplayIndexAll {
+		return c.initializeVirtualScreen(monitors)
+	}
+
+	// Try to find monitor by name first (if specified)
+	if c.cfg.Display.Name != "" {
+		if monitor := c.findMonitorByName(monitors, c.cfg.Display.Name); monitor != nil {
+			c.setMonitorCapture(monitor)
+			return nil
+		}
+		// Name specified but not found - return error
+		return fmt.Errorf("display '%s' not found", c.cfg.Display.Name)
+	}
+
+	// Try to find monitor by index
+	if c.cfg.Display.Index != nil {
+		if monitor := c.findMonitorByIndex(monitors, *c.cfg.Display.Index); monitor != nil {
+			c.setMonitorCapture(monitor)
+			return nil
+		}
+		// Index specified but out of range - return error
+		return fmt.Errorf("display index %d not found (available: 0-%d)", *c.cfg.Display.Index, len(monitors)-1)
+	}
+
+	// Default: use primary monitor
+	if monitor := c.findPrimaryMonitor(monitors); monitor != nil {
+		c.setMonitorCapture(monitor)
+		return nil
+	}
+
+	// Fallback to virtual screen if no monitors found
+	return c.initializeVirtualScreen(monitors)
+}
+
+// enumerateMonitors returns a list of all connected monitors using xrandr.
+func (c *linuxCapture) enumerateMonitors() []linuxMonitorInfo {
+	var monitors []linuxMonitorInfo
+
+	cmd := exec.Command("xrandr", "--query")
+	output, err := cmd.Output()
+	if err != nil {
+		return monitors
+	}
+
+	// Parse xrandr output for connected monitors
+	// Example lines:
+	// HDMI-1 connected primary 1920x1080+0+0 (normal left inverted right x axis y axis) 527mm x 296mm
+	// DP-1 connected 1920x1080+1920+0 (normal left inverted right x axis y axis) 527mm x 296mm
+	// eDP-1 disconnected (normal left inverted right x axis y axis)
+	connectedRegex := regexp.MustCompile(`^(\S+)\s+connected\s+(primary\s+)?(\d+)x(\d+)\+(\d+)\+(\d+)`)
+
+	lines := strings.Split(string(output), "\n")
+	index := 0
+	for _, line := range lines {
+		matches := connectedRegex.FindStringSubmatch(line)
+		if matches == nil {
+			continue
+		}
+
+		name := matches[1]
+		isPrimary := matches[2] != ""
+		width, _ := strconv.Atoi(matches[3])
+		height, _ := strconv.Atoi(matches[4])
+		x, _ := strconv.Atoi(matches[5])
+		y, _ := strconv.Atoi(matches[6])
+
+		monitors = append(monitors, linuxMonitorInfo{
+			Name:      name,
+			Width:     width,
+			Height:    height,
+			X:         x,
+			Y:         y,
+			IsPrimary: isPrimary,
+			Index:     index,
+		})
+		index++
+	}
+
+	return monitors
+}
+
+// findMonitorByIndex finds a monitor by its index.
+func (c *linuxCapture) findMonitorByIndex(monitors []linuxMonitorInfo, index int) *linuxMonitorInfo {
+	for i := range monitors {
+		if monitors[i].Index == index {
+			return &monitors[i]
+		}
+	}
+	return nil
+}
+
+// findMonitorByName finds a monitor by partial name match (case-insensitive).
+func (c *linuxCapture) findMonitorByName(monitors []linuxMonitorInfo, name string) *linuxMonitorInfo {
+	nameLower := strings.ToLower(name)
+	for i := range monitors {
+		if strings.Contains(strings.ToLower(monitors[i].Name), nameLower) {
+			return &monitors[i]
+		}
+	}
+	return nil
+}
+
+// findPrimaryMonitor finds the primary monitor.
+func (c *linuxCapture) findPrimaryMonitor(monitors []linuxMonitorInfo) *linuxMonitorInfo {
+	for i := range monitors {
+		if monitors[i].IsPrimary {
+			return &monitors[i]
+		}
+	}
+	// Fallback to first monitor if no primary found
+	if len(monitors) > 0 {
+		return &monitors[0]
+	}
+	return nil
+}
+
+// initializeVirtualScreen sets up capture for all monitors combined.
+func (c *linuxCapture) initializeVirtualScreen(monitors []linuxMonitorInfo) error {
+	// Calculate bounding box of all monitors
+	minX, minY := 0, 0
+	maxX, maxY := 0, 0
+
+	if len(monitors) > 0 {
+		minX = monitors[0].X
+		minY = monitors[0].Y
+		maxX = monitors[0].X + monitors[0].Width
+		maxY = monitors[0].Y + monitors[0].Height
+
+		for _, m := range monitors[1:] {
+			if m.X < minX {
+				minX = m.X
+			}
+			if m.Y < minY {
+				minY = m.Y
+			}
+			if m.X+m.Width > maxX {
+				maxX = m.X + m.Width
+			}
+			if m.Y+m.Height > maxY {
+				maxY = m.Y + m.Height
+			}
+		}
 	} else {
-		// Full screen capture
-		c.captureX = 0
-		c.captureY = 0
-		c.captureWidth = width
-		c.captureHeight = height
+		// Fallback: get screen resolution the old way
+		width, height := c.getScreenResolution()
+		if width == 0 || height == 0 {
+			width = 1920
+			height = 1080
+		}
+		maxX = width
+		maxY = height
+	}
+
+	c.captureX = minX
+	c.captureY = minY
+	c.captureWidth = maxX - minX
+	c.captureHeight = maxY - minY
+
+	c.displayInfo = DisplayInfo{
+		Index:     DisplayIndexAll,
+		Name:      "All Monitors",
+		Width:     c.captureWidth,
+		Height:    c.captureHeight,
+		X:         c.captureX,
+		Y:         c.captureY,
+		IsPrimary: false,
 	}
 
 	return nil
+}
+
+// setMonitorCapture configures capture for a specific monitor.
+func (c *linuxCapture) setMonitorCapture(monitor *linuxMonitorInfo) {
+	c.captureX = monitor.X
+	c.captureY = monitor.Y
+	c.captureWidth = monitor.Width
+	c.captureHeight = monitor.Height
+
+	c.displayInfo = DisplayInfo{
+		Index:     monitor.Index,
+		Name:      monitor.Name,
+		Width:     monitor.Width,
+		Height:    monitor.Height,
+		X:         monitor.X,
+		Y:         monitor.Y,
+		IsPrimary: monitor.IsPrimary,
+	}
 }
 
 // getScreenResolution gets screen resolution using xrandr.

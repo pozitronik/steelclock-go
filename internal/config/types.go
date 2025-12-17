@@ -1,6 +1,9 @@
 package config
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // StringOrSlice is a type that can unmarshal from either a string or an array of strings.
 // When unmarshaling a single string, it becomes a slice with one element.
@@ -83,6 +86,45 @@ func (r *IntOrRange) Value() int {
 		return r.Min
 	}
 	return 0
+}
+
+// IntOrString represents a value that can be either an integer or a string.
+// Used for display selection: integer for index, string for name matching.
+type IntOrString struct {
+	IntValue    int
+	StringValue string
+	IsString    bool
+}
+
+// UnmarshalJSON implements json.Unmarshaler for IntOrString
+func (v *IntOrString) UnmarshalJSON(data []byte) error {
+	// Try to unmarshal as an integer first
+	var intVal int
+	if err := json.Unmarshal(data, &intVal); err == nil {
+		v.IntValue = intVal
+		v.StringValue = ""
+		v.IsString = false
+		return nil
+	}
+
+	// Try to unmarshal as a string
+	var strVal string
+	if err := json.Unmarshal(data, &strVal); err == nil {
+		v.StringValue = strVal
+		v.IntValue = 0
+		v.IsString = true
+		return nil
+	}
+
+	return fmt.Errorf("display must be an integer or string, got: %s", string(data))
+}
+
+// MarshalJSON implements json.Marshaler for IntOrString
+func (v *IntOrString) MarshalJSON() ([]byte, error) {
+	if v.IsString {
+		return json.Marshal(v.StringValue)
+	}
+	return json.Marshal(v.IntValue)
 }
 
 // Config represents the complete SteelClock configuration (v2 schema)
@@ -884,10 +926,12 @@ type ClipboardWidgetConfig struct {
 
 // ScreenMirrorConfig contains settings for the screen mirror widget
 type ScreenMirrorConfig struct {
-	// Display: display index to capture (nil = primary display)
-	Display *int `json:"display,omitempty"`
-	// DisplayName: alternative display selection by name
-	DisplayName string `json:"display_name,omitempty"`
+	// Display: which display to capture
+	// - null: primary display (default)
+	// - integer 0, 1, 2...: specific monitor by index
+	// - integer -1: all monitors combined
+	// - string: match monitor by name (partial, case-insensitive)
+	Display *IntOrString `json:"display,omitempty"`
 	// Region: rectangular region to capture (nil = full display)
 	Region *ScreenMirrorRegionConfig `json:"region,omitempty"`
 	// Window: window to capture (nil = capture display/region)

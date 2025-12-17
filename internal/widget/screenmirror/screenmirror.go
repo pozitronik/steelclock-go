@@ -37,13 +37,12 @@ const (
 
 // ScreenMirrorConfig holds screen mirror widget configuration.
 type ScreenMirrorConfig struct {
-	DisplayIndex *int
-	DisplayName  string
-	Region       *CaptureRegion
-	Window       *WindowTarget
-	ScaleMode    ScaleMode
-	FPS          int
-	DitherMode   string
+	Display    DisplaySelector
+	Region     *CaptureRegion
+	Window     *WindowTarget
+	ScaleMode  ScaleMode
+	FPS        int
+	DitherMode string
 }
 
 // Widget displays captured screen content on the OLED display.
@@ -73,10 +72,9 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 
 	// Build capture configuration
 	captureCfg := CaptureConfig{
-		DisplayIndex: mirrorCfg.DisplayIndex,
-		DisplayName:  mirrorCfg.DisplayName,
-		Region:       mirrorCfg.Region,
-		Window:       mirrorCfg.Window,
+		Display: mirrorCfg.Display,
+		Region:  mirrorCfg.Region,
+		Window:  mirrorCfg.Window,
 	}
 
 	// Create platform-specific capture
@@ -110,8 +108,14 @@ func parseScreenMirrorConfig(cfg config.WidgetConfig) ScreenMirrorConfig {
 	if cfg.ScreenMirror != nil {
 		sm := cfg.ScreenMirror
 
-		mirrorCfg.DisplayIndex = sm.Display
-		mirrorCfg.DisplayName = sm.DisplayName
+		// Parse display selector (can be integer index or string name)
+		if sm.Display != nil {
+			if sm.Display.IsString {
+				mirrorCfg.Display.Name = sm.Display.StringValue
+			} else {
+				mirrorCfg.Display.Index = &sm.Display.IntValue
+			}
+		}
 
 		if sm.Region != nil {
 			mirrorCfg.Region = &CaptureRegion{

@@ -654,13 +654,33 @@ Captures and displays screen content on the OLED. Supports full screen capture, 
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `screen_mirror.display` | int/null | null | Display index (null = primary) |
-| `screen_mirror.display_name` | string | "" | Display name (alternative to index) |
+| `screen_mirror.display` | int/string/null | null | Display selector (see below) |
 | `screen_mirror.region` | object | null | Capture region {x, y, width, height} |
 | `screen_mirror.window` | object | null | Window capture {title, class, active} |
 | `screen_mirror.scale_mode` | string | "fit" | Scale mode: fit, stretch, crop |
 | `screen_mirror.fps` | int | 15 | Capture framerate (1-30) |
 | `screen_mirror.dither_mode` | string | "floyd_steinberg" | Dithering algorithm |
+
+#### Display Selection
+
+The `display` parameter accepts multiple types:
+
+| Value | Type | Description |
+|-------|------|-------------|
+| `null` | null | Primary monitor (default) |
+| `0`, `1`, `2`... | int | Specific monitor by index |
+| `-1` | int | All monitors combined (virtual screen) |
+| `"HDMI-1"` | string | Match monitor by name (partial, case-insensitive) |
+
+**Examples:**
+```json
+"display": null      // Primary monitor
+"display": 0         // First monitor (usually primary)
+"display": 1         // Second monitor
+"display": -1        // All monitors combined
+"display": "HDMI"    // Monitor with "HDMI" in name
+"display": "DP-1"    // Monitor named "DP-1"
+```
 
 #### Window Configuration
 
@@ -693,6 +713,42 @@ Captures and displays screen content on the OLED. Supports full screen capture, 
     "window": {"active": true},
     "fps": 30,
     "dither_mode": "ordered"
+  }
+}
+```
+
+**Second monitor:**
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "display": 1,
+    "scale_mode": "fit"
+  }
+}
+```
+
+**All monitors combined:**
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "display": -1,
+    "scale_mode": "fit"
+  }
+}
+```
+
+**Monitor by name:**
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "display": "HDMI",
+    "scale_mode": "fit"
   }
 }
 ```
