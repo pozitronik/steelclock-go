@@ -12,6 +12,8 @@ import (
 )
 
 // Windows API constants
+//
+//goland:noinspection GoSnakeCaseUsage
 const (
 	SM_XVIRTUALSCREEN  = 76
 	SM_YVIRTUALSCREEN  = 77
