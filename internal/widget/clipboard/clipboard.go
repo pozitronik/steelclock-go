@@ -59,8 +59,8 @@ func (t ContentType) String() string {
 	}
 }
 
-// ClipboardReader is the interface for platform-specific clipboard access.
-type ClipboardReader interface {
+// Reader is the interface for platform-specific clipboard access.
+type Reader interface {
 	// Read returns current clipboard content and its type.
 	// For text: returns the text content.
 	// For image: returns metadata like "[Image: WxH]".
@@ -74,8 +74,8 @@ type ClipboardReader interface {
 	Close() error
 }
 
-// ClipboardConfig holds clipboard-specific configuration.
-type ClipboardConfig struct {
+// Config holds clipboard-specific configuration.
+type Config struct {
 	// MaxLength is the maximum number of characters to display (default: 100).
 	MaxLength int
 	// ShowType shows content type prefix (default: true).
@@ -95,10 +95,10 @@ type ClipboardConfig struct {
 // Widget displays clipboard content with optional auto-show on change.
 type Widget struct {
 	*widget.BaseWidget
-	cfg ClipboardConfig
+	cfg Config
 
 	// Reader is the platform-specific clipboard reader
-	reader ClipboardReader
+	reader Reader
 
 	// Rendering
 	textRenderer *render.HorizontalTextRenderer
@@ -120,7 +120,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	helper := shared.NewConfigHelper(cfg)
 
 	// Parse clipboard-specific config
-	clipCfg := parseClipboardConfig(cfg)
+	clipCfg := parseConfig(cfg)
 
 	// Create text renderer
 	textSettings := helper.GetTextSettings()
@@ -141,7 +141,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	})
 
 	// Create platform-specific clipboard reader
-	reader, err := newClipboardReader()
+	reader, err := newReader()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create clipboard reader: %w", err)
 	}
@@ -202,9 +202,9 @@ func (w *Widget) readClipboard() {
 	w.mu.Unlock()
 }
 
-// parseClipboardConfig extracts clipboard-specific configuration.
-func parseClipboardConfig(cfg config.WidgetConfig) ClipboardConfig {
-	clipCfg := ClipboardConfig{
+// parseConfig extracts clipboard-specific configuration.
+func parseConfig(cfg config.WidgetConfig) Config {
+	clipCfg := Config{
 		MaxLength:      100,
 		ShowType:       true,
 		ScrollLongText: true,

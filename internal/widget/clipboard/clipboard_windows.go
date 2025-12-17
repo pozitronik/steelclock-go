@@ -33,15 +33,15 @@ const (
 	cfHTML        = 49 // CF_HTML (registered format, but commonly this ID)
 )
 
-// windowsClipboardReader implements ClipboardReader for Windows.
-type windowsClipboardReader struct {
+// windowsReader implements Reader for Windows.
+type windowsReader struct {
 	lastSeqNum uint32
 	mu         sync.Mutex
 }
 
-// newClipboardReader creates a Windows-specific clipboard reader.
-func newClipboardReader() (ClipboardReader, error) {
-	r := &windowsClipboardReader{}
+// newReader creates a Windows-specific clipboard reader.
+func newReader() (Reader, error) {
+	r := &windowsReader{}
 	// Get initial sequence number
 	seqNum, _, _ := procGetClipboardSequenceNum.Call()
 	r.lastSeqNum = uint32(seqNum)
@@ -49,7 +49,7 @@ func newClipboardReader() (ClipboardReader, error) {
 }
 
 // HasChanged returns true if the clipboard content has changed since last check.
-func (r *windowsClipboardReader) HasChanged() bool {
+func (r *windowsReader) HasChanged() bool {
 	seqNum, _, _ := procGetClipboardSequenceNum.Call()
 	currentSeq := uint32(seqNum)
 
@@ -64,7 +64,7 @@ func (r *windowsClipboardReader) HasChanged() bool {
 }
 
 // Read returns the current clipboard content and type.
-func (r *windowsClipboardReader) Read() (string, ContentType, error) {
+func (r *windowsReader) Read() (string, ContentType, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -73,7 +73,7 @@ func (r *windowsClipboardReader) Read() (string, ContentType, error) {
 	if ret == 0 {
 		return "", TypeUnknown, fmt.Errorf("failed to open clipboard: %w", err)
 	}
-	defer procCloseClipboard.Call()
+	defer func() { _, _, _ = procCloseClipboard.Call() }()
 
 	// Check available formats in order of preference
 	// Text
@@ -116,7 +116,7 @@ func (r *windowsClipboardReader) Read() (string, ContentType, error) {
 }
 
 // Close releases resources.
-func (r *windowsClipboardReader) Close() error {
+func (r *windowsReader) Close() error {
 	return nil
 }
 
@@ -137,7 +137,7 @@ func getUnicodeText() (string, error) {
 	if ptr == 0 {
 		return "", fmt.Errorf("failed to lock memory: %w", err)
 	}
-	defer procGlobalUnlock.Call(hMem)
+	defer func() { _, _, _ = procGlobalUnlock.Call(hMem) }()
 
 	// Convert UTF-16 to string
 	// nolint:govet // ptr is a valid uintptr from GlobalLock syscall, conversion to unsafe.Pointer is correct
@@ -163,7 +163,7 @@ func getFiles() ([]string, error) {
 	buf := make([]uint16, 260) // MAX_PATH
 
 	for i := uintptr(0); i < count; i++ {
-		procDragQueryFileW.Call(hMem, i, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+		_, _, _ = procDragQueryFileW.Call(hMem, i, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
 		files = append(files, syscall.UTF16ToString(buf))
 	}
 

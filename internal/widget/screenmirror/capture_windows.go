@@ -137,7 +137,7 @@ func enumerateMonitors() []monitorData {
 		return 1 // Continue enumeration
 	})
 
-	procEnumDisplayMonitors.Call(0, 0, callback, 0)
+	_, _, _ = procEnumDisplayMonitors.Call(0, 0, callback, 0)
 	return monitors
 }
 
@@ -222,7 +222,7 @@ func (c *windowsCapture) initializeDisplay() error {
 
 		// Get window bounds
 		var r rect
-		procGetWindowRect.Call(hwnd, uintptr(unsafe.Pointer(&r)))
+		_, _, _ = procGetWindowRect.Call(hwnd, uintptr(unsafe.Pointer(&r)))
 		c.captureX = int(r.Left)
 		c.captureY = int(r.Top)
 		c.captureWidth = int(r.Right - r.Left)
@@ -384,7 +384,7 @@ func (c *windowsCapture) findWindowByTitle(titleSubstr string) uintptr {
 		}
 
 		buf := make([]uint16, length+1)
-		procGetWindowTextW.Call(hwnd, uintptr(unsafe.Pointer(&buf[0])), length+1)
+		_, _, _ = procGetWindowTextW.Call(hwnd, uintptr(unsafe.Pointer(&buf[0])), length+1)
 		title := syscall.UTF16ToString(buf)
 
 		if strings.Contains(strings.ToLower(title), titleLower) {
@@ -394,7 +394,7 @@ func (c *windowsCapture) findWindowByTitle(titleSubstr string) uintptr {
 		return 1
 	})
 
-	procEnumWindows.Call(callback, 0)
+	_, _, _ = procEnumWindows.Call(callback, 0)
 	return foundHwnd
 }
 
@@ -415,7 +415,7 @@ func (c *windowsCapture) Capture() (*image.RGBA, error) {
 
 		if c.targetHwnd != 0 {
 			var r rect
-			procGetWindowRect.Call(c.targetHwnd, uintptr(unsafe.Pointer(&r)))
+			_, _, _ = procGetWindowRect.Call(c.targetHwnd, uintptr(unsafe.Pointer(&r)))
 			c.captureX = int(r.Left)
 			c.captureY = int(r.Top)
 			c.captureWidth = int(r.Right - r.Left)
@@ -433,24 +433,24 @@ func (c *windowsCapture) Capture() (*image.RGBA, error) {
 	if srcDC == 0 {
 		return nil, fmt.Errorf("failed to get screen DC")
 	}
-	defer procReleaseDC.Call(desktopHwnd, srcDC)
+	defer func() { _, _, _ = procReleaseDC.Call(desktopHwnd, srcDC) }()
 
 	// Create compatible DC and bitmap
 	memDC, _, _ := procCreateCompatibleDC.Call(srcDC)
 	if memDC == 0 {
 		return nil, fmt.Errorf("failed to create compatible DC")
 	}
-	defer procDeleteDC.Call(memDC)
+	defer func() { _, _, _ = procDeleteDC.Call(memDC) }()
 
 	bitmap, _, _ := procCreateCompatibleBitmap.Call(srcDC, uintptr(c.captureWidth), uintptr(c.captureHeight))
 	if bitmap == 0 {
 		return nil, fmt.Errorf("failed to create bitmap")
 	}
-	defer procDeleteObject.Call(bitmap)
+	defer func() { _, _, _ = procDeleteObject.Call(bitmap) }()
 
 	// Select bitmap into memory DC
 	oldBitmap, _, _ := procSelectObject.Call(memDC, bitmap)
-	defer procSelectObject.Call(memDC, oldBitmap)
+	defer func() { _, _, _ = procSelectObject.Call(memDC, oldBitmap) }()
 
 	// Copy screen to memory DC
 	ret, _, _ := procBitBlt.Call(

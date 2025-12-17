@@ -35,8 +35,8 @@ const (
 	maxFPS            = 30
 )
 
-// ScreenMirrorConfig holds screen mirror widget configuration.
-type ScreenMirrorConfig struct {
+// Config holds screen mirror widget configuration.
+type Config struct {
 	Display    DisplaySelector
 	Region     *CaptureRegion
 	Window     *WindowTarget
@@ -49,7 +49,7 @@ type ScreenMirrorConfig struct {
 type Widget struct {
 	*widget.BaseWidget
 
-	cfg ScreenMirrorConfig
+	cfg Config
 
 	// Screen capture
 	capture ScreenCapture
@@ -68,7 +68,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	base := widget.NewBaseWidget(cfg)
 
 	// Parse configuration
-	mirrorCfg := parseScreenMirrorConfig(cfg)
+	mirrorCfg := parseConfig(cfg)
 
 	// Build capture configuration
 	captureCfg := CaptureConfig{
@@ -97,9 +97,9 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	return w, nil
 }
 
-// parseScreenMirrorConfig extracts configuration from WidgetConfig.
-func parseScreenMirrorConfig(cfg config.WidgetConfig) ScreenMirrorConfig {
-	mirrorCfg := ScreenMirrorConfig{
+// parseConfig extracts configuration from WidgetConfig.
+func parseConfig(cfg config.WidgetConfig) Config {
+	mirrorCfg := Config{
 		ScaleMode:  ScaleMode(defaultScaleMode),
 		FPS:        defaultFPS,
 		DitherMode: defaultDitherMode,

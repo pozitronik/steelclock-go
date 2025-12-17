@@ -146,7 +146,7 @@ func TestParseScreenMirrorConfig_Defaults(t *testing.T) {
 		Position: config.PositionConfig{W: 128, H: 40},
 	}
 
-	result := parseScreenMirrorConfig(cfg)
+	result := parseConfig(cfg)
 
 	if result.ScaleMode != ScaleModeFit {
 		t.Errorf("ScaleMode = %v, want %v", result.ScaleMode, ScaleModeFit)
@@ -180,7 +180,7 @@ func TestParseScreenMirrorConfig_CustomValues(t *testing.T) {
 		},
 	}
 
-	result := parseScreenMirrorConfig(cfg)
+	result := parseConfig(cfg)
 
 	if result.ScaleMode != ScaleModeStretch {
 		t.Errorf("ScaleMode = %v, want %v", result.ScaleMode, ScaleModeStretch)
@@ -219,7 +219,7 @@ func TestParseScreenMirrorConfig_FPSClamping(t *testing.T) {
 				},
 			}
 
-			result := parseScreenMirrorConfig(cfg)
+			result := parseConfig(cfg)
 			if result.FPS != tt.wantFPS {
 				t.Errorf("FPS = %d, want %d", result.FPS, tt.wantFPS)
 			}
@@ -241,7 +241,7 @@ func TestParseScreenMirrorConfig_Region(t *testing.T) {
 		},
 	}
 
-	result := parseScreenMirrorConfig(cfg)
+	result := parseConfig(cfg)
 
 	if result.Region == nil {
 		t.Fatal("Region is nil")
@@ -272,7 +272,7 @@ func TestParseScreenMirrorConfig_Window(t *testing.T) {
 		},
 	}
 
-	result := parseScreenMirrorConfig(cfg)
+	result := parseConfig(cfg)
 
 	if result.Window == nil {
 		t.Fatal("Window is nil")

@@ -55,7 +55,7 @@ func TestContentType_String(t *testing.T) {
 	}
 }
 
-func TestParseClipboardConfig(t *testing.T) {
+func TestParseConfig(t *testing.T) {
 	showTypeTrue := true
 	showTypeFalse := false
 	scrollTrue := true
@@ -64,12 +64,12 @@ func TestParseClipboardConfig(t *testing.T) {
 	tests := []struct {
 		name string
 		cfg  config.WidgetConfig
-		want ClipboardConfig
+		want Config
 	}{
 		{
 			name: "default config",
 			cfg:  config.WidgetConfig{},
-			want: ClipboardConfig{
+			want: Config{
 				MaxLength:      100,
 				ShowType:       true,
 				ScrollLongText: true,
@@ -85,7 +85,7 @@ func TestParseClipboardConfig(t *testing.T) {
 					Format: "{type}: {content}",
 				},
 			},
-			want: ClipboardConfig{
+			want: Config{
 				MaxLength:      100,
 				ShowType:       true,
 				ScrollLongText: true,
@@ -105,7 +105,7 @@ func TestParseClipboardConfig(t *testing.T) {
 					ShowInvisible:  true,
 				},
 			},
-			want: ClipboardConfig{
+			want: Config{
 				MaxLength:      50,
 				ShowType:       false,
 				ScrollLongText: false,
@@ -122,7 +122,7 @@ func TestParseClipboardConfig(t *testing.T) {
 					ShowInvisible: false,
 				},
 			},
-			want: ClipboardConfig{
+			want: Config{
 				MaxLength:      100,
 				ShowType:       true,
 				ScrollLongText: true,
@@ -138,7 +138,7 @@ func TestParseClipboardConfig(t *testing.T) {
 					ScrollLongText: &scrollTrue,
 				},
 			},
-			want: ClipboardConfig{
+			want: Config{
 				MaxLength:      100,
 				ShowType:       true,
 				ScrollLongText: true,
@@ -151,7 +151,7 @@ func TestParseClipboardConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := parseClipboardConfig(tt.cfg)
+			got := parseConfig(tt.cfg)
 			if got.MaxLength != tt.want.MaxLength {
 				t.Errorf("MaxLength = %v, want %v", got.MaxLength, tt.want.MaxLength)
 			}
@@ -177,14 +177,14 @@ func TestParseClipboardConfig(t *testing.T) {
 func TestWidget_formatContent(t *testing.T) {
 	tests := []struct {
 		name        string
-		cfg         ClipboardConfig
+		cfg         Config
 		content     string
 		contentType ContentType
 		want        string
 	}{
 		{
 			name: "empty clipboard",
-			cfg: ClipboardConfig{
+			cfg: Config{
 				TextFormat: "{content}",
 			},
 			content:     "",
@@ -193,7 +193,7 @@ func TestWidget_formatContent(t *testing.T) {
 		},
 		{
 			name: "simple text",
-			cfg: ClipboardConfig{
+			cfg: Config{
 				TextFormat: "{content}",
 				MaxLength:  100,
 			},
@@ -203,7 +203,7 @@ func TestWidget_formatContent(t *testing.T) {
 		},
 		{
 			name: "text with type prefix",
-			cfg: ClipboardConfig{
+			cfg: Config{
 				TextFormat: "{type}: {content}",
 				MaxLength:  100,
 			},
@@ -213,7 +213,7 @@ func TestWidget_formatContent(t *testing.T) {
 		},
 		{
 			name: "text with length",
-			cfg: ClipboardConfig{
+			cfg: Config{
 				TextFormat: "{content} ({length})",
 				MaxLength:  100,
 			},
@@ -223,7 +223,7 @@ func TestWidget_formatContent(t *testing.T) {
 		},
 		{
 			name: "text with preview",
-			cfg: ClipboardConfig{
+			cfg: Config{
 				TextFormat: "{preview}",
 				MaxLength:  100,
 			},
@@ -233,7 +233,7 @@ func TestWidget_formatContent(t *testing.T) {
 		},
 		{
 			name: "long text preview truncated",
-			cfg: ClipboardConfig{
+			cfg: Config{
 				TextFormat: "{preview}",
 				MaxLength:  100,
 			},
@@ -243,7 +243,7 @@ func TestWidget_formatContent(t *testing.T) {
 		},
 		{
 			name: "text truncation",
-			cfg: ClipboardConfig{
+			cfg: Config{
 				TextFormat: "{content}",
 				MaxLength:  10,
 			},
@@ -253,7 +253,7 @@ func TestWidget_formatContent(t *testing.T) {
 		},
 		{
 			name: "newlines replaced",
-			cfg: ClipboardConfig{
+			cfg: Config{
 				TextFormat: "{content}",
 				MaxLength:  100,
 			},
@@ -263,7 +263,7 @@ func TestWidget_formatContent(t *testing.T) {
 		},
 		{
 			name: "tabs replaced",
-			cfg: ClipboardConfig{
+			cfg: Config{
 				TextFormat: "{content}",
 				MaxLength:  100,
 			},
@@ -273,7 +273,7 @@ func TestWidget_formatContent(t *testing.T) {
 		},
 		{
 			name: "show invisible - newlines",
-			cfg: ClipboardConfig{
+			cfg: Config{
 				TextFormat:    "{content}",
 				MaxLength:     100,
 				ShowInvisible: true,
@@ -284,7 +284,7 @@ func TestWidget_formatContent(t *testing.T) {
 		},
 		{
 			name: "show invisible - Windows newlines",
-			cfg: ClipboardConfig{
+			cfg: Config{
 				TextFormat:    "{content}",
 				MaxLength:     100,
 				ShowInvisible: true,
@@ -295,7 +295,7 @@ func TestWidget_formatContent(t *testing.T) {
 		},
 		{
 			name: "show invisible - tabs",
-			cfg: ClipboardConfig{
+			cfg: Config{
 				TextFormat:    "{content}",
 				MaxLength:     100,
 				ShowInvisible: true,
@@ -306,7 +306,7 @@ func TestWidget_formatContent(t *testing.T) {
 		},
 		{
 			name: "show invisible - carriage return only",
-			cfg: ClipboardConfig{
+			cfg: Config{
 				TextFormat:    "{content}",
 				MaxLength:     100,
 				ShowInvisible: true,
@@ -317,7 +317,7 @@ func TestWidget_formatContent(t *testing.T) {
 		},
 		{
 			name: "show invisible - mixed",
-			cfg: ClipboardConfig{
+			cfg: Config{
 				TextFormat:    "{content}",
 				MaxLength:     100,
 				ShowInvisible: true,

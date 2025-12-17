@@ -11,18 +11,18 @@ import (
 	"sync"
 )
 
-// linuxClipboardReader implements ClipboardReader for Linux.
+// linuxReader implements Reader for Linux.
 // It uses external tools (wl-paste, xclip, xsel) for clipboard access.
-type linuxClipboardReader struct {
+type linuxReader struct {
 	tool        string // "wl-paste", "xclip", or "xsel"
 	lastHash    [16]byte
 	hasLastHash bool
 	mu          sync.Mutex
 }
 
-// newClipboardReader creates a Linux-specific clipboard reader.
-func newClipboardReader() (ClipboardReader, error) {
-	r := &linuxClipboardReader{}
+// newReader creates a Linux-specific clipboard reader.
+func newReader() (Reader, error) {
+	r := &linuxReader{}
 
 	// Detect available tool (prefer Wayland, then X11)
 	tools := []string{"wl-paste", "xclip", "xsel"}
@@ -37,7 +37,7 @@ func newClipboardReader() (ClipboardReader, error) {
 }
 
 // HasChanged returns true if the clipboard content has changed since last check.
-func (r *linuxClipboardReader) HasChanged() bool {
+func (r *linuxReader) HasChanged() bool {
 	content, err := r.readRaw()
 	if err != nil {
 		return false
@@ -57,7 +57,7 @@ func (r *linuxClipboardReader) HasChanged() bool {
 }
 
 // Read returns the current clipboard content and type.
-func (r *linuxClipboardReader) Read() (string, ContentType, error) {
+func (r *linuxReader) Read() (string, ContentType, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -100,12 +100,12 @@ func (r *linuxClipboardReader) Read() (string, ContentType, error) {
 }
 
 // Close releases resources.
-func (r *linuxClipboardReader) Close() error {
+func (r *linuxReader) Close() error {
 	return nil
 }
 
 // readRaw reads raw clipboard content as bytes.
-func (r *linuxClipboardReader) readRaw() ([]byte, error) {
+func (r *linuxReader) readRaw() ([]byte, error) {
 	var cmd *exec.Cmd
 
 	switch r.tool {
@@ -129,7 +129,7 @@ func (r *linuxClipboardReader) readRaw() ([]byte, error) {
 }
 
 // detectContentType determines what type of content is in the clipboard.
-func (r *linuxClipboardReader) detectContentType() ContentType {
+func (r *linuxReader) detectContentType() ContentType {
 	targets := r.getTargets()
 	if len(targets) == 0 {
 		return TypeEmpty
@@ -176,7 +176,7 @@ func (r *linuxClipboardReader) detectContentType() ContentType {
 }
 
 // getTargets returns the list of available clipboard formats/targets.
-func (r *linuxClipboardReader) getTargets() []string {
+func (r *linuxReader) getTargets() []string {
 	var cmd *exec.Cmd
 
 	switch r.tool {
@@ -209,7 +209,7 @@ func (r *linuxClipboardReader) getTargets() []string {
 }
 
 // getImageInfo tries to get image dimensions if available.
-func (r *linuxClipboardReader) getImageInfo() string {
+func (r *linuxReader) getImageInfo() string {
 	// Try to get image dimensions using imagemagick if available
 	// This is optional - if not available, just return generic info
 	if _, err := exec.LookPath("identify"); err != nil {
@@ -241,7 +241,7 @@ func (r *linuxClipboardReader) getImageInfo() string {
 }
 
 // readFiles reads file paths from clipboard (for copied files).
-func (r *linuxClipboardReader) readFiles() ([]string, error) {
+func (r *linuxReader) readFiles() ([]string, error) {
 	var cmd *exec.Cmd
 
 	switch r.tool {
