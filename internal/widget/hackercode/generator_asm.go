@@ -172,15 +172,33 @@ func (g *AsmGenerator) generateLabel() string {
 
 // generateDataMove generates a MOV instruction.
 func (g *AsmGenerator) generateDataMove() string {
-	moveType := g.rng.Intn(4)
+	moveType := g.rng.Intn(6)
 	switch moveType {
 	case 0:
+		// 32-bit reg to reg
 		return fmt.Sprintf("MOV %s, %s", g.randomReg32(), g.randomReg32())
 	case 1:
-		return fmt.Sprintf("MOV %s, %s", g.randomReg32(), g.randomHex32())
+		// 16-bit reg to reg
+		return fmt.Sprintf("MOV %s, %s", g.randomReg16(), g.randomReg16())
 	case 2:
+		// 8-bit reg to reg
+		return fmt.Sprintf("MOV %s, %s", g.randomReg8(), g.randomReg8())
+	case 3:
+		// Immediate to register (size-appropriate)
+		regSize := g.rng.Intn(3)
+		switch regSize {
+		case 0:
+			return fmt.Sprintf("MOV %s, %s", g.randomReg32(), g.randomHex32())
+		case 1:
+			return fmt.Sprintf("MOV %s, %s", g.randomReg16(), g.randomHex16())
+		default:
+			return fmt.Sprintf("MOV %s, %s", g.randomReg8(), g.randomHex8())
+		}
+	case 4:
+		// Memory to 32-bit register
 		return fmt.Sprintf("MOV %s, %s", g.randomReg32(), g.randomMemRef())
 	default:
+		// 32-bit register to memory
 		return fmt.Sprintf("MOV %s, %s", g.randomMemRef(), g.randomReg32())
 	}
 }
@@ -190,19 +208,37 @@ func (g *AsmGenerator) generateArithmetic() string {
 	ops := []string{"ADD", "SUB", "INC", "DEC", "NEG", "MUL", "IMUL"}
 	op := ops[g.rng.Intn(len(ops))]
 
+	// INC/DEC/NEG can work on any register size
 	if op == "INC" || op == "DEC" || op == "NEG" {
-		return fmt.Sprintf("%s %s", op, g.randomReg32())
+		return fmt.Sprintf("%s %s", op, g.randomReg())
 	}
 
+	// MUL/IMUL typically use 32-bit
 	if op == "MUL" || op == "IMUL" {
 		return fmt.Sprintf("%s %s", op, g.randomReg32())
 	}
 
+	// ADD/SUB with mixed register sizes
+	regSize := g.rng.Intn(3)
 	operandType := g.rng.Intn(2)
-	if operandType == 0 {
-		return fmt.Sprintf("%s %s, %s", op, g.randomReg32(), g.randomReg32())
+
+	switch regSize {
+	case 0: // 32-bit
+		if operandType == 0 {
+			return fmt.Sprintf("%s %s, %s", op, g.randomReg32(), g.randomReg32())
+		}
+		return fmt.Sprintf("%s %s, %s", op, g.randomReg32(), g.randomHex8())
+	case 1: // 16-bit
+		if operandType == 0 {
+			return fmt.Sprintf("%s %s, %s", op, g.randomReg16(), g.randomReg16())
+		}
+		return fmt.Sprintf("%s %s, %s", op, g.randomReg16(), g.randomHex8())
+	default: // 8-bit
+		if operandType == 0 {
+			return fmt.Sprintf("%s %s, %s", op, g.randomReg8(), g.randomReg8())
+		}
+		return fmt.Sprintf("%s %s, %s", op, g.randomReg8(), g.randomHex8())
 	}
-	return fmt.Sprintf("%s %s, %s", op, g.randomReg32(), g.randomHex8())
 }
 
 // generateBitwise generates bitwise instructions.
@@ -210,19 +246,37 @@ func (g *AsmGenerator) generateBitwise() string {
 	ops := []string{"XOR", "AND", "OR", "NOT", "SHL", "SHR", "ROL", "ROR"}
 	op := ops[g.rng.Intn(len(ops))]
 
+	// NOT can work on any register size
 	if op == "NOT" {
-		return fmt.Sprintf("%s %s", op, g.randomReg32())
+		return fmt.Sprintf("%s %s", op, g.randomReg())
 	}
 
+	// Shift/rotate operations with mixed register sizes
 	if op == "SHL" || op == "SHR" || op == "ROL" || op == "ROR" {
-		return fmt.Sprintf("%s %s, %d", op, g.randomReg32(), g.rng.Intn(8)+1)
+		return fmt.Sprintf("%s %s, %d", op, g.randomReg(), g.rng.Intn(8)+1)
 	}
 
+	// XOR/AND/OR with mixed register sizes
+	regSize := g.rng.Intn(3)
 	operandType := g.rng.Intn(2)
-	if operandType == 0 {
-		return fmt.Sprintf("%s %s, %s", op, g.randomReg32(), g.randomReg32())
+
+	switch regSize {
+	case 0: // 32-bit
+		if operandType == 0 {
+			return fmt.Sprintf("%s %s, %s", op, g.randomReg32(), g.randomReg32())
+		}
+		return fmt.Sprintf("%s %s, %s", op, g.randomReg32(), g.randomHex8())
+	case 1: // 16-bit
+		if operandType == 0 {
+			return fmt.Sprintf("%s %s, %s", op, g.randomReg16(), g.randomReg16())
+		}
+		return fmt.Sprintf("%s %s, %s", op, g.randomReg16(), g.randomHex8())
+	default: // 8-bit
+		if operandType == 0 {
+			return fmt.Sprintf("%s %s, %s", op, g.randomReg8(), g.randomReg8())
+		}
+		return fmt.Sprintf("%s %s, %s", op, g.randomReg8(), g.randomHex8())
 	}
-	return fmt.Sprintf("%s %s, %s", op, g.randomReg32(), g.randomHex8())
 }
 
 // generateJump generates jump instructions.
@@ -276,11 +330,27 @@ func (g *AsmGenerator) generateMemoryOp() string {
 func (g *AsmGenerator) generateCompare() string {
 	op := []string{"CMP", "TEST"}[g.rng.Intn(2)]
 
+	// CMP/TEST with mixed register sizes
+	regSize := g.rng.Intn(3)
 	operandType := g.rng.Intn(2)
-	if operandType == 0 {
-		return fmt.Sprintf("%s %s, %s", op, g.randomReg32(), g.randomReg32())
+
+	switch regSize {
+	case 0: // 32-bit
+		if operandType == 0 {
+			return fmt.Sprintf("%s %s, %s", op, g.randomReg32(), g.randomReg32())
+		}
+		return fmt.Sprintf("%s %s, %s", op, g.randomReg32(), g.randomHex8())
+	case 1: // 16-bit
+		if operandType == 0 {
+			return fmt.Sprintf("%s %s, %s", op, g.randomReg16(), g.randomReg16())
+		}
+		return fmt.Sprintf("%s %s, %s", op, g.randomReg16(), g.randomHex8())
+	default: // 8-bit
+		if operandType == 0 {
+			return fmt.Sprintf("%s %s, %s", op, g.randomReg8(), g.randomReg8())
+		}
+		return fmt.Sprintf("%s %s, %s", op, g.randomReg8(), g.randomHex8())
 	}
-	return fmt.Sprintf("%s %s, %s", op, g.randomReg32(), g.randomHex8())
 }
 
 // generateComment generates an assembly comment.

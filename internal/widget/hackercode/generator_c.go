@@ -113,14 +113,14 @@ func (g *CGenerator) randomType() string {
 	return cTypeNames[g.rng.Intn(len(cTypeNames))]
 }
 
-// randomStruct returns a random struct name.
-func (g *CGenerator) randomStruct() string {
-	return cStructNames[g.rng.Intn(len(cStructNames))]
-}
-
 // randomFunc returns a random function name.
 func (g *CGenerator) randomFunc() string {
 	return cFuncNames[g.rng.Intn(len(cFuncNames))]
+}
+
+// randomStruct returns a random struct type name.
+func (g *CGenerator) randomStruct() string {
+	return cStructNames[g.rng.Intn(len(cStructNames))]
 }
 
 // randomHex8 returns a random 8-bit hex value.
@@ -242,7 +242,7 @@ func (g *CGenerator) generateCondition() string {
 func (g *CGenerator) generateStatement() string {
 	indent := g.indent()
 
-	stmtType := g.rng.Intn(12)
+	stmtType := g.rng.Intn(16)
 
 	switch stmtType {
 	case 0: // Variable declaration with hex init
@@ -254,7 +254,7 @@ func (g *CGenerator) generateStatement() string {
 	case 2: // Pointer assignment
 		return fmt.Sprintf("%s*%s = %s;", indent, g.randomVar(), g.randomHex8())
 
-	case 3: // Struct member access
+	case 3: // Struct member access via pointer
 		return fmt.Sprintf("%s%s->%s = %s;", indent, g.randomVar(), g.randomVar(), g.randomHex16())
 
 	case 4: // Function call
@@ -283,6 +283,18 @@ func (g *CGenerator) generateStatement() string {
 
 	case 10: // Cast assignment
 		return fmt.Sprintf("%s%s = (%s)%s;", indent, g.randomVar(), g.randomType(), g.randomVar())
+
+	case 11: // Struct variable declaration
+		return fmt.Sprintf("%s%s %s = {0};", indent, g.randomStruct(), g.randomVar())
+
+	case 12: // Struct pointer declaration
+		return fmt.Sprintf("%s%s *%s = NULL;", indent, g.randomStruct(), g.randomVar())
+
+	case 13: // Sizeof expression
+		return fmt.Sprintf("%s%s = sizeof(%s);", indent, g.randomVar(), g.randomStruct())
+
+	case 14: // 32-bit hex assignment
+		return fmt.Sprintf("%s%s = %s;", indent, g.randomVar(), g.randomHex32())
 
 	default: // Simple assignment
 		return fmt.Sprintf("%s%s = %s;", indent, g.randomVar(), g.randomVar())
