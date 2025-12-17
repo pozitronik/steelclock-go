@@ -13,8 +13,6 @@ import (
 
 // Windows API constants
 const (
-	SM_CXSCREEN        = 0
-	SM_CYSCREEN        = 1
 	SM_XVIRTUALSCREEN  = 76
 	SM_YVIRTUALSCREEN  = 77
 	SM_CXVIRTUALSCREEN = 78
@@ -23,11 +21,6 @@ const (
 	SRCCOPY        = 0x00CC0020
 	DIB_RGB_COLORS = 0
 	BI_RGB         = 0
-
-	BITSPIXEL = 12
-
-	// Monitor flags
-	MONITOR_DEFAULTTOPRIMARY = 1
 )
 
 // DisplayIndexAll is the special index value for capturing all monitors combined.
@@ -57,9 +50,6 @@ var (
 	procGetWindowRect        = user32.NewProc("GetWindowRect")
 	procEnumWindows          = user32.NewProc("EnumWindows")
 	procIsWindowVisible      = user32.NewProc("IsWindowVisible")
-	procPrintWindow          = user32.NewProc("PrintWindow")
-	procGetClientRect        = user32.NewProc("GetClientRect")
-	procClientToScreen       = user32.NewProc("ClientToScreen")
 
 	// Monitor enumeration
 	procEnumDisplayMonitors = user32.NewProc("EnumDisplayMonitors")
@@ -84,11 +74,6 @@ type bitmapInfoHeader struct {
 // RECT structure
 type rect struct {
 	Left, Top, Right, Bottom int32
-}
-
-// POINT structure
-type point struct {
-	X, Y int32
 }
 
 // MONITORINFOEXW structure for GetMonitorInfoW
