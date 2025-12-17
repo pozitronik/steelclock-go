@@ -15,7 +15,7 @@
         "scale_mode": "fit",
         "fps": 15,
         "dither_mode": "floyd_steinberg",
-        "display": null
+        "display": null,
       }
     }
   ]

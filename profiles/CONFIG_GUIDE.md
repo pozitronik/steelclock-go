@@ -72,15 +72,15 @@ Supported IDEs: VS Code, JetBrains IDEs, Visual Studio, Sublime Text, and others
 
 ### Global Settings
 
-| Property                | Type    | Default      | Description                              |
-|-------------------------|---------|--------------|------------------------------------------|
-| `schema_version`        | integer | 2            | Schema version (must be 2)               |
-| `game_name`             | string  | "STEELCLOCK" | Internal game name for GameSense         |
-| `game_display_name`     | string  | "SteelClock" | Display name in SteelSeries GG           |
-| `refresh_rate_ms`       | integer | 100          | Display refresh rate (see notes)         |
+| Property                | Type    | Default      | Description                                      |
+|-------------------------|---------|--------------|--------------------------------------------------|
+| `schema_version`        | integer | 2            | Schema version (must be 2)                       |
+| `game_name`             | string  | "STEELCLOCK" | Internal game name for GameSense                 |
+| `game_display_name`     | string  | "SteelClock" | Display name in SteelSeries GG                   |
+| `refresh_rate_ms`       | integer | 100          | Display refresh rate (see notes)                 |
 | `backend`               | string  | (auto)       | Backend: "gamesense", "direct", or omit for auto |
-| `unregister_on_exit`    | boolean | false        | Unregister on exit (may timeout)         |
-| `deinitialize_timer_ms` | integer | 15000        | Game deactivation timeout (1000-60000ms) |
+| `unregister_on_exit`    | boolean | false        | Unregister on exit (may timeout)                 |
+| `deinitialize_timer_ms` | integer | 15000        | Game deactivation timeout (1000-60000ms)         |
 
 ### Backend Configuration
 
@@ -334,25 +334,25 @@ Displays clipboard content or content type description. Supports auto-show mode 
 
 The widget automatically detects clipboard content type:
 
-| Content Type | Display Behavior |
-|--------------|------------------|
-| Plain text | Shows text content (scrolled if long) |
-| Image | Shows `[Image]` (metadata only) |
-| Files | Shows `filename.ext (+N more)` |
-| HTML | Shows `[HTML]` |
-| Empty | Shows `[Empty]` |
-| Unknown | Shows `[Unknown]` |
+| Content Type | Display Behavior                      |
+|--------------|---------------------------------------|
+| Plain text   | Shows text content (scrolled if long) |
+| Image        | Shows `[Image]` (metadata only)       |
+| Files        | Shows `filename.ext (+N more)`        |
+| HTML         | Shows `[HTML]`                        |
+| Empty        | Shows `[Empty]`                       |
+| Unknown      | Shows `[Unknown]`                     |
 
 #### Format Tokens
 
 Use these tokens in `text.format`:
 
-| Token | Description | Example |
-|-------|-------------|---------|
+| Token       | Description                           | Example                    |
+|-------------|---------------------------------------|----------------------------|
 | `{content}` | Clipboard content or type description | "Hello World" or "[Image]" |
-| `{type}` | Content type label | "Text", "Image", "Files" |
-| `{length}` | Content length (chars for text) | "42" |
-| `{preview}` | First 20 characters of text | "Hello Wor..." |
+| `{type}`    | Content type label                    | "Text", "Image", "Files"   |
+| `{length}`  | Content length (chars for text)       | "42"                       |
+| `{preview}` | First 20 characters of text           | "Hello Wor..."             |
 
 **Examples:**
 - `"{content}"` - Just the content (default)
@@ -380,32 +380,32 @@ The widget:
 
 #### Clipboard Configuration
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `clipboard.max_length` | int | 100 | Max characters to display |
-| `clipboard.show_type` | bool | true | Show content type prefix |
-| `clipboard.scroll_long_text` | bool | true | Enable horizontal scroll |
-| `clipboard.poll_interval_ms` | int | 500 | Clipboard check interval |
-| `clipboard.show_invisible` | bool | false | Show invisible characters as symbols |
+| Property                     | Type | Default | Description                          |
+|------------------------------|------|---------|--------------------------------------|
+| `clipboard.max_length`       | int  | 100     | Max characters to display            |
+| `clipboard.show_type`        | bool | true    | Show content type prefix             |
+| `clipboard.scroll_long_text` | bool | true    | Enable horizontal scroll             |
+| `clipboard.poll_interval_ms` | int  | 500     | Clipboard check interval             |
+| `clipboard.show_invisible`   | bool | false   | Show invisible characters as symbols |
 
 #### Invisible Characters
 
 When `show_invisible` is enabled, invisible characters are displayed as escape sequences:
 
-| Character | Display | Description |
-|-----------|---------|-------------|
-| `\r\n` | `\n` | Windows line ending |
-| `\n` | `\n` | Unix line ending |
-| `\r` | `\r` | Old Mac line ending |
-| `\t` | `\t` | Tab character |
+| Character | Display | Description         |
+|-----------|---------|---------------------|
+| `\r\n`    | `\n`    | Windows line ending |
+| `\n`      | `\n`    | Unix line ending    |
+| `\r`      | `\r`    | Old Mac line ending |
+| `\t`      | `\t`    | Tab character       |
 
 #### Platform Support
 
-| Platform | Implementation | Change Detection |
-|----------|----------------|------------------|
-| Windows | Win32 API | Sequence number (efficient) |
-| Linux | wl-paste / xclip / xsel | Content hash comparison |
-| Other | Not supported | - |
+| Platform | Implementation          | Change Detection            |
+|----------|-------------------------|-----------------------------|
+| Windows  | Win32 API               | Sequence number (efficient) |
+| Linux    | wl-paste / xclip / xsel | Content hash comparison     |
+| Other    | Not supported           | -                           |
 
 **Linux requirements:** Install `wl-paste` (Wayland) or `xclip`/`xsel` (X11).
 
@@ -462,11 +462,11 @@ Displays procedurally generated code being "typed" in real-time, creating an aut
 
 #### Code Styles
 
-| Style | Description |
-|-------|-------------|
-| `c` | C-like code with functions, variables, pointers, control flow |
-| `asm` | x86-style assembly with MOV, XOR, JMP, CALL, etc. |
-| `mixed` | Alternates between C and assembly blocks |
+| Style   | Description                                                   |
+|---------|---------------------------------------------------------------|
+| `c`     | C-like code with functions, variables, pointers, control flow |
+| `asm`   | x86-style assembly with MOV, XOR, JMP, CALL, etc.             |
+| `mixed` | Alternates between C and assembly blocks                      |
 
 #### Basic Usage
 
@@ -519,15 +519,15 @@ The widget simulates a typewriter effect:
 
 #### Configuration
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `hacker_code.style` | string | "c" | Code style: c, asm, mixed |
-| `hacker_code.typing_speed` | int | 50 | Characters per second (char-by-char) |
-| `hacker_code.line_delay` | int | 200 | Milliseconds pause at end of line |
-| `hacker_code.show_cursor` | bool | true | Show blinking cursor |
-| `hacker_code.cursor_blink_ms` | int | 500 | Cursor blink interval (ms) |
-| `hacker_code.indent_size` | int | 2 | Spaces per indent level |
-| `text.font` | string | (auto) | Font: "3x5", "5x7", "pixel3x5", "pixel5x7" |
+| Property                      | Type   | Default | Description                                |
+|-------------------------------|--------|---------|--------------------------------------------|
+| `hacker_code.style`           | string | "c"     | Code style: c, asm, mixed                  |
+| `hacker_code.typing_speed`    | int    | 50      | Characters per second (char-by-char)       |
+| `hacker_code.line_delay`      | int    | 200     | Milliseconds pause at end of line          |
+| `hacker_code.show_cursor`     | bool   | true    | Show blinking cursor                       |
+| `hacker_code.cursor_blink_ms` | int    | 500     | Cursor blink interval (ms)                 |
+| `hacker_code.indent_size`     | int    | 2       | Spaces per indent level                    |
+| `text.font`                   | string | (auto)  | Font: "3x5", "5x7", "pixel3x5", "pixel5x7" |
 
 **Font Selection:** Use standard `text.font` setting. If not specified, auto-selects based on display height (3x5 for small displays, 5x7 for larger).
 
@@ -598,8 +598,8 @@ Captures and displays screen content on the OLED. Supports full screen capture, 
     "region": {
       "x": 100,
       "y": 100,
-      "width": 400,
-      "height": 300
+      "w": 400,
+      "h": 300
     },
     "scale_mode": "crop"
   }
@@ -636,41 +636,41 @@ Captures and displays screen content on the OLED. Supports full screen capture, 
 
 #### Scale Modes
 
-| Mode | Behavior |
-|------|----------|
-| `fit` | Preserve aspect ratio, add black bars (letterbox) |
-| `stretch` | Fill entire widget, may distort aspect ratio |
-| `crop` | Preserve aspect ratio, crop edges to fill |
+| Mode      | Behavior                                          |
+|-----------|---------------------------------------------------|
+| `fit`     | Preserve aspect ratio, add black bars (letterbox) |
+| `stretch` | Fill entire widget, may distort aspect ratio      |
+| `crop`    | Preserve aspect ratio, crop edges to fill         |
 
 #### Dither Modes
 
-| Mode | Description |
-|------|-------------|
-| `floyd_steinberg` | Error diffusion dithering (best quality, default) |
-| `ordered` | Bayer matrix ordered dithering (faster, patterned) |
-| `none` | No dithering (simple threshold) |
+| Mode              | Description                                        |
+|-------------------|----------------------------------------------------|
+| `floyd_steinberg` | Error diffusion dithering (best quality, default)  |
+| `ordered`         | Bayer matrix ordered dithering (faster, patterned) |
+| `none`            | No dithering (simple threshold)                    |
 
 #### Configuration
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `screen_mirror.display` | int/string/null | null | Display selector (see below) |
-| `screen_mirror.region` | object | null | Capture region {x, y, width, height} |
-| `screen_mirror.window` | object | null | Window capture {title, class, active} |
-| `screen_mirror.scale_mode` | string | "fit" | Scale mode: fit, stretch, crop |
-| `screen_mirror.fps` | int | 15 | Capture framerate (1-30) |
-| `screen_mirror.dither_mode` | string | "floyd_steinberg" | Dithering algorithm |
+| Property                    | Type            | Default           | Description                           |
+|-----------------------------|-----------------|-------------------|---------------------------------------|
+| `screen_mirror.display`     | int/string/null | null              | Display selector (see below)          |
+| `screen_mirror.region`      | object          | null              | Capture region {x, y, w, h}           |
+| `screen_mirror.window`      | object          | null              | Window capture {title, class, active} |
+| `screen_mirror.scale_mode`  | string          | "fit"             | Scale mode: fit, stretch, crop        |
+| `screen_mirror.fps`         | int             | 15                | Capture framerate (1-30)              |
+| `screen_mirror.dither_mode` | string          | "floyd_steinberg" | Dithering algorithm                   |
 
 #### Display Selection
 
 The `display` parameter accepts multiple types:
 
-| Value | Type | Description |
-|-------|------|-------------|
-| `null` | null | Primary monitor (default) |
-| `0`, `1`, `2`... | int | Specific monitor by index |
-| `-1` | int | All monitors combined (virtual screen) |
-| `"HDMI-1"` | string | Match monitor by name (partial, case-insensitive) |
+| Value            | Type   | Description                                       |
+|------------------|--------|---------------------------------------------------|
+| `null`           | null   | Primary monitor (default)                         |
+| `0`, `1`, `2`... | int    | Specific monitor by index                         |
+| `-1`             | int    | All monitors combined (virtual screen)            |
+| `"HDMI-1"`       | string | Match monitor by name (partial, case-insensitive) |
 
 **Examples:**
 ```json
@@ -684,11 +684,11 @@ The `display` parameter accepts multiple types:
 
 #### Window Configuration
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `window.title` | string | Substring to match in window title |
-| `window.class` | string | Window class name (Windows-specific) |
-| `window.active` | bool | Capture currently focused window |
+| Property        | Type   | Description                          |
+|-----------------|--------|--------------------------------------|
+| `window.title`  | string | Substring to match in window title   |
+| `window.class`  | string | Window class name (Windows-specific) |
+| `window.active` | bool   | Capture currently focused window     |
 
 #### Examples
 

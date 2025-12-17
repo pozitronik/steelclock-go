@@ -950,10 +950,10 @@ type ScreenMirrorRegionConfig struct {
 	X int `json:"x"`
 	// Y: top edge in screen coordinates
 	Y int `json:"y"`
-	// Width: region width in pixels
-	Width int `json:"width"`
-	// Height: region height in pixels
-	Height int `json:"height"`
+	// W: region width in pixels
+	W int `json:"w"`
+	// H: region height in pixels
+	H int `json:"h"`
 }
 
 // ScreenMirrorWindowConfig defines which window to capture

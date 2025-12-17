@@ -119,10 +119,10 @@ func parseScreenMirrorConfig(cfg config.WidgetConfig) ScreenMirrorConfig {
 
 		if sm.Region != nil {
 			mirrorCfg.Region = &CaptureRegion{
-				X:      sm.Region.X,
-				Y:      sm.Region.Y,
-				Width:  sm.Region.Width,
-				Height: sm.Region.Height,
+				X: sm.Region.X,
+				Y: sm.Region.Y,
+				W: sm.Region.W,
+				H: sm.Region.H,
 			}
 		}
 

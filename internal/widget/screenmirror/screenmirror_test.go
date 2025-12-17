@@ -233,10 +233,10 @@ func TestParseScreenMirrorConfig_Region(t *testing.T) {
 		Position: config.PositionConfig{W: 128, H: 40},
 		ScreenMirror: &config.ScreenMirrorConfig{
 			Region: &config.ScreenMirrorRegionConfig{
-				X:      100,
-				Y:      200,
-				Width:  400,
-				Height: 300,
+				X: 100,
+				Y: 200,
+				W: 400,
+				H: 300,
 			},
 		},
 	}
@@ -252,11 +252,11 @@ func TestParseScreenMirrorConfig_Region(t *testing.T) {
 	if result.Region.Y != 200 {
 		t.Errorf("Region.Y = %d, want 200", result.Region.Y)
 	}
-	if result.Region.Width != 400 {
-		t.Errorf("Region.Width = %d, want 400", result.Region.Width)
+	if result.Region.W != 400 {
+		t.Errorf("Region.W = %d, want 400", result.Region.W)
 	}
-	if result.Region.Height != 300 {
-		t.Errorf("Region.Height = %d, want 300", result.Region.Height)
+	if result.Region.H != 300 {
+		t.Errorf("Region.H = %d, want 300", result.Region.H)
 	}
 }
 
@@ -341,10 +341,10 @@ func TestContentType_String(t *testing.T) {
 
 func TestCaptureRegion(t *testing.T) {
 	region := CaptureRegion{
-		X:      100,
-		Y:      200,
-		Width:  800,
-		Height: 600,
+		X: 100,
+		Y: 200,
+		W: 800,
+		H: 600,
 	}
 
 	if region.X != 100 {
@@ -353,11 +353,11 @@ func TestCaptureRegion(t *testing.T) {
 	if region.Y != 200 {
 		t.Errorf("Y = %d, want 200", region.Y)
 	}
-	if region.Width != 800 {
-		t.Errorf("Width = %d, want 800", region.Width)
+	if region.W != 800 {
+		t.Errorf("W = %d, want 800", region.W)
 	}
-	if region.Height != 600 {
-		t.Errorf("Height = %d, want 600", region.Height)
+	if region.H != 600 {
+		t.Errorf("H = %d, want 600", region.H)
 	}
 }
 

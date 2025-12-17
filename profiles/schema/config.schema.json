@@ -379,10 +379,10 @@
                     "properties": {
                       "x": { "type": "integer", "description": "Left edge in screen coordinates" },
                       "y": { "type": "integer", "description": "Top edge in screen coordinates" },
-                      "width": { "type": "integer", "description": "Region width in pixels", "minimum": 1 },
-                      "height": { "type": "integer", "description": "Region height in pixels", "minimum": 1 }
+                      "w": { "type": "integer", "description": "Region width in pixels", "minimum": 1 },
+                      "h": { "type": "integer", "description": "Region height in pixels", "minimum": 1 }
                     },
-                    "required": ["x", "y", "width", "height"]
+                    "required": ["x", "y", "w", "h"]
                   },
                   "window": {
                     "type": ["object", "null"],

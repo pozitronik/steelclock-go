@@ -99,8 +99,8 @@ func (c *linuxCapture) initializeDisplay() error {
 		// Region capture mode
 		c.captureX = c.cfg.Region.X
 		c.captureY = c.cfg.Region.Y
-		c.captureWidth = c.cfg.Region.Width
-		c.captureHeight = c.cfg.Region.Height
+		c.captureWidth = c.cfg.Region.W
+		c.captureHeight = c.cfg.Region.H
 
 		c.displayInfo = DisplayInfo{
 			Index:  -1,

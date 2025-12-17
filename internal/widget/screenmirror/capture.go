@@ -25,10 +25,10 @@ type DisplayInfo struct {
 
 // CaptureRegion defines a rectangular region to capture.
 type CaptureRegion struct {
-	X      int
-	Y      int
-	Width  int
-	Height int
+	X int
+	Y int
+	W int
+	H int
 }
 
 // WindowTarget defines which window to capture.
