@@ -19,11 +19,6 @@ var (
 		"AL", "AH", "BL", "BH", "CL", "CH", "DL", "DH",
 	}
 
-	asmInstructions = []string{
-		"MOV", "XOR", "AND", "OR", "ADD", "SUB", "CMP", "TEST",
-		"LEA", "SHL", "SHR", "ROL", "ROR", "NOT", "NEG", "INC", "DEC",
-	}
-
 	asmJumps = []string{
 		"JMP", "JZ", "JNZ", "JE", "JNE", "JA", "JB", "JAE", "JBE",
 		"JG", "JL", "JGE", "JLE", "JC", "JNC", "JS", "JNS",
