@@ -11,6 +11,10 @@
       "description": "Schema version (2 for this schema)",
       "const": 2
     },
+    "config_name": {
+      "type": "string",
+      "description": "Display name shown in profile selection menu (defaults to filename if not set)"
+    },
     "game_name": {
       "type": "string",
       "description": "Internal game name for GameSense registration",
@@ -287,7 +291,7 @@
         "type": {
           "type": "string",
           "description": "Widget type to display",
-          "enum": ["clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life", "hyperspace", "starwars_intro", "telegram", "telegram_counter"]
+          "enum": ["clipboard", "clock", "cpu", "memory", "network", "disk", "keyboard", "keyboard_layout", "volume", "volume_meter", "audio_visualizer", "doom", "winamp", "matrix", "weather", "battery", "game_of_life", "hyperspace", "starwars_intro", "telegram", "telegram_counter", "screen_mirror", "hacker_code"]
         },
         "enabled": { "type": "boolean", "description": "Show or hide this widget", "default": true },
         "position": { "$ref": "#/definitions/position" },
@@ -295,6 +299,124 @@
         "update_interval": { "type": "number", "description": "Update interval in seconds", "minimum": 0.01 }
       },
       "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "clipboard" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "auto_hide": { "$ref": "#/definitions/autoHide" },
+              "text": {
+                "allOf": [
+                  { "$ref": "#/definitions/textObject" },
+                  {
+                    "properties": {
+                      "format": {
+                        "description": "Format string with tokens: {content} (clipboard content or type description), {type} (content type label: Text/Image/Files/HTML/Empty/Unknown), {length} (content length), {preview} (first 20 chars of text)",
+                        "default": "{content}"
+                      }
+                    }
+                  }
+                ]
+              },
+              "scroll": { "$ref": "#/definitions/scrollConfig" },
+              "clipboard": {
+                "type": "object",
+                "description": "Clipboard widget settings",
+                "properties": {
+                  "max_length": {
+                    "type": "integer",
+                    "description": "Maximum characters to display (longer content is truncated)",
+                    "minimum": 10,
+                    "maximum": 1000,
+                    "default": 100
+                  },
+                  "show_type": {
+                    "type": "boolean",
+                    "description": "Show content type prefix in format",
+                    "default": true
+                  },
+                  "scroll_long_text": {
+                    "type": "boolean",
+                    "description": "Enable horizontal scrolling for long text",
+                    "default": true
+                  },
+                  "poll_interval_ms": {
+                    "type": "integer",
+                    "description": "Clipboard check interval in milliseconds",
+                    "minimum": 100,
+                    "maximum": 5000,
+                    "default": 500
+                  },
+                  "show_invisible": {
+                    "type": "boolean",
+                    "description": "Show invisible characters as escape sequences: newline as \\n, tab as \\t, carriage return as \\r",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "screen_mirror" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "screen_mirror": {
+                "type": "object",
+                "description": "Screen mirror widget settings",
+                "properties": {
+                  "display": {
+                    "oneOf": [
+                      { "type": "null" },
+                      { "type": "integer", "minimum": -1 },
+                      { "type": "string", "minLength": 1 }
+                    ],
+                    "description": "Display to capture: null = primary (default), 0-N = monitor by index, -1 = all monitors, string = match by name",
+                    "default": null
+                  },
+                  "region": {
+                    "type": ["object", "null"],
+                    "description": "Rectangular region to capture (null = full display)",
+                    "properties": {
+                      "x": { "type": "integer", "description": "Left edge in screen coordinates" },
+                      "y": { "type": "integer", "description": "Top edge in screen coordinates" },
+                      "w": { "type": "integer", "description": "Region width in pixels", "minimum": 1 },
+                      "h": { "type": "integer", "description": "Region height in pixels", "minimum": 1 }
+                    },
+                    "required": ["x", "y", "w", "h"]
+                  },
+                  "window": {
+                    "type": ["object", "null"],
+                    "description": "Window to capture (null = capture display/region)",
+                    "properties": {
+                      "title": { "type": "string", "description": "Substring to match in window title" },
+                      "class": { "type": "string", "description": "Window class name to match (Windows-specific)" },
+                      "active": { "type": "boolean", "description": "Capture the currently active/focused window", "default": false }
+                    }
+                  },
+                  "scale_mode": {
+                    "type": "string",
+                    "description": "How to scale captured content to fit widget",
+                    "enum": ["fit", "stretch", "crop"],
+                    "default": "fit"
+                  },
+                  "fps": {
+                    "type": "integer",
+                    "description": "Capture framerate (frames per second)",
+                    "minimum": 1,
+                    "maximum": 30,
+                    "default": 15
+                  },
+                  "dither_mode": {
+                    "type": "string",
+                    "description": "Dithering algorithm for monochrome conversion",
+                    "enum": ["floyd_steinberg", "ordered", "none"],
+                    "default": "floyd_steinberg"
+                  }
+                }
+              }
+            }
+          }
+        },
         {
           "if": { "properties": { "type": { "const": "clock" } }, "required": ["type"] },
           "then": {
@@ -1868,6 +1990,82 @@
                     }
                   }
                 ]
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "hacker_code" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "hacker_code": {
+                "type": "object",
+                "description": "Hacker code widget settings - procedurally generated code with typewriter effect",
+                "properties": {
+                  "style": {
+                    "type": "string",
+                    "description": "Code generation style",
+                    "enum": ["c", "asm", "mixed"],
+                    "default": "c"
+                  },
+                  "typing_speed": {
+                    "oneOf": [
+                      {
+                        "type": "integer",
+                        "description": "Fixed characters per second",
+                        "minimum": 1,
+                        "maximum": 500
+                      },
+                      {
+                        "type": "object",
+                        "description": "Random range for characters per second (new speed picked each line)",
+                        "properties": {
+                          "min": {
+                            "type": "integer",
+                            "description": "Minimum characters per second",
+                            "minimum": 1,
+                            "maximum": 500
+                          },
+                          "max": {
+                            "type": "integer",
+                            "description": "Maximum characters per second",
+                            "minimum": 1,
+                            "maximum": 500
+                          }
+                        },
+                        "required": ["min", "max"]
+                      }
+                    ],
+                    "description": "Characters per second - either a fixed integer or an object {min, max} for random range",
+                    "default": 50
+                  },
+                  "line_delay": {
+                    "type": "integer",
+                    "description": "Milliseconds pause at end of each line",
+                    "minimum": 0,
+                    "maximum": 5000,
+                    "default": 200
+                  },
+                  "show_cursor": {
+                    "type": "boolean",
+                    "description": "Show blinking cursor at typing position",
+                    "default": true
+                  },
+                  "cursor_blink_ms": {
+                    "type": "integer",
+                    "description": "Cursor blink interval in milliseconds",
+                    "minimum": 100,
+                    "maximum": 2000,
+                    "default": 500
+                  },
+                  "indent_size": {
+                    "type": "integer",
+                    "description": "Spaces per indent level",
+                    "minimum": 1,
+                    "maximum": 8,
+                    "default": 2
+                  }
+                }
               }
             }
           }

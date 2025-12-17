@@ -72,15 +72,15 @@ Supported IDEs: VS Code, JetBrains IDEs, Visual Studio, Sublime Text, and others
 
 ### Global Settings
 
-| Property                | Type    | Default      | Description                              |
-|-------------------------|---------|--------------|------------------------------------------|
-| `schema_version`        | integer | 2            | Schema version (must be 2)               |
-| `game_name`             | string  | "STEELCLOCK" | Internal game name for GameSense         |
-| `game_display_name`     | string  | "SteelClock" | Display name in SteelSeries GG           |
-| `refresh_rate_ms`       | integer | 100          | Display refresh rate (see notes)         |
+| Property                | Type    | Default      | Description                                      |
+|-------------------------|---------|--------------|--------------------------------------------------|
+| `schema_version`        | integer | 2            | Schema version (must be 2)                       |
+| `game_name`             | string  | "STEELCLOCK" | Internal game name for GameSense                 |
+| `game_display_name`     | string  | "SteelClock" | Display name in SteelSeries GG                   |
+| `refresh_rate_ms`       | integer | 100          | Display refresh rate (see notes)                 |
 | `backend`               | string  | (auto)       | Backend: "gamesense", "direct", or omit for auto |
-| `unregister_on_exit`    | boolean | false        | Unregister on exit (may timeout)         |
-| `deinitialize_timer_ms` | integer | 15000        | Game deactivation timeout (1000-60000ms) |
+| `unregister_on_exit`    | boolean | false        | Unregister on exit (may timeout)                 |
+| `deinitialize_timer_ms` | integer | 15000        | Game deactivation timeout (1000-60000ms)         |
 
 ### Backend Configuration
 
@@ -146,6 +146,7 @@ SteelClock supports these widget types:
 
 | Type               | Description             | Modes                         |
 |--------------------|-------------------------|-------------------------------|
+| `clipboard`        | Clipboard content       | text                          |
 | `clock`            | Time display            | text, analog, binary, segment |
 | `cpu`              | CPU usage monitor       | text, bar, graph, gauge       |
 | `memory`           | RAM usage monitor       | text, bar, graph, gauge       |
@@ -161,7 +162,9 @@ SteelClock supports these widget types:
 | `matrix`           | Matrix digital rain     | -                             |
 | `weather`          | Current weather         | icon, text                    |
 | `game_of_life`     | Conway's Game of Life   | -                             |
+| `hacker_code`      | Procedural code typing  | c, asm, mixed                 |
 | `hyperspace`       | Star Wars lightspeed    | continuous, cycle             |
+| `screen_mirror`    | Screen capture display  | -                             |
 
 ## Common Properties
 
@@ -302,6 +305,455 @@ Widgets with multiple modes use mode-named objects:
 **Note:** Colors are now nested within mode-specific objects (e.g., `bar.colors.fill` instead of `colors.fill`).
 
 ## Widget-Specific Properties
+
+### Clipboard Widget
+
+Displays clipboard content or content type description. Supports auto-show mode that shows the widget briefly when clipboard changes - useful as a "copy notification".
+
+```json
+{
+  "type": "clipboard",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 20},
+  "auto_hide": {
+    "enabled": true,
+    "timeout": 3.0
+  },
+  "text": {
+    "format": "{content}",
+    "font": "5x7",
+    "align": {"h": "left", "v": "center"}
+  },
+  "scroll": {
+    "enabled": true,
+    "speed": 30
+  }
+}
+```
+
+#### Content Types
+
+The widget automatically detects clipboard content type:
+
+| Content Type | Display Behavior                      |
+|--------------|---------------------------------------|
+| Plain text   | Shows text content (scrolled if long) |
+| Image        | Shows `[Image]` (metadata only)       |
+| Files        | Shows `filename.ext (+N more)`        |
+| HTML         | Shows `[HTML]`                        |
+| Empty        | Shows `[Empty]`                       |
+| Unknown      | Shows `[Unknown]`                     |
+
+#### Format Tokens
+
+Use these tokens in `text.format`:
+
+| Token       | Description                           | Example                    |
+|-------------|---------------------------------------|----------------------------|
+| `{content}` | Clipboard content or type description | "Hello World" or "[Image]" |
+| `{type}`    | Content type label                    | "Text", "Image", "Files"   |
+| `{length}`  | Content length (chars for text)       | "42"                       |
+| `{preview}` | First 20 characters of text           | "Hello Wor..."             |
+
+**Examples:**
+- `"{content}"` - Just the content (default)
+- `"{type}: {content}"` - "Text: Hello World"
+- `"{type} ({length})"` - "Text (42)"
+
+#### Auto-Show Mode
+
+Use `auto_hide` to create a notification-style widget that appears when clipboard changes:
+
+```json
+{
+  "auto_hide": {
+    "enabled": true,
+    "timeout": 3.0
+  }
+}
+```
+
+The widget:
+1. Starts hidden
+2. Shows when clipboard changes (triggers `auto_hide`)
+3. Hides after `timeout` seconds
+4. Shows again on next clipboard change
+
+#### Clipboard Configuration
+
+| Property                     | Type | Default | Description                          |
+|------------------------------|------|---------|--------------------------------------|
+| `clipboard.max_length`       | int  | 100     | Max characters to display            |
+| `clipboard.show_type`        | bool | true    | Show content type prefix             |
+| `clipboard.scroll_long_text` | bool | true    | Enable horizontal scroll             |
+| `clipboard.poll_interval_ms` | int  | 500     | Clipboard check interval             |
+| `clipboard.show_invisible`   | bool | false   | Show invisible characters as symbols |
+
+#### Invisible Characters
+
+When `show_invisible` is enabled, invisible characters are displayed as escape sequences:
+
+| Character | Display | Description         |
+|-----------|---------|---------------------|
+| `\r\n`    | `\n`    | Windows line ending |
+| `\n`      | `\n`    | Unix line ending    |
+| `\r`      | `\r`    | Old Mac line ending |
+| `\t`      | `\t`    | Tab character       |
+
+#### Platform Support
+
+| Platform | Implementation          | Change Detection            |
+|----------|-------------------------|-----------------------------|
+| Windows  | Win32 API               | Sequence number (efficient) |
+| Linux    | wl-paste / xclip / xsel | Content hash comparison     |
+| Other    | Not supported           | -                           |
+
+**Linux requirements:** Install `wl-paste` (Wayland) or `xclip`/`xsel` (X11).
+
+#### Examples
+
+**Simple notification on copy:**
+```json
+{
+  "type": "clipboard",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 20},
+  "auto_hide": {
+    "enabled": true,
+    "timeout": 3.0
+  },
+  "text": {
+    "format": "{content}"
+  }
+}
+```
+
+**Show content type with text:**
+```json
+{
+  "type": "clipboard",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "text": {
+    "format": "{type}: {content}"
+  },
+  "scroll": {
+    "enabled": true,
+    "speed": 30
+  }
+}
+```
+
+**Always visible clipboard monitor:**
+```json
+{
+  "type": "clipboard",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "style": {"border": 255},
+  "text": {
+    "format": "{preview}",
+    "font": "5x7"
+  }
+}
+```
+
+---
+
+### Hacker Code Widget
+
+Displays procedurally generated code being "typed" in real-time, creating an authentic hacking/coding visual effect. The code looks realistic but is generated on-the-fly using templates for C-like code or x86 assembly.
+
+#### Code Styles
+
+| Style   | Description                                                   |
+|---------|---------------------------------------------------------------|
+| `c`     | C-like code with functions, variables, pointers, control flow |
+| `asm`   | x86-style assembly with MOV, XOR, JMP, CALL, etc.             |
+| `mixed` | Alternates between C and assembly blocks                      |
+
+#### Basic Usage
+
+**C-style hacker effect:**
+```json
+{
+  "type": "hacker_code",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "hacker_code": {
+    "style": "c",
+    "typing_speed": 60,
+    "show_cursor": true
+  }
+}
+```
+
+**Assembly code:**
+```json
+{
+  "type": "hacker_code",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "hacker_code": {
+    "style": "asm",
+    "typing_speed": 100,
+    "line_delay": 100
+  }
+}
+```
+
+**Mixed mode:**
+```json
+{
+  "type": "hacker_code",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "hacker_code": {
+    "style": "mixed",
+    "typing_speed": 50
+  }
+}
+```
+
+#### Animation Behavior
+
+The widget simulates a typewriter effect:
+1. Characters appear one at a time at the cursor position
+2. When a line completes, the cursor moves to the next line after a brief delay
+3. When the screen fills, all lines scroll up by one
+4. A new line starts at the bottom
+5. The process repeats infinitely with procedurally generated code
+
+#### Configuration
+
+| Property                      | Type   | Default | Description                                |
+|-------------------------------|--------|---------|--------------------------------------------|
+| `hacker_code.style`           | string | "c"     | Code style: c, asm, mixed                  |
+| `hacker_code.typing_speed`    | int    | 50      | Characters per second (char-by-char)       |
+| `hacker_code.line_delay`      | int    | 200     | Milliseconds pause at end of line          |
+| `hacker_code.show_cursor`     | bool   | true    | Show blinking cursor                       |
+| `hacker_code.cursor_blink_ms` | int    | 500     | Cursor blink interval (ms)                 |
+| `hacker_code.indent_size`     | int    | 2       | Spaces per indent level                    |
+| `text.font`                   | string | (auto)  | Font: "3x5", "5x7", "pixel3x5", "pixel5x7" |
+
+**Font Selection:** Use standard `text.font` setting. If not specified, auto-selects based on display height (3x5 for small displays, 5x7 for larger).
+
+**Scroll Behavior:** Lines scroll up only when the typing cursor needs space beyond the visible area (when the first character is typed on a new line that would be off-screen).
+
+#### Examples
+
+**Fast assembly scrolling (no cursor):**
+```json
+{
+  "type": "hacker_code",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "hacker_code": {
+    "style": "asm",
+    "typing_speed": 150,
+    "line_delay": 50,
+    "show_cursor": false
+  }
+}
+```
+
+**Slow typing with visible cursor:**
+```json
+{
+  "type": "hacker_code",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "hacker_code": {
+    "style": "c",
+    "typing_speed": 30,
+    "cursor_blink_ms": 300
+  }
+}
+```
+
+---
+
+### Screen Mirror Widget
+
+Captures and displays screen content on the OLED. Supports full screen capture, region capture, and window capture. The captured image is scaled to fit the widget and converted to grayscale with optional dithering.
+
+**Platform Support:**
+- **Windows**: Uses GDI BitBlt (works in VMs, RDP, etc.)
+- **Linux**: Uses ffmpeg x11grab (requires `ffmpeg`, window capture requires `xdotool`)
+
+#### Basic Usage
+
+**Full screen capture:**
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "scale_mode": "fit",
+    "fps": 15,
+    "dither_mode": "floyd_steinberg"
+  }
+}
+```
+
+#### Capture Modes
+
+**Region capture** - capture a specific area of the screen:
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "region": {
+      "x": 100,
+      "y": 100,
+      "w": 400,
+      "h": 300
+    },
+    "scale_mode": "crop"
+  }
+}
+```
+
+**Window capture by title** - capture a specific window:
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "window": {
+      "title": "Calculator"
+    },
+    "scale_mode": "fit"
+  }
+}
+```
+
+**Active window capture** - always capture the focused window:
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "window": {
+      "active": true
+    },
+    "scale_mode": "stretch"
+  }
+}
+```
+
+#### Scale Modes
+
+| Mode      | Behavior                                          |
+|-----------|---------------------------------------------------|
+| `fit`     | Preserve aspect ratio, add black bars (letterbox) |
+| `stretch` | Fill entire widget, may distort aspect ratio      |
+| `crop`    | Preserve aspect ratio, crop edges to fill         |
+
+#### Dither Modes
+
+| Mode              | Description                                        |
+|-------------------|----------------------------------------------------|
+| `floyd_steinberg` | Error diffusion dithering (best quality, default)  |
+| `ordered`         | Bayer matrix ordered dithering (faster, patterned) |
+| `none`            | No dithering (simple threshold)                    |
+
+#### Configuration
+
+| Property                    | Type            | Default           | Description                           |
+|-----------------------------|-----------------|-------------------|---------------------------------------|
+| `screen_mirror.display`     | int/string/null | null              | Display selector (see below)          |
+| `screen_mirror.region`      | object          | null              | Capture region {x, y, w, h}           |
+| `screen_mirror.window`      | object          | null              | Window capture {title, class, active} |
+| `screen_mirror.scale_mode`  | string          | "fit"             | Scale mode: fit, stretch, crop        |
+| `screen_mirror.fps`         | int             | 15                | Capture framerate (1-30)              |
+| `screen_mirror.dither_mode` | string          | "floyd_steinberg" | Dithering algorithm                   |
+
+#### Display Selection
+
+The `display` parameter accepts multiple types:
+
+| Value            | Type   | Description                                       |
+|------------------|--------|---------------------------------------------------|
+| `null`           | null   | Primary monitor (default)                         |
+| `0`, `1`, `2`... | int    | Specific monitor by index                         |
+| `-1`             | int    | All monitors combined (virtual screen)            |
+| `"HDMI-1"`       | string | Match monitor by name (partial, case-insensitive) |
+
+**Examples:**
+```json
+"display": null      // Primary monitor
+"display": 0         // First monitor (usually primary)
+"display": 1         // Second monitor
+"display": -1        // All monitors combined
+"display": "HDMI"    // Monitor with "HDMI" in name
+"display": "DP-1"    // Monitor named "DP-1"
+```
+
+#### Window Configuration
+
+| Property        | Type   | Description                          |
+|-----------------|--------|--------------------------------------|
+| `window.title`  | string | Substring to match in window title   |
+| `window.class`  | string | Window class name (Windows-specific) |
+| `window.active` | bool   | Capture currently focused window     |
+
+#### Examples
+
+**Mini screen preview in corner:**
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 88, "y": 0, "w": 40, "h": 40},
+  "screen_mirror": {
+    "fps": 10,
+    "scale_mode": "fit"
+  }
+}
+```
+
+**High FPS for active window:**
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "window": {"active": true},
+    "fps": 30,
+    "dither_mode": "ordered"
+  }
+}
+```
+
+**Second monitor:**
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "display": 1,
+    "scale_mode": "fit"
+  }
+}
+```
+
+**All monitors combined:**
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "display": -1,
+    "scale_mode": "fit"
+  }
+}
+```
+
+**Monitor by name:**
+```json
+{
+  "type": "screen_mirror",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "screen_mirror": {
+    "display": "HDMI",
+    "scale_mode": "fit"
+  }
+}
+```
+
+---
 
 ### Clock Widget
 
