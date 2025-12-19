@@ -11,30 +11,53 @@ import (
 // convertStrftimeToGo converts Python strftime format to Go time format
 // This is a simplified converter for common formats
 func convertStrftimeToGo(strftime string) string {
-	// Map common strftime patterns to Go format
-	replacements := map[string]string{
+	// First check for exact common patterns
+	exactReplacements := map[string]string{
 		"%H:%M:%S": "15:04:05",
 		"%H:%M":    "15:04",
+		"%I:%M:%S": "3:04:05",
+		"%I:%M":    "3:04",
 		"%Y-%m-%d": "2006-01-02",
 		"%d.%m.%Y": "02.01.2006",
-		"%Y":       "2006",
-		"%m":       "01",
-		"%d":       "02",
-		"%H":       "15",
-		"%M":       "04",
-		"%S":       "05",
+	}
+
+	if goFmt, ok := exactReplacements[strftime]; ok {
+		return goFmt
+	}
+
+	// Token-by-token replacement for custom formats
+	// Order matters: longer tokens first to avoid partial matches
+	tokenReplacements := []struct {
+		token string
+		goFmt string
+	}{
+		{"%Y", "2006"}, // 4-digit year
+		{"%m", "01"},   // 2-digit month
+		{"%d", "02"},   // 2-digit day
+		{"%H", "15"},   // 24-hour hour
+		{"%I", "3"},    // 12-hour hour (no leading zero)
+		{"%M", "04"},   // minute
+		{"%S", "05"},   // second
+		{"%p", "PM"},   // AM/PM indicator
 	}
 
 	result := strftime
-	for old, goFmt := range replacements {
-		if result == old {
-			return goFmt
-		}
+	for _, r := range tokenReplacements {
+		result = strings.ReplaceAll(result, r.token, r.goFmt)
 	}
 
-	// If no exact match found, try common patterns
-	// For more complex formats, users should use Go format directly
 	return result
+}
+
+// convert24to12 converts 24-hour time to 12-hour format
+// Returns 12-hour value (1-12) and isPM boolean
+func convert24to12(hour int) (int, bool) {
+	isPM := hour >= 12
+	hour12 := hour % 12
+	if hour12 == 0 {
+		hour12 = 12
+	}
+	return hour12, isPM
 }
 
 // binaryTimeComponents holds parsed time components for binary display
@@ -155,6 +178,8 @@ var smallCharPatterns = map[string][]uint8{
 	"H": {0b101, 0b101, 0b111, 0b101, 0b101},
 	"M": {0b101, 0b111, 0b111, 0b101, 0b101},
 	"S": {0b111, 0b100, 0b111, 0b001, 0b111},
+	"A": {0b010, 0b101, 0b111, 0b101, 0b101},
+	"P": {0b110, 0b101, 0b110, 0b100, 0b100},
 }
 
 // Small digit patterns for binary clock hints (3x5 font)

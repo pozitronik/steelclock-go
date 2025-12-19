@@ -31,7 +31,9 @@
         "align": {
           "h": "center",
           "v": "center"
-        }
+        },
+        "use_12h": false,
+        "show_ampm": true
       },
       "analog": {
         "show_seconds": true,
@@ -54,7 +56,9 @@
         "on_color": 255,
         "off_color": 0,
         "show_labels": true,
-        "show_hint": false
+        "show_hint": false,
+        "use_12h": false,
+        "show_ampm": true
       },
       "segment": {
         "format": "%H:%M",
@@ -69,7 +73,10 @@
         "flip": {
           "style": "fade",
           "speed": 0.15
-        }
+        },
+        "use_12h": false,
+        "show_ampm": true,
+        "ampm_style": "dot"
       },
       "update_interval": 0.1
     }

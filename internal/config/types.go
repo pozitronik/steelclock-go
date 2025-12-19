@@ -319,6 +319,8 @@ type TextConfig struct {
 	Align    *AlignConfig `json:"align,omitempty"`
 	Unit     string       `json:"unit,omitempty"`
 	ShowUnit *bool        `json:"show_unit,omitempty"` // Show unit suffix in text mode (disk widget)
+	Use12h   bool         `json:"use_12h,omitempty"`   // Use 12-hour format instead of 24-hour (clock widget)
+	ShowAmPm bool         `json:"show_ampm,omitempty"` // Show AM/PM text when use_12h is true (clock widget)
 }
 
 // AlignConfig represents text alignment
@@ -456,6 +458,10 @@ type BinaryClockConfig struct {
 	OnColor *int `json:"on_color,omitempty"`
 	// OffColor: color for "off" bits, 0 = invisible (default: 40)
 	OffColor *int `json:"off_color,omitempty"`
+	// Use12h: use 12-hour format instead of 24-hour (default: false)
+	Use12h bool `json:"use_12h,omitempty"`
+	// ShowAmPm: show AM/PM indicator bit (0=AM, 1=PM) when use_12h is true (default: false)
+	ShowAmPm bool `json:"show_ampm,omitempty"`
 }
 
 // SegmentClockConfig represents seven-segment clock mode settings
@@ -480,6 +486,12 @@ type SegmentClockConfig struct {
 	OffColor *int `json:"off_color,omitempty"`
 	// Flip: flip animation settings
 	Flip *FlipEffectConfig `json:"flip,omitempty"`
+	// Use12h: use 12-hour format instead of 24-hour (default: false)
+	Use12h bool `json:"use_12h,omitempty"`
+	// ShowAmPm: show AM/PM indicator when use_12h is true (default: false)
+	ShowAmPm bool `json:"show_ampm,omitempty"`
+	// AmPmStyle: AM/PM indicator style - "dot" or "text" (default: "dot")
+	AmPmStyle string `json:"ampm_style,omitempty"`
 }
 
 // FlipEffectConfig represents digit flip animation settings
