@@ -769,16 +769,30 @@ The `display` parameter accepts multiple types:
   "text": {
     "format": "%H:%M:%S",
     "size": 16,
-    "align": {"h": "center", "v": "center"}
+    "align": {"h": "center", "v": "center"},
+    "use_12h": false,
+    "show_ampm": false
   },
   "update_interval": 1.0
 }
 ```
 
+| Property    | Options    | Default    | Description                              |
+|-------------|------------|------------|------------------------------------------|
+| `format`    | strftime   | `%H:%M:%S` | Time format string                       |
+| `use_12h`   | true/false | false      | Convert 24-hour to 12-hour format        |
+| `show_ampm` | true/false | false      | Append "AM"/"PM" text (requires use_12h) |
+
 **Format Examples:**
 - `"%H:%M:%S"` - 15:43:27 (24-hour)
-- `"%I:%M %p"` - 03:43 PM (12-hour)
+- `"%I:%M:%S"` - 3:43:27 (12-hour, via format)
+- `"%I:%M %p"` - 3:43 PM (12-hour with AM/PM via format)
 - `"%Y-%m-%d"` - 2025-11-25
+
+**12-Hour Mode:**
+There are two ways to use 12-hour format in text mode:
+1. **Via format string:** Use `%I` for 12-hour hours and `%p` for AM/PM indicator
+2. **Via use_12h option:** Set `use_12h: true` to automatically convert `%H` to 12-hour format, and `show_ampm: true` to append "AM"/"PM"
 
 #### Analog Mode
 
@@ -832,23 +846,27 @@ Vertical layout:           Horizontal layout:
     "on_color": 255,
     "off_color": 40,
     "show_labels": true,
-    "show_hint": true
+    "show_hint": true,
+    "use_12h": false,
+    "show_ampm": false
   }
 }
 ```
 
-| Property      | Options                  | Default    | Description                           |
-|---------------|--------------------------|------------|---------------------------------------|
-| `format`      | strftime                 | `%H:%M:%S` | Which components to show (%H, %M, %S) |
-| `style`       | `bcd`, `true`            | `bcd`      | Binary representation style           |
-| `layout`      | `vertical`, `horizontal` | `vertical` | Bit layout orientation                |
-| `dot_size`    | 1+                       | 4          | Dot diameter in pixels                |
-| `dot_spacing` | 0+                       | 2          | Gap between dots in pixels            |
-| `dot_style`   | `circle`, `square`       | `circle`   | Dot shape                             |
-| `on_color`    | 0-255                    | 255        | Color for "on" bits (1)               |
-| `off_color`   | 0-255                    | 40         | Color for "off" bits (0 = invisible)  |
-| `show_labels` | true/false               | false      | Show H/M/S labels                     |
-| `show_hint`   | true/false               | false      | Show decimal values alongside binary  |
+| Property      | Options                  | Default    | Description                               |
+|---------------|--------------------------|------------|-------------------------------------------|
+| `format`      | strftime                 | `%H:%M:%S` | Which components to show (%H, %M, %S)     |
+| `style`       | `bcd`, `true`            | `bcd`      | Binary representation style               |
+| `layout`      | `vertical`, `horizontal` | `vertical` | Bit layout orientation                    |
+| `dot_size`    | 1+                       | 4          | Dot diameter in pixels                    |
+| `dot_spacing` | 0+                       | 2          | Gap between dots in pixels                |
+| `dot_style`   | `circle`, `square`       | `circle`   | Dot shape                                 |
+| `on_color`    | 0-255                    | 255        | Color for "on" bits (1)                   |
+| `off_color`   | 0-255                    | 40         | Color for "off" bits (0 = invisible)      |
+| `show_labels` | true/false               | false      | Show H/M/S labels                         |
+| `show_hint`   | true/false               | false      | Show decimal values alongside binary      |
+| `use_12h`     | true/false               | false      | Use 12-hour format (1-12 instead of 0-23) |
+| `show_ampm`   | true/false               | false      | Show AM/PM indicator bit (on=PM, off=AM)  |
 
 #### Segment Mode
 
@@ -877,6 +895,9 @@ Displays time using a seven-segment display style, like digital alarm clocks.
     "colon_blink": true,
     "on_color": 255,
     "off_color": 30,
+    "use_12h": false,
+    "show_ampm": false,
+    "ampm_style": "dot",
     "flip": {
       "style": "fade",
       "speed": 0.15
@@ -885,26 +906,34 @@ Displays time using a seven-segment display style, like digital alarm clocks.
 }
 ```
 
-| Property            | Options                           | Default     | Description                          |
-|---------------------|-----------------------------------|-------------|--------------------------------------|
-| `format`            | see below                         | `%H:%M:%S`  | Time format with optional literals   |
-| `digit_height`      | 0+                                | 0           | Digit height (0 = auto-fit)          |
-| `segment_thickness` | 1+                                | 2           | Segment line thickness               |
-| `segment_style`     | `rectangle`, `hexagon`, `rounded` | `rectangle` | Segment shape style                  |
-| `digit_spacing`     | 0+                                | 2           | Space between digits                 |
-| `colon_style`       | `dots`, `bar`, `none`             | `dots`      | Colon separator style                |
-| `colon_blink`       | true/false                        | true        | Blink colons each second             |
-| `on_color`          | 0-255                             | 255         | Active segment color                 |
-| `off_color`         | 0-255                             | 30          | Inactive segment color (0=invisible) |
+| Property            | Options                           | Default     | Description                            |
+|---------------------|-----------------------------------|-------------|----------------------------------------|
+| `format`            | see below                         | `%H:%M:%S`  | Time format with optional literals     |
+| `digit_height`      | 0+                                | 0           | Digit height (0 = auto-fit)            |
+| `segment_thickness` | 1+                                | 2           | Segment line thickness                 |
+| `segment_style`     | `rectangle`, `hexagon`, `rounded` | `rectangle` | Segment shape style                    |
+| `digit_spacing`     | 0+                                | 2           | Space between digits                   |
+| `colon_style`       | `dots`, `bar`, `none`             | `dots`      | Colon separator style                  |
+| `colon_blink`       | true/false                        | true        | Blink colons each second               |
+| `on_color`          | 0-255                             | 255         | Active segment color                   |
+| `off_color`         | 0-255                             | 30          | Inactive segment color (0=invisible)   |
+| `use_12h`           | true/false                        | false       | Use 12-hour format (1-12)              |
+| `show_ampm`         | true/false                        | false       | Show AM/PM indicator                   |
+| `ampm_style`        | `dot`, `text`                     | `dot`       | AM/PM indicator style (requires above) |
 
 **Segment Styles:**
 - `rectangle` - Simple rectangular bars (default)
 - `hexagon` - Classic LCD style with angled/pointed ends
 - `rounded` - Segments with rounded/semicircular ends
 
+**AM/PM Indicator Styles** (when `use_12h` and `show_ampm` are enabled):
+- `dot` - Small dot indicator (filled circle = PM, outline = AM)
+- `text` - Small "AM" or "PM" text displayed next to the time
+
 **Format String:**
 Supports time specifiers and literal digits:
-- `%H` - Hours (00-23)
+- `%H` - Hours (00-23, or 01-12 if use_12h enabled)
+- `%I` - Hours in 12-hour format (1-12)
 - `%M` - Minutes (00-59)
 - `%S` - Seconds (00-59)
 - `0-9` - Literal digits (for testing)

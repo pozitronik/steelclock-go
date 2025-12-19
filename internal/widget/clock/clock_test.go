@@ -670,3 +670,194 @@ func TestWidget_ConcurrentAccess(t *testing.T) {
 func intPtr(i int) *int {
 	return &i
 }
+
+func TestConvert24to12(t *testing.T) {
+	tests := []struct {
+		hour24   int
+		wantHour int
+		wantIsPM bool
+	}{
+		{0, 12, false},  // midnight
+		{1, 1, false},   // 1 AM
+		{11, 11, false}, // 11 AM
+		{12, 12, true},  // noon
+		{13, 1, true},   // 1 PM
+		{23, 11, true},  // 11 PM
+		{6, 6, false},   // 6 AM
+		{18, 6, true},   // 6 PM
+	}
+
+	for _, tt := range tests {
+		t.Run("hour_"+string(rune('0'+tt.hour24/10))+string(rune('0'+tt.hour24%10)), func(t *testing.T) {
+			gotHour, gotIsPM := convert24to12(tt.hour24)
+			if gotHour != tt.wantHour || gotIsPM != tt.wantIsPM {
+				t.Errorf("convert24to12(%d) = (%d, %v), want (%d, %v)",
+					tt.hour24, gotHour, gotIsPM, tt.wantHour, tt.wantIsPM)
+			}
+		})
+	}
+}
+
+func TestWidget_12HourMode(t *testing.T) {
+	tests := []struct {
+		name     string
+		mode     string
+		use12h   bool
+		showAmPm bool
+	}{
+		{"text 24h", "text", false, false},
+		{"text 12h no ampm", "text", true, false},
+		{"text 12h with ampm", "text", true, true},
+		{"segment 24h", "segment", false, false},
+		{"segment 12h no ampm", "segment", true, false},
+		{"segment 12h with ampm dot", "segment", true, true},
+		{"binary 24h", "binary", false, false},
+		{"binary 12h no ampm", "binary", true, false},
+		{"binary 12h with ampm", "binary", true, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := config.WidgetConfig{
+				Type:    "clock",
+				ID:      "test_12h_clock",
+				Enabled: config.BoolPtr(true),
+				Position: config.PositionConfig{
+					X: 0, Y: 0, W: 128, H: 40,
+				},
+				Style: &config.StyleConfig{
+					Background: 0,
+					Border:     -1,
+				},
+				Mode: tt.mode,
+			}
+
+			// Set mode-specific config
+			switch tt.mode {
+			case "text":
+				cfg.Text = &config.TextConfig{
+					Format:   "15:04:05",
+					Size:     12,
+					Use12h:   tt.use12h,
+					ShowAmPm: tt.showAmPm,
+				}
+			case "segment":
+				cfg.Segment = &config.SegmentClockConfig{
+					Format:   "%H:%M",
+					Use12h:   tt.use12h,
+					ShowAmPm: tt.showAmPm,
+				}
+			case "binary":
+				cfg.Binary = &config.BinaryClockConfig{
+					Format:   "%H:%M:%S",
+					Use12h:   tt.use12h,
+					ShowAmPm: tt.showAmPm,
+				}
+			}
+
+			widget, err := New(cfg)
+			if err != nil {
+				t.Fatalf("New() error = %v", err)
+			}
+
+			// Render should succeed
+			img, err := widget.Render()
+			if err != nil {
+				t.Fatalf("Render() error = %v", err)
+			}
+
+			if img == nil {
+				t.Fatal("Render() returned nil image")
+			}
+
+			bounds := img.Bounds()
+			if bounds.Dx() != 128 || bounds.Dy() != 40 {
+				t.Errorf("image size = %dx%d, want 128x40", bounds.Dx(), bounds.Dy())
+			}
+		})
+	}
+}
+
+func TestWidget_SegmentAmPmStyles(t *testing.T) {
+	tests := []struct {
+		name      string
+		ampmStyle string
+	}{
+		{"dot style", "dot"},
+		{"text style", "text"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := config.WidgetConfig{
+				Type:    "clock",
+				ID:      "test_segment_ampm_style",
+				Enabled: config.BoolPtr(true),
+				Position: config.PositionConfig{
+					X: 0, Y: 0, W: 128, H: 40,
+				},
+				Style: &config.StyleConfig{
+					Background: 0,
+					Border:     -1,
+				},
+				Mode: "segment",
+				Segment: &config.SegmentClockConfig{
+					Format:    "%H:%M",
+					Use12h:    true,
+					ShowAmPm:  true,
+					AmPmStyle: tt.ampmStyle,
+				},
+			}
+
+			widget, err := New(cfg)
+			if err != nil {
+				t.Fatalf("New() error = %v", err)
+			}
+
+			img, err := widget.Render()
+			if err != nil {
+				t.Fatalf("Render() error = %v", err)
+			}
+
+			if img == nil {
+				t.Fatal("Render() returned nil image")
+			}
+		})
+	}
+}
+
+func TestConvertStrftimeToGo(t *testing.T) {
+	tests := []struct {
+		strftime string
+		want     string
+	}{
+		// Exact matches
+		{"%H:%M:%S", "15:04:05"},
+		{"%H:%M", "15:04"},
+		{"%I:%M:%S", "3:04:05"},
+		{"%I:%M", "3:04"},
+		{"%Y-%m-%d", "2006-01-02"},
+		{"%d.%m.%Y", "02.01.2006"},
+		// Token replacements
+		{"%H", "15"},
+		{"%I", "3"},
+		{"%M", "04"},
+		{"%S", "05"},
+		{"%p", "PM"},
+		// Mixed formats
+		{"%I:%M %p", "3:04 PM"},
+		{"%H:%M:%S on %Y-%m-%d", "15:04:05 on 2006-01-02"},
+		// Go format passthrough
+		{"15:04:05", "15:04:05"},
+		{"3:04 PM", "3:04 PM"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.strftime, func(t *testing.T) {
+			got := convertStrftimeToGo(tt.strftime)
+			if got != tt.want {
+				t.Errorf("convertStrftimeToGo(%q) = %q, want %q", tt.strftime, got, tt.want)
+			}
+		})
+	}
+}

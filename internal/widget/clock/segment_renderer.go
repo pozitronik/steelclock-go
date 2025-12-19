@@ -2,6 +2,7 @@ package clock
 
 import (
 	"image"
+	"image/color"
 	"sync"
 	"time"
 
@@ -33,6 +34,12 @@ func (r *SegmentRenderer) Render(img *image.Gray, t time.Time, x, y, w, h int) e
 	hour := t.Hour()
 	minute := t.Minute()
 	second := t.Second()
+
+	// Convert to 12-hour format if enabled
+	isPM := false
+	if r.config.Use12h {
+		hour, isPM = convert24to12(hour)
+	}
 
 	// Parse format to get digit sources and colon positions
 	sources, colonPositions := parseSegmentFormatAdvanced(r.config.Format)
@@ -149,6 +156,11 @@ func (r *SegmentRenderer) Render(img *image.Gray, t time.Time, x, y, w, h int) e
 		}
 	}
 
+	// Draw AM/PM indicator if enabled
+	if r.config.Use12h && r.config.ShowAmPm {
+		r.drawAmPmIndicator(img, xPos, startY, digitH, isPM)
+	}
+
 	return nil
 }
 
@@ -197,4 +209,34 @@ func (r *SegmentRenderer) drawColon(img *image.Gray, x, y, width, height int, t 
 	}
 
 	bitmap.DrawSegmentColon(img, x, y, width, height, style, r.config.SegmentThickness, uint8(r.config.OnColor), visible)
+}
+
+// drawAmPmIndicator draws the AM/PM indicator
+func (r *SegmentRenderer) drawAmPmIndicator(img *image.Gray, x, y, height int, isPM bool) {
+	c := color.Gray{Y: uint8(r.config.OnColor)}
+
+	switch r.config.AmPmStyle {
+	case ampmStyleText:
+		// Draw small "AM" or "PM" text using the small character patterns
+		text := "AM"
+		if isPM {
+			text = "PM"
+		}
+		// Position text to the right, vertically centered
+		textY := y + (height-5)/2 // 5 is the height of small font
+		drawSmallChar(img, string(text[0]), x+2, textY, c)
+		drawSmallChar(img, string(text[1]), x+6, textY, c) // 3 chars + 1 spacing
+	default: // "dot" style
+		// Draw a small dot indicator
+		// Filled = PM, outline = AM
+		dotSize := r.config.SegmentThickness + 2
+		dotX := x + dotSize/2 + 2
+		dotY := y + height - dotSize/2 - 2
+
+		if isPM {
+			bitmap.DrawFilledCircle(img, dotX, dotY, dotSize/2, c)
+		} else {
+			bitmap.DrawCircle(img, dotX, dotY, dotSize/2, c)
+		}
+	}
 }

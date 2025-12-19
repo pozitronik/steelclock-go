@@ -41,6 +41,12 @@ const (
 	colonStyleNone = "none"
 )
 
+// AM/PM indicator styles for segment clock
+const (
+	ampmStyleDot  = "dot"
+	ampmStyleText = "text"
+)
+
 // Flip animation styles
 const (
 	flipStyleNone = "none"
@@ -54,6 +60,8 @@ type TextConfig struct {
 	VertAlign  config.VAlign
 	Padding    int
 	Format     string // Go time format string (e.g., "15:04:05")
+	Use12h     bool   // Use 12-hour format
+	ShowAmPm   bool   // Show AM/PM text when Use12h is true
 }
 
 // AnalogConfig holds configuration for analog clock rendering
@@ -81,6 +89,8 @@ type BinaryConfig struct {
 	DotStyle   string // "circle" or "square"
 	OnColor    int    // 0-255
 	OffColor   int    // 0-255
+	Use12h     bool   // Use 12-hour format
+	ShowAmPm   bool   // Show AM/PM indicator bit (1=PM, 0=AM)
 }
 
 // SegmentConfig holds configuration for 7-segment clock rendering
@@ -96,6 +106,9 @@ type SegmentConfig struct {
 	OffColor         int // 0-255
 	FlipStyle        string
 	FlipSpeed        float64
+	Use12h           bool   // Use 12-hour format
+	ShowAmPm         bool   // Show AM/PM indicator
+	AmPmStyle        string // "dot" or "text"
 }
 
 // NewBinaryConfig creates a BinaryConfig with default values
@@ -111,6 +124,8 @@ func NewBinaryConfig() BinaryConfig {
 		DotStyle:   dotStyleCircle,
 		OnColor:    255,
 		OffColor:   40,
+		Use12h:     false,
+		ShowAmPm:   false,
 	}
 }
 
@@ -128,5 +143,8 @@ func NewSegmentConfig() SegmentConfig {
 		OffColor:         30,
 		FlipStyle:        flipStyleNone,
 		FlipSpeed:        0.15,
+		Use12h:           false,
+		ShowAmPm:         false,
+		AmPmStyle:        ampmStyleDot,
 	}
 }

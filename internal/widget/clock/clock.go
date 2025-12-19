@@ -78,6 +78,8 @@ func createTextRenderer(cfg config.WidgetConfig, helper *shared.ConfigHelper) (*
 	format := "15:04:05" // Default Go time format (HH:MM:SS)
 	fontSize := 12
 	fontName := textSettings.FontName
+	use12h := false
+	showAmPm := false
 	if cfg.Text != nil {
 		if cfg.Text.Format != "" {
 			format = convertStrftimeToGo(cfg.Text.Format)
@@ -85,6 +87,8 @@ func createTextRenderer(cfg config.WidgetConfig, helper *shared.ConfigHelper) (*
 		if cfg.Text.Size > 0 {
 			fontSize = cfg.Text.Size
 		}
+		use12h = cfg.Text.Use12h
+		showAmPm = cfg.Text.ShowAmPm
 	}
 
 	// Load font for text mode
@@ -100,6 +104,8 @@ func createTextRenderer(cfg config.WidgetConfig, helper *shared.ConfigHelper) (*
 		VertAlign:  textSettings.VertAlign,
 		Padding:    padding,
 		Format:     format,
+		Use12h:     use12h,
+		ShowAmPm:   showAmPm,
 	}), nil
 }
 
@@ -181,6 +187,8 @@ func createBinaryRenderer(cfg config.WidgetConfig) *BinaryRenderer {
 		if cfg.Binary.OffColor != nil {
 			binaryConfig.OffColor = *cfg.Binary.OffColor
 		}
+		binaryConfig.Use12h = cfg.Binary.Use12h
+		binaryConfig.ShowAmPm = cfg.Binary.ShowAmPm
 	}
 
 	return NewBinaryRenderer(binaryConfig)
@@ -226,6 +234,11 @@ func createSegmentRenderer(cfg config.WidgetConfig) *SegmentRenderer {
 			if cfg.Segment.Flip.Speed > 0 {
 				segmentConfig.FlipSpeed = cfg.Segment.Flip.Speed
 			}
+		}
+		segmentConfig.Use12h = cfg.Segment.Use12h
+		segmentConfig.ShowAmPm = cfg.Segment.ShowAmPm
+		if cfg.Segment.AmPmStyle != "" {
+			segmentConfig.AmPmStyle = cfg.Segment.AmPmStyle
 		}
 	}
 

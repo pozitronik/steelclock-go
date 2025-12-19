@@ -783,7 +783,25 @@
           "then": {
             "properties": {
               "text": {
-                "$ref": "#/definitions/textObject"
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/textObject"
+                  },
+                  {
+                    "properties": {
+                      "use_12h": {
+                        "type": "boolean",
+                        "description": "Use 12-hour format instead of 24-hour",
+                        "default": false
+                      },
+                      "show_ampm": {
+                        "type": "boolean",
+                        "description": "Show AM/PM text when use_12h is true",
+                        "default": false
+                      }
+                    }
+                  }
+                ]
               },
               "mode": {
                 "type": "string",
@@ -924,6 +942,16 @@
                     "minimum": -1,
                     "maximum": 255,
                     "default": 40
+                  },
+                  "use_12h": {
+                    "type": "boolean",
+                    "description": "Use 12-hour format instead of 24-hour",
+                    "default": false
+                  },
+                  "show_ampm": {
+                    "type": "boolean",
+                    "description": "Show AM/PM indicator bit (0=AM, 1=PM) when use_12h is true",
+                    "default": false
                   }
                 }
               },
@@ -1014,6 +1042,25 @@
                         "default": 0.15
                       }
                     }
+                  },
+                  "use_12h": {
+                    "type": "boolean",
+                    "description": "Use 12-hour format instead of 24-hour",
+                    "default": false
+                  },
+                  "show_ampm": {
+                    "type": "boolean",
+                    "description": "Show AM/PM indicator when use_12h is true",
+                    "default": false
+                  },
+                  "ampm_style": {
+                    "type": "string",
+                    "description": "AM/PM indicator style",
+                    "enum": [
+                      "dot",
+                      "text"
+                    ],
+                    "default": "dot"
                   }
                 }
               }
