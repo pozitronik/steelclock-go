@@ -285,6 +285,9 @@ type WidgetConfig struct {
 
 	// Telegram counter widget specific
 	Badge *TelegramBadgeConfig `json:"badge,omitempty"` // Badge mode settings (for telegram_counter)
+
+	// Claude Code status widget
+	ClaudeCode *ClaudeCodeConfig `json:"claude_code,omitempty"` // Claude Code status widget settings
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -1096,4 +1099,24 @@ type TelegramElementConfig struct {
 	Scroll *ScrollConfig `json:"scroll,omitempty"`
 	// WordBreak: how to break lines - "normal" (break on spaces) or "break-all" (break anywhere)
 	WordBreak string `json:"word_break,omitempty"`
+}
+
+// ClaudeCodeConfig contains settings for the Claude Code status widget.
+// This widget displays Claude Code's current activity with the Clawd mascot.
+//
+// Status is received via HTTP POST to /api/claude-status endpoint.
+// Configure Claude Code hooks to POST status updates to SteelClock's web server.
+type ClaudeCodeConfig struct {
+	// DisplayMode: widget display mode - "full", "compact", "minimal" (default: "full")
+	DisplayMode string `json:"display_mode,omitempty"`
+	// ShowStats: show session statistics like tool count and tokens (default: true)
+	ShowStats *bool `json:"show_stats,omitempty"`
+	// ShowToolIcon: show icon for current tool being used (default: true)
+	ShowToolIcon *bool `json:"show_tool_icon,omitempty"`
+	// IntroOnStart: play intro animation when widget starts (default: true)
+	IntroOnStart *bool `json:"intro_on_start,omitempty"`
+	// IntroDuration: intro animation duration in seconds (default: 3)
+	IntroDuration int `json:"intro_duration,omitempty"`
+	// IdleAnimations: enable idle animations like blinking (default: true)
+	IdleAnimations *bool `json:"idle_animations,omitempty"`
 }

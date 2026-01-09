@@ -1,0 +1,46 @@
+{
+  "$schema": "schema/config.schema.json",
+  "config_name": "Claude Code Status",
+  "refresh_rate_ms": 100,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "claude_code",
+      "id": "clawd",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40,
+        "z": 0
+      },
+      "style": {
+        "background": 0,
+        "border": -1,
+        "padding": 0
+      },
+      "text": {
+        "font": "5x7",
+        "size": 5,
+        "align": {
+          "h": "left",
+          "v": "top"
+        }
+      },
+      "claude_code": {
+        "display_mode": "full",
+        "show_stats": true,
+        "show_tool_icon": true,
+        "intro_on_start": true,
+        "intro_duration": 113,
+        "idle_animations": true
+      },
+      "update_interval": 0.1
+    }
+  ]
+}
