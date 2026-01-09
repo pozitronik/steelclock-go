@@ -13,6 +13,8 @@ import (
 	"image"
 	"image/color"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -22,6 +24,7 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/shared/render"
 	"github.com/pozitronik/steelclock-go/internal/webeditor"
 	"github.com/pozitronik/steelclock-go/internal/widget"
+	"golang.org/x/image/font"
 )
 
 func init() {
@@ -65,6 +68,9 @@ type Config struct {
 	IntroOnStart   bool   `json:"intro_on_start"`  // Play intro animation on widget start
 	IntroDurationS int    `json:"intro_duration"`  // Intro duration in seconds
 	IdleAnimations bool   `json:"idle_animations"` // Enable idle animations (blinking, etc.)
+	IntroTitle     string `json:"intro_title"`     // Title shown during intro (default: "Claude Code")
+	IntroSubtitle  string `json:"intro_subtitle"`  // Subtitle shown during intro (default: "Opus 4.5")
+	IntroPath      string `json:"intro_path"`      // Path shown during intro (default: auto-detect)
 }
 
 // Widget displays Claude Code status with the Clawd mascot
@@ -72,6 +78,8 @@ type Widget struct {
 	*widget.BaseWidget
 	cfg          Config
 	textRenderer *render.HorizontalTextRenderer
+	fontFace     font.Face
+	fontName     string
 
 	// Status
 	status     StatusData
@@ -120,6 +128,8 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		BaseWidget:     base,
 		cfg:            widgetCfg,
 		textRenderer:   textRenderer,
+		fontFace:       fontFace,
+		fontName:       textSettings.FontName,
 		status:         StatusData{State: StateNotRunning},
 		blinkCountdown: 50 + rand.Intn(100), // Random blink timing
 		rng:            rand.New(rand.NewSource(time.Now().UnixNano())),
@@ -143,6 +153,9 @@ func parseConfig(cfg config.WidgetConfig) Config {
 		IntroOnStart:   true,
 		IntroDurationS: 3,
 		IdleAnimations: true,
+		IntroTitle:     "Claude Code",
+		IntroSubtitle:  "Opus 4.5",
+		IntroPath:      "", // Empty means auto-detect
 	}
 
 	if cfg.ClaudeCode != nil {
@@ -163,6 +176,15 @@ func parseConfig(cfg config.WidgetConfig) Config {
 		}
 		if cfg.ClaudeCode.IdleAnimations != nil {
 			c.IdleAnimations = *cfg.ClaudeCode.IdleAnimations
+		}
+		if cfg.ClaudeCode.IntroTitle != "" {
+			c.IntroTitle = cfg.ClaudeCode.IntroTitle
+		}
+		if cfg.ClaudeCode.IntroSubtitle != "" {
+			c.IntroSubtitle = cfg.ClaudeCode.IntroSubtitle
+		}
+		if cfg.ClaudeCode.IntroPath != "" {
+			c.IntroPath = cfg.ClaudeCode.IntroPath
 		}
 	}
 
@@ -269,7 +291,7 @@ func (w *Widget) updateIdleAnimation(dt time.Duration) {
 	}
 }
 
-// renderIntro renders the intro animation with large Clawd
+// renderIntro renders the intro animation with Clawd and startup text
 func (w *Widget) renderIntro(img *image.Gray) {
 	pos := w.GetPosition()
 	elapsed := time.Since(w.introStartTime)
@@ -295,11 +317,81 @@ func (w *Widget) renderIntro(img *image.Gray) {
 		sprite = &ClawdLarge
 	}
 
-	// Center the sprite
-	x := (pos.W - sprite.Width) / 2
-	y := (pos.H - sprite.Height) / 2
+	// Position Clawd on the left, vertically centered
+	clawdX := 2
+	clawdY := (pos.H - sprite.Height) / 2
 
-	drawSprite(img, sprite, x, y)
+	drawSprite(img, sprite, clawdX, clawdY)
+
+	// Draw intro text on the right side
+	textX := clawdX + sprite.Width + 4
+
+	// Use fixed line height (matches 5x7 font with spacing)
+	lineHeight := 10
+
+	// Calculate text vertical start position (centered)
+	totalTextHeight := lineHeight * 3
+	textY := (pos.H - totalTextHeight) / 2
+
+	// Use full image bounds for clipping
+	bounds := img.Bounds()
+	clipW, clipH := bounds.Dx(), bounds.Dy()
+
+	// Line 1: Title (e.g., "Claude Code")
+	bitmap.SmartDrawTextAtPosition(img, w.cfg.IntroTitle, w.fontFace, w.fontName, textX, textY, 0, 0, clipW, clipH)
+
+	// Line 2: Subtitle (e.g., "Opus 4.5")
+	bitmap.SmartDrawTextAtPosition(img, w.cfg.IntroSubtitle, w.fontFace, w.fontName, textX, textY+lineHeight, 0, 0, clipW, clipH)
+
+	// Line 3: Path (pre-computed or configured)
+	pathText := w.getIntroPath()
+	if pathText != "" {
+		bitmap.SmartDrawTextAtPosition(img, pathText, w.fontFace, w.fontName, textX, textY+lineHeight*2, 0, 0, clipW, clipH)
+	}
+}
+
+// getIntroPath returns the path to display during intro
+func (w *Widget) getIntroPath() string {
+	if w.cfg.IntroPath != "" {
+		return w.cfg.IntroPath
+	}
+
+	// Auto-detect working directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+
+	// Try home-relative path first
+	if home, err := os.UserHomeDir(); err == nil {
+		if rel, err := filepath.Rel(home, cwd); err == nil && len(rel) > 0 && rel[0] != '.' {
+			return "~/" + rel
+		}
+	}
+
+	// If path is too long, take just the last component
+	if len(cwd) > 20 {
+		return filepath.Base(cwd)
+	}
+
+	return cwd
+}
+
+// shortenPath shortens a path to fit within maxWidth pixels
+func shortenPath(path string, maxWidth int) string {
+	// Try home-relative path first
+	if home, err := os.UserHomeDir(); err == nil {
+		if rel, err := filepath.Rel(home, path); err == nil && !filepath.IsAbs(rel) {
+			path = "~/" + rel
+		}
+	}
+
+	// If still too long, take just the last component
+	if len(path) > 20 {
+		path = filepath.Base(path)
+	}
+
+	return path
 }
 
 // renderFull renders the full display mode with Clawd, status, and stats
