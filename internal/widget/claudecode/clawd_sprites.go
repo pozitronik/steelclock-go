@@ -19,6 +19,7 @@ package claudecode
 //   ....#.#....#.#.....
 //
 // A wide horizontal blob with two little feet!
+// Clawd has "eyes" (the rounded corner gaps) but no facial expressions.
 
 // ClawdSprite represents a single frame of Clawd animation
 type ClawdSprite struct {
@@ -28,12 +29,12 @@ type ClawdSprite struct {
 }
 
 // ============================================================================
-// LARGE CLAWD (34x20) - 2x scale with aspect ratio correction, used for intro splash
+// LARGE CLAWD (34x20) - 2x scale with aspect ratio correction
 // Terminal characters are ~2:1 (height:width), so we double vertical resolution
 // ============================================================================
 
-// ClawdLargeIdle - Clawd at rest, 2x scale of authentic design
-var ClawdLargeIdle = ClawdSprite{
+// ClawdLarge - Standard Clawd at 2x scale
+var ClawdLarge = ClawdSprite{
 	Width: 34, Height: 20,
 	Data: [][]uint8{
 		//0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
@@ -41,7 +42,7 @@ var ClawdLargeIdle = ClawdSprite{
 		{0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0}, // 1
 		{0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0}, // 2
 		{0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0}, // 3
-		{0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0}, // 4  rounded corners
+		{0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0}, // 4  rounded corners (eyes)
 		{0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0}, // 5
 		{0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0}, // 6
 		{0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0}, // 7
@@ -60,7 +61,7 @@ var ClawdLargeIdle = ClawdSprite{
 	},
 }
 
-// ClawdLargeWave - Clawd doing a little wave/wobble (intro animation)
+// ClawdLargeWave - Clawd doing a little wave/wobble (intro animation frame)
 var ClawdLargeWave = ClawdSprite{
 	Width: 34, Height: 20,
 	Data: [][]uint8{
@@ -87,7 +88,7 @@ var ClawdLargeWave = ClawdSprite{
 	},
 }
 
-// ClawdLargeBounce - Clawd bouncing up (happy animation)
+// ClawdLargeBounce - Clawd bouncing up (intro animation frame)
 var ClawdLargeBounce = ClawdSprite{
 	Width: 34, Height: 20,
 	Data: [][]uint8{
@@ -119,106 +120,21 @@ var ClawdLargeBounce = ClawdSprite{
 // Terminal characters are ~2:1 (height:width), so we double vertical resolution
 // ============================================================================
 
-// ClawdMediumIdle - Standard Clawd at rest (exact authentic design)
-var ClawdMediumIdle = ClawdSprite{
+// ClawdMedium - Standard Clawd (exact authentic design)
+var ClawdMedium = ClawdSprite{
 	Width: 17, Height: 10,
 	Data: [][]uint8{
 		//0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6
 		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 0  top row
 		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 1
-		{0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0}, // 2  rounded corners
-		{0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0}, // 3
+		{0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0}, // 2  rounded corners / "eyes" (symmetric: gaps at 5,11)
+		{0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0}, // 3
 		{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0}, // 4  widest
 		{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0}, // 5
 		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 6  bottom
 		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 7
-		{0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0}, // 8  two feet
-		{0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0}, // 9
-	},
-}
-
-// ClawdMediumThinking - Clawd concentrating (slightly squished)
-var ClawdMediumThinking = ClawdSprite{
-	Width: 17, Height: 10,
-	Data: [][]uint8{
-		{0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // 0  narrower top
-		{0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // 1
-		{0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0}, // 2
-		{0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0}, // 3
-		{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0}, // 4  widest
-		{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0}, // 5
-		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 6
-		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 7
-		{0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0}, // 8  two feet
-		{0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0}, // 9
-	},
-}
-
-// ClawdMediumWorking - Clawd actively working
-var ClawdMediumWorking = ClawdSprite{
-	Width: 17, Height: 10,
-	Data: [][]uint8{
-		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 0
-		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 1
-		{0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0}, // 2
-		{0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0}, // 3
-		{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0}, // 4  widest
-		{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0}, // 5
-		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 6
-		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 7
-		{0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0}, // 8  two feet
-		{0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0}, // 9
-	},
-}
-
-// ClawdMediumHappy - Clawd celebrating (bounced up)
-var ClawdMediumHappy = ClawdSprite{
-	Width: 17, Height: 10,
-	Data: [][]uint8{
-		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 0
-		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 1
-		{0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0}, // 2
-		{0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0}, // 3
-		{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0}, // 4  widest
-		{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0}, // 5
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 6  in the air!
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 7
-		{0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0}, // 8  feet dangling
-		{0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0}, // 9
-	},
-}
-
-// ClawdMediumSad - Clawd sad/error (drooping)
-var ClawdMediumSad = ClawdSprite{
-	Width: 17, Height: 10,
-	Data: [][]uint8{
-		{0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // 0  drooping top
-		{0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // 1
-		{0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0}, // 2
-		{0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0}, // 3
-		{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0}, // 4  widest
-		{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0}, // 5
-		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 6
-		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 7
-		{0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0}, // 8  two feet
-		{0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0}, // 9
-	},
-}
-
-// ClawdMediumSleeping - Clawd sleeping (flattened)
-var ClawdMediumSleeping = ClawdSprite{
-	Width: 17, Height: 10,
-	Data: [][]uint8{
-		{0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // 0  flattened
-		{0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // 1
-		{0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0}, // 2
-		{0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0}, // 3
-		{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0}, // 4  widest
-		{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0}, // 5
-		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 6
-		{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0}, // 7
-		{0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0}, // 8  two feet
-		{0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0}, // 9
+		{0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0}, // 8  two feet (symmetric: 4,6 and 10,12)
+		{0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0}, // 9
 	},
 }
 
@@ -226,64 +142,12 @@ var ClawdMediumSleeping = ClawdSprite{
 // SMALL CLAWD (9x6) - Half scale with aspect ratio correction
 // ============================================================================
 
-// ClawdSmallIdle - Tiny Clawd at rest
-var ClawdSmallIdle = ClawdSprite{
+// ClawdSmall - Tiny Clawd
+var ClawdSmall = ClawdSprite{
 	Width: 9, Height: 6,
 	Data: [][]uint8{
 		{0, 0, 1, 1, 1, 1, 1, 0, 0}, // 0  body
 		{0, 0, 1, 1, 1, 1, 1, 0, 0}, // 1
-		{0, 1, 1, 1, 1, 1, 1, 1, 0}, // 2  widest
-		{0, 1, 1, 1, 1, 1, 1, 1, 0}, // 3
-		{0, 0, 1, 0, 0, 0, 1, 0, 0}, // 4  two feet
-		{0, 0, 1, 0, 0, 0, 1, 0, 0}, // 5
-	},
-}
-
-// ClawdSmallThinking - Tiny Clawd thinking
-var ClawdSmallThinking = ClawdSprite{
-	Width: 9, Height: 6,
-	Data: [][]uint8{
-		{0, 0, 0, 1, 1, 1, 0, 0, 0}, // 0  squished
-		{0, 0, 0, 1, 1, 1, 0, 0, 0}, // 1
-		{0, 1, 1, 1, 1, 1, 1, 1, 0}, // 2  widest
-		{0, 1, 1, 1, 1, 1, 1, 1, 0}, // 3
-		{0, 0, 1, 0, 0, 0, 1, 0, 0}, // 4  two feet
-		{0, 0, 1, 0, 0, 0, 1, 0, 0}, // 5
-	},
-}
-
-// ClawdSmallHappy - Tiny Clawd happy (bounced)
-var ClawdSmallHappy = ClawdSprite{
-	Width: 9, Height: 6,
-	Data: [][]uint8{
-		{0, 0, 1, 1, 1, 1, 1, 0, 0}, // 0  body
-		{0, 0, 1, 1, 1, 1, 1, 0, 0}, // 1
-		{0, 1, 1, 1, 1, 1, 1, 1, 0}, // 2  widest
-		{0, 1, 1, 1, 1, 1, 1, 1, 0}, // 3
-		{0, 0, 0, 0, 0, 0, 0, 0, 0}, // 4  in the air!
-		{0, 0, 0, 0, 0, 0, 0, 0, 0}, // 5
-	},
-}
-
-// ClawdSmallWorking - Tiny Clawd working
-var ClawdSmallWorking = ClawdSprite{
-	Width: 9, Height: 6,
-	Data: [][]uint8{
-		{0, 0, 1, 1, 1, 1, 1, 0, 0}, // 0  body
-		{0, 0, 1, 1, 1, 1, 1, 0, 0}, // 1
-		{0, 1, 1, 1, 1, 1, 1, 1, 0}, // 2  widest
-		{0, 1, 1, 1, 1, 1, 1, 1, 0}, // 3
-		{0, 0, 1, 0, 0, 0, 1, 0, 0}, // 4  two feet
-		{0, 0, 1, 0, 0, 0, 1, 0, 0}, // 5
-	},
-}
-
-// ClawdSmallSad - Tiny Clawd sad/error
-var ClawdSmallSad = ClawdSprite{
-	Width: 9, Height: 6,
-	Data: [][]uint8{
-		{0, 0, 0, 1, 1, 1, 0, 0, 0}, // 0  drooping
-		{0, 0, 0, 1, 1, 1, 0, 0, 0}, // 1
 		{0, 1, 1, 1, 1, 1, 1, 1, 0}, // 2  widest
 		{0, 1, 1, 1, 1, 1, 1, 1, 0}, // 3
 		{0, 0, 1, 0, 0, 0, 1, 0, 0}, // 4  two feet

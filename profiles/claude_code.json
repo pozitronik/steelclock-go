@@ -37,7 +37,7 @@
         "show_stats": true,
         "show_tool_icon": true,
         "intro_on_start": true,
-        "intro_duration": 113,
+        "intro_duration": 3,
         "idle_animations": true
       },
       "update_interval": 0.1

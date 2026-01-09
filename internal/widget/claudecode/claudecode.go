@@ -263,7 +263,7 @@ func (w *Widget) updateIdleAnimation(dt time.Duration) {
 	if w.blinkCountdown <= 0 {
 		// Trigger blink
 		w.blinkCountdown = 50 + w.rng.Intn(150) // Next blink in 50-200 frames
-		w.idleVariant = 1                        // Blink frame
+		w.idleVariant = 1                       // Blink frame
 	} else if w.blinkCountdown > 45 {
 		w.idleVariant = 0 // Normal frame
 	}
@@ -281,18 +281,18 @@ func (w *Widget) renderIntro(img *image.Gray) {
 
 	if phase < 0.3 {
 		// Fade in / appear
-		sprite = &ClawdLargeIdle
+		sprite = &ClawdLarge
 	} else if phase < 0.7 {
 		// Wave animation
 		waveFrame := (w.animFrame / 8) % 2
 		if waveFrame == 0 {
-			sprite = &ClawdLargeIdle
+			sprite = &ClawdLarge
 		} else {
 			sprite = &ClawdLargeWave
 		}
 	} else {
 		// Return to idle before transition
-		sprite = &ClawdLargeIdle
+		sprite = &ClawdLarge
 	}
 
 	// Center the sprite
@@ -411,43 +411,13 @@ func (w *Widget) renderMinimal(img *image.Gray, status StatusData, celebrating b
 }
 
 func (w *Widget) getClawdSprite(state State, celebrating bool) *ClawdSprite {
-	if celebrating {
-		return &ClawdMediumHappy
-	}
-
-	switch state {
-	case StateNotRunning:
-		return &ClawdMediumSleeping
-	case StateThinking:
-		return &ClawdMediumThinking
-	case StateToolRun:
-		return &ClawdMediumWorking
-	case StateSuccess:
-		return &ClawdMediumHappy
-	case StateError:
-		return &ClawdMediumSad
-	default: // StateIdle
-		return &ClawdMediumIdle
-	}
+	// Clawd has no emotions - just one sprite
+	return &ClawdMedium
 }
 
 func (w *Widget) getSmallClawdSprite(state State, celebrating bool) *ClawdSprite {
-	if celebrating {
-		return &ClawdSmallHappy
-	}
-
-	switch state {
-	case StateThinking:
-		return &ClawdSmallThinking
-	case StateToolRun:
-		return &ClawdSmallWorking
-	case StateError:
-		return &ClawdSmallSad
-	case StateSuccess:
-		return &ClawdSmallHappy
-	default:
-		return &ClawdSmallIdle
-	}
+	// Clawd has no emotions - just one sprite
+	return &ClawdSmall
 }
 
 func (w *Widget) getStatusText(status StatusData) string {

@@ -97,19 +97,11 @@ func TestRender_Intro(t *testing.T) {
 func TestDrawSprite(t *testing.T) {
 	// Test sprite drawing doesn't panic
 	sprites := []*ClawdSprite{
-		&ClawdLargeIdle,
+		&ClawdLarge,
 		&ClawdLargeWave,
-		&ClawdMediumIdle,
-		&ClawdMediumThinking,
-		&ClawdMediumWorking,
-		&ClawdMediumHappy,
-		&ClawdMediumSad,
-		&ClawdMediumSleeping,
-		&ClawdSmallIdle,
-		&ClawdSmallThinking,
-		&ClawdSmallHappy,
-		&ClawdSmallWorking,
-		&ClawdSmallSad,
+		&ClawdLargeBounce,
+		&ClawdMedium,
+		&ClawdSmall,
 	}
 
 	cfg := config.WidgetConfig{
@@ -133,8 +125,8 @@ func TestDrawSprite(t *testing.T) {
 
 func TestGetToolIcon(t *testing.T) {
 	tests := []struct {
-		tool     string
-		wantNil  bool
+		tool    string
+		wantNil bool
 	}{
 		{"Bash", false},
 		{"Read", false},
@@ -195,9 +187,9 @@ func TestStatusStates(t *testing.T) {
 		}
 	}
 
-	// Test celebrating state
+	// Test that sprite is always the same (Clawd has no emotions)
 	sprite := w.getClawdSprite(StateIdle, true)
-	if sprite != &ClawdMediumHappy {
-		t.Error("Celebrating should use happy sprite")
+	if sprite != &ClawdMedium {
+		t.Error("getClawdSprite should always return ClawdMedium")
 	}
 }
