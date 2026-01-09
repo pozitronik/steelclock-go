@@ -272,6 +272,16 @@ func (w *Widget) pollClipboard() {
 }
 
 // formatContent formats the clipboard content according to settings.
+//
+// Performance note: This function uses chained ReplaceAll calls which create
+// intermediate string allocations (8 allocs/op, ~543ns). A single-pass
+// strings.Builder approach would be faster (1 alloc/op, ~75ns), but:
+// - This is called every 500ms (poll interval), not in the render hot path
+// - Total overhead is ~1 microsecond/second (negligible)
+// - Current code is more readable and easier to verify correct behavior
+// - Edge case ordering (\r\n before \n) is explicit and clear
+//
+// See clipboard_bench_test.go for benchmark comparison.
 func (w *Widget) formatContent(content string, contentType ContentType) string {
 	// Handle empty
 	if contentType == TypeEmpty {
