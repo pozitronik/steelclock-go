@@ -220,6 +220,7 @@ type WidgetConfig struct {
 
 	// Widget-specific configurations
 	PerCore    *PerCoreConfig    `json:"per_core,omitempty"`   // CPU widget
+	GPU        *GPUConfig        `json:"gpu,omitempty"`        // GPU widget
 	Stereo     *StereoConfig     `json:"stereo,omitempty"`     // Volume meter
 	Metering   *MeteringConfig   `json:"metering,omitempty"`   // Volume meter
 	Peak       *PeakConfig       `json:"peak,omitempty"`       // Volume meter
@@ -532,6 +533,12 @@ type PerCoreConfig struct {
 	Enabled bool `json:"enabled,omitempty"`
 	Margin  int  `json:"margin,omitempty"`
 	Border  bool `json:"border,omitempty"`
+}
+
+// GPUConfig represents GPU widget settings
+type GPUConfig struct {
+	Adapter int    `json:"adapter,omitempty"` // GPU index (0 = first, 1 = second, etc.)
+	Metric  string `json:"metric,omitempty"`  // Metric to display: utilization, utilization_3d, memory_dedicated, etc.
 }
 
 // StereoConfig represents stereo settings for volume meter

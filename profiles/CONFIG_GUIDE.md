@@ -992,6 +992,61 @@ Examples:
 
 Same structure as CPU widget, without `per_core`.
 
+### GPU Widget
+
+**Modes:** `text`, `bar`, `graph`, `gauge`
+
+**Note:** GPU monitoring is only available on Windows (uses PDH API). On Linux, the widget displays "GPU N/A".
+
+```json
+{
+  "type": "gpu",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "mode": "gauge",
+  "gpu": {
+    "adapter": 0,
+    "metric": "utilization"
+  },
+  "gauge": {
+    "show_ticks": true,
+    "colors": {
+      "arc": 200,
+      "needle": 255,
+      "ticks": 150
+    }
+  },
+  "update_interval": 1.0
+}
+```
+
+| Property       | Options                            | Default        | Description                              |
+|----------------|------------------------------------|----------------|------------------------------------------|
+| `gpu.adapter`  | 0, 1, 2, ...                       | 0              | GPU index (0 = first GPU)                |
+| `gpu.metric`   | see below                          | `utilization`  | Metric to display                        |
+
+**Available Metrics:**
+
+| Metric                    | Description                        |
+|---------------------------|------------------------------------|
+| `utilization`             | Overall GPU utilization (%)        |
+| `utilization_3d`          | 3D engine utilization (%)          |
+| `utilization_copy`        | Copy engine utilization (%)        |
+| `utilization_video_encode`| Video encode engine utilization (%)|
+| `utilization_video_decode`| Video decode engine utilization (%)|
+| `memory_dedicated`        | Dedicated VRAM usage (%)           |
+| `memory_shared`           | Shared memory usage (%)            |
+
+**Multi-GPU Setup:**
+To monitor multiple GPUs, create separate GPU widgets with different `adapter` values:
+```json
+{
+  "widgets": [
+    {"type": "gpu", "position": {"x": 0, "y": 0, "w": 64, "h": 40}, "gpu": {"adapter": 0}},
+    {"type": "gpu", "position": {"x": 64, "y": 0, "w": 64, "h": 40}, "gpu": {"adapter": 1}}
+  ]
+}
+```
+
 ### Network Widget
 
 **Modes:** `text`, `bar`, `graph`, `gauge`
