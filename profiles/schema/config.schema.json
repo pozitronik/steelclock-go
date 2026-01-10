@@ -555,7 +555,8 @@
             "telegram",
             "telegram_counter",
             "screen_mirror",
-            "hacker_code"
+            "hacker_code",
+            "claude_code"
           ]
         },
         "enabled": {
@@ -3769,6 +3770,72 @@
                     "minimum": 1,
                     "maximum": 8,
                     "default": 2
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "claude_code"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "text": {
+                "$ref": "#/definitions/textStyle"
+              },
+              "claude_code": {
+                "type": "object",
+                "description": "Claude Code status widget with Clawd mascot",
+                "properties": {
+                  "display_mode": {
+                    "type": "string",
+                    "description": "Display mode: full (Clawd + status + stats), compact (Clawd + status), minimal (status only)",
+                    "enum": [
+                      "full",
+                      "compact",
+                      "minimal"
+                    ],
+                    "default": "full"
+                  },
+                  "show_stats": {
+                    "type": "boolean",
+                    "description": "Show token/tool counts in full mode",
+                    "default": true
+                  },
+                  "show_tool_icon": {
+                    "type": "boolean",
+                    "description": "Show tool-specific icon when using tools",
+                    "default": true
+                  },
+                  "intro_on_start": {
+                    "type": "boolean",
+                    "description": "Play intro animation when widget starts",
+                    "default": true
+                  },
+                  "intro_duration": {
+                    "type": "integer",
+                    "description": "Intro animation duration in seconds",
+                    "minimum": 1,
+                    "maximum": 30,
+                    "default": 3
+                  },
+                  "idle_animations": {
+                    "type": "boolean",
+                    "description": "Enable idle animations like blinking",
+                    "default": true
+                  },
+                  "intro_title": {
+                    "type": "string",
+                    "description": "Text shown during intro, supports \\n for multiple lines (e.g., \"Claude Code\\nReady to code?\")"
                   }
                 }
               }
