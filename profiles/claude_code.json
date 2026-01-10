@@ -37,10 +37,9 @@
         "show_stats": true,
         "show_tool_icon": true,
         "intro_on_start": true,
-        "intro_duration": 3,
+        "intro_duration": 10,
         "idle_animations": true,
-        "intro_title": "Claude Code",
-        "intro_subtitle": "Opus 4.5"
+        "intro_title": "Claude Code\\nReady to code?"
       },
       "update_interval": 0.1
     }

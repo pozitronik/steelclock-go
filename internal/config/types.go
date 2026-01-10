@@ -1119,10 +1119,6 @@ type ClaudeCodeConfig struct {
 	IntroDuration int `json:"intro_duration,omitempty"`
 	// IdleAnimations: enable idle animations like blinking (default: true)
 	IdleAnimations *bool `json:"idle_animations,omitempty"`
-	// IntroTitle: title text shown during intro (default: "Claude Code")
+	// IntroTitle: text shown during intro, supports \n for multiple lines
 	IntroTitle string `json:"intro_title,omitempty"`
-	// IntroSubtitle: subtitle text shown during intro, e.g. model info (default: "Opus 4.5")
-	IntroSubtitle string `json:"intro_subtitle,omitempty"`
-	// IntroPath: path shown during intro (default: auto-detect working directory)
-	IntroPath string `json:"intro_path,omitempty"`
 }
