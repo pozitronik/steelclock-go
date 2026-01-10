@@ -67,7 +67,7 @@ type Config struct {
 	IntroOnStart   bool   `json:"intro_on_start"`  // Play intro animation on widget start
 	IntroDurationS int    `json:"intro_duration"`  // Intro duration in seconds
 	IdleAnimations bool   `json:"idle_animations"` // Enable idle animations (blinking, etc.)
-	IntroTitle string `json:"intro_title"` // Text shown during intro, supports \n for multiple lines
+	IntroTitle     string `json:"intro_title"`     // Text shown during intro, supports \n for multiple lines
 }
 
 // Widget displays Claude Code status with the Clawd mascot
@@ -284,28 +284,51 @@ func (w *Widget) renderIntro(img *image.Gray) {
 	elapsed := time.Since(w.introStartTime)
 	duration := time.Duration(w.cfg.IntroDurationS) * time.Second
 
-	// Choose sprite based on animation phase
+	// Choose sprite and position based on animation phase
 	var sprite *ClawdSprite
+	var xOffset int
 	phase := float64(elapsed) / float64(duration)
 
-	if phase < 0.3 {
-		// Fade in / appear
+	// Dance movement distance in pixels
+	const danceDistance = 2
+
+	if phase < 0.2 {
+		// Phase 1: Appear / fade in - static at left position
 		sprite = &ClawdLarge
-	} else if phase < 0.7 {
-		// Wave animation
-		waveFrame := (w.animFrame / 8) % 2
-		if waveFrame == 0 {
+		xOffset = 0
+	} else if phase < 0.8 {
+		// Phase 2: Dance animation (60% of intro time)
+		// 4-phase dance cycle: normal-left, stretch-right, normal-right, stretch-left
+		danceElapsed := elapsed - time.Duration(float64(duration)*0.2)
+		cycleDuration := 1000 * time.Millisecond // Full dance cycle duration
+		cyclePhase := float64(danceElapsed%cycleDuration) / float64(cycleDuration)
+
+		if cyclePhase < 0.25 {
+			// Phase A: Normal sprite at left position
 			sprite = &ClawdLarge
-		} else {
+			xOffset = 0
+		} else if cyclePhase < 0.5 {
+			// Phase B: Stretched sprite (leaning right) at left position
 			sprite = &ClawdLargeWave
+			xOffset = 0
+		} else if cyclePhase < 0.75 {
+			// Phase C: Normal sprite at right position (landed)
+			sprite = &ClawdLarge
+			xOffset = danceDistance
+		} else {
+			// Phase D: Mirrored stretched sprite (leaning left) at right position
+			sprite = GetClawdLargeWaveMirror()
+			xOffset = danceDistance
 		}
 	} else {
-		// Return to idle before transition
+		// Phase 3: Settle down - static at center before transition
 		sprite = &ClawdLarge
+		xOffset = danceDistance / 2 // End at center position
 	}
 
-	// Position Clawd on the left, vertically centered
-	clawdX := 2
+	// Base position: Clawd on the left, vertically centered
+	baseX := 2
+	clawdX := baseX + xOffset
 	clawdY := (pos.H - sprite.Height) / 2
 
 	drawSprite(img, sprite, clawdX, clawdY)
@@ -318,8 +341,8 @@ func (w *Widget) renderIntro(img *image.Gray) {
 	// Split intro title by newlines
 	lines := strings.Split(w.cfg.IntroTitle, "\\n")
 
-	// Draw intro text on the right side
-	textX := clawdX + sprite.Width + 4
+	// Draw intro text on the right side (use ClawdLarge width for consistent text position)
+	textX := baseX + ClawdLarge.Width + 6
 
 	// Use fixed line height (matches 5x7 font with spacing)
 	lineHeight := 10

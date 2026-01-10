@@ -2,6 +2,8 @@
 // This widget was designed by Claude itself as a creative expression of its digital presence.
 package claudecode
 
+import "sync"
+
 // Clawd Sprite Definitions
 // ========================
 // Clawd is the adorable blob-like mascot of Claude Code.
@@ -304,4 +306,41 @@ func GetToolIcon(toolName string) *ClawdSprite {
 	default:
 		return nil
 	}
+}
+
+// ============================================================================
+// SPRITE UTILITIES
+// ============================================================================
+
+// mirrorSprite creates a horizontally mirrored copy of a sprite
+func mirrorSprite(s *ClawdSprite) ClawdSprite {
+	mirrored := ClawdSprite{
+		Width:  s.Width,
+		Height: s.Height,
+		Data:   make([][]uint8, len(s.Data)),
+	}
+	for i, row := range s.Data {
+		// Create new row with reversed elements
+		newRow := make([]uint8, len(row))
+		for j, k := 0, len(row)-1; j <= k; j, k = j+1, k-1 {
+			newRow[j], newRow[k] = row[k], row[j]
+		}
+		mirrored.Data[i] = newRow
+	}
+	return mirrored
+}
+
+// Cached mirrored sprites (lazy initialization)
+var (
+	clawdLargeWaveMirror     ClawdSprite
+	clawdLargeWaveMirrorOnce sync.Once
+)
+
+// GetClawdLargeWaveMirror returns the horizontally mirrored ClawdLargeWave sprite
+// The sprite is created once and cached for subsequent calls
+func GetClawdLargeWaveMirror() *ClawdSprite {
+	clawdLargeWaveMirrorOnce.Do(func() {
+		clawdLargeWaveMirror = mirrorSprite(&ClawdLargeWave)
+	})
+	return &clawdLargeWaveMirror
 }
