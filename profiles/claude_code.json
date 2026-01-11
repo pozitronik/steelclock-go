@@ -25,7 +25,7 @@
         "padding": 0
       },
       "text": {
-        "font": null,
+        "font": "5x7",
         "size": 16,
         "align": {
           "h": "left",
