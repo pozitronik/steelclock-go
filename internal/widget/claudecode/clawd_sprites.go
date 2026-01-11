@@ -288,6 +288,20 @@ var ToolIconTask = ClawdSprite{
 	},
 }
 
+// ErrorMark - Exclamation mark for error state
+var ErrorMark = ClawdSprite{
+	Width: 3, Height: 7,
+	Data: [][]uint8{
+		{0, 1, 0},
+		{0, 1, 0},
+		{0, 1, 0},
+		{0, 1, 0},
+		{0, 1, 0},
+		{0, 0, 0},
+		{0, 1, 0},
+	},
+}
+
 // GetToolIcon returns the appropriate icon for a tool name
 func GetToolIcon(toolName string) *ClawdSprite {
 	switch toolName {

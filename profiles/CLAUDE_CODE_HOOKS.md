@@ -74,11 +74,21 @@ Content-Type: application/json
   "preview": "src/main.go",
   "message": "Reading file...",
   "timestamp": "2024-01-10T12:00:00Z",
+  "context_window": {
+    "context_window_size": 200000,
+    "current_usage": {
+      "input_tokens": 15000,
+      "cache_creation_input_tokens": 2000,
+      "cache_read_input_tokens": 500,
+      "output_tokens": 3000
+    }
+  },
+  "model": {
+    "display_name": "claude-sonnet-4-20250514"
+  },
   "session": {
     "started_at": "2024-01-10T11:00:00Z",
-    "tool_calls": 15,
-    "tokens_used": 5000,
-    "tokens_limit": 100000
+    "tool_calls": 15
   }
 }
 ```
@@ -92,6 +102,8 @@ Content-Type: application/json
 | `preview` | string | No | Short preview of tool action (e.g., filename, command) |
 | `message` | string | No | Custom status message |
 | `timestamp` | ISO8601 | No | Auto-set if not provided |
+| `context_window` | object | No | Token usage from Claude Code (passed from hook stdin) |
+| `model` | object | No | Model information from Claude Code |
 | `session` | object | No | Session statistics |
 
 ### Response
@@ -259,7 +271,7 @@ Save as `~/.claude/steelclock-hook.sh`:
 ```bash
 #!/bin/bash
 # SteelClock Claude Code Hook Script
-# Communicates Claude's state to the Clawd widget
+# Communicates Claude's state and token usage to the Clawd widget
 #
 # Usage: steelclock-hook.sh <event> [tool_name]
 #
@@ -281,38 +293,51 @@ STEELCLOCK_URL="http://host.docker.internal:8384/api/claude-status"
 event="$1"
 tool="${2:-}"
 
+# Read hook input from stdin (contains context_window data)
+input=$(cat)
+
+# Extract context_window and model from hook input using jq
+context_window=$(echo "$input" | jq -c '.context_window // empty' 2>/dev/null)
+model=$(echo "$input" | jq -c '.model // empty' 2>/dev/null)
+
+# Build base state JSON
 case "$event" in
   prompt|compact)
-    json='{"state":"thinking"}'
+    state="thinking"
     ;;
   tool)
-    json="{\"state\":\"tool\",\"tool\":\"$tool\"}"
+    state="tool"
     ;;
   tool_done|agent_done)
-    json='{"state":"thinking"}'
+    state="thinking"
     ;;
   tool_fail)
-    json='{"state":"error"}'
+    state="error"
     ;;
   stop|notify)
-    json='{"state":"success"}'
+    state="success"
     ;;
   start)
-    json='{"state":"idle"}'
+    state="idle"
     ;;
   end)
-    json='{"state":"not_running"}'
+    state="not_running"
     ;;
   agent)
-    json='{"state":"tool","tool":"Task"}'
+    state="tool"
+    tool="Task"
     ;;
-  idle)
-    json='{"state":"idle"}'
-    ;;
-  *)
-    json='{"state":"idle"}'
+  idle|*)
+    state="idle"
     ;;
 esac
+
+# Build JSON with optional context_window and model
+json="{\"state\":\"$state\""
+[ -n "$tool" ] && json="$json,\"tool\":\"$tool\""
+[ -n "$context_window" ] && json="$json,\"context_window\":$context_window"
+[ -n "$model" ] && json="$json,\"model\":$model"
+json="$json}"
 
 # Send status update asynchronously (non-blocking)
 curl -s -X POST "$STEELCLOCK_URL" \

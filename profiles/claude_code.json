@@ -33,13 +33,21 @@
         }
       },
       "claude_code": {
-        "display_mode": "full",
-        "show_stats": true,
-        "show_tool_icon": true,
         "intro_on_start": true,
-        "intro_duration": 10,
+        "intro_duration": 3,
         "idle_animations": true,
-        "intro_title": "Claude Code\\nReady to code?"
+        "intro_title": "Claude is here!\\nReady to code?",
+        "auto_hide": false,
+        "sprite_size": "large",
+        "show_text": true,
+        "notify": {
+          "thinking": -1,
+          "tool": -1,
+          "success": 5,
+          "error": -1,
+          "idle": -1,
+          "not_running": -1
+        }
       },
       "update_interval": 0.1
     }

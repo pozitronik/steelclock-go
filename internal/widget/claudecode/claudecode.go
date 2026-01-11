@@ -1,4 +1,4 @@
-// Package claudecode provides a widget displaying Claude Code status with the Clawd mascot.
+// Package claudecode provides a notification widget for Claude Code status.
 //
 // This widget was designed and implemented by Claude as a creative expression
 // of its digital presence. Clawd, the friendly crab-like mascot, reflects
@@ -9,7 +9,6 @@
 package claudecode
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"math/rand"
@@ -20,7 +19,6 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/shared"
-	"github.com/pozitronik/steelclock-go/internal/shared/render"
 	"github.com/pozitronik/steelclock-go/internal/webeditor"
 	"github.com/pozitronik/steelclock-go/internal/widget"
 	"golang.org/x/image/font"
@@ -46,47 +44,54 @@ const (
 
 // StatusData represents the status information from Claude Code
 type StatusData struct {
-	State       State     `json:"state"`
-	Tool        string    `json:"tool,omitempty"`
-	ToolPreview string    `json:"preview,omitempty"`
-	Message     string    `json:"message,omitempty"`
-	Timestamp   time.Time `json:"timestamp"`
-	Session     struct {
-		StartedAt   time.Time `json:"started_at,omitempty"`
-		ToolCalls   int       `json:"tool_calls,omitempty"`
-		TokensUsed  int       `json:"tokens_used,omitempty"`
-		TokensLimit int       `json:"tokens_limit,omitempty"`
-	} `json:"session,omitempty"`
+	State     State     `json:"state"`
+	Tool      string    `json:"tool,omitempty"`
+	Message   string    `json:"message,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// NotifyConfig holds notification duration per state
+// 0 = don't notify, -1 = notify until next state, N = notify for N seconds
+type NotifyConfig struct {
+	Thinking   int
+	Tool       int
+	Success    int
+	Error      int
+	Idle       int
+	NotRunning int
 }
 
 // Config holds widget configuration
 type Config struct {
-	DisplayMode    string `json:"display_mode"`    // "intro", "full", "compact", "minimal"
-	ShowStats      bool   `json:"show_stats"`      // Show token/tool counts
-	ShowToolIcon   bool   `json:"show_tool_icon"`  // Show tool-specific icon
-	IntroOnStart   bool   `json:"intro_on_start"`  // Play intro animation on widget start
-	IntroDurationS int    `json:"intro_duration"`  // Intro duration in seconds
-	IdleAnimations bool   `json:"idle_animations"` // Enable idle animations (blinking, etc.)
-	IntroTitle     string `json:"intro_title"`     // Text shown during intro, supports \n for multiple lines
+	IntroOnStart   bool
+	IntroDurationS int
+	IdleAnimations bool
+	IntroTitle     string
+	AutoHide       bool   // Hide widget when no notification to show
+	SpriteSize     string // "large", "medium", "small"
+	ShowText       bool   // Show status text next to Clawd
+	Notify         NotifyConfig
 }
 
-// Widget displays Claude Code status with the Clawd mascot
+// Widget displays Claude Code notifications with the Clawd mascot
 type Widget struct {
 	*widget.BaseWidget
-	cfg          Config
-	textRenderer *render.HorizontalTextRenderer
-	fontFace     font.Face
-	fontName     string
+	cfg      Config
+	fontFace font.Face
+	fontName string
 
 	// Status
 	status     StatusData
 	lastStatus StatusData
 	statusMu   sync.RWMutex
 
+	// Notification visibility
+	visibleUntil time.Time // When notification should hide (zero = indefinite)
+	shouldShow   bool      // Current visibility state
+
 	// Animation state
 	animFrame      int
 	blinkCountdown int
-	idleVariant    int
 	lastFrameTime  time.Time
 	showingIntro   bool
 	introStartTime time.Time
@@ -99,7 +104,7 @@ type Widget struct {
 	rng *rand.Rand
 }
 
-// New creates a new Claude Code status widget
+// New creates a new Claude Code notification widget
 func New(cfg config.WidgetConfig) (*Widget, error) {
 	base := widget.NewBaseWidget(cfg)
 	helper := shared.NewConfigHelper(cfg)
@@ -107,28 +112,20 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	// Parse configuration
 	widgetCfg := parseConfig(cfg)
 
-	// Create text renderer
+	// Load font
 	textSettings := helper.GetTextSettings()
 	fontFace, err := bitmap.LoadFont(textSettings.FontName, textSettings.FontSize)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load font: %w", err)
+		return nil, err
 	}
-
-	textRenderer := render.NewHorizontalTextRenderer(render.HorizontalTextRendererConfig{
-		FontFace:   fontFace,
-		FontName:   textSettings.FontName,
-		HorizAlign: textSettings.HorizAlign,
-		VertAlign:  textSettings.VertAlign,
-	})
 
 	w := &Widget{
 		BaseWidget:     base,
 		cfg:            widgetCfg,
-		textRenderer:   textRenderer,
 		fontFace:       fontFace,
 		fontName:       textSettings.FontName,
 		status:         StatusData{State: StateNotRunning},
-		blinkCountdown: 50 + rand.Intn(100), // Random blink timing
+		blinkCountdown: 50 + rand.Intn(100),
 		rng:            rand.New(rand.NewSource(time.Now().UnixNano())),
 		lastFrameTime:  time.Now(),
 	}
@@ -137,6 +134,8 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	if widgetCfg.IntroOnStart {
 		w.showingIntro = true
 		w.introStartTime = time.Now()
+		w.shouldShow = true
+		w.TriggerAutoHide() // Show widget during intro
 	}
 
 	return w, nil
@@ -144,25 +143,24 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 
 func parseConfig(cfg config.WidgetConfig) Config {
 	c := Config{
-		DisplayMode:    "full",
-		ShowStats:      true,
-		ShowToolIcon:   true,
 		IntroOnStart:   true,
 		IntroDurationS: 3,
 		IdleAnimations: true,
-		IntroTitle:     "", // No default - empty means no text
+		IntroTitle:     "",
+		AutoHide:       true,     // Hide by default when no notification
+		SpriteSize:     "medium", // Default sprite size
+		ShowText:       true,     // Show status text by default
+		Notify: NotifyConfig{
+			Thinking:   0,  // Don't show (too noisy)
+			Tool:       2,  // Show for 2 seconds
+			Success:    -1, // Show until next state
+			Error:      -1, // Show until next state
+			Idle:       0,  // Don't show
+			NotRunning: 0,  // Don't show
+		},
 	}
 
 	if cfg.ClaudeCode != nil {
-		if cfg.ClaudeCode.DisplayMode != "" {
-			c.DisplayMode = cfg.ClaudeCode.DisplayMode
-		}
-		if cfg.ClaudeCode.ShowStats != nil {
-			c.ShowStats = *cfg.ClaudeCode.ShowStats
-		}
-		if cfg.ClaudeCode.ShowToolIcon != nil {
-			c.ShowToolIcon = *cfg.ClaudeCode.ShowToolIcon
-		}
 		if cfg.ClaudeCode.IntroOnStart != nil {
 			c.IntroOnStart = *cfg.ClaudeCode.IntroOnStart
 		}
@@ -173,12 +171,76 @@ func parseConfig(cfg config.WidgetConfig) Config {
 			c.IdleAnimations = *cfg.ClaudeCode.IdleAnimations
 		}
 		c.IntroTitle = cfg.ClaudeCode.IntroTitle
+		if cfg.ClaudeCode.AutoHide != nil {
+			c.AutoHide = *cfg.ClaudeCode.AutoHide
+		}
+		if cfg.ClaudeCode.SpriteSize != "" {
+			c.SpriteSize = cfg.ClaudeCode.SpriteSize
+		}
+		if cfg.ClaudeCode.ShowText != nil {
+			c.ShowText = *cfg.ClaudeCode.ShowText
+		}
+
+		// Parse notify config - only override defaults for explicitly set values
+		if cfg.ClaudeCode.Notify != nil {
+			n := cfg.ClaudeCode.Notify
+			if n.Thinking != nil {
+				c.Notify.Thinking = *n.Thinking
+			}
+			if n.Tool != nil {
+				c.Notify.Tool = *n.Tool
+			}
+			if n.Success != nil {
+				c.Notify.Success = *n.Success
+			}
+			if n.Error != nil {
+				c.Notify.Error = *n.Error
+			}
+			if n.Idle != nil {
+				c.Notify.Idle = *n.Idle
+			}
+			if n.NotRunning != nil {
+				c.Notify.NotRunning = *n.NotRunning
+			}
+		}
 	}
 
 	return c
 }
 
-// Update reads the current Claude Code status from the web editor's in-memory store
+// getClawdSprite returns the Clawd sprite based on configured size
+func (w *Widget) getClawdSprite() *ClawdSprite {
+	switch w.cfg.SpriteSize {
+	case "large":
+		return &ClawdLarge
+	case "small":
+		return &ClawdSmall
+	default:
+		return &ClawdMedium
+	}
+}
+
+// getNotifyDuration returns the notification duration for a state
+func (w *Widget) getNotifyDuration(state State) int {
+	switch state {
+	case StateThinking:
+		return w.cfg.Notify.Thinking
+	case StateToolRun:
+		return w.cfg.Notify.Tool
+	case StateSuccess:
+		return w.cfg.Notify.Success
+	case StateError:
+		return w.cfg.Notify.Error
+	case StateIdle:
+		return w.cfg.Notify.Idle
+	case StateNotRunning:
+		return w.cfg.Notify.NotRunning
+	default:
+		return 0
+	}
+}
+
+// Update reads the current Claude Code status
 func (w *Widget) Update() error {
 	w.statusMu.Lock()
 	defer w.statusMu.Unlock()
@@ -187,43 +249,57 @@ func (w *Widget) Update() error {
 	w.lastStatus = w.status
 
 	// Get status from the web editor's in-memory store
-	// This is populated by POST requests to /api/claude-status
 	httpStatus := webeditor.GetClaudeStatus()
 	if httpStatus == nil {
-		// No status available - Claude Code not running or no hooks configured
 		w.status = StatusData{State: StateNotRunning}
-		return nil
+	} else {
+		w.status = StatusData{
+			State:     State(httpStatus.State),
+			Tool:      httpStatus.Tool,
+			Message:   httpStatus.Message,
+			Timestamp: httpStatus.Timestamp,
+		}
 	}
 
-	// Convert webeditor status to widget status
-	w.status = StatusData{
-		State:       State(httpStatus.State),
-		Tool:        httpStatus.Tool,
-		ToolPreview: httpStatus.ToolPreview,
-		Message:     httpStatus.Message,
-		Timestamp:   httpStatus.Timestamp,
+	// Check for state change
+	if w.status.State != w.lastStatus.State {
+		w.onStateChange(w.status.State)
 	}
-	w.status.Session.StartedAt = httpStatus.Session.StartedAt
-	w.status.Session.ToolCalls = httpStatus.Session.ToolCalls
-	w.status.Session.TokensUsed = httpStatus.Session.TokensUsed
-	w.status.Session.TokensLimit = httpStatus.Session.TokensLimit
 
-	// Trigger celebration on transition from tool run to idle (task completed)
-	if w.lastStatus.State == StateToolRun && w.status.State == State("idle") {
+	// Trigger celebration on transition to success
+	if w.status.State == StateSuccess && w.lastStatus.State != StateSuccess {
 		w.celebrateUntil = time.Now().Add(2 * time.Second)
 	}
 
 	return nil
 }
 
-// Render draws Clawd and status information
+// onStateChange handles notification visibility when state changes
+func (w *Widget) onStateChange(newState State) {
+	duration := w.getNotifyDuration(newState)
+
+	if duration == 0 {
+		// Don't show notification
+		w.shouldShow = false
+		w.visibleUntil = time.Time{}
+	} else if duration == -1 {
+		// Show until next state change
+		w.shouldShow = true
+		w.visibleUntil = time.Time{} // No expiry
+		w.TriggerAutoHide()          // Reset auto-hide timer
+	} else {
+		// Show for N seconds
+		w.shouldShow = true
+		w.visibleUntil = time.Now().Add(time.Duration(duration) * time.Second)
+		w.TriggerAutoHide() // Reset auto-hide timer
+	}
+}
+
+// Render draws Clawd and notification
 func (w *Widget) Render() (image.Image, error) {
 	if w.ShouldHide() {
 		return nil, nil
 	}
-
-	img := w.CreateCanvas()
-	w.ApplyBorder(img)
 
 	now := time.Now()
 	deltaTime := now.Sub(w.lastFrameTime)
@@ -237,11 +313,30 @@ func (w *Widget) Render() (image.Image, error) {
 	if w.showingIntro {
 		introDuration := time.Duration(w.cfg.IntroDurationS) * time.Second
 		if now.Sub(w.introStartTime) < introDuration {
+			img := w.CreateCanvas()
+			w.ApplyBorder(img)
 			w.renderIntro(img)
 			return img, nil
 		}
 		w.showingIntro = false
+		// After intro, check current state for visibility
+		w.statusMu.RLock()
+		w.onStateChange(w.status.State)
+		w.statusMu.RUnlock()
 	}
+
+	// Check if notification has expired (notify duration)
+	if !w.visibleUntil.IsZero() && now.After(w.visibleUntil) {
+		w.shouldShow = false
+	}
+
+	// Don't render if not visible (notify config says hide) and auto_hide is enabled
+	if !w.shouldShow && w.cfg.AutoHide {
+		return nil, nil
+	}
+
+	img := w.CreateCanvas()
+	w.ApplyBorder(img)
 
 	// Get current status
 	w.statusMu.RLock()
@@ -249,15 +344,7 @@ func (w *Widget) Render() (image.Image, error) {
 	celebrating := now.Before(w.celebrateUntil)
 	w.statusMu.RUnlock()
 
-	// Choose render mode
-	switch w.cfg.DisplayMode {
-	case "minimal":
-		w.renderMinimal(img, status, celebrating)
-	case "compact":
-		w.renderCompact(img, status, celebrating)
-	default: // "full"
-		w.renderFull(img, status, celebrating)
-	}
+	w.renderNotification(img, status, celebrating)
 
 	return img, nil
 }
@@ -270,11 +357,7 @@ func (w *Widget) updateIdleAnimation(dt time.Duration) {
 	// Blink countdown
 	w.blinkCountdown--
 	if w.blinkCountdown <= 0 {
-		// Trigger blink
-		w.blinkCountdown = 50 + w.rng.Intn(150) // Next blink in 50-200 frames
-		w.idleVariant = 1                       // Blink frame
-	} else if w.blinkCountdown > 45 {
-		w.idleVariant = 0 // Normal frame
+		w.blinkCountdown = 50 + w.rng.Intn(150)
 	}
 }
 
@@ -289,232 +372,165 @@ func (w *Widget) renderIntro(img *image.Gray) {
 	var xOffset int
 	phase := float64(elapsed) / float64(duration)
 
-	// Dance movement distance in pixels
 	const danceDistance = 2
 
 	if phase < 0.2 {
-		// Phase 1: Appear / fade in - static at left position
 		sprite = &ClawdLarge
 		xOffset = 0
 	} else if phase < 0.8 {
-		// Phase 2: Dance animation (60% of intro time)
-		// 4-phase dance cycle: normal-left, stretch-right, normal-right, stretch-left
 		danceElapsed := elapsed - time.Duration(float64(duration)*0.2)
-		cycleDuration := 1000 * time.Millisecond // Full dance cycle duration
+		cycleDuration := 1000 * time.Millisecond
 		cyclePhase := float64(danceElapsed%cycleDuration) / float64(cycleDuration)
 
 		if cyclePhase < 0.25 {
-			// Phase A: Normal sprite at left position
 			sprite = &ClawdLarge
 			xOffset = 0
 		} else if cyclePhase < 0.5 {
-			// Phase B: Stretched sprite (leaning right) at left position
 			sprite = &ClawdLargeWave
 			xOffset = 0
 		} else if cyclePhase < 0.75 {
-			// Phase C: Normal sprite at right position (landed)
 			sprite = &ClawdLarge
 			xOffset = danceDistance
 		} else {
-			// Phase D: Mirrored stretched sprite (leaning left) at right position
 			sprite = GetClawdLargeWaveMirror()
 			xOffset = danceDistance
 		}
 	} else {
-		// Phase 3: Settle down - static at center before transition
 		sprite = &ClawdLarge
-		xOffset = danceDistance / 2 // End at center position
+		xOffset = danceDistance / 2
 	}
 
-	// Base position: Clawd on the left, vertically centered
 	baseX := 2
 	clawdX := baseX + xOffset
 	clawdY := (pos.H - sprite.Height) / 2
 
 	drawSprite(img, sprite, clawdX, clawdY)
 
-	// If no intro title, just show Clawd
 	if w.cfg.IntroTitle == "" {
 		return
 	}
 
-	// Split intro title by newlines
 	lines := strings.Split(w.cfg.IntroTitle, "\\n")
-
-	// Draw intro text on the right side (use ClawdLarge width for consistent text position)
 	textX := baseX + ClawdLarge.Width + 6
-
-	// Use fixed line height (matches 5x7 font with spacing)
 	lineHeight := 10
-
-	// Calculate text vertical start position (centered based on number of lines)
 	totalTextHeight := lineHeight * len(lines)
 	textY := (pos.H - totalTextHeight) / 2
-
-	// Use full image bounds for clipping
 	bounds := img.Bounds()
 	clipW, clipH := bounds.Dx(), bounds.Dy()
 
-	// Draw each line
 	for i, line := range lines {
 		bitmap.SmartDrawTextAtPosition(img, line, w.fontFace, w.fontName, textX, textY+lineHeight*i, 0, 0, clipW, clipH)
 	}
 }
 
-// renderFull renders the full display mode with Clawd, status, and stats
-func (w *Widget) renderFull(img *image.Gray, status StatusData, celebrating bool) {
+// renderNotification renders the notification view
+// Layout: tool icon (top-left), Clawd (bottom-left), message (right)
+func (w *Widget) renderNotification(img *image.Gray, status StatusData, celebrating bool) {
 	pos := w.GetPosition()
+	padding := 2
 
-	// Get appropriate Clawd sprite
-	sprite := w.getClawdSprite(status.State, celebrating)
+	// === LEFT COLUMN ===
 
-	// Draw Clawd on the left
-	clawdX := 2
-	clawdY := (pos.H - sprite.Height) / 2
-	drawSprite(img, sprite, clawdX, clawdY)
-
-	// Draw thinking dots if thinking
-	if status.State == StateThinking {
-		dotsFrame := (w.animFrame / 6) % len(ThinkingDots)
-		dotsSprite := &ThinkingDots[dotsFrame]
-		drawSprite(img, dotsSprite, clawdX+sprite.Width+1, clawdY-2)
+	// Tool icon in top-left corner
+	if status.State == StateToolRun && status.Tool != "" {
+		if icon := GetToolIcon(status.Tool); icon != nil {
+			drawSprite(img, icon, padding, padding)
+		}
 	}
 
-	// Draw sleeping Zs if not running
-	if status.State == StateNotRunning {
+	// Clawd in bottom-left corner
+	sprite := w.getClawdSprite()
+	clawdX := padding
+	clawdY := pos.H - sprite.Height - padding
+	drawSprite(img, sprite, clawdX, clawdY)
+
+	// State-specific animations around Clawd
+	w.renderStateAnimation(img, status, celebrating, clawdX, clawdY, sprite)
+
+	// === RIGHT AREA ===
+
+	// Message in comic bubble (if enabled)
+	// Skip bubble for sleeping states - Zzz animation is enough
+	if w.cfg.ShowText && status.State != StateIdle && status.State != StateNotRunning {
+		message := w.getNotificationMessage(status)
+
+		// Calculate text dimensions (add extra width to prevent clipping)
+		textWidth := bitmap.MeasureTextWidth(message, w.fontFace, w.fontName) + 4
+		textHeight := 7 // Approximate height for pixel fonts
+
+		// Position bubble to the right of Clawd, near the top
+		bubblePadding := 12 // Extra space for bubble + trailing circles
+		textX := clawdX + sprite.Width + bubblePadding
+		textY := padding + 5 // Near the top with margin for bubble padding
+
+		// Draw comic bubble based on state
+		bubbleType := getBubbleTypeForState(status.State)
+		var tailX, tailY int
+		if bubbleType == BubbleThought {
+			// Thought bubble: trailing circles start from top of Clawd's head
+			tailX = clawdX + sprite.Width/2
+			tailY = clawdY - 2
+		} else {
+			// Speech bubble: tail points to Clawd's side
+			tailX = clawdX + sprite.Width
+			tailY = clawdY + sprite.Height/2
+		}
+		drawBubble(img, bubbleType, textX, textY, textWidth, textHeight, tailX, tailY)
+
+		// Draw text in white (bubble has no fill, so text must be visible on black background)
+		// Use full image bounds for clipping to avoid cutting off text
+		bitmap.SmartDrawTextAtPositionWithColor(img, message, w.fontFace, w.fontName,
+			textX, textY, 0, 0, img.Bounds().Dx(), img.Bounds().Dy(), 255)
+	}
+}
+
+// renderStateAnimation renders state-specific animations around Clawd
+func (w *Widget) renderStateAnimation(img *image.Gray, status StatusData, celebrating bool, clawdX, clawdY int, sprite *ClawdSprite) {
+	// Note: Thinking dots animation removed - thought bubble trailing circles serve this purpose
+
+	// Sleeping Zs
+	if status.State == StateNotRunning || status.State == StateIdle {
 		zsFrame := (w.animFrame / 12) % len(SleepingZs)
 		zsSprite := &SleepingZs[zsFrame]
 		drawSprite(img, zsSprite, clawdX+sprite.Width-2, clawdY-4)
 	}
 
-	// Draw celebration sparkles
-	if celebrating {
+	// Celebration sparkles
+	if celebrating || status.State == StateSuccess {
 		w.sparklePhase = (w.sparklePhase + 1) % (len(Sparkles) * 3)
 		sparkleIdx := w.sparklePhase / 3
 		sparkle := &Sparkles[sparkleIdx]
-		// Draw sparkles around Clawd
-		drawSprite(img, sparkle, clawdX-2, clawdY-2)
-		drawSprite(img, sparkle, clawdX+sprite.Width, clawdY-2)
+		drawSprite(img, sparkle, clawdX-1, clawdY-2)
+		drawSprite(img, sparkle, clawdX+sprite.Width-2, clawdY-2)
 	}
 
-	// Text area starts after Clawd
-	textX := clawdX + sprite.Width + 4
-	textWidth := pos.W - textX - 2
-
-	// Draw status text
-	statusText := w.getStatusText(status)
-	bounds := image.Rect(textX, 2, textX+textWidth, 12)
-	w.textRenderer.Render(img, statusText, 0, bounds)
-
-	// Draw tool info or secondary text
-	if status.State == StateToolRun && status.Tool != "" {
-		// Draw tool icon if enabled
-		if w.cfg.ShowToolIcon {
-			if icon := GetToolIcon(status.Tool); icon != nil {
-				iconY := 14
-				drawSprite(img, icon, textX, iconY)
-				textX += icon.Width + 2
-			}
-		}
-
-		// Draw tool preview
-		preview := status.Tool
-		if status.ToolPreview != "" {
-			preview = truncateString(status.ToolPreview, 20)
-		}
-		bounds = image.Rect(textX, 14, pos.W-2, 24)
-		w.textRenderer.Render(img, preview, 0, bounds)
-	}
-
-	// Draw stats at bottom if enabled
-	if w.cfg.ShowStats && status.Session.ToolCalls > 0 {
-		stats := fmt.Sprintf("%d tools", status.Session.ToolCalls)
-		if status.Session.TokensUsed > 0 {
-			stats = fmt.Sprintf("%dK | %s", status.Session.TokensUsed/1000, stats)
-		}
-		bounds = image.Rect(textX, pos.H-10, pos.W-2, pos.H-2)
-		w.textRenderer.Render(img, stats, 0, bounds)
+	// Error indicator
+	if status.State == StateError {
+		drawSprite(img, &ErrorMark, clawdX+sprite.Width, clawdY)
 	}
 }
 
-// renderCompact renders a compact display
-func (w *Widget) renderCompact(img *image.Gray, status StatusData, celebrating bool) {
-	pos := w.GetPosition()
-
-	// Small Clawd on left
-	sprite := w.getSmallClawdSprite(status.State, celebrating)
-	clawdY := (pos.H - sprite.Height) / 2
-	drawSprite(img, sprite, 2, clawdY)
-
-	// Status text on right
-	statusText := w.getShortStatusText(status)
-	bounds := image.Rect(12, 2, pos.W-2, pos.H-2)
-	w.textRenderer.Render(img, statusText, 0, bounds)
-}
-
-// renderMinimal renders just a tiny Clawd indicator
-func (w *Widget) renderMinimal(img *image.Gray, status StatusData, celebrating bool) {
-	pos := w.GetPosition()
-
-	sprite := w.getSmallClawdSprite(status.State, celebrating)
-	x := (pos.W - sprite.Width) / 2
-	y := (pos.H - sprite.Height) / 2
-	drawSprite(img, sprite, x, y)
-
-	// Add thinking dots for thinking state
-	if status.State == StateThinking {
-		dotsFrame := (w.animFrame / 6) % len(ThinkingDots)
-		dotsSprite := &ThinkingDots[dotsFrame]
-		drawSprite(img, dotsSprite, x+sprite.Width+1, y-1)
-	}
-}
-
-func (w *Widget) getClawdSprite(state State, celebrating bool) *ClawdSprite {
-	// Clawd has no emotions - just one sprite
-	return &ClawdMedium
-}
-
-func (w *Widget) getSmallClawdSprite(state State, celebrating bool) *ClawdSprite {
-	// Clawd has no emotions - just one sprite
-	return &ClawdSmall
-}
-
-func (w *Widget) getStatusText(status StatusData) string {
+// getNotificationMessage returns the message to display for each state
+func (w *Widget) getNotificationMessage(status StatusData) string {
 	switch status.State {
 	case StateNotRunning:
-		return "Zzz... (sleeping)"
-	case StateIdle:
-		return "Ready!"
-	case StateThinking:
-		return "Thinking..."
-	case StateToolRun:
-		return "Working..."
-	case StateSuccess:
-		return "Done!"
-	case StateError:
-		return "Oops!"
-	default:
-		return "..."
-	}
-}
-
-func (w *Widget) getShortStatusText(status StatusData) string {
-	switch status.State {
-	case StateNotRunning:
-		return "Zzz"
+		return "Zzz..."
 	case StateIdle:
 		return "Ready"
 	case StateThinking:
-		return "Hmm..."
+		return "Thinking"
 	case StateToolRun:
 		if status.Tool != "" {
 			return status.Tool
 		}
-		return "Working"
+		return "Working..."
 	case StateSuccess:
 		return "Done!"
 	case StateError:
-		return "Error"
+		if status.Message != "" {
+			return status.Message
+		}
+		return "Error!"
 	default:
 		return "..."
 	}
@@ -533,11 +549,4 @@ func drawSprite(img *image.Gray, sprite *ClawdSprite, x, y int) {
 			}
 		}
 	}
-}
-
-func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
 }

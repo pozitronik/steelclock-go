@@ -38,6 +38,9 @@ func TestRender_NotRunning(t *testing.T) {
 		},
 		ClaudeCode: &config.ClaudeCodeConfig{
 			IntroOnStart: config.BoolPtr(false), // Skip intro for test
+			Notify: &config.ClaudeCodeNotifyConfig{
+				NotRunning: config.IntPtr(-1), // Show not_running state for test
+			},
 		},
 	}
 
@@ -45,6 +48,9 @@ func TestRender_NotRunning(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
+
+	// Manually set shouldShow since no intro and state change triggers it
+	w.shouldShow = true
 
 	// Update to get initial state
 	_ = w.Update()
@@ -169,27 +175,33 @@ func TestStatusStates(t *testing.T) {
 		},
 		ClaudeCode: &config.ClaudeCodeConfig{
 			IntroOnStart: config.BoolPtr(false),
+			Notify: &config.ClaudeCodeNotifyConfig{
+				Thinking:   config.IntPtr(-1), // Show all states for testing
+				Tool:       config.IntPtr(-1),
+				Success:    config.IntPtr(-1),
+				Error:      config.IntPtr(-1),
+				Idle:       config.IntPtr(-1),
+				NotRunning: config.IntPtr(-1),
+			},
 		},
 	}
 
 	w, _ := New(cfg)
 
-	// Test that all states produce valid sprites
+	// Test that all states produce valid messages
 	for _, state := range states {
-		sprite := w.getClawdSprite(state, false)
-		if sprite == nil {
-			t.Errorf("getClawdSprite(%s) returned nil", state)
-		}
-
-		smallSprite := w.getSmallClawdSprite(state, false)
-		if smallSprite == nil {
-			t.Errorf("getSmallClawdSprite(%s) returned nil", state)
+		status := StatusData{State: state}
+		msg := w.getNotificationMessage(status)
+		if msg == "" {
+			t.Errorf("getNotificationMessage(%s) returned empty string", state)
 		}
 	}
 
-	// Test that sprite is always the same (Clawd has no emotions)
-	sprite := w.getClawdSprite(StateIdle, true)
-	if sprite != &ClawdMedium {
-		t.Error("getClawdSprite should always return ClawdMedium")
+	// Test notification duration lookup
+	for _, state := range states {
+		duration := w.getNotifyDuration(state)
+		if duration != -1 {
+			t.Errorf("getNotifyDuration(%s) = %d, want -1", state, duration)
+		}
 	}
 }

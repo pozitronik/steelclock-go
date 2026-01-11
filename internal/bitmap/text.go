@@ -364,3 +364,30 @@ func SmartDrawTextAtPosition(img *image.Gray, text string, fontFace font.Face, f
 		DrawTextAtPosition(img, text, fontFace, x, y, clipX, clipY, clipW, clipH)
 	}
 }
+
+// SmartDrawTextAtPositionWithColor draws text at a specific position with clipping and custom color.
+// If fontFace is nil and fontName is an internal font name, uses internal font.
+// textColor is the grayscale value (0=black, 255=white).
+func SmartDrawTextAtPositionWithColor(img *image.Gray, text string, fontFace font.Face, fontName string, x, y, clipX, clipY, clipW, clipH int, textColor uint8) {
+	if fontFace == nil && IsInternalFont(fontName) {
+		glyphSet := GetInternalFontByName(fontName)
+		if glyphSet == nil {
+			return
+		}
+		// Draw internal font with clipping and custom color
+		DrawInternalTextClipped(img, text, glyphSet, x, y, clipX, clipY, clipW, clipH, color.Gray{Y: textColor})
+		return
+	}
+
+	// Fall back to TTF rendering (always white for now)
+	if fontFace != nil {
+		DrawTextAtPosition(img, text, fontFace, x, y, clipX, clipY, clipW, clipH)
+	}
+}
+
+// MeasureTextWidth returns just the width of text using the appropriate font.
+// Convenience wrapper around SmartMeasureText.
+func MeasureTextWidth(text string, fontFace font.Face, fontName string) int {
+	w, _ := SmartMeasureText(text, fontFace, fontName)
+	return w
+}

@@ -1101,18 +1101,12 @@ type TelegramElementConfig struct {
 	WordBreak string `json:"word_break,omitempty"`
 }
 
-// ClaudeCodeConfig contains settings for the Claude Code status widget.
-// This widget displays Claude Code's current activity with the Clawd mascot.
+// ClaudeCodeConfig contains settings for the Claude Code notification widget.
+// This widget notifies about Claude Code's activity with the Clawd mascot.
 //
 // Status is received via HTTP POST to /api/claude-status endpoint.
 // Configure Claude Code hooks to POST status updates to SteelClock's web server.
 type ClaudeCodeConfig struct {
-	// DisplayMode: widget display mode - "full", "compact", "minimal" (default: "full")
-	DisplayMode string `json:"display_mode,omitempty"`
-	// ShowStats: show session statistics like tool count and tokens (default: true)
-	ShowStats *bool `json:"show_stats,omitempty"`
-	// ShowToolIcon: show icon for current tool being used (default: true)
-	ShowToolIcon *bool `json:"show_tool_icon,omitempty"`
 	// IntroOnStart: play intro animation when widget starts (default: true)
 	IntroOnStart *bool `json:"intro_on_start,omitempty"`
 	// IntroDuration: intro animation duration in seconds (default: 3)
@@ -1121,4 +1115,32 @@ type ClaudeCodeConfig struct {
 	IdleAnimations *bool `json:"idle_animations,omitempty"`
 	// IntroTitle: text shown during intro, supports \n for multiple lines
 	IntroTitle string `json:"intro_title,omitempty"`
+	// AutoHide: hide widget when there's no notification to show (default: true)
+	AutoHide *bool `json:"auto_hide,omitempty"`
+	// SpriteSize: Clawd sprite size - "large" (34x20), "medium" (17x10), "small" (9x6)
+	// Default: "medium"
+	SpriteSize string `json:"sprite_size,omitempty"`
+	// ShowText: show status text next to Clawd (default: true)
+	// When false, only Clawd animations are shown
+	ShowText *bool `json:"show_text,omitempty"`
+	// Notify: notification duration per state in seconds
+	// 0 = don't show, -1 = show until next state change, N = show for N seconds
+	Notify *ClaudeCodeNotifyConfig `json:"notify,omitempty"`
+}
+
+// ClaudeCodeNotifyConfig defines notification duration for each Claude Code state.
+// Values: 0 = don't notify, -1 = notify until next event, N = notify for N seconds
+type ClaudeCodeNotifyConfig struct {
+	// Thinking: duration when Claude is thinking (default: 0)
+	Thinking *int `json:"thinking,omitempty"`
+	// Tool: duration when Claude is using a tool (default: 2)
+	Tool *int `json:"tool,omitempty"`
+	// Success: duration when task completes successfully (default: -1)
+	Success *int `json:"success,omitempty"`
+	// Error: duration when an error occurs (default: -1)
+	Error *int `json:"error,omitempty"`
+	// Idle: duration when Claude is idle (default: 0)
+	Idle *int `json:"idle,omitempty"`
+	// NotRunning: duration when Claude Code is not running (default: 0)
+	NotRunning *int `json:"not_running,omitempty"`
 }
