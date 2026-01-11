@@ -3828,6 +3828,11 @@
                     "description": "Show status text next to Clawd. When false, only Clawd animations are displayed",
                     "default": true
                   },
+                  "show_timer": {
+                    "type": "boolean",
+                    "description": "Show elapsed time during thinking/tool states",
+                    "default": true
+                  },
                   "notify": {
                     "type": "object",
                     "description": "Notification duration per state. 0 = don't show, -1 = show until next state, N = show for N seconds",

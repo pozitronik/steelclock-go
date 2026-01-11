@@ -1121,6 +1121,8 @@ type ClaudeCodeConfig struct {
 	// ShowText: show status text next to Clawd (default: true)
 	// When false, only Clawd animations are shown
 	ShowText *bool `json:"show_text,omitempty"`
+	// ShowTimer: show elapsed time during thinking/tool states (default: true)
+	ShowTimer *bool `json:"show_timer,omitempty"`
 	// Notify: notification duration per state in seconds
 	// 0 = don't show, -1 = show until next state change, N = show for N seconds
 	Notify *ClaudeCodeNotifyConfig `json:"notify,omitempty"`
