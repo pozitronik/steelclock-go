@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"math"
 	"math/rand"
 	"strings"
 	"sync"
@@ -94,7 +95,6 @@ type Widget struct {
 
 	// Animation state
 	animFrame      int
-	blinkCountdown int
 	lastFrameTime  time.Time
 	showingIntro   bool
 	introStartTime time.Time
@@ -114,9 +114,18 @@ type Widget struct {
 	// Blinking animation state
 	isBlinking     bool      // Whether currently blinking
 	blinkStartTime time.Time // When current blink started
+	nextBlinkTime  time.Time // When next blink should trigger
 
 	// Active state timing (for elapsed time display)
 	activeStateStartTime time.Time // When current active state started
+
+	// Idle animation states
+	isLookingLeft  bool      // Looking left animation active
+	isLookingRight bool      // Looking right animation active
+	lookStartTime  time.Time // When look animation started
+	nextLookTime   time.Time // When next look animation should trigger
+	breathingPhase float64   // Phase for breathing animation (0 to 2*PI)
+	lastBreathTime time.Time // Last time breathing was updated
 
 	// Random for idle animations
 	rng *rand.Rand
@@ -137,15 +146,19 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		return nil, err
 	}
 
+	now := time.Now()
+	rng := rand.New(rand.NewSource(now.UnixNano()))
 	w := &Widget{
-		BaseWidget:     base,
-		cfg:            widgetCfg,
-		fontFace:       fontFace,
-		fontName:       textSettings.FontName,
-		status:         StatusData{State: StateNotRunning},
-		blinkCountdown: 50 + rand.Intn(100),
-		rng:            rand.New(rand.NewSource(time.Now().UnixNano())),
-		lastFrameTime:  time.Now(),
+		BaseWidget:    base,
+		cfg:           widgetCfg,
+		fontFace:      fontFace,
+		fontName:      textSettings.FontName,
+		status:        StatusData{State: StateNotRunning},
+		rng:           rng,
+		lastFrameTime: now,
+		// Time-based animation triggers
+		nextBlinkTime: now.Add(2*time.Second + time.Duration(rng.Intn(3000))*time.Millisecond),
+		nextLookTime:  now.Add(15*time.Second + time.Duration(rng.Intn(15000))*time.Millisecond),
 	}
 
 	// Start with intro if duration > 0
@@ -243,6 +256,9 @@ const wakeUpAnimationDuration = 400 * time.Millisecond
 // blinkDuration is how long a single blink takes
 const blinkDuration = 200 * time.Millisecond
 
+// lookDuration is how long the looking animation lasts
+const lookDuration = 1200 * time.Millisecond
+
 // getClawdSprite returns the Clawd sprite based on configured size and animation state
 // Takes current time to avoid redundant time.Now() calls
 func (w *Widget) getClawdSprite(currentState State, now time.Time) *ClawdSprite {
@@ -261,6 +277,15 @@ func (w *Widget) getClawdSprite(currentState State, now time.Time) *ClawdSprite 
 				return w.getSleepySprite(frameIndex)
 			}
 		}
+
+		// Check for idle animations
+		if w.isLookingLeft {
+			return w.getLookSprite(true)
+		}
+		if w.isLookingRight {
+			return w.getLookSprite(false)
+		}
+
 		// Animation complete OR started in idle state (already sleeping)
 		return w.getSleepySprite(2)
 	}
@@ -330,6 +355,25 @@ func (w *Widget) getSleepySprite(frameIndex int) *ClawdSprite {
 			return SleepySpritesMedium[frameIndex]
 		}
 		return &ClawdMediumSleepy2
+	}
+}
+
+// getLookSprite returns the look left/right sprite for the configured size
+func (w *Widget) getLookSprite(left bool) *ClawdSprite {
+	switch w.cfg.SpriteSize {
+	case "large":
+		if left {
+			return &ClawdLargeLookLeft
+		}
+		return &ClawdLargeLookRight
+	case "small":
+		// Small size doesn't have look variants, use normal sleepy
+		return &ClawdSmall
+	default:
+		if left {
+			return &ClawdMediumLookLeft
+		}
+		return &ClawdMediumLookRight
 	}
 }
 
@@ -511,7 +555,12 @@ func (w *Widget) updateAnimations(now time.Time, currentState State) {
 		return
 	}
 
-	isAwake := !isIdleState(currentState)
+	isIdle := isIdleState(currentState)
+
+	// Complete sleepy transition animation if finished
+	if w.isSleepy && now.Sub(w.sleepyStartTime) >= sleepyAnimationDuration {
+		w.isSleepy = false
+	}
 
 	// Complete wake-up animation if finished
 	if w.isWakingUp && now.Sub(w.wakeUpStartTime) >= wakeUpAnimationDuration {
@@ -523,16 +572,50 @@ func (w *Widget) updateAnimations(now time.Time, currentState State) {
 		w.isBlinking = false
 	}
 
-	// Blink countdown - only when awake and not already blinking or waking up
-	if isAwake && !w.isBlinking && !w.isWakingUp {
-		w.blinkCountdown--
-		if w.blinkCountdown <= 0 {
-			// Trigger a blink
-			w.isBlinking = true
-			w.blinkStartTime = now
-			// Reset countdown for next blink (2-5 seconds at ~60fps)
-			w.blinkCountdown = 120 + w.rng.Intn(180)
+	// Blink trigger - only when awake and not already blinking or waking up
+	if !isIdle && !w.isBlinking && !w.isWakingUp && now.After(w.nextBlinkTime) {
+		w.isBlinking = true
+		w.blinkStartTime = now
+		// Schedule next blink (2-5 seconds)
+		w.nextBlinkTime = now.Add(2*time.Second + time.Duration(w.rng.Intn(3000))*time.Millisecond)
+	}
+
+	// === Idle-only animations (breathing, looking, yawning) ===
+	if isIdle && !w.isSleepy {
+		// Breathing animation - time-based sine wave
+		if !w.lastBreathTime.IsZero() {
+			elapsed := now.Sub(w.lastBreathTime).Seconds()
+			w.breathingPhase += elapsed * 2.0 // ~2 radians per second for slow breathing
+			if w.breathingPhase > 2*math.Pi {
+				w.breathingPhase -= 2 * math.Pi
+			}
 		}
+		w.lastBreathTime = now
+
+		// Complete looking animation if finished
+		if (w.isLookingLeft || w.isLookingRight) && now.Sub(w.lookStartTime) >= lookDuration {
+			w.isLookingLeft = false
+			w.isLookingRight = false
+		}
+
+		// Look trigger - only when not already looking
+		if !w.isLookingLeft && !w.isLookingRight && now.After(w.nextLookTime) {
+			// Randomly look left or right
+			if w.rng.Intn(2) == 0 {
+				w.isLookingLeft = true
+			} else {
+				w.isLookingRight = true
+			}
+			w.lookStartTime = now
+			// Schedule next look (15-30 seconds)
+			w.nextLookTime = now.Add(15*time.Second + time.Duration(w.rng.Intn(15000))*time.Millisecond)
+		}
+	} else {
+		// Reset idle animations when not idle
+		w.isLookingLeft = false
+		w.isLookingRight = false
+		w.breathingPhase = 0
+		w.lastBreathTime = time.Time{}
 	}
 }
 
@@ -628,6 +711,14 @@ func (w *Widget) renderNotification(img *image.Gray, status StatusData, celebrat
 	// Clawd in bottom-left corner
 	clawdX := padding
 	clawdY := pos.H - sprite.Height - padding
+
+	// Apply breathing offset during idle state (subtle up/down bobbing)
+	if isIdleState(status.State) && !w.isSleepy && w.cfg.IdleAnimations {
+		// Breathing oscillates Y position by +/- 1 pixel
+		breathingOffset := int(math.Round(math.Sin(w.breathingPhase)))
+		clawdY += breathingOffset
+	}
+
 	drawSprite(img, sprite, clawdX, clawdY)
 
 	// State-specific animations around Clawd
