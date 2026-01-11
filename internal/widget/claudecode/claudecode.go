@@ -379,9 +379,16 @@ func (w *Widget) Update() error {
 		w.onStateChange(w.status.State)
 	}
 
-	// Trigger celebration on transition to success
+	// Trigger celebration on transition to success (duration from notify.success)
 	if w.status.State == StateSuccess && w.lastStatus.State != StateSuccess {
-		w.celebrateUntil = time.Now().Add(2 * time.Second)
+		duration := w.cfg.Notify.Success
+		if duration > 0 {
+			w.celebrateUntil = time.Now().Add(time.Duration(duration) * time.Second)
+		} else if duration == -1 {
+			// -1 means until next state, use far future time
+			w.celebrateUntil = time.Now().Add(24 * time.Hour)
+		}
+		// duration == 0 means no celebration
 	}
 
 	return nil
@@ -415,6 +422,11 @@ func (w *Widget) onStateChange(newState State) {
 		if oldState != StateThinking && oldState != StateToolRun {
 			w.activeStateStartTime = time.Now()
 		}
+	}
+
+	// Stop celebration when leaving success state
+	if oldState == StateSuccess && newState != StateSuccess {
+		w.celebrateUntil = time.Time{}
 	}
 
 	duration := w.getNotifyDuration(newState)
@@ -707,8 +719,8 @@ func (w *Widget) renderStateAnimation(img *image.Gray, status StatusData, celebr
 		drawSprite(img, zsSprite, clawdX+sprite.Width-2, clawdY-4)
 	}
 
-	// Celebration sparkles
-	if celebrating || status.State == StateSuccess {
+	// Celebration sparkles (only during 2-second celebration period)
+	if celebrating {
 		w.sparklePhase = (w.sparklePhase + 1) % (len(Sparkles) * 3)
 		sparkleIdx := w.sparklePhase / 3
 		sparkle := &Sparkles[sparkleIdx]
