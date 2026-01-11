@@ -288,6 +288,10 @@ type WidgetConfig struct {
 
 	// Claude Code status widget
 	ClaudeCode *ClaudeCodeConfig `json:"claude_code,omitempty"` // Claude Code status widget settings
+
+	// Beefweb widget (Foobar2000/DeaDBeeF)
+	Beefweb         *BeefwebConfig         `json:"beefweb,omitempty"`           // Beefweb settings
+	BeefwebAutoShow *BeefwebAutoShowConfig `json:"beefweb_auto_show,omitempty"` // Beefweb auto-show events
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -607,6 +611,38 @@ type WinampAutoShowConfig struct {
 // WinampPlaceholderConfig represents what to show when Winamp is not playing
 type WinampPlaceholderConfig struct {
 	// Mode: "text" for custom text, "icon" for Winamp icon
+	Mode string `json:"mode,omitempty"`
+	// Text to display when mode is "text"
+	Text string `json:"text,omitempty"`
+}
+
+// BeefwebConfig represents Beefweb widget settings (Foobar2000/DeaDBeeF)
+// Format string is configured via text.format with placeholders:
+// {artist}, {title}, {album}, {duration}, {position}, {state}
+type BeefwebConfig struct {
+	// ServerURL is the beefweb server URL (default: http://localhost:8880)
+	ServerURL string `json:"server_url,omitempty"`
+	// Placeholder configuration when player is not running or stopped
+	Placeholder *BeefwebPlaceholderConfig `json:"placeholder,omitempty"`
+}
+
+// BeefwebAutoShowConfig represents events that trigger the beefweb widget to show
+type BeefwebAutoShowConfig struct {
+	// OnTrackChange - show widget when track changes (default: true)
+	OnTrackChange *bool `json:"on_track_change,omitempty"`
+	// OnPlay - show widget when playback starts
+	OnPlay bool `json:"on_play,omitempty"`
+	// OnPause - show widget when playback is paused
+	OnPause bool `json:"on_pause,omitempty"`
+	// OnStop - show widget when playback stops
+	OnStop bool `json:"on_stop,omitempty"`
+	// DurationSec - how long to show the widget (seconds, default: 5)
+	DurationSec float64 `json:"duration_sec,omitempty"`
+}
+
+// BeefwebPlaceholderConfig represents what to show when player is not running
+type BeefwebPlaceholderConfig struct {
+	// Mode: "text" for custom text, "hide" to hide widget
 	Mode string `json:"mode,omitempty"`
 	// Text to display when mode is "text"
 	Text string `json:"text,omitempty"`
