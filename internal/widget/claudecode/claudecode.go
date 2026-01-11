@@ -85,8 +85,9 @@ type Widget struct {
 	statusMu   sync.RWMutex
 
 	// Notification visibility
-	visibleUntil time.Time // When notification should hide (zero = indefinite)
-	shouldShow   bool      // Current visibility state
+	visibleUntil       time.Time // When widget should auto-hide (zero = indefinite)
+	bubbleVisibleUntil time.Time // When bubble/message should hide (zero = indefinite)
+	shouldShow         bool      // Current visibility state
 
 	// Animation state
 	animFrame      int
@@ -98,6 +99,10 @@ type Widget struct {
 	// Celebration state
 	celebrateUntil time.Time
 	sparklePhase   int
+
+	// Sleepy animation state (transition to idle)
+	sleepyStartTime time.Time // When sleepy animation started
+	isSleepy        bool      // Whether we're in sleepy transition
 
 	// Random for idle animations
 	rng *rand.Rand
@@ -135,6 +140,10 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		w.introStartTime = time.Now()
 		w.shouldShow = true
 		w.TriggerAutoHide() // Show widget during intro
+	} else if widgetCfg.IdleAnimations {
+		// No intro - trigger sleepy animation on startup if in idle/not_running state
+		w.isSleepy = true
+		w.sleepyStartTime = time.Now()
 	}
 
 	return w, nil
@@ -203,8 +212,32 @@ func parseConfig(cfg config.WidgetConfig) Config {
 	return c
 }
 
-// getClawdSprite returns the Clawd sprite based on configured size
-func (w *Widget) getClawdSprite() *ClawdSprite {
+// sleepyAnimationDuration is how long the sleepy animation takes
+const sleepyAnimationDuration = 800 * time.Millisecond
+
+// getClawdSprite returns the Clawd sprite based on configured size and animation state
+func (w *Widget) getClawdSprite(currentState State) *ClawdSprite {
+	// For idle/not_running states, show sleepy/sleeping sprite
+	if currentState == StateIdle || currentState == StateNotRunning {
+		if w.isSleepy {
+			// Currently in sleepy animation transition
+			elapsed := time.Since(w.sleepyStartTime)
+			if elapsed < sleepyAnimationDuration {
+				// Calculate which frame to show (0 = open, 1 = half, 2 = closed)
+				progress := float64(elapsed) / float64(sleepyAnimationDuration)
+				frameIndex := int(progress * 3)
+				if frameIndex > 2 {
+					frameIndex = 2
+				}
+				return w.getSleepySprite(frameIndex)
+			}
+		}
+		// Animation complete OR started in idle state (already sleeping)
+		// Show closed eyes
+		return w.getSleepySprite(2)
+	}
+
+	// Non-idle states: normal sprite with open eyes
 	switch w.cfg.SpriteSize {
 	case "large":
 		return &ClawdLarge
@@ -212,6 +245,25 @@ func (w *Widget) getClawdSprite() *ClawdSprite {
 		return &ClawdSmall
 	default:
 		return &ClawdMedium
+	}
+}
+
+// getSleepySprite returns the sleepy sprite frame for the configured size
+func (w *Widget) getSleepySprite(frameIndex int) *ClawdSprite {
+	switch w.cfg.SpriteSize {
+	case "large":
+		if frameIndex >= 0 && frameIndex < len(SleepySpritesLarge) {
+			return SleepySpritesLarge[frameIndex]
+		}
+		return &ClawdLargeSleepy2
+	case "small":
+		// Small size doesn't have sleepy variants, use normal
+		return &ClawdSmall
+	default:
+		if frameIndex >= 0 && frameIndex < len(SleepySpritesMedium) {
+			return SleepySpritesMedium[frameIndex]
+		}
+		return &ClawdMediumSleepy2
 	}
 }
 
@@ -271,21 +323,33 @@ func (w *Widget) Update() error {
 
 // onStateChange handles notification visibility when state changes
 func (w *Widget) onStateChange(newState State) {
+	// Trigger sleepy animation when entering idle or not_running state
+	if (newState == StateIdle || newState == StateNotRunning) && w.cfg.IdleAnimations {
+		w.isSleepy = true
+		w.sleepyStartTime = time.Now()
+	} else {
+		// Reset sleepy state when leaving idle
+		w.isSleepy = false
+	}
+
 	duration := w.getNotifyDuration(newState)
 
 	if duration == 0 {
 		// Don't show notification
 		w.shouldShow = false
 		w.visibleUntil = time.Time{}
+		w.bubbleVisibleUntil = time.Time{}
 	} else if duration == -1 {
 		// Show until next state change
 		w.shouldShow = true
-		w.visibleUntil = time.Time{} // No expiry
-		w.TriggerAutoHide()          // Reset auto-hide timer
+		w.visibleUntil = time.Time{}       // No expiry for widget
+		w.bubbleVisibleUntil = time.Time{} // No expiry for bubble
+		w.TriggerAutoHide()                // Reset auto-hide timer
 	} else {
 		// Show for N seconds
 		w.shouldShow = true
 		w.visibleUntil = time.Now().Add(time.Duration(duration) * time.Second)
+		w.bubbleVisibleUntil = time.Now().Add(time.Duration(duration) * time.Second)
 		w.TriggerAutoHide() // Reset auto-hide timer
 	}
 }
@@ -430,7 +494,7 @@ func (w *Widget) renderNotification(img *image.Gray, status StatusData, celebrat
 	if status.State == StateToolRun && status.Tool != "" {
 		if icon := GetToolIcon(status.Tool); icon != nil {
 			// Draw icon above where Clawd will be, centered horizontally
-			sprite := w.getClawdSprite()
+			sprite := w.getClawdSprite(status.State)
 			iconX := padding + (sprite.Width-icon.Width)/2
 			iconY := pos.H - sprite.Height - padding - icon.Height - 2
 			drawSprite(img, icon, iconX, iconY)
@@ -438,7 +502,7 @@ func (w *Widget) renderNotification(img *image.Gray, status StatusData, celebrat
 	}
 
 	// Clawd in bottom-left corner
-	sprite := w.getClawdSprite()
+	sprite := w.getClawdSprite(status.State)
 	clawdX := padding
 	clawdY := pos.H - sprite.Height - padding
 	drawSprite(img, sprite, clawdX, clawdY)
@@ -450,7 +514,9 @@ func (w *Widget) renderNotification(img *image.Gray, status StatusData, celebrat
 
 	// Message in comic bubble (if enabled)
 	// Skip bubble for sleeping states - Zzz animation is enough
-	if w.cfg.ShowText && status.State != StateIdle && status.State != StateNotRunning {
+	// Also hide bubble after configured duration expires
+	bubbleExpired := !w.bubbleVisibleUntil.IsZero() && time.Now().After(w.bubbleVisibleUntil)
+	if w.cfg.ShowText && status.State != StateIdle && status.State != StateNotRunning && !bubbleExpired {
 		message := w.getNotificationMessage(status)
 
 		// Calculate text dimensions using the widget's configured font
@@ -518,9 +584,11 @@ func (w *Widget) renderStateAnimation(img *image.Gray, status StatusData, celebr
 		drawSprite(img, sparkle, clawdX+sprite.Width-2, clawdY-2)
 	}
 
-	// Error indicator
+	// Error indicator - above Clawd's head, centered
 	if status.State == StateError {
-		drawSprite(img, &ErrorMark, clawdX+sprite.Width, clawdY)
+		errorX := clawdX + (sprite.Width-ErrorMark.Width)/2
+		errorY := clawdY - ErrorMark.Height - 2
+		drawSprite(img, &ErrorMark, errorX, errorY)
 	}
 }
 
