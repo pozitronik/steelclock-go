@@ -192,6 +192,7 @@ The `config_name` field determines how the profile appears in the tray menu. If 
 | **volume_meter**     | Realtime audio peak meter         | bar, gauge (stereo & VU support)       |   Yes   | Limited* |
 | **audio_visualizer** | Realtime audio spectrum/waveform  | spectrum, oscilloscope                 |   Yes   |   Yes*   |
 | **winamp**           | Winamp player info display        | text (with scrolling support)          |   Yes   |    No    |
+| **beefweb**          | Foobar2000/DeaDBeeF player        | text (with scrolling support)          |   Yes   |   Yes    |
 | **telegram**         | Telegram notifications display    | text (with scrolling/transitions)      |   Yes   |   Yes    |
 | **telegram_counter** | Telegram unread message counter   | text                                   |   Yes   |   Yes    |
 | **doom**             | Interactive DOOM game display     | game                                   |   Yes   |   Yes    |
@@ -202,6 +203,8 @@ The `config_name` field determines how the profile appears in the tray menu. If 
 | **weather**          | Current weather conditions        | icon, text                             |   Yes   |   Yes    |
 
 \* See [Linux Limitations](#linux-limitations) section below.
+
+**Note:** The `beefweb` widget requires the [beefweb](https://github.com/hyperblast/beefweb) plugin installed in Foobar2000 (Windows) or DeaDBeeF (Linux).
 
 See [CONFIG_GUIDE.md](profiles/CONFIG_GUIDE.md) for detailed widget properties and configuration examples.
 
