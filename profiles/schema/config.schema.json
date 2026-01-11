@@ -3796,15 +3796,10 @@
                 "type": "object",
                 "description": "Claude Code notification widget with Clawd mascot",
                 "properties": {
-                  "intro_on_start": {
-                    "type": "boolean",
-                    "description": "Play intro animation when widget starts",
-                    "default": true
-                  },
                   "intro_duration": {
                     "type": "integer",
-                    "description": "Intro animation duration in seconds",
-                    "minimum": 1,
+                    "description": "Intro animation duration in seconds (0 = no intro)",
+                    "minimum": 0,
                     "maximum": 30,
                     "default": 3
                   },

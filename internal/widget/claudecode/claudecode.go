@@ -63,8 +63,7 @@ type NotifyConfig struct {
 
 // Config holds widget configuration
 type Config struct {
-	IntroOnStart   bool
-	IntroDurationS int
+	IntroDurationS int // Intro duration in seconds (0 = no intro)
 	IdleAnimations bool
 	IntroTitle     string
 	AutoHide       bool   // Hide widget when no notification to show
@@ -130,8 +129,8 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		lastFrameTime:  time.Now(),
 	}
 
-	// Start with intro if configured
-	if widgetCfg.IntroOnStart {
+	// Start with intro if duration > 0
+	if widgetCfg.IntroDurationS > 0 {
 		w.showingIntro = true
 		w.introStartTime = time.Now()
 		w.shouldShow = true
@@ -143,8 +142,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 
 func parseConfig(cfg config.WidgetConfig) Config {
 	c := Config{
-		IntroOnStart:   true,
-		IntroDurationS: 3,
+		IntroDurationS: 3, // Default 3 seconds intro (0 = no intro)
 		IdleAnimations: true,
 		IntroTitle:     "",
 		AutoHide:       true,     // Hide by default when no notification
@@ -161,10 +159,7 @@ func parseConfig(cfg config.WidgetConfig) Config {
 	}
 
 	if cfg.ClaudeCode != nil {
-		if cfg.ClaudeCode.IntroOnStart != nil {
-			c.IntroOnStart = *cfg.ClaudeCode.IntroOnStart
-		}
-		if cfg.ClaudeCode.IntroDuration > 0 {
+		if cfg.ClaudeCode.IntroDuration >= 0 {
 			c.IntroDurationS = cfg.ClaudeCode.IntroDuration
 		}
 		if cfg.ClaudeCode.IdleAnimations != nil {

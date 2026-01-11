@@ -37,7 +37,7 @@ func TestRender_NotRunning(t *testing.T) {
 			X: 0, Y: 0, W: 128, H: 40,
 		},
 		ClaudeCode: &config.ClaudeCodeConfig{
-			IntroOnStart: config.BoolPtr(false), // Skip intro for test
+			IntroDuration: 0, // Skip intro for test
 			Notify: &config.ClaudeCodeNotifyConfig{
 				NotRunning: config.IntPtr(-1), // Show not_running state for test
 			},
@@ -79,7 +79,6 @@ func TestRender_Intro(t *testing.T) {
 			X: 0, Y: 0, W: 128, H: 40,
 		},
 		ClaudeCode: &config.ClaudeCodeConfig{
-			IntroOnStart:  config.BoolPtr(true),
 			IntroDuration: 1, // Short intro for test
 		},
 	}
@@ -117,7 +116,7 @@ func TestDrawSprite(t *testing.T) {
 			X: 0, Y: 0, W: 64, H: 40,
 		},
 		ClaudeCode: &config.ClaudeCodeConfig{
-			IntroOnStart: config.BoolPtr(false),
+			IntroDuration: 0, // Skip intro
 		},
 	}
 
@@ -174,7 +173,7 @@ func TestStatusStates(t *testing.T) {
 			X: 0, Y: 0, W: 128, H: 40,
 		},
 		ClaudeCode: &config.ClaudeCodeConfig{
-			IntroOnStart: config.BoolPtr(false),
+			IntroDuration: 0, // Skip intro
 			Notify: &config.ClaudeCodeNotifyConfig{
 				Thinking:   config.IntPtr(-1), // Show all states for testing
 				Tool:       config.IntPtr(-1),

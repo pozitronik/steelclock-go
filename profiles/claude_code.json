@@ -33,7 +33,6 @@
         }
       },
       "claude_code": {
-        "intro_on_start": true,
         "intro_duration": 1,
         "idle_animations": true,
         "intro_title": "Claude is here!\\nReady to code?",

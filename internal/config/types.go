@@ -1107,9 +1107,7 @@ type TelegramElementConfig struct {
 // Status is received via HTTP POST to /api/claude-status endpoint.
 // Configure Claude Code hooks to POST status updates to SteelClock's web server.
 type ClaudeCodeConfig struct {
-	// IntroOnStart: play intro animation when widget starts (default: true)
-	IntroOnStart *bool `json:"intro_on_start,omitempty"`
-	// IntroDuration: intro animation duration in seconds (default: 3)
+	// IntroDuration: intro animation duration in seconds (default: 3, 0 = no intro)
 	IntroDuration int `json:"intro_duration,omitempty"`
 	// IdleAnimations: enable idle animations like blinking (default: true)
 	IdleAnimations *bool `json:"idle_animations,omitempty"`
