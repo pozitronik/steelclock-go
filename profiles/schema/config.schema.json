@@ -3833,6 +3833,11 @@
                     "description": "Show elapsed time during thinking/tool states",
                     "default": true
                   },
+                  "show_subagent": {
+                    "type": "boolean",
+                    "description": "Show small Clawd sprite in bottom right corner when subagent (Task) is running",
+                    "default": true
+                  },
                   "notify": {
                     "type": "object",
                     "description": "Notification duration per state. 0 = don't show, -1 = show until next state, N = show for N seconds",

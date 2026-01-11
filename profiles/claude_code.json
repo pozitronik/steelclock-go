@@ -40,6 +40,7 @@
         "sprite_size": "large",
         "show_text": true,
         "show_timer": true,
+        "show_subagent": true,
         "notify": {
           "thinking": -1,
           "tool": -1,

@@ -1123,6 +1123,8 @@ type ClaudeCodeConfig struct {
 	ShowText *bool `json:"show_text,omitempty"`
 	// ShowTimer: show elapsed time during thinking/tool states (default: true)
 	ShowTimer *bool `json:"show_timer,omitempty"`
+	// ShowSubagent: show small Clawd sprite when subagent (Task) is running (default: true)
+	ShowSubagent *bool `json:"show_subagent,omitempty"`
 	// Notify: notification duration per state in seconds
 	// 0 = don't show, -1 = show until next state change, N = show for N seconds
 	Notify *ClaudeCodeNotifyConfig `json:"notify,omitempty"`

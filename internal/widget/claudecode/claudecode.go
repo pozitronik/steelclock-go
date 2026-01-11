@@ -71,6 +71,7 @@ type Config struct {
 	SpriteSize     string // "large", "medium", "small"
 	ShowText       bool   // Show status text next to Clawd
 	ShowTimer      bool   // Show elapsed time during thinking/tool states
+	ShowSubagent   bool   // Show subagent counter
 	Notify         NotifyConfig
 }
 
@@ -171,6 +172,7 @@ func parseConfig(cfg config.WidgetConfig) Config {
 		SpriteSize:     "medium", // Default sprite size
 		ShowText:       true,     // Show status text by default
 		ShowTimer:      true,     // Show elapsed time by default
+		ShowSubagent:   true,     // Show tool call counter by default
 		Notify: NotifyConfig{
 			Thinking:   0,  // Don't show (too noisy)
 			Tool:       2,  // Show for 2 seconds
@@ -200,6 +202,9 @@ func parseConfig(cfg config.WidgetConfig) Config {
 		}
 		if cfg.ClaudeCode.ShowTimer != nil {
 			c.ShowTimer = *cfg.ClaudeCode.ShowTimer
+		}
+		if cfg.ClaudeCode.ShowSubagent != nil {
+			c.ShowSubagent = *cfg.ClaudeCode.ShowSubagent
 		}
 
 		// Parse notify config - only override defaults for explicitly set values
@@ -680,6 +685,14 @@ func (w *Widget) renderNotification(img *image.Gray, status StatusData, celebrat
 		timerY := pos.H // Bottom line as baseline
 		bitmap.SmartDrawTextAtPosition(img, elapsedStr, w.fontFace, w.fontName,
 			timerX, timerY, 0, 0, bounds.Dx(), bounds.Dy())
+	}
+
+	// Subagent indicator: small Clawd in the bottom right corner when Task is running
+	if w.cfg.ShowSubagent && status.State == StateToolRun && status.Tool == "Task" {
+		miniClawd := &ClawdSmall
+		miniX := pos.W - miniClawd.Width - 1
+		miniY := pos.H - miniClawd.Height
+		drawSprite(img, miniClawd, miniX, miniY)
 	}
 }
 
