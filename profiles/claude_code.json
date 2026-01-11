@@ -25,8 +25,8 @@
         "padding": 0
       },
       "text": {
-        "font": "5x7",
-        "size": 5,
+        "font": null,
+        "size": 16,
         "align": {
           "h": "left",
           "v": "top"
@@ -34,7 +34,7 @@
       },
       "claude_code": {
         "intro_on_start": true,
-        "intro_duration": 3,
+        "intro_duration": 1,
         "idle_animations": true,
         "intro_title": "Claude is here!\\nReady to code?",
         "auto_hide": false,

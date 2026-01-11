@@ -431,10 +431,14 @@ func (w *Widget) renderNotification(img *image.Gray, status StatusData, celebrat
 
 	// === LEFT COLUMN ===
 
-	// Tool icon in top-left corner
+	// Tool icon above Clawd's head (more visible position)
 	if status.State == StateToolRun && status.Tool != "" {
 		if icon := GetToolIcon(status.Tool); icon != nil {
-			drawSprite(img, icon, padding, padding)
+			// Draw icon above where Clawd will be, centered horizontally
+			sprite := w.getClawdSprite()
+			iconX := padding + (sprite.Width-icon.Width)/2
+			iconY := pos.H - sprite.Height - padding - icon.Height - 2
+			drawSprite(img, icon, iconX, iconY)
 		}
 	}
 
@@ -454,14 +458,15 @@ func (w *Widget) renderNotification(img *image.Gray, status StatusData, celebrat
 	if w.cfg.ShowText && status.State != StateIdle && status.State != StateNotRunning {
 		message := w.getNotificationMessage(status)
 
-		// Calculate text dimensions (add extra width to prevent clipping)
-		textWidth := bitmap.MeasureTextWidth(message, w.fontFace, w.fontName) + 4
-		textHeight := 7 // Approximate height for pixel fonts
+		// Calculate text dimensions using the widget's configured font
+		measuredWidth, measuredHeight := bitmap.SmartMeasureText(message, w.fontFace, w.fontName)
+		textWidth := measuredWidth + 4 // Extra width to prevent clipping
+		textHeight := measuredHeight
 
 		// Position bubble to the right of Clawd, near the top
 		bubblePadding := 12 // Extra space for bubble + trailing circles
 		textX := clawdX + sprite.Width + bubblePadding
-		textY := padding + 5 // Near the top with margin for bubble padding
+		textY := padding + 3 // Near the top with margin for bubble padding
 
 		// Draw comic bubble based on state
 		bubbleType := getBubbleTypeForState(status.State)
@@ -477,10 +482,24 @@ func (w *Widget) renderNotification(img *image.Gray, status StatusData, celebrat
 		}
 		drawBubble(img, bubbleType, textX, textY, textWidth, textHeight, tailX, tailY)
 
-		// Draw text in white (bubble has no fill, so text must be visible on black background)
-		// Use full image bounds for clipping to avoid cutting off text
+		// Calculate text draw position based on font type
+		textDrawY := textY
+		if w.fontFace != nil && !bitmap.IsInternalFont(w.fontName) {
+			// TTF font: y is baseline position, so add ascent to place text top at textY
+			metrics := w.fontFace.Metrics()
+			ascent := metrics.Ascent.Ceil()
+			textDrawY = textY + ascent
+		}
+
+		// Draw text
 		bitmap.SmartDrawTextAtPositionWithColor(img, message, w.fontFace, w.fontName,
-			textX, textY, 0, 0, img.Bounds().Dx(), img.Bounds().Dy(), 255)
+			textX, textDrawY, 0, 0, img.Bounds().Dx(), img.Bounds().Dy(), 255)
+
+		// For TTF fonts, apply threshold to remove anti-aliasing artifacts
+		// This converts gray pixels to crisp black/white for monochrome display
+		if w.fontFace != nil && !bitmap.IsInternalFont(w.fontName) {
+			thresholdArea(img, textX-1, textY-1, textWidth+2, textHeight+2, 128)
+		}
 	}
 }
 
@@ -545,6 +564,24 @@ func drawSprite(img *image.Gray, sprite *ClawdSprite, x, y int) {
 				py := y + sy
 				if px >= 0 && px < img.Bounds().Dx() && py >= 0 && py < img.Bounds().Dy() {
 					img.SetGray(px, py, color.Gray{Y: 255})
+				}
+			}
+		}
+	}
+}
+
+// thresholdArea applies a threshold to an area of the image, converting
+// gray pixels to pure black or white. This removes anti-aliasing artifacts
+// from TTF font rendering for crisp display on monochrome screens.
+func thresholdArea(img *image.Gray, x, y, w, h int, threshold uint8) {
+	bounds := img.Bounds()
+	for py := y; py < y+h; py++ {
+		for px := x; px < x+w; px++ {
+			if px >= bounds.Min.X && px < bounds.Max.X && py >= bounds.Min.Y && py < bounds.Max.Y {
+				if img.GrayAt(px, py).Y >= threshold {
+					img.SetGray(px, py, color.Gray{Y: 255})
+				} else {
+					img.SetGray(px, py, color.Gray{Y: 0})
 				}
 			}
 		}

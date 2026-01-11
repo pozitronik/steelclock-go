@@ -291,10 +291,12 @@ Save as `~/.claude/steelclock-hook.sh`:
 STEELCLOCK_URL="http://host.docker.internal:8384/api/claude-status"
 
 event="$1"
-tool="${2:-}"
 
-# Read hook input from stdin (contains context_window data)
+# Read hook input from stdin (contains tool_name, context_window, etc.)
 input=$(cat)
+
+# Extract tool_name from stdin JSON (environment variables are unreliable)
+tool=$(echo "$input" | jq -r '.tool_name // empty' 2>/dev/null)
 
 # Extract context_window and model from hook input using jq
 context_window=$(echo "$input" | jq -c '.context_window // empty' 2>/dev/null)
@@ -376,7 +378,7 @@ Add to `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "/home/YOUR_USER/.claude/steelclock-hook.sh tool $TOOL_NAME"
+            "command": "/home/YOUR_USER/.claude/steelclock-hook.sh tool"
           }
         ]
       }
