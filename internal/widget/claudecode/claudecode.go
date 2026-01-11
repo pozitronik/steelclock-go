@@ -580,7 +580,7 @@ func (w *Widget) updateAnimations(now time.Time, currentState State) {
 		w.nextBlinkTime = now.Add(2*time.Second + time.Duration(w.rng.Intn(3000))*time.Millisecond)
 	}
 
-	// === Idle-only animations (breathing, looking, yawning) ===
+	// === Idle-only animations (breathing, looking) ===
 	if isIdle && !w.isSleepy {
 		// Breathing animation - time-based sine wave
 		if !w.lastBreathTime.IsZero() {

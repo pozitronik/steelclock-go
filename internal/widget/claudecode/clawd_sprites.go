@@ -265,7 +265,7 @@ var SleepySpritesMedium = []*ClawdSprite{
 }
 
 // ============================================================================
-// IDLE ANIMATION SPRITES - Looking around and yawning
+// IDLE ANIMATION SPRITES - Looking around
 // ============================================================================
 
 // ClawdMediumLookLeft - Medium Clawd looking left (eyes shifted left)
