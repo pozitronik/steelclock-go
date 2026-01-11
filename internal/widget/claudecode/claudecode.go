@@ -458,7 +458,6 @@ func (w *Widget) Render() (image.Image, error) {
 	}
 
 	now := time.Now()
-	deltaTime := now.Sub(w.lastFrameTime)
 	w.lastFrameTime = now
 
 	// Update animation frame
@@ -471,7 +470,7 @@ func (w *Widget) Render() (image.Image, error) {
 	w.statusMu.RUnlock()
 
 	// Update animations with current state (avoids extra mutex lock)
-	w.updateAnimations(now, deltaTime, status.State)
+	w.updateAnimations(now, status.State)
 
 	// Check if we should show intro
 	if w.showingIntro {
@@ -507,7 +506,7 @@ func (w *Widget) Render() (image.Image, error) {
 
 // updateAnimations updates animation states for the current frame
 // Takes current time and state to avoid redundant time.Now() calls and mutex locks
-func (w *Widget) updateAnimations(now time.Time, dt time.Duration, currentState State) {
+func (w *Widget) updateAnimations(now time.Time, currentState State) {
 	if !w.cfg.IdleAnimations {
 		return
 	}

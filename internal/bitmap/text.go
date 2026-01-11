@@ -384,10 +384,3 @@ func SmartDrawTextAtPositionWithColor(img *image.Gray, text string, fontFace fon
 		DrawTextAtPosition(img, text, fontFace, x, y, clipX, clipY, clipW, clipH)
 	}
 }
-
-// MeasureTextWidth returns just the width of text using the appropriate font.
-// Convenience wrapper around SmartMeasureText.
-func MeasureTextWidth(text string, fontFace font.Face, fontName string) int {
-	w, _ := SmartMeasureText(text, fontFace, fontName)
-	return w
-}

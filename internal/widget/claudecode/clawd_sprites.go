@@ -257,7 +257,7 @@ var SleepySpritesLarge = []*ClawdSprite{
 	&ClawdLargeSleepy2, // Frame 2: eyes fully closed
 }
 
-// SleepySpritesM - Array of medium sleepy animation frames
+// SleepySpritesMedium SleepySpritesM - Array of medium sleepy animation frames
 var SleepySpritesMedium = []*ClawdSprite{
 	&ClawdMedium,        // Frame 0: eyes open
 	&ClawdMediumSleepy1, // Frame 1: eyes half closed
@@ -267,16 +267,6 @@ var SleepySpritesMedium = []*ClawdSprite{
 // ============================================================================
 // ANIMATION EFFECTS
 // ============================================================================
-
-// ThinkingDots - Animated dots that appear while thinking
-var ThinkingDots = []ClawdSprite{
-	{Width: 5, Height: 2, Data: [][]uint8{{1, 0, 0, 0, 0}, {0, 0, 0, 0, 0}}},
-	{Width: 5, Height: 2, Data: [][]uint8{{1, 0, 1, 0, 0}, {0, 0, 0, 0, 0}}},
-	{Width: 5, Height: 2, Data: [][]uint8{{1, 0, 1, 0, 1}, {0, 0, 0, 0, 0}}},
-	{Width: 5, Height: 2, Data: [][]uint8{{0, 0, 1, 0, 1}, {0, 0, 0, 0, 0}}},
-	{Width: 5, Height: 2, Data: [][]uint8{{0, 0, 0, 0, 1}, {0, 0, 0, 0, 0}}},
-	{Width: 5, Height: 2, Data: [][]uint8{{0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}}},
-}
 
 // SleepingZs - Z's floating up while sleeping
 var SleepingZs = []ClawdSprite{
