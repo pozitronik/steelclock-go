@@ -67,8 +67,9 @@ func (s *Server) Start() error {
 		return nil // Already running
 	}
 
-	// Bind to localhost only on the default port
-	addr := fmt.Sprintf("127.0.0.1:%d", DefaultPort)
+	// Bind to all interfaces to allow WSL connections
+	// Security: The server still validates Origin header on POST requests
+	addr := fmt.Sprintf("0.0.0.0:%d", DefaultPort)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("failed to start listener on port %d: %w", DefaultPort, err)

@@ -46,6 +46,9 @@ func (s *Server) registerHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/api/preview/frame", s.handlePreviewFrame)
 	mux.HandleFunc("/api/preview/ws", s.handlePreviewWebSocket)
 	mux.HandleFunc("/api/preview/override", s.handlePreviewOverride)
+
+	// Claude Code status endpoint
+	mux.HandleFunc("/api/claude-status", s.handleClaudeStatus)
 }
 
 // serveIndex serves the main HTML page

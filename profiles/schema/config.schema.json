@@ -555,7 +555,8 @@
             "telegram",
             "telegram_counter",
             "screen_mirror",
-            "hacker_code"
+            "hacker_code",
+            "claude_code"
           ]
         },
         "enabled": {
@@ -3769,6 +3770,109 @@
                     "minimum": 1,
                     "maximum": 8,
                     "default": 2
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "claude_code"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "text": {
+                "$ref": "#/definitions/textStyle"
+              },
+              "claude_code": {
+                "type": "object",
+                "description": "Claude Code notification widget with Clawd mascot",
+                "properties": {
+                  "intro_duration": {
+                    "type": "integer",
+                    "description": "Intro animation duration in seconds (0 = no intro)",
+                    "minimum": 0,
+                    "maximum": 30,
+                    "default": 3
+                  },
+                  "idle_animations": {
+                    "type": "boolean",
+                    "description": "Enable idle animations like blinking",
+                    "default": true
+                  },
+                  "intro_title": {
+                    "type": "string",
+                    "description": "Text shown during intro, supports \\n for multiple lines (e.g., \"Claude Code\\nReady to code?\")"
+                  },
+                  "auto_hide": {
+                    "type": "boolean",
+                    "description": "Hide widget when no notification is active (based on notify durations)",
+                    "default": true
+                  },
+                  "sprite_size": {
+                    "type": "string",
+                    "description": "Clawd sprite size: large (34x20), medium (17x10), small (9x6)",
+                    "enum": ["large", "medium", "small"],
+                    "default": "medium"
+                  },
+                  "show_text": {
+                    "type": "boolean",
+                    "description": "Show status text next to Clawd. When false, only Clawd animations are displayed",
+                    "default": true
+                  },
+                  "show_timer": {
+                    "type": "boolean",
+                    "description": "Show elapsed time during thinking/tool states",
+                    "default": true
+                  },
+                  "show_subagent": {
+                    "type": "boolean",
+                    "description": "Show small Clawd sprite in bottom right corner when subagent (Task) is running",
+                    "default": true
+                  },
+                  "notify": {
+                    "type": "object",
+                    "description": "Notification duration per state. 0 = don't show, -1 = show until next state, N = show for N seconds",
+                    "properties": {
+                      "thinking": {
+                        "type": "integer",
+                        "description": "Duration when Claude is thinking",
+                        "default": 0
+                      },
+                      "tool": {
+                        "type": "integer",
+                        "description": "Duration when Claude is using a tool",
+                        "default": 2
+                      },
+                      "success": {
+                        "type": "integer",
+                        "description": "Duration when task completes successfully",
+                        "default": -1
+                      },
+                      "error": {
+                        "type": "integer",
+                        "description": "Duration when an error occurs",
+                        "default": -1
+                      },
+                      "idle": {
+                        "type": "integer",
+                        "description": "Duration when Claude is idle",
+                        "default": 0
+                      },
+                      "not_running": {
+                        "type": "integer",
+                        "description": "Duration when Claude Code is not running",
+                        "default": 0
+                      }
+                    }
                   }
                 }
               }

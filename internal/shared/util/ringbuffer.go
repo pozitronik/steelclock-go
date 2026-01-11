@@ -54,7 +54,23 @@ func (r *RingBuffer[T]) Get(index int) T {
 }
 
 // ToSlice returns a copy of all elements in order (oldest to newest).
-// This allocates a new slice - use sparingly in hot paths.
+// This allocates a new slice on every call.
+//
+// Performance note: ToSlice is called during Render() for graph-mode widgets
+// (every 100ms). Benchmark analysis (see ringbuffer_bench_test.go) shows:
+//
+//   - Single call: ~200ns, 512B allocation (64 float64 elements)
+//   - Dual I/O render: ~400ns, 1KB allocation (2 calls)
+//   - Full render with normalization: ~770ns, 2KB (4 allocations total)
+//
+// This represents 0.0008% of the 100ms render cycle - negligible.
+// A zero-allocation CopyTo() approach was benchmarked at ~270ns but requires:
+//   - Widgets to manage pre-allocated buffers
+//   - Buffer lifecycle management (resizing if history length changes)
+//   - Additional complexity in multiple widget implementations
+//
+// The current approach prioritizes simplicity and correctness over
+// micro-optimization. The GC easily handles 60KB/sec of short-lived allocations.
 func (r *RingBuffer[T]) ToSlice() []T {
 	if r.count == 0 {
 		return nil

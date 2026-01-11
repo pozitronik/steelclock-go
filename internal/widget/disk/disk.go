@@ -23,7 +23,6 @@ func init() {
 // Widget displays disk I/O (Read/Write)
 type Widget struct {
 	*widgetbase.DualIOWidget
-	base         *widget.BaseWidget
 	diskName     *string
 	diskProvider metrics.DiskProvider
 
@@ -146,30 +145,9 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 
 	return &Widget{
 		DualIOWidget: baseDualIO,
-		base:         base,
 		diskName:     cfg.Disk,
 		diskProvider: metrics.DefaultDisk,
 	}, nil
-}
-
-// Name returns the widget's ID
-func (w *Widget) Name() string {
-	return w.base.Name()
-}
-
-// GetUpdateInterval returns the update interval
-func (w *Widget) GetUpdateInterval() time.Duration {
-	return w.base.GetUpdateInterval()
-}
-
-// GetPosition returns the widget's position
-func (w *Widget) GetPosition() config.PositionConfig {
-	return w.base.GetPosition()
-}
-
-// GetStyle returns the widget's style
-func (w *Widget) GetStyle() config.StyleConfig {
-	return w.base.GetStyle()
 }
 
 // Update updates the disk stats

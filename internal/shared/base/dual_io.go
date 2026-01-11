@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"sync"
+	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/shared/render"
@@ -11,8 +12,11 @@ import (
 )
 
 // WidgetBase defines the interface for base widget functionality
-// needed by DualIOWidget
+// needed by DualIOWidget. Widgets embedding DualIOWidget can delegate
+// these methods to avoid boilerplate (see Name(), GetUpdateInterval(), etc.).
 type WidgetBase interface {
+	Name() string
+	GetUpdateInterval() time.Duration
 	GetPosition() config.PositionConfig
 	GetStyle() config.StyleConfig
 	GetRenderBackgroundColor() uint8
@@ -84,6 +88,26 @@ func NewDualIOWidget(cfg DualIOConfig) *DualIOWidget {
 		PrimaryHistory:   util.NewRingBuffer[float64](cfg.HistoryLen),
 		SecondaryHistory: util.NewRingBuffer[float64](cfg.HistoryLen),
 	}
+}
+
+// Name delegates to the embedded Base widget
+func (w *DualIOWidget) Name() string {
+	return w.Base.Name()
+}
+
+// GetUpdateInterval delegates to the embedded Base widget
+func (w *DualIOWidget) GetUpdateInterval() time.Duration {
+	return w.Base.GetUpdateInterval()
+}
+
+// GetPosition delegates to the embedded Base widget
+func (w *DualIOWidget) GetPosition() config.PositionConfig {
+	return w.Base.GetPosition()
+}
+
+// GetStyle delegates to the embedded Base widget
+func (w *DualIOWidget) GetStyle() config.StyleConfig {
+	return w.Base.GetStyle()
 }
 
 // SetValues updates current primary and secondary values (thread-safe)
