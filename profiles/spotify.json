@@ -1,0 +1,56 @@
+{
+  "schema_version": 2,
+  "config_name": "Spotify",
+  "game_name": "SPOTIFY",
+  "game_display_name": "Spotify Widget",
+  "refresh_rate_ms": 100,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "spotify",
+      "position": { "x": 0, "y": 0, "w": 128, "h": 40 },
+      "style": {
+        "background": 0,
+        "border": -1,
+        "padding": 2
+      },
+      "text": {
+        "font": "5x7",
+        "size": 12,
+        "format": "{artist} - {title}",
+        "align": { "h": "left", "v": "center" }
+      },
+      "spotify_auth": {
+        "mode": "oauth",
+        "client_id": "YOUR_SPOTIFY_CLIENT_ID_HERE",
+        "callback_port": 8888
+      },
+      "spotify": {
+        "placeholder": {
+          "mode": "text",
+          "text": "[Spotify not playing]"
+        }
+      },
+      "spotify_auto_show": {
+        "on_track_change": true,
+        "on_play": true,
+        "on_pause": false,
+        "on_stop": false,
+        "duration_sec": 5
+      },
+      "scroll": {
+        "enabled": true,
+        "direction": "left",
+        "speed": 30,
+        "mode": "pause_ends",
+        "pause_ms": 2000,
+        "gap": 20
+      },
+      "update_interval": 1.0
+    }
+  ]
+}
