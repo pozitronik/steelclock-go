@@ -28,14 +28,14 @@ Hooks are shell commands that execute at specific points during Claude's operati
 
 ### Clawd States
 
-| State | Visual | When |
-|-------|--------|------|
-| `not_running` | Sleeping with Zzz | No active session or session ended |
-| `idle` | Standing ready | Waiting for user input |
-| `thinking` | Animated dots (...) | Processing user prompt, generating response |
-| `tool` | Working + tool icon | Executing a tool (Read, Bash, Edit, etc.) |
-| `success` | Happy bounce + sparkles | Task completed successfully |
-| `error` | Sad pose | Something went wrong |
+| State         | Visual                  | When                                        |
+|---------------|-------------------------|---------------------------------------------|
+| `not_running` | Sleeping with Zzz       | No active session or session ended          |
+| `idle`        | Standing ready          | Waiting for user input                      |
+| `thinking`    | Animated dots (...)     | Processing user prompt, generating response |
+| `tool`        | Working + tool icon     | Executing a tool (Read, Bash, Edit, etc.)   |
+| `success`     | Happy bounce + sparkles | Task completed successfully                 |
+| `error`       | Sad pose                | Something went wrong                        |
 
 ---
 
@@ -46,13 +46,18 @@ Hooks are shell commands that execute at specific points during Claude's operati
 1. SteelClock running on Windows with `claude_code` widget profile
 2. Claude Code running in WSL/Linux
 3. Network access between WSL and Windows host
+4. Windows Firewall rule allowing port 8384 (see below)
 
 ### Quick Start
 
-1. Copy the hook script to `~/.claude/steelclock-hook.sh`
-2. Make it executable: `chmod +x ~/.claude/steelclock-hook.sh`
-3. Add hooks to `~/.claude/settings.json`
-4. Restart Claude Code
+1. **Add Windows Firewall rule** (run in elevated PowerShell):
+   ```powershell
+   New-NetFirewallRule -DisplayName "SteelClock WSL" -Direction Inbound -LocalPort 8384 -Protocol TCP -Action Allow
+   ```
+2. Copy the hook script to `~/.claude/steelclock-hook.sh`
+3. Make it executable: `chmod +x ~/.claude/steelclock-hook.sh`
+4. Add hooks to `~/.claude/settings.json`
+5. Restart Claude Code
 
 ---
 
@@ -61,9 +66,11 @@ Hooks are shell commands that execute at specific points during Claude's operati
 ### Endpoint
 
 ```
-POST http://host.docker.internal:8384/api/claude-status
+POST http://<windows-host-ip>:8384/api/claude-status
 Content-Type: application/json
 ```
+
+The hook script automatically detects the Windows host IP (typically the WSL default gateway).
 
 ### Request Body
 
@@ -95,16 +102,16 @@ Content-Type: application/json
 
 ### Fields
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `state` | string | Yes | One of: `not_running`, `idle`, `thinking`, `tool`, `success`, `error` |
-| `tool` | string | No | Tool name when state is `tool` (e.g., "Read", "Bash", "Edit") |
-| `preview` | string | No | Short preview of tool action (e.g., filename, command) |
-| `message` | string | No | Custom status message |
-| `timestamp` | ISO8601 | No | Auto-set if not provided |
-| `context_window` | object | No | Token usage from Claude Code (passed from hook stdin) |
-| `model` | object | No | Model information from Claude Code |
-| `session` | object | No | Session statistics |
+| Field            | Type    | Required | Description                                                           |
+|------------------|---------|----------|-----------------------------------------------------------------------|
+| `state`          | string  | Yes      | One of: `not_running`, `idle`, `thinking`, `tool`, `success`, `error` |
+| `tool`           | string  | No       | Tool name when state is `tool` (e.g., "Read", "Bash", "Edit")         |
+| `preview`        | string  | No       | Short preview of tool action (e.g., filename, command)                |
+| `message`        | string  | No       | Custom status message                                                 |
+| `timestamp`      | ISO8601 | No       | Auto-set if not provided                                              |
+| `context_window` | object  | No       | Token usage from Claude Code (passed from hook stdin)                 |
+| `model`          | object  | No       | Model information from Claude Code                                    |
+| `session`        | object  | No       | Session statistics                                                    |
 
 ### Response
 
@@ -118,10 +125,15 @@ Content-Type: application/json
 ### GET Current Status
 
 ```
-GET http://host.docker.internal:8384/api/claude-status
+GET http://<windows-host-ip>:8384/api/claude-status
 ```
 
 Returns current status or `{"state": "not_running"}` if no recent updates.
+
+From WSL, use:
+```bash
+curl "http://$(ip route | grep default | awk '{print $3}'):8384/api/claude-status"
+```
 
 ---
 
@@ -271,7 +283,7 @@ Save as `~/.claude/steelclock-hook.sh`:
 ```bash
 #!/bin/bash
 # SteelClock Claude Code Hook Script
-# Communicates Claude's state and token usage to the Clawd widget
+# Communicates Claude's state to the Clawd widget
 #
 # Usage: steelclock-hook.sh <event> [tool_name]
 #
@@ -288,63 +300,109 @@ Save as `~/.claude/steelclock-hook.sh`:
 #   agent_done- Subagent completed (thinking)
 #   compact   - Context compaction (thinking)
 
-STEELCLOCK_URL="http://host.docker.internal:8384/api/claude-status"
+STEELCLOCK_PORT=8384
+CACHE_FILE="/tmp/steelclock_host_ip"
+CACHE_TTL=300  # 5 minutes
+
+# Get Windows host IP with caching
+# WSL2 IPs can change between reboots, so we detect dynamically
+get_windows_ip() {
+    # Check cache first (if file exists and is recent)
+    if [ -f "$CACHE_FILE" ]; then
+        cache_age=$(( $(date +%s) - $(stat -c %Y "$CACHE_FILE" 2>/dev/null || echo 0) ))
+        if [ "$cache_age" -lt "$CACHE_TTL" ]; then
+            cached_ip=$(cat "$CACHE_FILE")
+            if [ -n "$cached_ip" ]; then
+                echo "$cached_ip"
+                return 0
+            fi
+        fi
+    fi
+
+    # Try multiple methods to find Windows host IP
+    local ip=""
+
+    # Method 1: Default gateway (most reliable for WSL2)
+    ip=$(ip route | grep default | awk '{print $3}' | head -1)
+    if [ -n "$ip" ]; then
+        echo "$ip" > "$CACHE_FILE"
+        echo "$ip"
+        return 0
+    fi
+
+    # Method 2: host.docker.internal (if Docker sets it up)
+    ip=$(getent hosts host.docker.internal 2>/dev/null | awk '{print $1}')
+    if [ -n "$ip" ]; then
+        echo "$ip" > "$CACHE_FILE"
+        echo "$ip"
+        return 0
+    fi
+
+    # Method 3: resolv.conf nameserver (fallback)
+    ip=$(grep nameserver /etc/resolv.conf | head -1 | awk '{print $2}')
+    if [ -n "$ip" ]; then
+        echo "$ip" > "$CACHE_FILE"
+        echo "$ip"
+        return 0
+    fi
+
+    return 1
+}
 
 event="$1"
 
-# Read hook input from stdin (contains tool_name, context_window, etc.)
-input=$(cat)
+# Read stdin (Claude Code may pass JSON data here)
+stdin_data=$(cat)
 
-# Extract tool_name from stdin JSON (environment variables are unreliable)
-tool=$(echo "$input" | jq -r '.tool_name // empty' 2>/dev/null)
+# Tool name: check argument, then env var, then try to extract from stdin JSON
+tool="${2:-$CLAUDE_TOOL_NAME}"
+if [ -z "$tool" ] && [ -n "$stdin_data" ]; then
+    # Try to extract tool_name from stdin JSON using jq
+    tool=$(echo "$stdin_data" | jq -r '.tool_name // .tool // empty' 2>/dev/null)
+fi
 
-# Extract context_window and model from hook input using jq
-context_window=$(echo "$input" | jq -c '.context_window // empty' 2>/dev/null)
-model=$(echo "$input" | jq -c '.model // empty' 2>/dev/null)
-
-# Build base state JSON
 case "$event" in
   prompt|compact)
-    state="thinking"
+    json='{"state":"thinking"}'
     ;;
   tool)
-    state="tool"
+    json="{\"state\":\"tool\",\"tool\":\"$tool\"}"
     ;;
   tool_done|agent_done)
-    state="thinking"
+    json='{"state":"thinking"}'
     ;;
   tool_fail)
-    state="error"
+    json='{"state":"error"}'
     ;;
   stop|notify)
-    state="success"
+    json='{"state":"success"}'
     ;;
   start)
-    state="idle"
+    json='{"state":"idle"}'
     ;;
   end)
-    state="not_running"
+    json='{"state":"not_running"}'
     ;;
   agent)
-    state="tool"
-    tool="Task"
+    json='{"state":"tool","tool":"Task"}'
     ;;
   idle|*)
-    state="idle"
+    json='{"state":"idle"}'
     ;;
 esac
 
-# Build JSON with optional context_window and model
-json="{\"state\":\"$state\""
-[ -n "$tool" ] && json="$json,\"tool\":\"$tool\""
-[ -n "$context_window" ] && json="$json,\"context_window\":$context_window"
-[ -n "$model" ] && json="$json,\"model\":$model"
-json="$json}"
+# Get Windows host IP
+windows_ip=$(get_windows_ip)
 
-# Send status update asynchronously (non-blocking)
-curl -s -X POST "$STEELCLOCK_URL" \
-  -H "Content-Type: application/json" \
-  -d "$json" > /dev/null 2>&1 &
+if [ -n "$windows_ip" ]; then
+    STEELCLOCK_URL="http://${windows_ip}:${STEELCLOCK_PORT}/api/claude-status"
+
+    # Send status update asynchronously (non-blocking)
+    curl -s -X POST "$STEELCLOCK_URL" \
+      -H "Content-Type: application/json" \
+      --connect-timeout 2 \
+      -d "$json" > /dev/null 2>&1 &
+fi
 ```
 
 Make executable:
@@ -517,21 +575,21 @@ However, understanding how this works helps you appreciate the system:
 If you need to send a custom status (not common), you can use the Bash tool:
 
 ```bash
-curl -s -X POST "http://host.docker.internal:8384/api/claude-status" \
+curl -s -X POST "http://$(ip route | grep default | awk '{print $3}'):8384/api/claude-status" \
   -H "Content-Type: application/json" \
   -d '{"state":"thinking","message":"Processing complex request..."}'
 ```
 
 ### Available States
 
-| State | When to Use |
-|-------|-------------|
-| `thinking` | Processing, reasoning, planning |
-| `tool` | Actively using a tool (include `"tool":"ToolName"`) |
-| `idle` | Ready and waiting |
-| `success` | Task completed successfully |
-| `error` | Something went wrong |
-| `not_running` | Session inactive |
+| State         | When to Use                                         |
+|---------------|-----------------------------------------------------|
+| `thinking`    | Processing, reasoning, planning                     |
+| `tool`        | Actively using a tool (include `"tool":"ToolName"`) |
+| `idle`        | Ready and waiting                                   |
+| `success`     | Task completed successfully                         |
+| `error`       | Something went wrong                                |
+| `not_running` | Session inactive                                    |
 
 ### Clawd's Personality
 
@@ -555,12 +613,39 @@ Clawd helps the user understand what you're doing without needing to watch the t
 **Problem:** Hooks fail to reach SteelClock.
 
 **Solutions:**
-1. Verify SteelClock is running with the claude_code profile
-2. Check Windows Firewall allows connections on port 8384
-3. Test connection: `curl http://host.docker.internal:8384/api/claude-status`
-4. If `host.docker.internal` doesn't work, try:
-   - `$(wsl.exe hostname -I | tr -d '\r' | awk '{print $1}')`
-   - Check `/etc/resolv.conf` nameserver
+
+1. **Verify SteelClock is running** with the claude_code profile
+
+2. **Add Windows Firewall rule** (run in elevated PowerShell):
+   ```powershell
+   New-NetFirewallRule -DisplayName "SteelClock WSL" -Direction Inbound -LocalPort 8384 -Protocol TCP -Action Allow
+   ```
+
+3. **Test from Windows** (cmd.exe):
+   ```cmd
+   curl http://127.0.0.1:8384/api/claude-status
+   ```
+
+4. **Test from WSL** using the gateway IP:
+   ```bash
+   curl "http://$(ip route | grep default | awk '{print $3}'):8384/api/claude-status"
+   ```
+
+5. **Clear IP cache** if IPs changed (e.g., after reboot):
+   ```bash
+   rm -f /tmp/steelclock_host_ip
+   ```
+
+### WSL2 IP Address Issues
+
+**Problem:** `host.docker.internal` or cached IP no longer works.
+
+**Background:** WSL2 uses a virtual network with dynamic IPs that can change after Windows/WSL restarts. The hook script detects the correct IP automatically using the default gateway.
+
+**Solutions:**
+1. Clear the IP cache: `rm -f /tmp/steelclock_host_ip`
+2. The script will auto-detect the new IP on the next hook call
+3. Verify the detected IP: `cat /tmp/steelclock_host_ip`
 
 ### Hooks Not Firing
 
@@ -578,19 +663,29 @@ Clawd helps the user understand what you're doing without needing to watch the t
 
 **Solutions:**
 1. Status expires after 30 seconds automatically
-2. Manually reset: `curl -X POST http://host.docker.internal:8384/api/claude-status -d '{"state":"idle"}'`
+2. Manually reset:
+   ```bash
+   curl -X POST "http://$(ip route | grep default | awk '{print $3}'):8384/api/claude-status" \
+     -H "Content-Type: application/json" -d '{"state":"idle"}'
+   ```
 
 ### Testing Hooks Manually
 
 ```bash
+# Clear cache and test
+rm -f /tmp/steelclock_host_ip
+
 # Test each state
 ~/.claude/steelclock-hook.sh prompt    # Should show thinking
 ~/.claude/steelclock-hook.sh tool Bash # Should show working + Bash icon
 ~/.claude/steelclock-hook.sh stop      # Should show celebration
 ~/.claude/steelclock-hook.sh idle      # Should show ready
 
+# Check detected IP
+cat /tmp/steelclock_host_ip
+
 # Check current status
-curl http://host.docker.internal:8384/api/claude-status
+curl "http://$(cat /tmp/steelclock_host_ip):8384/api/claude-status"
 ```
 
 ---
@@ -602,6 +697,8 @@ curl http://host.docker.internal:8384/api/claude-status
 - Hooks run asynchronously (non-blocking) to avoid slowing Claude
 - The `&` at the end of curl command ensures background execution
 - Tool icons are shown for: Bash, Read, Edit, Write, Glob, Grep, WebFetch, WebSearch, Task
+- Windows host IP is detected via default gateway and cached for 5 minutes at `/tmp/steelclock_host_ip`
+- WSL2 IPs can change after reboots; the script auto-detects the correct IP
 
 ---
 
