@@ -1,6 +1,7 @@
 package gpu
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -10,7 +11,6 @@ import (
 // mockReader is a test implementation of Reader
 type mockReader struct {
 	metricValue float64
-	memoryTotal uint64
 	adapters    []AdapterInfo
 	returnErr   error
 }
@@ -22,15 +22,34 @@ func (m *mockReader) GetMetric(_ int, _ string) (float64, error) {
 	return m.metricValue, nil
 }
 
-func (m *mockReader) GetMemoryTotal(_ int, _ string) (uint64, error) {
-	return m.memoryTotal, nil
-}
-
 func (m *mockReader) ListAdapters() ([]AdapterInfo, error) {
 	return m.adapters, nil
 }
 
 func (m *mockReader) Close() {}
+
+// newTestWidget creates a GPU widget with the given mock reader pre-injected.
+// This avoids the two-step pattern of creating a widget then replacing internal fields.
+func newTestWidget(t *testing.T, mode string, reader Reader) *Widget {
+	t.Helper()
+	cfg := config.WidgetConfig{
+		Type:    "gpu",
+		ID:      "test_gpu",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Mode:  mode,
+		Graph: &config.GraphConfig{History: 30},
+	}
+	w, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	w.reader = reader
+	w.readerFailed = false
+	return w
+}
 
 // TestNew tests successful GPU widget creation
 func TestNew(t *testing.T) {
@@ -116,8 +135,10 @@ func TestNew_WithGPUConfig(t *testing.T) {
 	}{
 		{"adapter 0 utilization", 0, MetricUtilization},
 		{"adapter 1 utilization", 1, MetricUtilization},
-		{"adapter 0 memory", 0, MetricMemoryDedicated},
 		{"adapter 0 3d", 0, MetricUtilization3D},
+		{"adapter 0 copy", 0, MetricUtilizationCopy},
+		{"adapter 0 encode", 0, MetricUtilizationEncode},
+		{"adapter 0 decode", 0, MetricUtilizationDecode},
 	}
 
 	for _, tt := range tests {
@@ -149,6 +170,70 @@ func TestNew_WithGPUConfig(t *testing.T) {
 				t.Errorf("metric = %s, want %s", widget.metric, tt.metric)
 			}
 		})
+	}
+}
+
+// TestNew_InvalidMetric tests that invalid metrics are rejected at construction time
+func TestNew_InvalidMetric(t *testing.T) {
+	tests := []struct {
+		name   string
+		metric string
+	}{
+		{"unknown metric", "nonexistent"},
+		{"memory_dedicated (unsupported)", MetricMemoryDedicated},
+		{"memory_shared (unsupported)", MetricMemoryShared},
+		{"empty with explicit config", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Skip empty string test - empty metric falls back to default "utilization"
+			if tt.metric == "" {
+				return
+			}
+			cfg := config.WidgetConfig{
+				Type:    "gpu",
+				ID:      "test_gpu_invalid",
+				Enabled: config.BoolPtr(true),
+				Position: config.PositionConfig{
+					X: 0, Y: 0, W: 128, H: 40,
+				},
+				GPU: &config.GPUConfig{Metric: tt.metric},
+			}
+			_, err := New(cfg)
+			if err == nil {
+				t.Errorf("New() should return error for metric %q", tt.metric)
+			}
+		})
+	}
+}
+
+// TestNew_SupportedMetricsCompleteness verifies that all utilization metric constants
+// are present in the supportedMetrics map
+func TestNew_SupportedMetricsCompleteness(t *testing.T) {
+	expectedSupported := []string{
+		MetricUtilization,
+		MetricUtilization3D,
+		MetricUtilizationCopy,
+		MetricUtilizationEncode,
+		MetricUtilizationDecode,
+	}
+
+	for _, metric := range expectedSupported {
+		if !supportedMetrics[metric] {
+			t.Errorf("metric %q should be in supportedMetrics", metric)
+		}
+	}
+
+	expectedUnsupported := []string{
+		MetricMemoryDedicated,
+		MetricMemoryShared,
+	}
+
+	for _, metric := range expectedUnsupported {
+		if supportedMetrics[metric] {
+			t.Errorf("metric %q should NOT be in supportedMetrics (memory metrics not yet supported)", metric)
+		}
 	}
 }
 
@@ -192,32 +277,22 @@ func TestWidget_Render_AllModes(t *testing.T) {
 		{"gauge", render.DisplayModeGauge},
 	}
 
+	mock := &mockReader{metricValue: 50.0}
+
 	for _, tt := range modes {
 		t.Run(tt.mode, func(t *testing.T) {
-			cfg := config.WidgetConfig{
-				Type:    "gpu",
-				ID:      "test_gpu_" + tt.mode,
-				Enabled: config.BoolPtr(true),
-				Position: config.PositionConfig{
-					X: 0, Y: 0, W: 128, H: 40,
-				},
-				Mode: tt.mode,
-				Graph: &config.GraphConfig{
-					History: 30,
-				},
+			w := newTestWidget(t, tt.mode, mock)
+
+			if w.displayMode != tt.displayMode {
+				t.Errorf("displayMode = %s, want %s", w.displayMode, tt.displayMode)
 			}
 
-			widget, err := New(cfg)
-			if err != nil {
-				t.Fatalf("New() error = %v", err)
+			// Update with mock data, then render
+			if err := w.Update(); err != nil {
+				t.Fatalf("Update() error = %v", err)
 			}
 
-			if widget.displayMode != tt.displayMode {
-				t.Errorf("displayMode = %s, want %s", widget.displayMode, tt.displayMode)
-			}
-
-			// Test render
-			img, err := widget.Render()
+			img, err := w.Render()
 			if err != nil {
 				t.Errorf("Render() error = %v", err)
 			}
@@ -236,47 +311,26 @@ func TestWidget_Render_AllModes(t *testing.T) {
 
 // TestWidget_WithMockReader tests the widget with a mock reader
 func TestWidget_WithMockReader(t *testing.T) {
-	cfg := config.WidgetConfig{
-		Type:    "gpu",
-		ID:      "test_gpu_mock",
-		Enabled: config.BoolPtr(true),
-		Position: config.PositionConfig{
-			X: 0, Y: 0, W: 128, H: 40,
-		},
-		Mode: "text",
-		GPU: &config.GPUConfig{
-			Adapter: 0,
-			Metric:  MetricUtilization,
-		},
-	}
-
-	widget, err := New(cfg)
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
-
-	// Replace reader with mock
-	mockRdr := &mockReader{
+	mock := &mockReader{
 		metricValue: 75.5,
 		adapters: []AdapterInfo{
 			{Index: 0, Name: "Test GPU 0"},
 			{Index: 1, Name: "Test GPU 1"},
 		},
 	}
-	widget.reader = mockRdr
-	widget.readerFailed = false
+	w := newTestWidget(t, "text", mock)
 
 	// Update should use mock reader
-	err = widget.Update()
+	err := w.Update()
 	if err != nil {
 		t.Errorf("Update() error = %v", err)
 	}
 
 	// Verify value was set
-	widget.mu.RLock()
-	value := widget.currentValue
-	hasData := widget.hasData
-	widget.mu.RUnlock()
+	w.mu.RLock()
+	value := w.currentValue
+	hasData := w.hasData
+	w.mu.RUnlock()
 
 	if !hasData {
 		t.Error("Update() did not set hasData")
@@ -287,7 +341,7 @@ func TestWidget_WithMockReader(t *testing.T) {
 	}
 
 	// Test render with data
-	img, err := widget.Render()
+	img, err := w.Render()
 	if err != nil {
 		t.Errorf("Render() error = %v", err)
 	}
@@ -297,28 +351,14 @@ func TestWidget_WithMockReader(t *testing.T) {
 	}
 }
 
-// TestWidget_MetricConstants tests metric constant values
-func TestWidget_MetricConstants(t *testing.T) {
-	// Verify metric constants match expected strings
-	tests := []struct {
-		constant string
-		expected string
-	}{
-		{MetricUtilization, "utilization"},
-		{MetricUtilization3D, "utilization_3d"},
-		{MetricUtilizationCopy, "utilization_copy"},
-		{MetricUtilizationEncode, "utilization_video_encode"},
-		{MetricUtilizationDecode, "utilization_video_decode"},
-		{MetricMemoryDedicated, "memory_dedicated"},
-		{MetricMemoryShared, "memory_shared"},
-	}
+// TestWidget_Update_ReaderError tests Update when reader returns an error
+func TestWidget_Update_ReaderError(t *testing.T) {
+	mock := &mockReader{returnErr: fmt.Errorf("PDH error")}
+	w := newTestWidget(t, "text", mock)
 
-	for _, tt := range tests {
-		t.Run(tt.expected, func(t *testing.T) {
-			if tt.constant != tt.expected {
-				t.Errorf("constant = %s, want %s", tt.constant, tt.expected)
-			}
-		})
+	err := w.Update()
+	if err == nil {
+		t.Error("Update() should return error when reader fails")
 	}
 }
 
@@ -345,21 +385,6 @@ func TestWidget_Stop(t *testing.T) {
 
 // TestWidget_ValueClamping tests that values are clamped to 0-100
 func TestWidget_ValueClamping(t *testing.T) {
-	cfg := config.WidgetConfig{
-		Type:    "gpu",
-		ID:      "test_gpu_clamp",
-		Enabled: config.BoolPtr(true),
-		Position: config.PositionConfig{
-			X: 0, Y: 0, W: 128, H: 40,
-		},
-		Mode: "text",
-	}
-
-	widget, err := New(cfg)
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
-
 	tests := []struct {
 		name     string
 		input    float64
@@ -374,18 +399,17 @@ func TestWidget_ValueClamping(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRdr := &mockReader{metricValue: tt.input}
-			widget.reader = mockRdr
-			widget.readerFailed = false
+			mock := &mockReader{metricValue: tt.input}
+			w := newTestWidget(t, "text", mock)
 
-			err := widget.Update()
+			err := w.Update()
 			if err != nil {
 				t.Errorf("Update() error = %v", err)
 			}
 
-			widget.mu.RLock()
-			value := widget.currentValue
-			widget.mu.RUnlock()
+			w.mu.RLock()
+			value := w.currentValue
+			w.mu.RUnlock()
 
 			if value != tt.expected {
 				t.Errorf("currentValue = %f, want %f", value, tt.expected)

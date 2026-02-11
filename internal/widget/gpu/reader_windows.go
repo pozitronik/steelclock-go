@@ -5,6 +5,7 @@ package gpu
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -12,29 +13,20 @@ import (
 )
 
 var (
-	pdh                             = syscall.NewLazyDLL("pdh.dll")
-	pdhOpenQuery                    = pdh.NewProc("PdhOpenQueryW")
-	pdhCloseQuery                   = pdh.NewProc("PdhCloseQuery")
-	pdhAddEnglishCounter            = pdh.NewProc("PdhAddEnglishCounterW")
-	pdhCollectQueryData             = pdh.NewProc("PdhCollectQueryData")
-	pdhGetFormattedCounterArrayW    = pdh.NewProc("PdhGetFormattedCounterArrayW")
-	pdhGetFormattedCounterValue     = pdh.NewProc("PdhGetFormattedCounterValue")
-	pdhEnumObjectItemsW             = pdh.NewProc("PdhEnumObjectItemsW")
-	pdhGetCounterInfoW              = pdh.NewProc("PdhGetCounterInfoW")
-	pdhMakeCounterPathW             = pdh.NewProc("PdhMakeCounterPathW")
-	pdhExpandWildCardPathW          = pdh.NewProc("PdhExpandWildCardPathW")
-	pdhRemoveCounter                = pdh.NewProc("PdhRemoveCounter")
-	pdhGetFormattedCounterArraySize = pdh.NewProc("PdhGetFormattedCounterArrayW")
+	pdh                          = syscall.NewLazyDLL("pdh.dll")
+	pdhOpenQuery                 = pdh.NewProc("PdhOpenQueryW")
+	pdhCloseQuery                = pdh.NewProc("PdhCloseQuery")
+	pdhAddEnglishCounter         = pdh.NewProc("PdhAddEnglishCounterW")
+	pdhCollectQueryData          = pdh.NewProc("PdhCollectQueryData")
+	pdhGetFormattedCounterArrayW = pdh.NewProc("PdhGetFormattedCounterArrayW")
+	pdhRemoveCounter             = pdh.NewProc("PdhRemoveCounter")
 )
 
 // PDH constants
 const (
 	pdhFmtDouble      = 0x00000200
-	pdhFmtLarge       = 0x00000400
 	pdhMoreData       = 0x800007D2
 	pdhCstatValidData = 0x00000000
-	pdhInvalidData    = 0xC0000BBA
-	pdhNoData         = 0x800007D5
 )
 
 // PDH_FMT_COUNTERVALUE_ITEM_DOUBLE for array results
@@ -48,28 +40,21 @@ type pdhFmtCountervalueDouble struct {
 	doubleValue float64
 }
 
-type pdhFmtCountervalueLarge struct {
-	CStatus    uint32
-	largeValue int64
-}
-
 // pdhReader implements the Reader interface using Windows PDH API
 type pdhReader struct {
-	mu            sync.Mutex
-	queryHandle   uintptr
-	counters      map[string]uintptr // metric name -> counter handle
-	adapterCache  []AdapterInfo
-	memoryTotals  map[int]map[string]uint64 // adapter -> metric -> total bytes
-	initialized   bool
-	physRegex     *regexp.Regexp
-	engtypeRegex  *regexp.Regexp
+	mu           sync.Mutex
+	queryHandle  uintptr
+	counters     map[string]uintptr // metric name -> counter handle
+	adapterCache []AdapterInfo
+	initialized  bool
+	physRegex    *regexp.Regexp
+	engtypeRegex *regexp.Regexp
 }
 
 // newReader creates a new PDH-based GPU metrics reader
 func newReader() (Reader, error) {
 	r := &pdhReader{
 		counters:     make(map[string]uintptr),
-		memoryTotals: make(map[int]map[string]uint64),
 		physRegex:    regexp.MustCompile(`phys_(\d+)`),
 		engtypeRegex: regexp.MustCompile(`engtype_(\w+)`),
 	}
@@ -186,8 +171,10 @@ func (r *pdhReader) discoverAdapters() {
 			name := syscall.UTF16ToString((*[256]uint16)(unsafe.Pointer(item.szName))[:])
 			matches := r.physRegex.FindStringSubmatch(name)
 			if len(matches) > 1 {
-				var physIndex int
-				fmt.Sscanf(matches[1], "%d", &physIndex)
+				physIndex, err := strconv.Atoi(matches[1])
+				if err != nil {
+					continue
+				}
 				adapterMap[physIndex] = true
 			}
 		}
@@ -284,8 +271,9 @@ func (r *pdhReader) GetMetric(adapter int, metric string) (float64, error) {
 		return 0, fmt.Errorf("PdhGetFormattedCounterArrayW failed: 0x%x", ret)
 	}
 
-	// Aggregate values for the specified adapter
+	// Single pass: aggregate values for the specified adapter
 	var total float64
+	var maxValue float64
 	var count int
 	itemSize := unsafe.Sizeof(pdhFmtCountervalueItemDouble{})
 
@@ -302,61 +290,12 @@ func (r *pdhReader) GetMetric(adapter int, metric string) (float64, error) {
 		if len(matches) <= 1 {
 			continue
 		}
-		var physIndex int
-		fmt.Sscanf(matches[1], "%d", &physIndex)
-		if physIndex != adapter {
+		physIndex, err := strconv.Atoi(matches[1])
+		if err != nil || physIndex != adapter {
 			continue
 		}
 
 		// For engine metrics, check engine type filter
-		if engTypeFilter != "" {
-			engMatches := r.engtypeRegex.FindStringSubmatch(name)
-			if len(engMatches) <= 1 {
-				continue
-			}
-			if !strings.EqualFold(engMatches[1], engTypeFilter) {
-				continue
-			}
-		}
-
-		// Check if value is valid
-		if item.FmtValue.CStatus == pdhCstatValidData || item.FmtValue.CStatus == 0 {
-			total += item.FmtValue.doubleValue
-			count++
-		}
-	}
-
-	if count == 0 {
-		return 0, nil
-	}
-
-	// For memory metrics, return total bytes
-	// For utilization metrics, return max value (not average) as that's more representative
-	if counterKey == "memory_dedicated" || counterKey == "memory_shared" {
-		return total, nil // Already bytes
-	}
-
-	// For utilization, take the maximum across all matching engines
-	// This is more intuitive than averaging (e.g., if 3D engine is at 100%, GPU is busy)
-	maxValue := 0.0
-	for i := uint32(0); i < itemCount; i++ {
-		item := (*pdhFmtCountervalueItemDouble)(unsafe.Pointer(&buffer[uintptr(i)*itemSize]))
-		if item.szName == nil {
-			continue
-		}
-
-		name := syscall.UTF16ToString((*[256]uint16)(unsafe.Pointer(item.szName))[:])
-
-		matches := r.physRegex.FindStringSubmatch(name)
-		if len(matches) <= 1 {
-			continue
-		}
-		var physIndex int
-		fmt.Sscanf(matches[1], "%d", &physIndex)
-		if physIndex != adapter {
-			continue
-		}
-
 		if engTypeFilter != "" {
 			engMatches := r.engtypeRegex.FindStringSubmatch(name)
 			if len(engMatches) <= 1 || !strings.EqualFold(engMatches[1], engTypeFilter) {
@@ -364,58 +303,26 @@ func (r *pdhReader) GetMetric(adapter int, metric string) (float64, error) {
 			}
 		}
 
+		// Check if value is valid
 		if item.FmtValue.CStatus == pdhCstatValidData || item.FmtValue.CStatus == 0 {
-			if item.FmtValue.doubleValue > maxValue {
-				maxValue = item.FmtValue.doubleValue
+			val := item.FmtValue.doubleValue
+			total += val
+			count++
+			if val > maxValue {
+				maxValue = val
 			}
 		}
 	}
 
-	return maxValue, nil
-}
-
-// GetMemoryTotal returns the total memory for the specified metric type
-func (r *pdhReader) GetMemoryTotal(adapter int, metricType string) (uint64, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	// Check cache first
-	if adapterTotals, ok := r.memoryTotals[adapter]; ok {
-		if total, ok := adapterTotals[metricType]; ok && total > 0 {
-			return total, nil
-		}
-	}
-
-	// For dedicated memory, we need to query the total
-	// Unfortunately, PDH doesn't directly provide total VRAM
-	// We'll estimate based on "Total Committed" counter if available
-	// or return 0 to show raw bytes instead of percentage
-
-	// Try to get committed memory as a proxy for total
-	counterHandle, ok := r.counters["memory_dedicated"]
-	if !ok {
-		return 0, fmt.Errorf("memory counter not available")
-	}
-
-	// Get current values to find committed memory
-	var bufferSize uint32
-	var itemCount uint32
-
-	ret, _, _ := pdhGetFormattedCounterArrayW.Call(
-		counterHandle,
-		pdhFmtDouble,
-		uintptr(unsafe.Pointer(&bufferSize)),
-		uintptr(unsafe.Pointer(&itemCount)),
-		0,
-	)
-
-	if ret != pdhMoreData && ret != 0 {
+	if count == 0 {
 		return 0, nil
 	}
 
-	// For now, return 0 which will cause the widget to display raw utilization
-	// In a future enhancement, we could query WMI for total VRAM
-	return 0, nil
+	// Memory metrics: return total bytes; utilization metrics: return max percentage
+	if counterKey == "memory_dedicated" || counterKey == "memory_shared" {
+		return total, nil
+	}
+	return maxValue, nil
 }
 
 // ListAdapters returns information about available GPU adapters

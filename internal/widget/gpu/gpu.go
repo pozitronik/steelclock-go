@@ -20,7 +20,7 @@ func init() {
 	})
 }
 
-// Supported GPU metrics
+// GPU metric constants
 const (
 	MetricUtilization       = "utilization"
 	MetricUtilization3D     = "utilization_3d"
@@ -31,6 +31,17 @@ const (
 	MetricMemoryShared      = "memory_shared"
 )
 
+// supportedMetrics lists metrics that are currently functional.
+// Memory metrics (memory_dedicated, memory_shared) are defined as constants but not yet
+// supported because PDH doesn't provide total VRAM counters needed for percentage calculation.
+var supportedMetrics = map[string]bool{
+	MetricUtilization:       true,
+	MetricUtilization3D:     true,
+	MetricUtilizationCopy:   true,
+	MetricUtilizationEncode: true,
+	MetricUtilizationDecode: true,
+}
+
 // AdapterInfo contains information about a GPU adapter
 type AdapterInfo struct {
 	Index int
@@ -40,13 +51,9 @@ type AdapterInfo struct {
 
 // Reader is the interface for reading GPU metrics
 type Reader interface {
-	// GetMetric returns the current value for the specified metric and adapter
-	// Returns value in percentage (0-100) for utilization metrics
-	// Returns value in bytes for memory metrics
+	// GetMetric returns the current value for the specified metric and adapter.
+	// Returns value in percentage (0-100) for utilization metrics.
 	GetMetric(adapter int, metric string) (float64, error)
-	// GetMemoryTotal returns total memory in bytes for the specified adapter
-	// Used to calculate percentage for memory metrics
-	GetMemoryTotal(adapter int, metricType string) (uint64, error)
 	// ListAdapters returns information about available GPU adapters
 	ListAdapters() ([]AdapterInfo, error)
 	// Close releases resources
@@ -84,13 +91,11 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	base := widget.NewBaseWidget(cfg)
 	helper := shared.NewConfigHelper(cfg)
 
-	// Extract common settings using helper
-	displayMode := render.DisplayMode(helper.GetDisplayMode(config.ModeText))
-	textSettings := helper.GetTextSettings()
-	padding := helper.GetPadding()
-	barSettings := helper.GetBarSettings()
-	graphSettings := helper.GetGraphSettings()
-	gaugeSettings := helper.GetGaugeSettings()
+	// Build common metric renderer
+	mr, err := helper.BuildMetricRenderer()
+	if err != nil {
+		return nil, err
+	}
 
 	// Extract GPU-specific settings
 	adapter := 0
@@ -102,44 +107,10 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		}
 	}
 
-	// Load font for text mode
-	fontFace, err := bitmap.LoadFontForTextMode(string(displayMode), textSettings.FontName, textSettings.FontSize)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load font: %w", err)
+	// Validate metric
+	if !supportedMetrics[metric] {
+		return nil, fmt.Errorf("unsupported GPU metric: %q (supported: utilization, utilization_3d, utilization_copy, utilization_video_encode, utilization_video_decode)", metric)
 	}
-
-	// Determine bar color
-	barColor := uint8(255)
-	if graphSettings.FillColor >= 0 && graphSettings.FillColor <= 255 {
-		barColor = uint8(graphSettings.FillColor)
-	}
-
-	// Create metric renderer
-	renderer := render.NewMetricRenderer(
-		render.BarConfig{
-			Direction: barSettings.Direction,
-			Border:    barSettings.Border,
-			Color:     barColor,
-		},
-		render.GraphConfig{
-			FillColor:  graphSettings.FillColor,
-			LineColor:  graphSettings.LineColor,
-			HistoryLen: graphSettings.HistoryLen,
-		},
-		render.GaugeConfig{
-			ArcColor:    uint8(gaugeSettings.ArcColor),
-			NeedleColor: uint8(gaugeSettings.NeedleColor),
-			ShowTicks:   gaugeSettings.ShowTicks,
-			TicksColor:  uint8(gaugeSettings.TicksColor),
-		},
-		render.TextConfig{
-			FontFace:   fontFace,
-			FontName:   textSettings.FontName,
-			HorizAlign: textSettings.HorizAlign,
-			VertAlign:  textSettings.VertAlign,
-			Padding:    padding,
-		},
-	)
 
 	// Initialize reader (platform-specific)
 	reader, readerErr := newReader()
@@ -149,9 +120,9 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		readerFailed = true
 	} else {
 		// Log available adapters
-		adapters, err := reader.ListAdapters()
-		if err != nil {
-			log.Printf("[GPU] Failed to list adapters: %v", err)
+		adapters, listErr := reader.ListAdapters()
+		if listErr != nil {
+			log.Printf("[GPU] Failed to list adapters: %v", listErr)
 		} else {
 			log.Printf("[GPU] Found %d adapter(s):", len(adapters))
 			for _, a := range adapters {
@@ -162,15 +133,15 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 
 	return &Widget{
 		BaseWidget:   base,
-		displayMode:  displayMode,
-		historyLen:   graphSettings.HistoryLen,
-		strategy:     render.GetMetricStrategy(displayMode),
-		Renderer:     renderer,
+		displayMode:  mr.DisplayMode,
+		historyLen:   mr.HistoryLen,
+		strategy:     mr.Strategy,
+		Renderer:     mr.Renderer,
 		adapter:      adapter,
 		metric:       metric,
 		reader:       reader,
 		readerFailed: readerFailed,
-		history:      util.NewRingBuffer[float64](graphSettings.HistoryLen),
+		history:      util.NewRingBuffer[float64](mr.HistoryLen),
 	}, nil
 }
 
@@ -185,15 +156,7 @@ func (w *Widget) Update() error {
 		return err
 	}
 
-	// For memory metrics, convert to percentage
-	if w.metric == MetricMemoryDedicated || w.metric == MetricMemoryShared {
-		total, err := w.reader.GetMemoryTotal(w.adapter, w.metric)
-		if err == nil && total > 0 {
-			value = (value / float64(total)) * 100
-		}
-	}
-
-	// Clamp to 0-100
+	// Clamp to 0-100 (utilization metrics are already in percentage)
 	if value < 0 {
 		value = 0
 	}
