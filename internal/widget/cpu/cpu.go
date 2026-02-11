@@ -1,12 +1,10 @@
 package cpu
 
 import (
-	"fmt"
 	"image"
 	"sync"
 	"time"
 
-	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/metrics"
 	"github.com/pozitronik/steelclock-go/internal/shared"
@@ -61,81 +59,39 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	base := widget.NewBaseWidget(cfg)
 	helper := shared.NewConfigHelper(cfg)
 
-	// Extract common settings using helper
-	displayMode := render.DisplayMode(helper.GetDisplayMode(config.ModeText))
-	textSettings := helper.GetTextSettings()
-	padding := helper.GetPadding()
-	barSettings := helper.GetBarSettings()
-	graphSettings := helper.GetGraphSettings()
-	gaugeSettings := helper.GetGaugeSettings()
+	// Build common metric renderer (shared with Memory widget)
+	mr, err := helper.BuildMetricRenderer()
+	if err != nil {
+		return nil, err
+	}
+
+	// CPU-specific settings
 	perCore, coreBorder, coreMargin := helper.GetPerCoreSettings()
 
-	// Use default CPU provider
 	cpuProvider := metrics.DefaultCPU
-
-	// Get core count
 	cores, err := cpuProvider.Counts(true)
 	if err != nil || cores == 0 {
 		cores = 1
 	}
 
-	// Load font for text mode
-	fontFace, err := bitmap.LoadFontForTextMode(string(displayMode), textSettings.FontName, textSettings.FontSize)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load font: %w", err)
-	}
-
-	// Determine bar color
-	barColor := uint8(255)
-	if graphSettings.FillColor >= 0 && graphSettings.FillColor <= 255 {
-		barColor = uint8(graphSettings.FillColor)
-	}
-
-	// Create metric renderer for single-value mode
-	renderer := render.NewMetricRenderer(
-		render.BarConfig{
-			Direction: barSettings.Direction,
-			Border:    barSettings.Border,
-			Color:     barColor,
-		},
-		render.GraphConfig{
-			FillColor:  graphSettings.FillColor,
-			LineColor:  graphSettings.LineColor,
-			HistoryLen: graphSettings.HistoryLen,
-		},
-		render.GaugeConfig{
-			ArcColor:    uint8(gaugeSettings.ArcColor),
-			NeedleColor: uint8(gaugeSettings.NeedleColor),
-			ShowTicks:   gaugeSettings.ShowTicks,
-			TicksColor:  uint8(gaugeSettings.TicksColor),
-		},
-		render.TextConfig{
-			FontFace:   fontFace,
-			FontName:   textSettings.FontName,
-			HorizAlign: textSettings.HorizAlign,
-			VertAlign:  textSettings.VertAlign,
-			Padding:    padding,
-		},
-	)
-
 	return &Widget{
 		BaseWidget:     base,
-		displayMode:    displayMode,
+		displayMode:    mr.DisplayMode,
 		perCore:        perCore,
-		padding:        padding,
+		padding:        mr.Padding,
 		coreBorder:     coreBorder,
 		coreMargin:     coreMargin,
-		fillColor:      graphSettings.FillColor,
-		historyLen:     graphSettings.HistoryLen,
-		strategy:       render.GetMetricStrategy(displayMode),
-		gridStrategy:   render.GetGridMetricStrategy(displayMode),
-		Renderer:       renderer,
+		fillColor:      mr.FillColor,
+		historyLen:     mr.HistoryLen,
+		strategy:       mr.Strategy,
+		gridStrategy:   render.GetGridMetricStrategy(mr.DisplayMode),
+		Renderer:       mr.Renderer,
 		cpuProvider:    cpuProvider,
-		historySingle:  util.NewRingBuffer[float64](graphSettings.HistoryLen),
-		historyPerCore: util.NewRingBuffer[[]float64](graphSettings.HistoryLen),
+		historySingle:  util.NewRingBuffer[float64](mr.HistoryLen),
+		historyPerCore: util.NewRingBuffer[[]float64](mr.HistoryLen),
 		coreCount:      cores,
-		fontFace:       fontFace,
-		fontName:       textSettings.FontName,
+		fontFace:       mr.FontFace,
+		fontName:       mr.FontName,
 	}, nil
 }
 

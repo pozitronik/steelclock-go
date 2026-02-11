@@ -1,11 +1,9 @@
 package memory
 
 import (
-	"fmt"
 	"image"
 	"sync"
 
-	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/metrics"
 	"github.com/pozitronik/steelclock-go/internal/shared"
@@ -38,59 +36,18 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	base := widget.NewBaseWidget(cfg)
 	helper := shared.NewConfigHelper(cfg)
 
-	// Extract common settings using helper
-	displayMode := render.DisplayMode(helper.GetDisplayMode(config.ModeText))
-	textSettings := helper.GetTextSettings()
-	padding := helper.GetPadding()
-	barSettings := helper.GetBarSettings()
-	graphSettings := helper.GetGraphSettings()
-	gaugeSettings := helper.GetGaugeSettings()
-
-	// Load font for text mode
-	fontFace, err := bitmap.LoadFontForTextMode(string(displayMode), textSettings.FontName, textSettings.FontSize)
+	// Build common metric renderer (shared with CPU widget)
+	mr, err := helper.BuildMetricRenderer()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load font: %w", err)
+		return nil, err
 	}
-
-	// Determine bar color
-	barColor := uint8(255)
-	if graphSettings.FillColor >= 0 && graphSettings.FillColor <= 255 {
-		barColor = uint8(graphSettings.FillColor)
-	}
-
-	// Create metric renderer
-	renderer := render.NewMetricRenderer(
-		render.BarConfig{
-			Direction: barSettings.Direction,
-			Border:    barSettings.Border,
-			Color:     barColor,
-		},
-		render.GraphConfig{
-			FillColor:  graphSettings.FillColor,
-			LineColor:  graphSettings.LineColor,
-			HistoryLen: graphSettings.HistoryLen,
-		},
-		render.GaugeConfig{
-			ArcColor:    uint8(gaugeSettings.ArcColor),
-			NeedleColor: uint8(gaugeSettings.NeedleColor),
-			ShowTicks:   gaugeSettings.ShowTicks,
-			TicksColor:  uint8(gaugeSettings.TicksColor),
-		},
-		render.TextConfig{
-			FontFace:   fontFace,
-			FontName:   textSettings.FontName,
-			HorizAlign: textSettings.HorizAlign,
-			VertAlign:  textSettings.VertAlign,
-			Padding:    padding,
-		},
-	)
 
 	return &Widget{
 		BaseWidget:     base,
-		strategy:       render.GetMetricStrategy(displayMode),
-		Renderer:       renderer,
-		displayMode:    displayMode,
-		history:        util.NewRingBuffer[float64](graphSettings.HistoryLen),
+		strategy:       mr.Strategy,
+		Renderer:       mr.Renderer,
+		displayMode:    mr.DisplayMode,
+		history:        util.NewRingBuffer[float64](mr.HistoryLen),
 		textFormat:     "%.0f",
 		memoryProvider: metrics.DefaultMemory,
 	}, nil

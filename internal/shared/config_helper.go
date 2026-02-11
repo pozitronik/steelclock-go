@@ -1,7 +1,12 @@
 package shared
 
 import (
+	"fmt"
+
+	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/shared/render"
+	"golang.org/x/image/font"
 )
 
 // TextSettings holds extracted text configuration with defaults
@@ -170,6 +175,80 @@ func (h *ConfigHelper) GetPerCoreSettings() (enabled bool, border bool, margin i
 		return h.cfg.PerCore.Enabled, h.cfg.PerCore.Border, h.cfg.PerCore.Margin
 	}
 	return false, false, 0
+}
+
+// MetricRendererResult holds all outputs from BuildMetricRenderer needed by widget constructors
+type MetricRendererResult struct {
+	Renderer    *render.MetricRenderer
+	Strategy    render.MetricDisplayStrategy
+	DisplayMode render.DisplayMode
+	FontFace    font.Face
+	FontName    string
+	Padding     int
+	FillColor   int // from graph settings (-1 = no fill, 0-255)
+	HistoryLen  int // from graph settings
+}
+
+// BuildMetricRenderer extracts common widget settings and builds a MetricRenderer.
+// This eliminates duplicated initialization code across single-value metric widgets
+// (CPU, Memory, and any future similar widgets).
+func (h *ConfigHelper) BuildMetricRenderer() (*MetricRendererResult, error) {
+	displayMode := render.DisplayMode(h.GetDisplayMode(config.ModeText))
+	textSettings := h.GetTextSettings()
+	padding := h.GetPadding()
+	barSettings := h.GetBarSettings()
+	graphSettings := h.GetGraphSettings()
+	gaugeSettings := h.GetGaugeSettings()
+
+	// Load font for text mode
+	fontFace, err := bitmap.LoadFontForTextMode(string(displayMode), textSettings.FontName, textSettings.FontSize)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load font: %w", err)
+	}
+
+	// Determine bar color
+	barColor := uint8(255)
+	if graphSettings.FillColor >= 0 && graphSettings.FillColor <= 255 {
+		barColor = uint8(graphSettings.FillColor)
+	}
+
+	// Create metric renderer
+	renderer := render.NewMetricRenderer(
+		render.BarConfig{
+			Direction: barSettings.Direction,
+			Border:    barSettings.Border,
+			Color:     barColor,
+		},
+		render.GraphConfig{
+			FillColor:  graphSettings.FillColor,
+			LineColor:  graphSettings.LineColor,
+			HistoryLen: graphSettings.HistoryLen,
+		},
+		render.GaugeConfig{
+			ArcColor:    uint8(gaugeSettings.ArcColor),
+			NeedleColor: uint8(gaugeSettings.NeedleColor),
+			ShowTicks:   gaugeSettings.ShowTicks,
+			TicksColor:  uint8(gaugeSettings.TicksColor),
+		},
+		render.TextConfig{
+			FontFace:   fontFace,
+			FontName:   textSettings.FontName,
+			HorizAlign: textSettings.HorizAlign,
+			VertAlign:  textSettings.VertAlign,
+			Padding:    padding,
+		},
+	)
+
+	return &MetricRendererResult{
+		Renderer:    renderer,
+		Strategy:    render.GetMetricStrategy(displayMode),
+		DisplayMode: displayMode,
+		FontFace:    fontFace,
+		FontName:    textSettings.FontName,
+		Padding:     padding,
+		FillColor:   graphSettings.FillColor,
+		HistoryLen:  graphSettings.HistoryLen,
+	}, nil
 }
 
 // GetFillColorForMode returns the fill color based on display mode
