@@ -292,6 +292,11 @@ type WidgetConfig struct {
 	// Beefweb widget (Foobar2000/DeaDBeeF)
 	Beefweb         *BeefwebConfig         `json:"beefweb,omitempty"`           // Beefweb settings
 	BeefwebAutoShow *BeefwebAutoShowConfig `json:"beefweb_auto_show,omitempty"` // Beefweb auto-show events
+
+	// Spotify widget
+	SpotifyAuth     *SpotifyAuthConfig     `json:"spotify_auth,omitempty"`      // Spotify authentication settings
+	Spotify         *SpotifyConfig         `json:"spotify,omitempty"`           // Spotify display settings
+	SpotifyAutoShow *SpotifyAutoShowConfig `json:"spotify_auto_show,omitempty"` // Spotify auto-show events
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -646,6 +651,51 @@ type BeefwebPlaceholderConfig struct {
 	Mode string `json:"mode,omitempty"`
 	// Text to display when mode is "text"
 	Text string `json:"text,omitempty"`
+}
+
+// SpotifyAuthConfig contains Spotify authentication settings
+type SpotifyAuthConfig struct {
+	// Mode: "oauth" (interactive PKCE flow) or "manual" (token in config)
+	// Default: "oauth"
+	Mode string `json:"mode,omitempty"`
+	// ClientID: Spotify application Client ID (required)
+	ClientID string `json:"client_id"`
+	// AccessToken: pre-obtained access token (for manual mode only)
+	AccessToken string `json:"access_token,omitempty"`
+	// RefreshToken: pre-obtained refresh token (for manual mode only)
+	RefreshToken string `json:"refresh_token,omitempty"`
+	// TokenPath: path to token storage file (default: spotify_token.json)
+	TokenPath string `json:"token_path,omitempty"`
+	// CallbackPort: local port for OAuth callback server (default: 8888)
+	CallbackPort int `json:"callback_port,omitempty"`
+}
+
+// SpotifyConfig contains Spotify widget display settings
+type SpotifyConfig struct {
+	// Placeholder configuration when Spotify is not playing
+	Placeholder *SpotifyPlaceholderConfig `json:"placeholder,omitempty"`
+}
+
+// SpotifyPlaceholderConfig represents what to show when Spotify is not playing
+type SpotifyPlaceholderConfig struct {
+	// Mode: "text" for custom text, "icon" for Spotify icon, "hide" to hide widget
+	Mode string `json:"mode,omitempty"`
+	// Text to display when mode is "text"
+	Text string `json:"text,omitempty"`
+}
+
+// SpotifyAutoShowConfig represents events that trigger the Spotify widget to show
+type SpotifyAutoShowConfig struct {
+	// OnTrackChange - show widget when track changes (default: true)
+	OnTrackChange *bool `json:"on_track_change,omitempty"`
+	// OnPlay - show widget when playback starts
+	OnPlay bool `json:"on_play,omitempty"`
+	// OnPause - show widget when playback is paused
+	OnPause bool `json:"on_pause,omitempty"`
+	// OnStop - show widget when playback stops
+	OnStop bool `json:"on_stop,omitempty"`
+	// DurationSec - how long to show the widget (seconds, default: 5)
+	DurationSec float64 `json:"duration_sec,omitempty"`
 }
 
 // ScrollConfig represents text scrolling settings

@@ -547,6 +547,7 @@
             "doom",
             "winamp",
             "beefweb",
+            "spotify",
             "matrix",
             "weather",
             "battery",
@@ -2677,6 +2678,173 @@
                 }
               },
               "beefweb_auto_show": {
+                "type": "object",
+                "description": "Events that trigger the widget to appear (when auto_hide is enabled)",
+                "properties": {
+                  "on_track_change": {
+                    "type": "boolean",
+                    "description": "Show widget when track changes",
+                    "default": true
+                  },
+                  "on_play": {
+                    "type": "boolean",
+                    "description": "Show widget when playback starts",
+                    "default": false
+                  },
+                  "on_pause": {
+                    "type": "boolean",
+                    "description": "Show widget when playback is paused",
+                    "default": false
+                  },
+                  "on_stop": {
+                    "type": "boolean",
+                    "description": "Show widget when playback stops",
+                    "default": false
+                  },
+                  "duration_sec": {
+                    "type": "number",
+                    "description": "How long to show the widget in seconds",
+                    "minimum": 0,
+                    "default": 5
+                  }
+                }
+              },
+              "scroll": {
+                "type": "object",
+                "description": "Text scrolling settings",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Enable text scrolling",
+                    "default": false
+                  },
+                  "direction": {
+                    "type": "string",
+                    "description": "Scroll direction",
+                    "enum": [
+                      "left",
+                      "right",
+                      "up",
+                      "down"
+                    ],
+                    "default": "left"
+                  },
+                  "speed": {
+                    "type": "number",
+                    "description": "Scroll speed in pixels per second",
+                    "minimum": 1,
+                    "default": 30
+                  },
+                  "mode": {
+                    "type": "string",
+                    "description": "Scroll mode: continuous (loop), bounce (reverse at edges), pause_ends (pause at start/end)",
+                    "enum": [
+                      "continuous",
+                      "bounce",
+                      "pause_ends"
+                    ],
+                    "default": "continuous"
+                  },
+                  "pause_ms": {
+                    "type": "integer",
+                    "description": "Pause duration at ends in milliseconds (for bounce/pause_ends modes)",
+                    "minimum": 0,
+                    "default": 1000
+                  },
+                  "gap": {
+                    "type": "integer",
+                    "description": "Gap between text repetitions in pixels (for continuous mode)",
+                    "minimum": 0,
+                    "default": 20
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "spotify"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spotify_auth": {
+                "type": "object",
+                "description": "Spotify authentication configuration",
+                "required": [
+                  "client_id"
+                ],
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "description": "Authentication mode: 'oauth' (interactive PKCE flow) or 'manual' (token in config)",
+                    "enum": [
+                      "oauth",
+                      "manual"
+                    ],
+                    "default": "oauth"
+                  },
+                  "client_id": {
+                    "type": "string",
+                    "description": "Spotify application Client ID (required)"
+                  },
+                  "access_token": {
+                    "type": "string",
+                    "description": "Pre-obtained access token (for manual mode only)"
+                  },
+                  "refresh_token": {
+                    "type": "string",
+                    "description": "Pre-obtained refresh token (for manual mode only)"
+                  },
+                  "token_path": {
+                    "type": "string",
+                    "description": "Path to token storage file",
+                    "default": "spotify_token.json"
+                  },
+                  "callback_port": {
+                    "type": "integer",
+                    "description": "Local port for OAuth callback server",
+                    "minimum": 1024,
+                    "maximum": 65535,
+                    "default": 8888
+                  }
+                }
+              },
+              "spotify": {
+                "type": "object",
+                "description": "Spotify display settings",
+                "properties": {
+                  "placeholder": {
+                    "type": "object",
+                    "description": "What to show when Spotify is not playing",
+                    "properties": {
+                      "mode": {
+                        "type": "string",
+                        "description": "Placeholder mode: 'text' (custom text), 'icon' (Spotify icon), 'hide' (hide widget)",
+                        "enum": [
+                          "text",
+                          "icon",
+                          "hide"
+                        ],
+                        "default": "text"
+                      },
+                      "text": {
+                        "type": "string",
+                        "description": "Text to display when mode is 'text'",
+                        "default": "[Not playing]"
+                      }
+                    }
+                  }
+                }
+              },
+              "spotify_auto_show": {
                 "type": "object",
                 "description": "Events that trigger the widget to appear (when auto_hide is enabled)",
                 "properties": {
