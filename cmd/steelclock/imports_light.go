@@ -32,6 +32,7 @@ import (
 	_ "github.com/pozitronik/steelclock-go/internal/widget/matrix"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/memory"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/network"
+	_ "github.com/pozitronik/steelclock-go/internal/widget/spotifywidget"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/starwarsintro"
 	// EXCLUDED: _ "github.com/pozitronik/steelclock-go/internal/widget/telegramcounter"
 	// EXCLUDED: _ "github.com/pozitronik/steelclock-go/internal/widget/telegramwidget"
