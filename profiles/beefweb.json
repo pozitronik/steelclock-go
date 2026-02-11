@@ -1,0 +1,65 @@
+{
+  "$schema": "schema/config.schema.json",
+  "config_name": "Foobar2000 Player",
+  "refresh_rate_ms": 100,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "beefweb",
+      "id": "player",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40,
+        "z": 0
+      },
+      "style": {
+        "background": 0,
+        "border": -1,
+        "padding": 2
+      },
+      "text": {
+        "font": "5x7",
+        "size": 12,
+        "format": "{artist} - {title}",
+        "align": {
+          "h": "left",
+          "v": "center"
+        }
+      },
+      "beefweb": {
+        "server_url": "http://localhost:8880",
+        "placeholder": {
+          "mode": "text",
+          "text": "[Not running]"
+        }
+      },
+      "beefweb_auto_show": {
+        "on_track_change": true,
+        "on_play": true,
+        "on_pause": false,
+        "on_stop": false,
+        "duration_sec": 5
+      },
+      "scroll": {
+        "enabled": true,
+        "direction": "left",
+        "speed": 30,
+        "mode": "pause_ends",
+        "pause_ms": 2000,
+        "gap": 20
+      },
+      "auto_hide": {
+        "enabled": false,
+        "timeout": 5
+      },
+      "update_interval": 0.5
+    }
+  ]
+}

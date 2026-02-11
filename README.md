@@ -28,7 +28,7 @@ https://github.com/user-attachments/assets/58f607cb-be31-4af4-bb3d-6e0628f0748c
 - **System Tray Integration**: Runs in background with system tray icon
 - **Configuration Profiles**: Switch between multiple configurations via tray menu
 - **Live Configuration Reload**: Edit and reload config without restarting
-- **Multiple Widgets**: Clock, CPU, Memory, Battery, Network, Disk, Keyboard indicators, Keyboard layout, Volume control, Audio visualizer, Winamp integration, Telegram notifications, Matrix digital rain, Weather, Game of Life, Hyperspace, Star Wars intro
+- **Multiple Widgets**: Clock, CPU, Memory, Battery, Network, Disk, Keyboard indicators, Keyboard layout, Volume control, Audio visualizer, Winamp integration, Telegram notifications, Claude Code status, Matrix digital rain, Weather, Game of Life, Hyperspace, Star Wars intro
 - **Display Modes**: Text, horizontal/vertical bars, graphs, analog gauges, etc
 - **Per-Core CPU Monitoring**: Grid layouts showing individual core usage for all display modes
 - **Widget Transparency**: Overlay widgets using `background_color: -1` for layered displays
@@ -179,6 +179,7 @@ The `config_name` field determines how the profile appears in the tray menu. If 
 
 | Widget               | Description                       | Modes                                  | Windows |  Linux   |
 |----------------------|-----------------------------------|----------------------------------------|:-------:|:--------:|
+| **claude_code**      | Claude Code status with Clawd     | -                                      |   Yes   |   Yes    |
 | **clock**            | Current time display              | text, analog                           |   Yes   |   Yes    |
 | **cpu**              | CPU usage (per-core support)      | text, bar, graph, gauge                |   Yes   |   Yes    |
 | **memory**           | RAM usage                         | text, bar, graph, gauge                |   Yes   |   Yes    |
@@ -191,6 +192,8 @@ The `config_name` field determines how the profile appears in the tray menu. If 
 | **volume_meter**     | Realtime audio peak meter         | bar, gauge (stereo & VU support)       |   Yes   | Limited* |
 | **audio_visualizer** | Realtime audio spectrum/waveform  | spectrum, oscilloscope                 |   Yes   |   Yes*   |
 | **winamp**           | Winamp player info display        | text (with scrolling support)          |   Yes   |    No    |
+| **beefweb**          | Foobar2000/DeaDBeeF player        | text (with scrolling support)          |   Yes   |   Yes    |
+| **spotify**          | Spotify player info display       | text (with scrolling support)          |   Yes   |   Yes    |
 | **telegram**         | Telegram notifications display    | text (with scrolling/transitions)      |   Yes   |   Yes    |
 | **telegram_counter** | Telegram unread message counter   | text                                   |   Yes   |   Yes    |
 | **doom**             | Interactive DOOM game display     | game                                   |   Yes   |   Yes    |
@@ -201,6 +204,10 @@ The `config_name` field determines how the profile appears in the tray menu. If 
 | **weather**          | Current weather conditions        | icon, text                             |   Yes   |   Yes    |
 
 \* See [Linux Limitations](#linux-limitations) section below.
+
+**Note:** The `beefweb` widget requires the [beefweb](https://github.com/hyperblast/beefweb) plugin installed in Foobar2000 (Windows) or DeaDBeeF (Linux).
+
+**Note:** The `spotify` widget requires a Spotify Developer Application. See [SPOTIFY_README.md](profiles/SPOTIFY_README.md) for setup instructions.
 
 See [CONFIG_GUIDE.md](profiles/CONFIG_GUIDE.md) for detailed widget properties and configuration examples.
 

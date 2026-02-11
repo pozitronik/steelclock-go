@@ -4,6 +4,7 @@ import (
 	"image"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -13,9 +14,19 @@ import (
 
 // mockWidgetBase implements WidgetBase interface for testing
 type mockWidgetBase struct {
+	name            string
+	updateInterval  time.Duration
 	position        config.PositionConfig
 	style           config.StyleConfig
 	backgroundColor uint8
+}
+
+func (m *mockWidgetBase) Name() string {
+	return m.name
+}
+
+func (m *mockWidgetBase) GetUpdateInterval() time.Duration {
+	return m.updateInterval
 }
 
 func (m *mockWidgetBase) GetPosition() config.PositionConfig {
@@ -42,6 +53,8 @@ func (m *mockWidgetBase) ApplyBorder(img *image.Gray) {
 
 func newMockWidgetBase(w, h int) *mockWidgetBase {
 	return &mockWidgetBase{
+		name:           "test_mock",
+		updateInterval: time.Second,
 		position: config.PositionConfig{
 			X: 0, Y: 0, W: w, H: h,
 		},

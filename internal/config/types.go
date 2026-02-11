@@ -286,6 +286,18 @@ type WidgetConfig struct {
 
 	// Telegram counter widget specific
 	Badge *TelegramBadgeConfig `json:"badge,omitempty"` // Badge mode settings (for telegram_counter)
+
+	// Claude Code status widget
+	ClaudeCode *ClaudeCodeConfig `json:"claude_code,omitempty"` // Claude Code status widget settings
+
+	// Beefweb widget (Foobar2000/DeaDBeeF)
+	Beefweb         *BeefwebConfig         `json:"beefweb,omitempty"`           // Beefweb settings
+	BeefwebAutoShow *BeefwebAutoShowConfig `json:"beefweb_auto_show,omitempty"` // Beefweb auto-show events
+
+	// Spotify widget
+	SpotifyAuth     *SpotifyAuthConfig     `json:"spotify_auth,omitempty"`      // Spotify authentication settings
+	Spotify         *SpotifyConfig         `json:"spotify,omitempty"`           // Spotify display settings
+	SpotifyAutoShow *SpotifyAutoShowConfig `json:"spotify_auto_show,omitempty"` // Spotify auto-show events
 }
 
 // IsEnabled returns true if the widget is enabled (defaults to true if not specified)
@@ -614,6 +626,83 @@ type WinampPlaceholderConfig struct {
 	Mode string `json:"mode,omitempty"`
 	// Text to display when mode is "text"
 	Text string `json:"text,omitempty"`
+}
+
+// BeefwebConfig represents Beefweb widget settings (Foobar2000/DeaDBeeF)
+// Format string is configured via text.format with placeholders:
+// {artist}, {title}, {album}, {duration}, {position}, {state}
+type BeefwebConfig struct {
+	// ServerURL is the beefweb server URL (default: http://localhost:8880)
+	ServerURL string `json:"server_url,omitempty"`
+	// Placeholder configuration when player is not running or stopped
+	Placeholder *BeefwebPlaceholderConfig `json:"placeholder,omitempty"`
+}
+
+// BeefwebAutoShowConfig represents events that trigger the beefweb widget to show
+type BeefwebAutoShowConfig struct {
+	// OnTrackChange - show widget when track changes (default: true)
+	OnTrackChange *bool `json:"on_track_change,omitempty"`
+	// OnPlay - show widget when playback starts
+	OnPlay bool `json:"on_play,omitempty"`
+	// OnPause - show widget when playback is paused
+	OnPause bool `json:"on_pause,omitempty"`
+	// OnStop - show widget when playback stops
+	OnStop bool `json:"on_stop,omitempty"`
+	// DurationSec - how long to show the widget (seconds, default: 5)
+	DurationSec float64 `json:"duration_sec,omitempty"`
+}
+
+// BeefwebPlaceholderConfig represents what to show when player is not running
+type BeefwebPlaceholderConfig struct {
+	// Mode: "text" for custom text, "hide" to hide widget
+	Mode string `json:"mode,omitempty"`
+	// Text to display when mode is "text"
+	Text string `json:"text,omitempty"`
+}
+
+// SpotifyAuthConfig contains Spotify authentication settings
+type SpotifyAuthConfig struct {
+	// Mode: "oauth" (interactive PKCE flow) or "manual" (token in config)
+	// Default: "oauth"
+	Mode string `json:"mode,omitempty"`
+	// ClientID: Spotify application Client ID (required)
+	ClientID string `json:"client_id"`
+	// AccessToken: pre-obtained access token (for manual mode only)
+	AccessToken string `json:"access_token,omitempty"`
+	// RefreshToken: pre-obtained refresh token (for manual mode only)
+	RefreshToken string `json:"refresh_token,omitempty"`
+	// TokenPath: path to token storage file (default: spotify_token.json)
+	TokenPath string `json:"token_path,omitempty"`
+	// CallbackPort: local port for OAuth callback server (default: 8888)
+	CallbackPort int `json:"callback_port,omitempty"`
+}
+
+// SpotifyConfig contains Spotify widget display settings
+type SpotifyConfig struct {
+	// Placeholder configuration when Spotify is not playing
+	Placeholder *SpotifyPlaceholderConfig `json:"placeholder,omitempty"`
+}
+
+// SpotifyPlaceholderConfig represents what to show when Spotify is not playing
+type SpotifyPlaceholderConfig struct {
+	// Mode: "text" for custom text, "icon" for Spotify icon, "hide" to hide widget
+	Mode string `json:"mode,omitempty"`
+	// Text to display when mode is "text"
+	Text string `json:"text,omitempty"`
+}
+
+// SpotifyAutoShowConfig represents events that trigger the Spotify widget to show
+type SpotifyAutoShowConfig struct {
+	// OnTrackChange - show widget when track changes (default: true)
+	OnTrackChange *bool `json:"on_track_change,omitempty"`
+	// OnPlay - show widget when playback starts
+	OnPlay bool `json:"on_play,omitempty"`
+	// OnPause - show widget when playback is paused
+	OnPause bool `json:"on_pause,omitempty"`
+	// OnStop - show widget when playback stops
+	OnStop bool `json:"on_stop,omitempty"`
+	// DurationSec - how long to show the widget (seconds, default: 5)
+	DurationSec float64 `json:"duration_sec,omitempty"`
 }
 
 // ScrollConfig represents text scrolling settings
@@ -1103,4 +1192,50 @@ type TelegramElementConfig struct {
 	Scroll *ScrollConfig `json:"scroll,omitempty"`
 	// WordBreak: how to break lines - "normal" (break on spaces) or "break-all" (break anywhere)
 	WordBreak string `json:"word_break,omitempty"`
+}
+
+// ClaudeCodeConfig contains settings for the Claude Code notification widget.
+// This widget notifies about Claude Code's activity with the Clawd mascot.
+//
+// Status is received via HTTP POST to /api/claude-status endpoint.
+// Configure Claude Code hooks to POST status updates to SteelClock's web server.
+type ClaudeCodeConfig struct {
+	// IntroDuration: intro animation duration in seconds (default: 3, 0 = no intro)
+	IntroDuration int `json:"intro_duration,omitempty"`
+	// IdleAnimations: enable idle animations like blinking (default: true)
+	IdleAnimations *bool `json:"idle_animations,omitempty"`
+	// IntroTitle: text shown during intro, supports \n for multiple lines
+	IntroTitle string `json:"intro_title,omitempty"`
+	// AutoHide: hide widget when there's no notification to show (default: true)
+	AutoHide *bool `json:"auto_hide,omitempty"`
+	// SpriteSize: Clawd sprite size - "large" (34x20), "medium" (17x10), "small" (9x6)
+	// Default: "medium"
+	SpriteSize string `json:"sprite_size,omitempty"`
+	// ShowText: show status text next to Clawd (default: true)
+	// When false, only Clawd animations are shown
+	ShowText *bool `json:"show_text,omitempty"`
+	// ShowTimer: show elapsed time during thinking/tool states (default: true)
+	ShowTimer *bool `json:"show_timer,omitempty"`
+	// ShowSubagent: show small Clawd sprite when subagent (Task) is running (default: true)
+	ShowSubagent *bool `json:"show_subagent,omitempty"`
+	// Notify: notification duration per state in seconds
+	// 0 = don't show, -1 = show until next state change, N = show for N seconds
+	Notify *ClaudeCodeNotifyConfig `json:"notify,omitempty"`
+}
+
+// ClaudeCodeNotifyConfig defines notification duration for each Claude Code state.
+// Values: 0 = don't notify, -1 = notify until next event, N = notify for N seconds
+type ClaudeCodeNotifyConfig struct {
+	// Thinking: duration when Claude is thinking (default: 0)
+	Thinking *int `json:"thinking,omitempty"`
+	// Tool: duration when Claude is using a tool (default: 2)
+	Tool *int `json:"tool,omitempty"`
+	// Success: duration when task completes successfully (default: -1)
+	Success *int `json:"success,omitempty"`
+	// Error: duration when an error occurs (default: -1)
+	Error *int `json:"error,omitempty"`
+	// Idle: duration when Claude is idle (default: 0)
+	Idle *int `json:"idle,omitempty"`
+	// NotRunning: duration when Claude Code is not running (default: 0)
+	NotRunning *int `json:"not_running,omitempty"`
 }

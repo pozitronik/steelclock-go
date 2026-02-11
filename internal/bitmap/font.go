@@ -20,6 +20,16 @@ const (
 )
 
 var (
+	// fontCache caches parsed TTF font files (*opentype.Font) by path.
+	// This is the expensive operation - file I/O and parsing.
+	//
+	// Design decision: We cache *opentype.Font but NOT font.Face objects.
+	// Rationale (see font_cache_test.go for verification):
+	// 1. TTF parsing is expensive - worth caching
+	// 2. font.Face creation via NewFace() is cheap - just wraps cached data
+	// 3. Different sizes need different Face objects anyway
+	// 4. font.Face is not thread-safe - caching would add complexity
+	// 5. Widgets create fonts once in New() - no render-loop cost
 	fontCache      = make(map[string]*opentype.Font)
 	fontCacheMutex sync.RWMutex            // Protects fontCache map access
 	bundledFontURL = DefaultBundledFontURL // Can be overridden via SetBundledFontURL
