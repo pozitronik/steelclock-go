@@ -311,16 +311,18 @@ func generateRandomString(length int) string {
 }
 
 // openBrowser opens the URL in the default browser.
-func openBrowser(url string) error {
+func openBrowser(rawURL string) error {
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {
 	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", url)
+		// Use rundll32 to avoid cmd.exe, which interprets & as a command separator
+		// and has complex quoting rules that conflict with Go's argument escaping.
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", rawURL)
 	case "darwin":
-		cmd = exec.Command("open", url)
+		cmd = exec.Command("open", rawURL)
 	default: // Linux and others
-		cmd = exec.Command("xdg-open", url)
+		cmd = exec.Command("xdg-open", rawURL)
 	}
 
 	return cmd.Start()
