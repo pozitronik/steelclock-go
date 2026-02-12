@@ -24,7 +24,7 @@
       },
       "spotify_auth": {
         "mode": "oauth",
-        "client_id": "d764a237a5d84044b9ff409cf184884f",
+        "client_id": "YOUR_SPOTIFY_CLIENT_ID_HERE",
         "callback_port": 8888
       },
       "spotify": {
