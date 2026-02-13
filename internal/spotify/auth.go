@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os/exec"
@@ -134,20 +135,25 @@ func (p *PKCEAuth) startCallbackServer(ctx context.Context) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/callback", p.handleCallback)
 
+	addr := fmt.Sprintf("127.0.0.1:%d", p.callbackPort)
+
+	// Bind the port synchronously so we detect failures (port busy, firewall
+	// block, etc.) immediately instead of losing them in a goroutine.
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("failed to listen on %s: %w", addr, err)
+	}
+
 	p.server = &http.Server{
-		Addr:              fmt.Sprintf("127.0.0.1:%d", p.callbackPort),
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	go func() {
-		if err := p.server.ListenAndServe(); err != http.ErrServerClosed {
+		if err := p.server.Serve(listener); err != http.ErrServerClosed {
 			log.Printf("spotify: callback server error: %v", err)
 		}
 	}()
-
-	// Give server time to start
-	time.Sleep(100 * time.Millisecond)
 
 	return nil
 }
