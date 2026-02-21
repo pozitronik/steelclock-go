@@ -20,12 +20,8 @@ var (
 	ErrNotAuthenticated = errors.New("not authenticated")
 	// ErrAuthRequired indicates authentication is required.
 	ErrAuthRequired = errors.New("authentication required")
-	// ErrTokenExpired indicates the access token has expired.
-	ErrTokenExpired = errors.New("token expired")
 	// ErrRefreshFailed indicates token refresh failed.
 	ErrRefreshFailed = errors.New("token refresh failed")
-	// ErrNoActiveDevice indicates no Spotify device is active.
-	ErrNoActiveDevice = errors.New("no active device")
 	// ErrRateLimited indicates the API rate limit was exceeded.
 	ErrRateLimited = errors.New("rate limited")
 )
@@ -164,7 +160,7 @@ func (c *httpClient) checkAvailability() bool {
 
 	// Try to refresh if expired
 	if c.token.IsExpired() {
-		if err := c.refreshTokenInternal(); err != nil {
+		if err := c.refreshTokenInternal(context.TODO()); err != nil {
 			c.available = false
 			return false
 		}
@@ -185,13 +181,13 @@ func (c *httpClient) GetState() (*PlayerState, error) {
 
 	// Refresh token if expired
 	if c.token.IsExpired() {
-		if err := c.refreshTokenInternal(); err != nil {
+		if err := c.refreshTokenInternal(context.TODO()); err != nil {
 			return nil, fmt.Errorf("%w: %v", ErrRefreshFailed, err)
 		}
 	}
 
 	// Make API request
-	req, err := http.NewRequest("GET", SpotifyAPIURL+"/me/player/currently-playing", nil)
+	req, err := http.NewRequest("GET", APIURL+"/me/player/currently-playing", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -202,7 +198,7 @@ func (c *httpClient) GetState() (*PlayerState, error) {
 	if err != nil {
 		return nil, fmt.Errorf("API request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Handle response codes
 	switch resp.StatusCode {
@@ -284,7 +280,7 @@ func (c *httpClient) Connect(ctx context.Context) error {
 	// If already authenticated, just verify
 	if c.token != nil && c.token.IsValid() {
 		if c.token.IsExpired() {
-			return c.refreshTokenInternal()
+			return c.refreshTokenInternal(ctx)
 		}
 		c.connected = true
 		return nil
@@ -357,11 +353,11 @@ func (c *httpClient) RefreshToken() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	return c.refreshTokenInternal()
+	return c.refreshTokenInternal(context.TODO())
 }
 
 // refreshTokenInternal refreshes the token (must hold lock).
-func (c *httpClient) refreshTokenInternal() error {
+func (c *httpClient) refreshTokenInternal(ctx context.Context) error {
 	if c.token == nil || c.token.RefreshToken == "" {
 		return ErrNotAuthenticated
 	}
@@ -372,7 +368,7 @@ func (c *httpClient) refreshTokenInternal() error {
 	data.Set("refresh_token", c.token.RefreshToken)
 	data.Set("client_id", c.clientID)
 
-	req, err := http.NewRequest("POST", SpotifyTokenURL, strings.NewReader(data.Encode()))
+	req, err := http.NewRequestWithContext(ctx, "POST", TokenURL, strings.NewReader(data.Encode()))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -382,7 +378,7 @@ func (c *httpClient) refreshTokenInternal() error {
 	if err != nil {
 		return fmt.Errorf("refresh request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)

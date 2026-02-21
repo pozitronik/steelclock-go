@@ -5,7 +5,7 @@ import (
 )
 
 // TokenShape extends the shared token type for bluetooth-specific shape tokens
-const TokenShape render.TokenType = render.TokenCustomBase
+const TokenShape = render.TokenCustomBase
 
 // parseBluetoothFormat parses a format string into tokens
 func parseBluetoothFormat(format string) []render.Token {

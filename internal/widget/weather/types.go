@@ -38,7 +38,7 @@ const (
 )
 
 // TokenLarge extends the shared token type for weather-specific large tokens
-const TokenLarge render.TokenType = render.TokenCustomBase
+const TokenLarge = render.TokenCustomBase
 
 // WData holds the current weather information
 type WData struct {

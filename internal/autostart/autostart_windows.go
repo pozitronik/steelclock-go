@@ -3,6 +3,8 @@
 package autostart
 
 import (
+	"errors"
+
 	"golang.org/x/sys/windows/registry"
 )
 
@@ -21,7 +23,7 @@ func isEnabled() (bool, error) {
 	if err != nil {
 		return false, nil // key doesn't exist — not enabled
 	}
-	defer key.Close()
+	defer func() { _ = key.Close() }()
 
 	val, _, err := key.GetStringValue(valueName)
 	if err != nil {
@@ -41,7 +43,7 @@ func enable() error {
 	if err != nil {
 		return err
 	}
-	defer key.Close()
+	defer func() { _ = key.Close() }()
 
 	return key.SetStringValue(valueName, exePath)
 }
@@ -51,10 +53,10 @@ func disable() error {
 	if err != nil {
 		return nil // key doesn't exist — nothing to disable
 	}
-	defer key.Close()
+	defer func() { _ = key.Close() }()
 
 	err = key.DeleteValue(valueName)
-	if err == registry.ErrNotExist {
+	if errors.Is(err, registry.ErrNotExist) {
 		return nil // already removed
 	}
 	return err
