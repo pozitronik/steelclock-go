@@ -28,7 +28,7 @@ https://github.com/user-attachments/assets/58f607cb-be31-4af4-bb3d-6e0628f0748c
 - **System Tray Integration**: Runs in background with system tray icon
 - **Configuration Profiles**: Switch between multiple configurations via tray menu
 - **Live Configuration Reload**: Edit and reload config without restarting
-- **Multiple Widgets**: Clock, CPU, Memory, Battery, Network, Disk, Keyboard indicators, Keyboard layout, Volume control, Audio visualizer, Winamp integration, Telegram notifications, Claude Code status, Matrix digital rain, Weather, Game of Life, Hyperspace, Star Wars intro
+- **Multiple Widgets**: Clock, CPU, Memory, Battery, Network, Disk, Keyboard indicators, Keyboard layout, Volume control, Audio visualizer, Bluetooth device status, Winamp integration, Telegram notifications, Claude Code status, Matrix digital rain, Weather, Game of Life, Hyperspace, Star Wars intro
 - **Display Modes**: Text, horizontal/vertical bars, graphs, analog gauges, etc
 - **Per-Core CPU Monitoring**: Grid layouts showing individual core usage for all display modes
 - **Widget Transparency**: Overlay widgets using `background_color: -1` for layered displays
@@ -184,6 +184,7 @@ The `config_name` field determines how the profile appears in the tray menu. If 
 | **cpu**              | CPU usage (per-core support)      | text, bar, graph, gauge                |   Yes   |   Yes    |
 | **memory**           | RAM usage                         | text, bar, graph, gauge                |   Yes   |   Yes    |
 | **battery**          | Battery level and charging status | text, bar, graph, gauge                |   Yes   |   Yes    |
+| **bluetooth**        | Bluetooth device status/battery   | icon, text, bar                        |   Yes   |   Yes    |
 | **network**          | Network I/O (RX/TX)               | text, bar, graph, gauge                |   Yes   |   Yes    |
 | **disk**             | Disk I/O (read/write)             | text, bar, graph                       |   Yes   |   Yes    |
 | **keyboard**         | Lock indicators (Caps/Num/Scroll) | icons, text, mixed                     |   Yes   |    No    |
@@ -206,6 +207,8 @@ The `config_name` field determines how the profile appears in the tray menu. If 
 \* See [Linux Limitations](#linux-limitations) section below.
 
 **Note:** The `beefweb` widget requires the [beefweb](https://github.com/hyperblast/beefweb) plugin installed in Foobar2000 (Windows) or DeaDBeeF (Linux).
+
+**Note:** The `bluetooth` widget requires [bqc](https://github.com/pozitronik/bqc) running locally. The widget polls the bqc REST API to display device connection state, type icon, name, and battery level with configurable low-battery blink threshold.
 
 **Note:** The `spotify` widget requires a Spotify Developer Application. See [SPOTIFY_README.md](profiles/SPOTIFY_README.md) for setup instructions.
 

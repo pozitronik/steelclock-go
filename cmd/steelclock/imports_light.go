@@ -19,6 +19,7 @@ import (
 	_ "github.com/pozitronik/steelclock-go/internal/widget/audiovisualizer"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/battery"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/beefwebwidget"
+	_ "github.com/pozitronik/steelclock-go/internal/widget/bluetooth"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/claudecode"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/clipboard"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/clock"

@@ -1,0 +1,49 @@
+{
+  "$schema": "schema/config.schema.json",
+  "config_name": "Bluetooth Device",
+  "refresh_rate_ms": 100,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "bluetooth",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 20,
+        "z": 0
+      },
+      "style": {
+        "background": 0,
+        "border": -1,
+        "padding": 0
+      },
+      "bluetooth": {
+        "address": "00:00:00:00:00:00",
+        "api_url": "127.0.0.1:8765",
+        "show_icon": true,
+        "battery_mode": "none",
+        "show_name": true,
+        "low_battery_threshold": 20
+      },
+      "colors": {
+        "on": 255,
+        "off": 100
+      },
+      "text": {
+        "font": null,
+        "size": 16,
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
+      },
+      "update_interval": 1
+    }
+  ]
+}

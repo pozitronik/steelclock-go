@@ -204,6 +204,8 @@ func applyTypeSpecificDefaults(w *WidgetConfig) {
 		applyVolumeDefaults(w)
 	case "volume_meter":
 		applyVolumeMeterDefaults(w)
+	case "bluetooth":
+		applyBluetoothDefaults(w)
 	}
 }
 
@@ -419,6 +421,19 @@ func applyVolumeMeterDefaults(w *WidgetConfig) {
 	}
 	if w.Clipping.Threshold == 0 {
 		w.Clipping.Threshold = 0.99
+	}
+}
+
+// applyBluetoothDefaults sets default values for bluetooth widgets
+func applyBluetoothDefaults(w *WidgetConfig) {
+	if w.Bluetooth == nil {
+		w.Bluetooth = &BluetoothConfig{}
+	}
+	if w.Bluetooth.APIURL == "" {
+		w.Bluetooth.APIURL = "127.0.0.1:8765"
+	}
+	if w.Bluetooth.BatteryMode == "" {
+		w.Bluetooth.BatteryMode = "icon"
 	}
 }
 

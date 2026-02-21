@@ -558,7 +558,8 @@
             "telegram_counter",
             "screen_mirror",
             "hacker_code",
-            "claude_code"
+            "claude_code",
+            "bluetooth"
           ]
         },
         "enabled": {
@@ -4189,6 +4190,68 @@
                         "default": 0
                       }
                     }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "bluetooth"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "bluetooth": {
+                "type": "object",
+                "description": "Bluetooth device status widget settings (bqc API)",
+                "required": [
+                  "address"
+                ],
+                "properties": {
+                  "address": {
+                    "type": "string",
+                    "description": "Bluetooth MAC address of the device to track (e.g., 'AA:BB:CC:DD:EE:FF')"
+                  },
+                  "api_url": {
+                    "type": "string",
+                    "description": "bqc API host:port",
+                    "default": "127.0.0.1:8765"
+                  },
+                  "show_icon": {
+                    "type": "boolean",
+                    "description": "Show device type icon",
+                    "default": true
+                  },
+                  "battery_mode": {
+                    "type": "string",
+                    "description": "Battery display style (\"none\" to disable)",
+                    "enum": [
+                      "none",
+                      "icon",
+                      "text",
+                      "bar"
+                    ],
+                    "default": "icon"
+                  },
+                  "show_name": {
+                    "type": "boolean",
+                    "description": "Show device display name",
+                    "default": false
+                  },
+                  "low_battery_threshold": {
+                    "type": "integer",
+                    "description": "Battery percentage at or below which the indicator blinks (0 = disabled)",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
                   }
                 }
               }
