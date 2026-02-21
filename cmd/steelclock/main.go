@@ -12,6 +12,18 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
+// looksLikeAppDir returns true if dir contains steelclock.json or a profiles/ subdirectory,
+// suggesting it is the application's working directory.
+func looksLikeAppDir(dir string) bool {
+	if info, err := os.Stat(filepath.Join(dir, "steelclock.json")); err == nil && !info.IsDir() {
+		return true
+	}
+	if info, err := os.Stat(filepath.Join(dir, "profiles")); err == nil && info.IsDir() {
+		return true
+	}
+	return false
+}
+
 var logFile *os.File
 
 func main() {
@@ -25,6 +37,17 @@ func main() {
 	baseDir, err := os.Getwd()
 	if err != nil {
 		log.Fatalf("Failed to get current working directory: %v", err)
+	}
+
+	// If CWD doesn't look like the app directory, fall back to executable's directory.
+	// This handles autostart and shortcut scenarios where CWD differs from app location.
+	if !looksLikeAppDir(baseDir) {
+		if exePath, exeErr := os.Executable(); exeErr == nil {
+			if altDir := filepath.Dir(exePath); looksLikeAppDir(altDir) {
+				log.Printf("CWD %q has no config; using executable directory %q instead", baseDir, altDir)
+				baseDir = altDir
+			}
+		}
 	}
 
 	// If explicit config path is provided, use legacy single-config mode
