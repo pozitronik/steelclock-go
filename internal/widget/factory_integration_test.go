@@ -158,6 +158,13 @@ func TestCreateWidget_AllTypes(t *testing.T) {
 			if !tt.wantErr && w == nil {
 				t.Error("CreateWidget() returned nil widget")
 			}
+
+			// Stop widgets with background goroutines to prevent leaks
+			if !tt.wantErr && w != nil {
+				if s, ok := w.(widget.Stoppable); ok {
+					t.Cleanup(func() { s.Stop() })
+				}
+			}
 		})
 	}
 }

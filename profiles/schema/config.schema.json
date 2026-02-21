@@ -558,7 +558,8 @@
             "telegram_counter",
             "screen_mirror",
             "hacker_code",
-            "claude_code"
+            "claude_code",
+            "bluetooth"
           ]
         },
         "enabled": {
@@ -4189,6 +4190,52 @@
                         "default": 0
                       }
                     }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "bluetooth"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "bluetooth": {
+                "type": "object",
+                "description": "Bluetooth device status widget settings (bqc API)",
+                "required": [
+                  "address"
+                ],
+                "properties": {
+                  "address": {
+                    "type": "string",
+                    "description": "Bluetooth MAC address of the device to track (e.g., 'AA:BB:CC:DD:EE:FF')"
+                  },
+                  "api_url": {
+                    "type": "string",
+                    "description": "bqc API host:port",
+                    "default": "127.0.0.1:8765"
+                  },
+                  "format": {
+                    "type": "string",
+                    "description": "Display format string with tokens: {icon}, {name}, {level}, {state}, {battery:N}, {battery_h:N}, {battery_v:N}, {bar:N}, {bar_h:N}, {bar_v:N}. N is always the horizontal width in pixels.",
+                    "default": "{icon} {name} {battery:20}"
+                  },
+                  "low_battery_threshold": {
+                    "type": "integer",
+                    "description": "Battery percentage at or below which the indicator blinks (0 = disabled)",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "default": 0
                   }
                 }
               }

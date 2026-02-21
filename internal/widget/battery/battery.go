@@ -659,94 +659,26 @@ func (w *Widget) renderBattery(img *image.Gray, status Status) {
 
 // renderBatteryHorizontal draws horizontal battery progressbar
 func (w *Widget) renderBatteryHorizontal(img *image.Gray, status Status, pos config.PositionConfig) {
-	// Battery dimensions - leave room for the positive terminal nub
-	nubW := 4
-	batteryX := w.padding
-	batteryY := w.padding
-	batteryW := pos.W - w.padding*2 - nubW - 1
-	batteryH := pos.H - w.padding*2
-
-	// Ensure minimum usable size but don't exceed widget bounds
-	if batteryW < 8 {
-		batteryW = 8
-	}
-	if batteryH < 6 {
-		batteryH = 6
-	}
-
-	// Draw battery body outline
-	bitmap.DrawRectangle(img, batteryX, batteryY, batteryW, batteryH, w.colorBorder)
-
-	// Draw positive terminal (nub on the right)
-	nubH := batteryH / 3
-	if nubH < 4 {
-		nubH = 4
-	}
-	nubX := batteryX + batteryW
-	nubY := batteryY + (batteryH-nubH)/2
-	bitmap.DrawFilledRectangle(img, nubX, nubY, nubW, nubH, w.colorBorder)
-
-	// Calculate fill dimensions (inside the battery body)
-	fillMargin := 2
-	fillX := batteryX + fillMargin
-	fillY := batteryY + fillMargin
-	fillMaxW := batteryW - 2*fillMargin
-	fillH := batteryH - 2*fillMargin
-	fillW := int(float64(fillMaxW) * float64(status.Percentage) / 100.0)
-
-	fillColor := w.getColorForLevel(status.Percentage)
-	if fillW > 0 {
-		bitmap.DrawFilledRectangle(img, fillX, fillY, fillW, fillH, fillColor)
-	}
-
-	// Draw status icon in top-left corner
-	w.drawStatusIcon(img, batteryX+2, batteryY+2, status)
+	render.DrawBatteryShape(img, 0, 0, pos.W, pos.H, render.BatteryShapeConfig{
+		Orientation: config.DirectionHorizontal,
+		Percentage:  status.Percentage,
+		FillColor:   w.getColorForLevel(status.Percentage),
+		BorderColor: w.colorBorder,
+		Padding:     w.padding,
+	})
+	w.drawStatusIcon(img, w.padding+2, w.padding+2, status)
 }
 
 // renderBatteryVertical draws vertical battery progressbar
 func (w *Widget) renderBatteryVertical(img *image.Gray, status Status, pos config.PositionConfig) {
-	// Battery dimensions - leave room for the positive terminal nub at top
-	nubH := 4
-	batteryX := w.padding
-	batteryY := w.padding + nubH + 1
-	batteryW := pos.W - w.padding*2
-	batteryH := pos.H - w.padding*2 - nubH - 1
-
-	// Ensure minimum usable size but don't exceed widget bounds
-	if batteryW < 6 {
-		batteryW = 6
-	}
-	if batteryH < 8 {
-		batteryH = 8
-	}
-
-	// Draw battery body outline
-	bitmap.DrawRectangle(img, batteryX, batteryY, batteryW, batteryH, w.colorBorder)
-
-	// Draw positive terminal (nub at top)
-	nubW := batteryW / 3
-	if nubW < 4 {
-		nubW = 4
-	}
-	nubX := batteryX + (batteryW-nubW)/2
-	nubY := w.padding
-	bitmap.DrawFilledRectangle(img, nubX, nubY, nubW, nubH, w.colorBorder)
-
-	// Calculate fill dimensions
-	fillMargin := 2
-	fillX := batteryX + fillMargin
-	fillMaxH := batteryH - 2*fillMargin
-	fillW := batteryW - 2*fillMargin
-	fillH := int(float64(fillMaxH) * float64(status.Percentage) / 100.0)
-	fillY := batteryY + fillMargin + fillMaxH - fillH
-
-	fillColor := w.getColorForLevel(status.Percentage)
-	if fillH > 0 {
-		bitmap.DrawFilledRectangle(img, fillX, fillY, fillW, fillH, fillColor)
-	}
-
-	// Draw status icon in top-left corner (inside battery body)
-	w.drawStatusIcon(img, batteryX+2, batteryY+2, status)
+	render.DrawBatteryShape(img, 0, 0, pos.W, pos.H, render.BatteryShapeConfig{
+		Orientation: config.DirectionVertical,
+		Percentage:  status.Percentage,
+		FillColor:   w.getColorForLevel(status.Percentage),
+		BorderColor: w.colorBorder,
+		Padding:     w.padding,
+	})
+	w.drawStatusIcon(img, w.padding+2, w.padding+2, status)
 }
 
 // Stop cleans up resources
