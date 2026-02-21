@@ -1,6 +1,10 @@
 package weather
 
-import "time"
+import (
+	"time"
+
+	"github.com/pozitronik/steelclock-go/internal/shared/render"
+)
 
 // Weather condition codes for icon mapping
 const (
@@ -33,23 +37,8 @@ const (
 	UVExtreme  = "Extreme"
 )
 
-// TokenType represents the type of format token
-type TokenType int
-
-const (
-	TokenLiteral TokenType = iota // Plain text
-	TokenText                     // Text-based token (temp, humidity, etc.)
-	TokenIcon                     // Icon token (icon, aqi_icon, etc.)
-	TokenLarge                    // Large expanding token (forecast:graph, etc.)
-)
-
-// Token represents a parsed token from the format string
-type Token struct {
-	Type    TokenType
-	Name    string // Token name without braces
-	Param   string // Optional parameter (e.g., "24" in {icon:24})
-	Literal string // For literal tokens, the text content
-}
+// TokenLarge extends the shared token type for weather-specific large tokens
+const TokenLarge render.TokenType = render.TokenCustomBase
 
 // WData holds the current weather information
 type WData struct {

@@ -242,28 +242,19 @@ func (w *Widget) renderUnreadCount(img *image.Gray) {
 
 // formatText replaces tokens in the text format with actual values (except {icon})
 func (w *Widget) formatText() string {
-	text := w.textFormat
-
-	// Replace all supported tokens (except {icon} which is handled separately)
-	replacements := map[string]int{
-		"{unread}":         w.unreadStats.Total,
-		"{total}":          w.unreadStats.Total,
-		"{mentions}":       w.unreadStats.Mentions,
-		"{reactions}":      w.unreadStats.Reactions,
-		"{private}":        w.unreadStats.Private,
-		"{groups}":         w.unreadStats.Groups,
-		"{channels}":       w.unreadStats.Channels,
-		"{muted}":          w.unreadStats.Muted,
-		"{private_muted}":  w.unreadStats.PrivateMuted,
-		"{groups_muted}":   w.unreadStats.GroupsMuted,
-		"{channels_muted}": w.unreadStats.ChannelsMuted,
-	}
-
-	for token, value := range replacements {
-		text = strings.ReplaceAll(text, token, fmt.Sprintf("%d", value))
-	}
-
-	return text
+	f := render.NewTokenFormatter().
+		Set("unread", fmt.Sprintf("%d", w.unreadStats.Total)).
+		Set("total", fmt.Sprintf("%d", w.unreadStats.Total)).
+		Set("mentions", fmt.Sprintf("%d", w.unreadStats.Mentions)).
+		Set("reactions", fmt.Sprintf("%d", w.unreadStats.Reactions)).
+		Set("private", fmt.Sprintf("%d", w.unreadStats.Private)).
+		Set("groups", fmt.Sprintf("%d", w.unreadStats.Groups)).
+		Set("channels", fmt.Sprintf("%d", w.unreadStats.Channels)).
+		Set("muted", fmt.Sprintf("%d", w.unreadStats.Muted)).
+		Set("private_muted", fmt.Sprintf("%d", w.unreadStats.PrivateMuted)).
+		Set("groups_muted", fmt.Sprintf("%d", w.unreadStats.GroupsMuted)).
+		Set("channels_muted", fmt.Sprintf("%d", w.unreadStats.ChannelsMuted))
+	return f.Format(w.textFormat)
 }
 
 // getIconSize returns the icon size based on actual text height

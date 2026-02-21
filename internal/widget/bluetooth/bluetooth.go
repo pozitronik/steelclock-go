@@ -59,7 +59,7 @@ type Widget struct {
 	address             string
 	apiURL              string
 	format              string
-	tokens              []Token
+	tokens              []render.Token
 	colorOn             int
 	colorOff            int
 	lowBatteryThreshold int
@@ -346,7 +346,7 @@ func (w *Widget) Render() (image.Image, error) {
 			skipDraw = true
 		}
 		// Icon blink for "not found" state
-		if t.Type == TokenIcon && !deviceFound && !blinkVisible {
+		if t.Type == render.TokenIcon && !deviceFound && !blinkVisible {
 			skipDraw = true
 		}
 
@@ -377,18 +377,18 @@ type tokenState struct {
 }
 
 // measureBluetoothToken returns the pixel width of a single token
-func (w *Widget) measureBluetoothToken(t *Token, state *tokenState) int {
+func (w *Widget) measureBluetoothToken(t *render.Token, state *tokenState) int {
 	switch t.Type {
-	case TokenLiteral:
+	case render.TokenLiteral:
 		width, _ := bitmap.SmartMeasureText(t.Literal, w.fontFace, w.fontName)
 		return width
-	case TokenIcon:
+	case render.TokenIcon:
 		icon := glyphs.GetIcon(w.iconSet, state.iconName)
 		if icon != nil {
 			return icon.Width + 2 // +2 gap after icon
 		}
 		return 0
-	case TokenText:
+	case render.TokenText:
 		text := w.resolveTextToken(t, state)
 		if text == "" {
 			return 0
@@ -402,7 +402,7 @@ func (w *Widget) measureBluetoothToken(t *Token, state *tokenState) int {
 }
 
 // resolveTextToken returns the string value for a text token
-func (w *Widget) resolveTextToken(t *Token, state *tokenState) string {
+func (w *Widget) resolveTextToken(t *render.Token, state *tokenState) string {
 	if !state.apiReachable || !state.adapterOk || !state.deviceFound {
 		return ""
 	}
@@ -423,7 +423,7 @@ func (w *Widget) resolveTextToken(t *Token, state *tokenState) string {
 // measureShapeToken returns the pixel width of a shape token.
 // The size parameter N always specifies the horizontal width,
 // regardless of orientation. Vertical height comes from the content area.
-func (w *Widget) measureShapeToken(t *Token) int {
+func (w *Widget) measureShapeToken(t *render.Token) int {
 	size := w.parseShapeSize(t)
 	if size <= 0 {
 		return 0
@@ -432,7 +432,7 @@ func (w *Widget) measureShapeToken(t *Token) int {
 }
 
 // parseShapeSize extracts the pixel size from the token parameter
-func (w *Widget) parseShapeSize(t *Token) int {
+func (w *Widget) parseShapeSize(t *render.Token) int {
 	if t.Param == "" {
 		return 0
 	}
@@ -442,17 +442,17 @@ func (w *Widget) parseShapeSize(t *Token) int {
 }
 
 // renderBluetoothToken draws a single token at (x, y) within the given height
-func (w *Widget) renderBluetoothToken(img *image.Gray, t *Token, x, y, height int, state *tokenState) {
+func (w *Widget) renderBluetoothToken(img *image.Gray, t *render.Token, x, y, height int, state *tokenState) {
 	switch t.Type {
-	case TokenLiteral:
+	case render.TokenLiteral:
 		textColor := w.colorOn
 		if !state.connected && state.deviceFound && state.apiReachable && state.adapterOk {
 			textColor = w.colorOff
 		}
 		w.drawTextAligned(img, t.Literal, x, y, height, uint8(textColor))
-	case TokenIcon:
+	case render.TokenIcon:
 		w.renderIconToken(img, x, y, height, state)
-	case TokenText:
+	case render.TokenText:
 		w.renderTextToken(img, t, x, y, height, state)
 	case TokenShape:
 		w.renderShapeToken(img, t, x, y, height, state)
@@ -479,7 +479,7 @@ func (w *Widget) renderIconToken(img *image.Gray, x, y, height int, state *token
 }
 
 // renderTextToken draws a text token (name, level, state)
-func (w *Widget) renderTextToken(img *image.Gray, t *Token, x, y, height int, state *tokenState) {
+func (w *Widget) renderTextToken(img *image.Gray, t *render.Token, x, y, height int, state *tokenState) {
 	text := w.resolveTextToken(t, state)
 	if text == "" {
 		return
@@ -492,7 +492,7 @@ func (w *Widget) renderTextToken(img *image.Gray, t *Token, x, y, height int, st
 }
 
 // renderShapeToken draws a battery or bar shape
-func (w *Widget) renderShapeToken(img *image.Gray, t *Token, x, y, height int, state *tokenState) {
+func (w *Widget) renderShapeToken(img *image.Gray, t *render.Token, x, y, height int, state *tokenState) {
 	if !state.connected || !state.battSupported || state.battLevel == nil || !state.deviceFound {
 		return
 	}

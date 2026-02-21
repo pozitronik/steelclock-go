@@ -2,6 +2,8 @@ package bluetooth
 
 import (
 	"testing"
+
+	"github.com/pozitronik/steelclock-go/internal/shared/render"
 )
 
 func TestParseBluetoothFormat(t *testing.T) {
@@ -9,17 +11,17 @@ func TestParseBluetoothFormat(t *testing.T) {
 		name       string
 		format     string
 		wantCount  int
-		wantTokens []Token
+		wantTokens []render.Token
 	}{
 		{
 			name:      "default format",
 			format:    "{icon} {name} {battery:20}",
 			wantCount: 5,
-			wantTokens: []Token{
-				{Type: TokenIcon, Name: "icon"},
-				{Type: TokenLiteral, Literal: " "},
-				{Type: TokenText, Name: "name"},
-				{Type: TokenLiteral, Literal: " "},
+			wantTokens: []render.Token{
+				{Type: render.TokenIcon, Name: "icon"},
+				{Type: render.TokenLiteral, Literal: " "},
+				{Type: render.TokenText, Name: "name"},
+				{Type: render.TokenLiteral, Literal: " "},
 				{Type: TokenShape, Name: "battery", Param: "20"},
 			},
 		},
@@ -27,37 +29,37 @@ func TestParseBluetoothFormat(t *testing.T) {
 			name:      "icon only",
 			format:    "{icon}",
 			wantCount: 1,
-			wantTokens: []Token{
-				{Type: TokenIcon, Name: "icon"},
+			wantTokens: []render.Token{
+				{Type: render.TokenIcon, Name: "icon"},
 			},
 		},
 		{
 			name:      "name and level",
 			format:    "{name} {level}",
 			wantCount: 3,
-			wantTokens: []Token{
-				{Type: TokenText, Name: "name"},
-				{Type: TokenLiteral, Literal: " "},
-				{Type: TokenText, Name: "level"},
+			wantTokens: []render.Token{
+				{Type: render.TokenText, Name: "name"},
+				{Type: render.TokenLiteral, Literal: " "},
+				{Type: render.TokenText, Name: "level"},
 			},
 		},
 		{
 			name:      "all text tokens",
 			format:    "{name} {level} {state}",
 			wantCount: 5,
-			wantTokens: []Token{
-				{Type: TokenText, Name: "name"},
-				{Type: TokenLiteral, Literal: " "},
-				{Type: TokenText, Name: "level"},
-				{Type: TokenLiteral, Literal: " "},
-				{Type: TokenText, Name: "state"},
+			wantTokens: []render.Token{
+				{Type: render.TokenText, Name: "name"},
+				{Type: render.TokenLiteral, Literal: " "},
+				{Type: render.TokenText, Name: "level"},
+				{Type: render.TokenLiteral, Literal: " "},
+				{Type: render.TokenText, Name: "state"},
 			},
 		},
 		{
 			name:      "vertical battery",
 			format:    "{battery_v:15}",
 			wantCount: 1,
-			wantTokens: []Token{
+			wantTokens: []render.Token{
 				{Type: TokenShape, Name: "battery_v", Param: "15"},
 			},
 		},
@@ -65,7 +67,7 @@ func TestParseBluetoothFormat(t *testing.T) {
 			name:      "horizontal bar",
 			format:    "{bar_h:30}",
 			wantCount: 1,
-			wantTokens: []Token{
+			wantTokens: []render.Token{
 				{Type: TokenShape, Name: "bar_h", Param: "30"},
 			},
 		},
@@ -73,18 +75,18 @@ func TestParseBluetoothFormat(t *testing.T) {
 			name:      "literal text with separator",
 			format:    "{icon} | {name}",
 			wantCount: 3,
-			wantTokens: []Token{
-				{Type: TokenIcon, Name: "icon"},
-				{Type: TokenLiteral, Literal: " | "},
-				{Type: TokenText, Name: "name"},
+			wantTokens: []render.Token{
+				{Type: render.TokenIcon, Name: "icon"},
+				{Type: render.TokenLiteral, Literal: " | "},
+				{Type: render.TokenText, Name: "name"},
 			},
 		},
 		{
 			name:      "unknown token treated as literal",
 			format:    "{unknown}",
 			wantCount: 1,
-			wantTokens: []Token{
-				{Type: TokenLiteral, Name: "unknown"},
+			wantTokens: []render.Token{
+				{Type: render.TokenLiteral, Name: "unknown"},
 			},
 		},
 		{
@@ -96,15 +98,15 @@ func TestParseBluetoothFormat(t *testing.T) {
 			name:      "pure literal text",
 			format:    "hello world",
 			wantCount: 1,
-			wantTokens: []Token{
-				{Type: TokenLiteral, Literal: "hello world"},
+			wantTokens: []render.Token{
+				{Type: render.TokenLiteral, Literal: "hello world"},
 			},
 		},
 		{
 			name:      "bar without param",
 			format:    "{bar}",
 			wantCount: 1,
-			wantTokens: []Token{
+			wantTokens: []render.Token{
 				{Type: TokenShape, Name: "bar"},
 			},
 		},
@@ -150,20 +152,20 @@ func TestParseBluetoothFormat(t *testing.T) {
 func TestGetBluetoothTokenType(t *testing.T) {
 	tests := []struct {
 		name     string
-		wantType TokenType
+		wantType render.TokenType
 	}{
-		{"icon", TokenIcon},
-		{"name", TokenText},
-		{"level", TokenText},
-		{"state", TokenText},
+		{"icon", render.TokenIcon},
+		{"name", render.TokenText},
+		{"level", render.TokenText},
+		{"state", render.TokenText},
 		{"battery", TokenShape},
 		{"battery_h", TokenShape},
 		{"battery_v", TokenShape},
 		{"bar", TokenShape},
 		{"bar_h", TokenShape},
 		{"bar_v", TokenShape},
-		{"unknown", TokenLiteral},
-		{"foo", TokenLiteral},
+		{"unknown", render.TokenLiteral},
+		{"foo", render.TokenLiteral},
 	}
 
 	for _, tt := range tests {
@@ -179,47 +181,47 @@ func TestGetBluetoothTokenType(t *testing.T) {
 func TestFindBlinkTarget(t *testing.T) {
 	tests := []struct {
 		name   string
-		tokens []Token
+		tokens []render.Token
 		want   int
 	}{
 		{
 			name:   "shape token first priority",
-			tokens: []Token{{Type: TokenIcon, Name: "icon"}, {Type: TokenText, Name: "name"}, {Type: TokenShape, Name: "battery"}},
+			tokens: []render.Token{{Type: render.TokenIcon, Name: "icon"}, {Type: render.TokenText, Name: "name"}, {Type: TokenShape, Name: "battery"}},
 			want:   2,
 		},
 		{
 			name:   "icon fallback when no shape",
-			tokens: []Token{{Type: TokenIcon, Name: "icon"}, {Type: TokenText, Name: "name"}},
+			tokens: []render.Token{{Type: render.TokenIcon, Name: "icon"}, {Type: render.TokenText, Name: "name"}},
 			want:   0,
 		},
 		{
 			name:   "name fallback when no shape or icon",
-			tokens: []Token{{Type: TokenText, Name: "name"}, {Type: TokenText, Name: "level"}},
+			tokens: []render.Token{{Type: render.TokenText, Name: "name"}, {Type: render.TokenText, Name: "level"}},
 			want:   0,
 		},
 		{
 			name:   "no target when only literals",
-			tokens: []Token{{Type: TokenLiteral, Literal: " "}, {Type: TokenText, Name: "level"}},
+			tokens: []render.Token{{Type: render.TokenLiteral, Literal: " "}, {Type: render.TokenText, Name: "level"}},
 			want:   -1,
 		},
 		{
 			name:   "no target for empty tokens",
-			tokens: []Token{},
+			tokens: []render.Token{},
 			want:   -1,
 		},
 		{
 			name:   "shape before icon even if icon is first",
-			tokens: []Token{{Type: TokenIcon, Name: "icon"}, {Type: TokenShape, Name: "bar"}},
+			tokens: []render.Token{{Type: render.TokenIcon, Name: "icon"}, {Type: TokenShape, Name: "bar"}},
 			want:   1,
 		},
 		{
 			name:   "first shape of multiple",
-			tokens: []Token{{Type: TokenShape, Name: "battery"}, {Type: TokenShape, Name: "bar"}},
+			tokens: []render.Token{{Type: TokenShape, Name: "battery"}, {Type: TokenShape, Name: "bar"}},
 			want:   0,
 		},
 		{
 			name:   "level does not count as name for fallback",
-			tokens: []Token{{Type: TokenText, Name: "level"}, {Type: TokenText, Name: "state"}},
+			tokens: []render.Token{{Type: render.TokenText, Name: "level"}, {Type: render.TokenText, Name: "state"}},
 			want:   -1,
 		},
 	}
