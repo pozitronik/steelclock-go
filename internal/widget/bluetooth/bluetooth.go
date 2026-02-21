@@ -58,10 +58,8 @@ type Widget struct {
 	// Configuration
 	address             string
 	apiURL              string
-	showIcon            bool
-	showBattery         bool
-	batteryMode         string // "none", "icon", "text", "bar"
-	showName            bool
+	format              string
+	tokens              []Token
 	colorOn             int
 	colorOff            int
 	lowBatteryThreshold int
@@ -109,18 +107,9 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 
 	btCfg := cfg.Bluetooth
 
-	// Show flags (default: icon=true, name=false)
-	showIcon := true
-	if btCfg.ShowIcon != nil {
-		showIcon = *btCfg.ShowIcon
-	}
-	showName := false
-	if btCfg.ShowName != nil {
-		showName = *btCfg.ShowName
-	}
-
-	// Battery mode: "none" disables battery display
-	showBattery := btCfg.BatteryMode != "none"
+	// Parse format string
+	format := btCfg.Format
+	tokens := parseBluetoothFormat(format)
 
 	// Colors (on/off like keyboard widget)
 	colorOn := 255
@@ -159,10 +148,8 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		BaseWidget:          base,
 		address:             btCfg.Address,
 		apiURL:              btCfg.APIURL,
-		showIcon:            showIcon,
-		showBattery:         showBattery,
-		batteryMode:         btCfg.BatteryMode,
-		showName:            showName,
+		format:              format,
+		tokens:              tokens,
 		colorOn:             colorOn,
 		colorOff:            colorOff,
 		lowBatteryThreshold: btCfg.LowBatteryThreshold,
@@ -278,15 +265,13 @@ func (w *Widget) Render() (image.Image, error) {
 	// Determine visual state
 	isTransient := connState == "Connecting" || connState == "Disconnecting"
 
-	// Determine low-battery blink target:
-	// If battery is shown, blink the battery indicator.
-	// Otherwise, blink the icon (if shown) or the name.
+	// Determine low-battery blink
 	batteryIsLow := w.lowBatteryThreshold > 0 && connected && battSupported &&
 		battLevel != nil && *battLevel <= w.lowBatteryThreshold
-	hasBatteryDisplay := w.showBattery && connected && battSupported && battLevel != nil && deviceFound
-	blinkBattery := batteryIsLow && hasBatteryDisplay
-	blinkIcon := batteryIsLow && !hasBatteryDisplay && w.showIcon
-	blinkName := batteryIsLow && !hasBatteryDisplay && !w.showIcon && w.showName
+	blinkTargetIdx := -1
+	if batteryIsLow {
+		blinkTargetIdx = findBlinkTarget(w.tokens)
+	}
 
 	// Determine icon name and color
 	var iconName string
@@ -298,7 +283,7 @@ func (w *Widget) Render() (image.Image, error) {
 		iconColor = w.colorOff
 	case !deviceFound:
 		iconName = "bt_unknown"
-		iconColor = w.colorOn // "?" is an attention indicator, not a "dimmed" state
+		iconColor = w.colorOn
 	case isTransient:
 		iconName = deviceTypeToIcon(devType)
 		iconColor = w.colorOn
@@ -310,64 +295,309 @@ func (w *Widget) Render() (image.Image, error) {
 		iconColor = w.colorOff
 	}
 
-	// Layout elements horizontally: [Icon] [Name] [Battery/Ellipsis]
-	currentX := content.X
+	// State for token text resolution
+	state := &tokenState{
+		apiReachable:  apiReachable,
+		adapterOk:     adapterOk,
+		deviceFound:   deviceFound,
+		connected:     connected,
+		connState:     connState,
+		devName:       devName,
+		battLevel:     battLevel,
+		battSupported: battSupported,
+		isTransient:   isTransient,
+		iconName:      iconName,
+		iconColor:     iconColor,
+	}
 
-	// Draw icon (always reserve space to prevent layout shift during blink)
-	if w.showIcon {
-		icon := glyphs.GetIcon(w.iconSet, iconName)
-		if icon != nil {
-			skipDraw := (!deviceFound && !blinkVisible) || (blinkIcon && !batteryBlinkVisible)
-			if !skipDraw && iconColor >= 0 {
-				iconY := content.Y + (content.Height-icon.Height)/2
-				glyphs.DrawGlyph(img, icon, currentX, iconY, color.Gray{Y: uint8(iconColor)})
-			}
-			currentX += icon.Width + 2
+	// === Pass 1: Measure total width of all tokens ===
+	totalWidth := 0
+	widths := make([]int, len(w.tokens))
+	for i := range w.tokens {
+		widths[i] = w.measureBluetoothToken(&w.tokens[i], state)
+		totalWidth += widths[i]
+	}
+
+	// === Calculate starting X based on horizontal alignment ===
+	var startX int
+	switch w.horizAlign {
+	case config.AlignLeft:
+		startX = content.X
+	case config.AlignRight:
+		startX = content.X + content.Width - totalWidth
+		if startX < content.X {
+			startX = content.X
+		}
+	default: // center
+		startX = content.X + (content.Width-totalWidth)/2
+		if startX < content.X {
+			startX = content.X
 		}
 	}
 
-	// Draw ellipsis for transient states
-	if isTransient {
-		ellipsis := glyphs.GetIcon(w.iconSet, "bt_ellipsis")
-		if ellipsis != nil {
-			ellY := content.Y + (content.Height-ellipsis.Height)/2
-			glyphs.DrawGlyph(img, ellipsis, currentX, ellY, color.Gray{Y: uint8(w.colorOn)})
-			currentX += ellipsis.Width + 2
-		}
-	}
+	// === Pass 2: Render each token ===
+	currentX := startX
+	for i := range w.tokens {
+		t := &w.tokens[i]
 
-	// Draw device name (always reserve space to prevent layout shift during blink)
-	if w.showName && devName != "" && deviceFound && apiReachable && adapterOk {
-		nameColor := w.colorOff
-		if connected {
-			nameColor = w.colorOn
+		// Determine if this token should be hidden due to blink
+		skipDraw := false
+		if i == blinkTargetIdx && !batteryBlinkVisible {
+			skipDraw = true
 		}
-		skipDraw := blinkName && !batteryBlinkVisible
-		if !skipDraw && nameColor >= 0 {
-			w.drawText(img, devName, currentX, content.Y, content.Height, uint8(nameColor))
+		// Icon blink for "not found" state
+		if t.Type == TokenIcon && !deviceFound && !blinkVisible {
+			skipDraw = true
 		}
-		// Always advance position to reserve space
-		drawer := &font.Drawer{Face: w.fontFace}
-		advance := drawer.MeasureString(devName)
-		currentX += advance.Ceil() + 2
-	}
 
-	// Draw battery indicator
-	if hasBatteryDisplay {
-		if !blinkBattery || batteryBlinkVisible {
-			remainingW := content.X + content.Width - currentX
-			w.drawBattery(img, currentX, content.Y, remainingW, content.Height, *battLevel)
+		if !skipDraw {
+			w.renderBluetoothToken(img, t, currentX, content.Y, content.Height, state)
 		}
+
+		// Always advance X to reserve space (prevent layout shift)
+		currentX += widths[i]
 	}
 
 	return img, nil
 }
 
-// drawText draws text at the given position, vertically centered
-func (w *Widget) drawText(img *image.Gray, text string, x, y, height int, c uint8) {
+// tokenState holds snapshot of device state for token rendering
+type tokenState struct {
+	apiReachable  bool
+	adapterOk     bool
+	deviceFound   bool
+	connected     bool
+	connState     string
+	devName       string
+	battLevel     *int
+	battSupported bool
+	isTransient   bool
+	iconName      string
+	iconColor     int
+}
+
+// measureBluetoothToken returns the pixel width of a single token
+func (w *Widget) measureBluetoothToken(t *Token, state *tokenState) int {
+	switch t.Type {
+	case TokenLiteral:
+		width, _ := bitmap.SmartMeasureText(t.Literal, w.fontFace, w.fontName)
+		return width
+	case TokenIcon:
+		icon := glyphs.GetIcon(w.iconSet, state.iconName)
+		if icon != nil {
+			return icon.Width + 2 // +2 gap after icon
+		}
+		return 0
+	case TokenText:
+		text := w.resolveTextToken(t, state)
+		if text == "" {
+			return 0
+		}
+		width, _ := bitmap.SmartMeasureText(text, w.fontFace, w.fontName)
+		return width
+	case TokenShape:
+		return w.measureShapeToken(t)
+	}
+	return 0
+}
+
+// resolveTextToken returns the string value for a text token
+func (w *Widget) resolveTextToken(t *Token, state *tokenState) string {
+	if !state.apiReachable || !state.adapterOk || !state.deviceFound {
+		return ""
+	}
+	switch t.Name {
+	case "name":
+		return state.devName
+	case "level":
+		if state.connected && state.battSupported && state.battLevel != nil {
+			return fmt.Sprintf("%d%%", *state.battLevel)
+		}
+		return ""
+	case "state":
+		return state.connState
+	}
+	return ""
+}
+
+// measureShapeToken returns the pixel width of a shape token.
+// The size parameter N always specifies the horizontal width,
+// regardless of orientation. Vertical height comes from the content area.
+func (w *Widget) measureShapeToken(t *Token) int {
+	size := w.parseShapeSize(t)
+	if size <= 0 {
+		return 0
+	}
+	return size
+}
+
+// parseShapeSize extracts the pixel size from the token parameter
+func (w *Widget) parseShapeSize(t *Token) int {
+	if t.Param == "" {
+		return 0
+	}
+	var size int
+	_, _ = fmt.Sscanf(t.Param, "%d", &size)
+	return size
+}
+
+// renderBluetoothToken draws a single token at (x, y) within the given height
+func (w *Widget) renderBluetoothToken(img *image.Gray, t *Token, x, y, height int, state *tokenState) {
+	switch t.Type {
+	case TokenLiteral:
+		textColor := w.colorOn
+		if !state.connected && state.deviceFound && state.apiReachable && state.adapterOk {
+			textColor = w.colorOff
+		}
+		w.drawTextAligned(img, t.Literal, x, y, height, uint8(textColor))
+	case TokenIcon:
+		w.renderIconToken(img, x, y, height, state)
+	case TokenText:
+		w.renderTextToken(img, t, x, y, height, state)
+	case TokenShape:
+		w.renderShapeToken(img, t, x, y, height, state)
+	}
+}
+
+// renderIconToken draws the device type icon
+func (w *Widget) renderIconToken(img *image.Gray, x, y, height int, state *tokenState) {
+	icon := glyphs.GetIcon(w.iconSet, state.iconName)
+	if icon == nil || state.iconColor < 0 {
+		return
+	}
+
+	var iconY int
+	switch w.vertAlign {
+	case config.AlignTop:
+		iconY = y
+	case config.AlignBottom:
+		iconY = y + height - icon.Height
+	default: // center
+		iconY = y + (height-icon.Height)/2
+	}
+	glyphs.DrawGlyph(img, icon, x, iconY, color.Gray{Y: uint8(state.iconColor)})
+}
+
+// renderTextToken draws a text token (name, level, state)
+func (w *Widget) renderTextToken(img *image.Gray, t *Token, x, y, height int, state *tokenState) {
+	text := w.resolveTextToken(t, state)
+	if text == "" {
+		return
+	}
+	c := w.colorOn
+	if !state.connected {
+		c = w.colorOff
+	}
+	w.drawTextAligned(img, text, x, y, height, uint8(c))
+}
+
+// renderShapeToken draws a battery or bar shape
+func (w *Widget) renderShapeToken(img *image.Gray, t *Token, x, y, height int, state *tokenState) {
+	if !state.connected || !state.battSupported || state.battLevel == nil || !state.deviceFound {
+		return
+	}
+	level := *state.battLevel
+	size := w.parseShapeSize(t)
+	if size <= 0 {
+		return
+	}
+
+	switch t.Name {
+	case "battery", "battery_h":
+		w.drawBatteryShape(img, x, y, size, height, level, "horizontal")
+	case "battery_v":
+		w.drawBatteryShape(img, x, y, size, height, level, "vertical")
+	case "bar", "bar_h":
+		w.drawBarShape(img, x, y, size, height, level, false)
+	case "bar_v":
+		w.drawBarShape(img, x, y, size, height, level, true)
+	}
+}
+
+// drawBatteryShape draws a battery outline+fill shape
+func (w *Widget) drawBatteryShape(img *image.Gray, x, y, shapeW, availH, level int, orientation string) {
+	if shapeW < 4 || availH < 4 {
+		return
+	}
+
+	// For horizontal, cap height to maintain reasonable aspect ratio
+	battH := availH
+	battW := shapeW
+	if orientation == "horizontal" {
+		if battH > battW {
+			battH = battW / 2
+			if battH < 6 {
+				battH = min(availH, 6)
+			}
+		}
+	}
+
+	battY := y + (availH-battH)/2
+	render.DrawBatteryShape(img, x, battY, battW, battH, render.BatteryShapeConfig{
+		Orientation: orientation,
+		Percentage:  level,
+		FillColor:   uint8(w.colorOn),
+		BorderColor: uint8(w.colorOn),
+	})
+}
+
+// drawBarShape draws a simple filled bar
+func (w *Widget) drawBarShape(img *image.Gray, x, y, barW, availH, level int, vertical bool) {
+	if barW < 3 || availH < 3 {
+		return
+	}
+
+	if vertical {
+		barH := availH - 4
+		if barH < 3 {
+			barH = 3
+		}
+		barY := y + (availH-barH)/2
+		fillHeight := barH * level / 100
+
+		bitmap.DrawRectangle(img, x, barY, barW, barH, uint8(w.colorOn))
+		if fillHeight > 2 {
+			startY := barY + barH - 1 - fillHeight + 1
+			for py := startY; py < barY+barH-1; py++ {
+				for px := x + 1; px < x+barW-1; px++ {
+					img.SetGray(px, py, color.Gray{Y: uint8(w.colorOn)})
+				}
+			}
+		}
+	} else {
+		barH := availH - 4
+		if barH < 3 {
+			barH = 3
+		}
+		barY := y + (availH-barH)/2
+		fillWidth := barW * level / 100
+
+		bitmap.DrawRectangle(img, x, barY, barW, barH, uint8(w.colorOn))
+		if fillWidth > 2 {
+			for py := barY + 1; py < barY+barH-1; py++ {
+				for px := x + 1; px < x+1+fillWidth-2; px++ {
+					img.SetGray(px, py, color.Gray{Y: uint8(w.colorOn)})
+				}
+			}
+		}
+	}
+}
+
+// drawTextAligned draws text at the given position with color and vertical alignment
+func (w *Widget) drawTextAligned(img *image.Gray, text string, x, y, height int, c uint8) {
 	metrics := w.fontFace.Metrics()
 	textHeight := (metrics.Ascent + metrics.Descent).Ceil()
-	baseY := y + (height-textHeight)/2 + metrics.Ascent.Ceil()
+	ascent := metrics.Ascent.Ceil()
+
+	var baseY int
+	switch w.vertAlign {
+	case config.AlignTop:
+		baseY = y + ascent
+	case config.AlignBottom:
+		baseY = y + height - textHeight + ascent
+	default: // center
+		baseY = y + (height-textHeight)/2 + ascent
+	}
 
 	drawer := &font.Drawer{
 		Dst:  img,
@@ -379,55 +609,6 @@ func (w *Widget) drawText(img *image.Gray, text string, x, y, height int, c uint
 		},
 	}
 	drawer.DrawString(text)
-}
-
-// drawBattery draws a battery level indicator at the given position.
-// availW is the remaining horizontal space available for the battery.
-func (w *Widget) drawBattery(img *image.Gray, x, y, availW, availH, level int) {
-	if availW < 4 || availH < 4 {
-		return
-	}
-
-	switch w.batteryMode {
-	case "text":
-		text := fmt.Sprintf("%d%%", level)
-		w.drawText(img, text, x, y, availH, uint8(w.colorOn))
-	case "bar":
-		barWidth := availW
-		barHeight := availH - 4
-		if barHeight < 3 {
-			barHeight = 3
-		}
-		barY := y + (availH-barHeight)/2
-		fillWidth := barWidth * level / 100
-
-		bitmap.DrawRectangle(img, x, barY, barWidth, barHeight, uint8(w.colorOn))
-		if fillWidth > 2 {
-			for py := barY + 1; py < barY+barHeight-1; py++ {
-				for px := x + 1; px < x+1+fillWidth-2; px++ {
-					img.SetGray(px, py, color.Gray{Y: uint8(w.colorOn)})
-				}
-			}
-		}
-	default: // "icon" - battery outline shape fitted to remaining space
-		// Use available space, keeping ~2:1 aspect ratio capped by availW
-		battH := availH
-		battW := battH * 2
-		if battW > availW {
-			battW = availW
-			battH = battW / 2
-			if battH < 6 {
-				battH = min(availH, 6)
-			}
-		}
-		battY := y + (availH-battH)/2
-		render.DrawBatteryShape(img, x, battY, battW, battH, render.BatteryShapeConfig{
-			Orientation: "horizontal",
-			Percentage:  level,
-			FillColor:   uint8(w.colorOn),
-			BorderColor: uint8(w.colorOn),
-		})
-	}
 }
 
 // deviceTypeToIcon maps bqc API device type strings to icon names

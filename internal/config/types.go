@@ -1243,12 +1243,11 @@ type BluetoothConfig struct {
 	Address string `json:"address"`
 	// APIURL: bqc API host:port (default: "127.0.0.1:8765")
 	APIURL string `json:"api_url,omitempty"`
-	// ShowIcon: show device type icon (default: true)
-	ShowIcon *bool `json:"show_icon,omitempty"`
-	// BatteryMode: battery display style - "none", "icon", "text", "bar" (default: "icon")
-	BatteryMode string `json:"battery_mode,omitempty"`
-	// ShowName: show device display name (default: false)
-	ShowName *bool `json:"show_name,omitempty"`
+	// Format: display format string with tokens: {icon}, {name}, {level}, {state},
+	// {battery:N}, {battery_h:N}, {battery_v:N}, {bar:N}, {bar_h:N}, {bar_v:N}.
+	// N is always the horizontal width in pixels; vertical height comes from the content area.
+	// (default: "{icon} {name} {battery:20}")
+	Format string `json:"format,omitempty"`
 	// LowBatteryThreshold: battery percentage at or below which the indicator blinks (0 = disabled, default: 0)
 	LowBatteryThreshold int `json:"low_battery_threshold,omitempty"`
 }

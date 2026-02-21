@@ -26,9 +26,7 @@
       "bluetooth": {
         "address": "00:00:00:00:00:00",
         "api_url": "127.0.0.1:8765",
-        "show_icon": true,
-        "battery_mode": "none",
-        "show_name": true,
+        "format": "{icon} {name} {battery:20}",
         "low_battery_threshold": 20
       },
       "colors": {

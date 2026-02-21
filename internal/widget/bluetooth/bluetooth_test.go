@@ -32,9 +32,9 @@ func testConfig() config.WidgetConfig {
 			},
 		},
 		Bluetooth: &config.BluetoothConfig{
-			Address:     "AA:BB:CC:DD:EE:FF",
-			APIURL:      "127.0.0.1:8765",
-			BatteryMode: "icon",
+			Address: "AA:BB:CC:DD:EE:FF",
+			APIURL:  "127.0.0.1:8765",
+			Format:  "{icon} {name} {battery:20}",
 		},
 		UpdateInterval: 1.0,
 	}
@@ -55,14 +55,11 @@ func TestNew_ValidConfig(t *testing.T) {
 	if w.apiURL != "127.0.0.1:8765" {
 		t.Errorf("apiURL = %q, want %q", w.apiURL, "127.0.0.1:8765")
 	}
-	if !w.showIcon {
-		t.Error("showIcon should default to true")
+	if w.format != "{icon} {name} {battery:20}" {
+		t.Errorf("format = %q, want %q", w.format, "{icon} {name} {battery:20}")
 	}
-	if !w.showBattery {
-		t.Error("showBattery should be true when batteryMode is 'icon'")
-	}
-	if w.showName {
-		t.Error("showName should default to false")
+	if len(w.tokens) != 5 {
+		t.Errorf("tokens count = %d, want 5", len(w.tokens))
 	}
 }
 
@@ -81,29 +78,6 @@ func TestNew_NilBluetoothConfig(t *testing.T) {
 	_, err := New(cfg)
 	if err == nil {
 		t.Fatal("New() should return error for nil bluetooth config")
-	}
-}
-
-func TestNew_ShowFlagsExplicit(t *testing.T) {
-	cfg := testConfig()
-	showIcon := false
-	showName := true
-	cfg.Bluetooth.ShowIcon = &showIcon
-	cfg.Bluetooth.ShowName = &showName
-	cfg.Bluetooth.BatteryMode = "none"
-
-	w, err := New(cfg)
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
-	if w.showIcon {
-		t.Error("showIcon should be false when explicitly set")
-	}
-	if w.showBattery {
-		t.Error("showBattery should be false when battery_mode is 'none'")
-	}
-	if !w.showName {
-		t.Error("showName should be true when explicitly set")
 	}
 }
 
@@ -364,17 +338,20 @@ func TestUpdate_DisplayNameFallback(t *testing.T) {
 
 func TestRender_NoPanic(t *testing.T) {
 	tests := []struct {
-		name  string
-		setup func(w *Widget)
+		name   string
+		format string
+		setup  func(w *Widget)
 	}{
 		{
-			name: "default state",
+			name:   "default state",
+			format: "{icon} {name} {battery:20}",
 			setup: func(_ *Widget) {
 				// Default state
 			},
 		},
 		{
-			name: "connected",
+			name:   "connected",
+			format: "{icon} {name} {battery:20}",
 			setup: func(w *Widget) {
 				w.connected = true
 				w.deviceFound = true
@@ -389,7 +366,8 @@ func TestRender_NoPanic(t *testing.T) {
 			},
 		},
 		{
-			name: "disconnected",
+			name:   "disconnected",
+			format: "{icon} {name} {battery:20}",
 			setup: func(w *Widget) {
 				w.connected = false
 				w.deviceFound = true
@@ -400,20 +378,23 @@ func TestRender_NoPanic(t *testing.T) {
 			},
 		},
 		{
-			name: "adapter off",
+			name:   "adapter off",
+			format: "{icon} {name} {battery:20}",
 			setup: func(w *Widget) {
 				w.adapterOk = false
 				w.apiReachable = true
 			},
 		},
 		{
-			name: "api unreachable",
+			name:   "api unreachable",
+			format: "{icon} {name} {battery:20}",
 			setup: func(w *Widget) {
 				w.apiReachable = false
 			},
 		},
 		{
-			name: "device not found",
+			name:   "device not found",
+			format: "{icon} {name} {battery:20}",
 			setup: func(w *Widget) {
 				w.deviceFound = false
 				w.apiReachable = true
@@ -421,7 +402,8 @@ func TestRender_NoPanic(t *testing.T) {
 			},
 		},
 		{
-			name: "transient connecting",
+			name:   "transient connecting",
+			format: "{icon} {name} {battery:20}",
 			setup: func(w *Widget) {
 				w.deviceFound = true
 				w.adapterOk = true
@@ -431,7 +413,8 @@ func TestRender_NoPanic(t *testing.T) {
 			},
 		},
 		{
-			name: "transient disconnecting",
+			name:   "transient disconnecting",
+			format: "{icon} {name} {battery:20}",
 			setup: func(w *Widget) {
 				w.deviceFound = true
 				w.adapterOk = true
@@ -441,31 +424,68 @@ func TestRender_NoPanic(t *testing.T) {
 			},
 		},
 		{
-			name: "battery text mode",
+			name:   "level text format",
+			format: "{icon} {level}",
 			setup: func(w *Widget) {
 				w.connected = true
 				w.deviceFound = true
 				w.adapterOk = true
 				w.apiReachable = true
 				w.deviceType = "AudioOutput"
-				w.batteryMode = "text"
 				level := 42
 				w.batteryLevel = &level
 				w.batterySupport = true
 			},
 		},
 		{
-			name: "battery bar mode",
+			name:   "bar format",
+			format: "{bar:30}",
 			setup: func(w *Widget) {
 				w.connected = true
 				w.deviceFound = true
 				w.adapterOk = true
 				w.apiReachable = true
 				w.deviceType = "AudioOutput"
-				w.batteryMode = "bar"
 				level := 90
 				w.batteryLevel = &level
 				w.batterySupport = true
+			},
+		},
+		{
+			name:   "vertical battery format",
+			format: "{battery_v:15}",
+			setup: func(w *Widget) {
+				w.connected = true
+				w.deviceFound = true
+				w.adapterOk = true
+				w.apiReachable = true
+				w.deviceType = "AudioOutput"
+				level := 50
+				w.batteryLevel = &level
+				w.batterySupport = true
+			},
+		},
+		{
+			name:   "state token",
+			format: "{name} - {state}",
+			setup: func(w *Widget) {
+				w.connected = true
+				w.deviceFound = true
+				w.adapterOk = true
+				w.apiReachable = true
+				w.connectionState = "Connected"
+				w.deviceType = "Mouse"
+				w.deviceName = "Test Mouse"
+			},
+		},
+		{
+			name:   "icon only",
+			format: "{icon}",
+			setup: func(w *Widget) {
+				w.deviceFound = true
+				w.adapterOk = true
+				w.apiReachable = true
+				w.deviceType = "Keyboard"
 			},
 		},
 	}
@@ -473,6 +493,7 @@ func TestRender_NoPanic(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := testConfig()
+			cfg.Bluetooth.Format = tt.format
 			w, err := New(cfg)
 			if err != nil {
 				t.Fatalf("New() error = %v", err)
@@ -538,6 +559,7 @@ func TestNew_LowBatteryThreshold(t *testing.T) {
 func TestRender_LowBatteryBlink(t *testing.T) {
 	cfg := testConfig()
 	cfg.Bluetooth.LowBatteryThreshold = 20
+	cfg.Bluetooth.Format = "{icon} {name} {battery:20}"
 
 	w, err := New(cfg)
 	if err != nil {
@@ -662,7 +684,7 @@ func TestRender_LowBatteryAboveThreshold(t *testing.T) {
 func TestRender_LowBatteryBlinkFallbackToIcon(t *testing.T) {
 	cfg := testConfig()
 	cfg.Bluetooth.LowBatteryThreshold = 20
-	cfg.Bluetooth.BatteryMode = "none" // battery off -> blink falls to icon
+	cfg.Bluetooth.Format = "{icon} {name}" // no battery shape -> blink falls to icon
 
 	w, err := New(cfg)
 	if err != nil {
@@ -711,11 +733,7 @@ func TestRender_LowBatteryBlinkFallbackToIcon(t *testing.T) {
 func TestRender_LowBatteryBlinkFallbackToName(t *testing.T) {
 	cfg := testConfig()
 	cfg.Bluetooth.LowBatteryThreshold = 20
-	showIcon := false
-	showName := true
-	cfg.Bluetooth.BatteryMode = "none"
-	cfg.Bluetooth.ShowIcon = &showIcon
-	cfg.Bluetooth.ShowName = &showName
+	cfg.Bluetooth.Format = "{name}" // no icon, no shape -> blink falls to name
 
 	w, err := New(cfg)
 	if err != nil {
@@ -784,6 +802,54 @@ func TestNew_IconSetSelection(t *testing.T) {
 			}
 			if w.iconSet.Name != tt.wantSetName {
 				t.Errorf("iconSet.Name = %q, want %q", w.iconSet.Name, tt.wantSetName)
+			}
+		})
+	}
+}
+
+func TestRender_FormatVariations(t *testing.T) {
+	tests := []struct {
+		name   string
+		format string
+	}{
+		{"name and level", "{name} {level}"},
+		{"icon only", "{icon}"},
+		{"vertical battery", "{battery_v:15}"},
+		{"all tokens", "{icon} {name} {state} {level} {battery:20}"},
+		{"bar format", "{icon} {bar:30}"},
+		{"vertical bar", "{bar_v:20}"},
+		{"mixed separators", "{icon} | {name} - {level}"},
+		{"empty format", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := testConfig()
+			cfg.Bluetooth.Format = tt.format
+
+			w, err := New(cfg)
+			if err != nil {
+				t.Fatalf("New() error = %v", err)
+			}
+
+			// Set up connected state
+			level := 65
+			w.connected = true
+			w.deviceFound = true
+			w.adapterOk = true
+			w.apiReachable = true
+			w.connectionState = "Connected"
+			w.deviceType = "AudioOutput"
+			w.deviceName = "Test Device"
+			w.batteryLevel = &level
+			w.batterySupport = true
+
+			img, err := w.Render()
+			if err != nil {
+				t.Errorf("Render() error = %v", err)
+			}
+			if img == nil {
+				t.Error("Render() returned nil image")
 			}
 		})
 	}

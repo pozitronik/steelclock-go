@@ -4225,26 +4225,10 @@
                     "description": "bqc API host:port",
                     "default": "127.0.0.1:8765"
                   },
-                  "show_icon": {
-                    "type": "boolean",
-                    "description": "Show device type icon",
-                    "default": true
-                  },
-                  "battery_mode": {
+                  "format": {
                     "type": "string",
-                    "description": "Battery display style (\"none\" to disable)",
-                    "enum": [
-                      "none",
-                      "icon",
-                      "text",
-                      "bar"
-                    ],
-                    "default": "icon"
-                  },
-                  "show_name": {
-                    "type": "boolean",
-                    "description": "Show device display name",
-                    "default": false
+                    "description": "Display format string with tokens: {icon}, {name}, {level}, {state}, {battery:N}, {battery_h:N}, {battery_v:N}, {bar:N}, {bar_h:N}, {bar_v:N}. N is always the horizontal width in pixels.",
+                    "default": "{icon} {name} {battery:20}"
                   },
                   "low_battery_threshold": {
                     "type": "integer",

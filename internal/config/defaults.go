@@ -432,8 +432,8 @@ func applyBluetoothDefaults(w *WidgetConfig) {
 	if w.Bluetooth.APIURL == "" {
 		w.Bluetooth.APIURL = "127.0.0.1:8765"
 	}
-	if w.Bluetooth.BatteryMode == "" {
-		w.Bluetooth.BatteryMode = "icon"
+	if w.Bluetooth.Format == "" {
+		w.Bluetooth.Format = "{icon} {name} {battery:20}"
 	}
 }
 
