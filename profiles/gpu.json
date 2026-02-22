@@ -21,16 +21,13 @@
         "border": 255,
         "padding": 0
       },
-      "mode": "bar",
+      "mode": "graph",
       "gpu": {
         "adapter": 0,
         "metric": "utilization_3d"
       },
-      "bar": {
-        "direction": "horizontal",
-        "colors": {
-          "fill": 255
-        }
+      "graph": {
+        "history": 60
       },
       "text": {
         "format": "3D %.0f%%",
@@ -55,19 +52,16 @@
         "border": 255,
         "padding": 0
       },
-      "mode": "bar",
+      "mode": "graph",
       "gpu": {
         "adapter": 0,
-        "metric": "utilization_copy"
+        "metric": "memory_dedicated"
       },
-      "bar": {
-        "direction": "horizontal",
-        "colors": {
-          "fill": 200
-        }
+      "graph": {
+        "history": 60
       },
       "text": {
-        "format": "CPY %.0f%%",
+        "format": "VRAM %.0f%%",
         "size": 10,
         "align": {
           "h": "center",
@@ -89,16 +83,13 @@
         "border": 255,
         "padding": 0
       },
-      "mode": "bar",
+      "mode": "graph",
       "gpu": {
         "adapter": 0,
         "metric": "utilization_video_encode"
       },
-      "bar": {
-        "direction": "horizontal",
-        "colors": {
-          "fill": 200
-        }
+      "graph": {
+        "history": 60
       },
       "text": {
         "format": "ENC %.0f%%",
@@ -123,16 +114,13 @@
         "border": 255,
         "padding": 0
       },
-      "mode": "bar",
+      "mode": "graph",
       "gpu": {
         "adapter": 0,
         "metric": "utilization_video_decode"
       },
-      "bar": {
-        "direction": "horizontal",
-        "colors": {
-          "fill": 200
-        }
+      "graph": {
+        "history": 60
       },
       "text": {
         "format": "DEC %.0f%%",

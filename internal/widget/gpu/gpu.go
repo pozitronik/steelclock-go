@@ -32,14 +32,14 @@ const (
 )
 
 // supportedMetrics lists metrics that are currently functional.
-// Memory metrics (memory_dedicated, memory_shared) are defined as constants but not yet
-// supported because PDH doesn't provide total VRAM counters needed for percentage calculation.
 var supportedMetrics = map[string]bool{
 	MetricUtilization:       true,
 	MetricUtilization3D:     true,
 	MetricUtilizationCopy:   true,
 	MetricUtilizationEncode: true,
 	MetricUtilizationDecode: true,
+	MetricMemoryDedicated:   true,
+	MetricMemoryShared:      true,
 }
 
 // AdapterInfo contains information about a GPU adapter.
@@ -47,9 +47,11 @@ var supportedMetrics = map[string]bool{
 // On Windows, LUID (Locally Unique Identifier) is the primary key used to
 // distinguish adapters, since all GPUs report phys_0 in PDH instance names.
 type AdapterInfo struct {
-	Index int
-	Name  string
-	LUID  string // Locally Unique Identifier from PDH instance names (Windows only)
+	Index                int
+	Name                 string
+	LUID                 string // Locally Unique Identifier from PDH instance names (Windows only)
+	DedicatedVideoMemory uint64 // Total dedicated VRAM in bytes (from DXGI, Windows only)
+	SharedSystemMemory   uint64 // Total shared system memory in bytes (from DXGI, Windows only)
 }
 
 // Reader is the interface for reading GPU metrics
@@ -75,8 +77,9 @@ type Widget struct {
 	Renderer *render.MetricRenderer
 
 	// GPU configuration
-	adapter int    // GPU adapter index
-	metric  string // Metric to display
+	adapter    int    // GPU adapter index
+	metric     string // Metric to display
+	textFormat string // Format string for bar text overlay (from text.format)
 
 	// GPU metrics reader
 	reader       Reader
@@ -110,9 +113,15 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		}
 	}
 
+	// Extract text format for bar overlay
+	textFormat := ""
+	if cfg.Text != nil {
+		textFormat = cfg.Text.Format
+	}
+
 	// Validate metric
 	if !supportedMetrics[metric] {
-		return nil, fmt.Errorf("unsupported GPU metric: %q (supported: utilization, utilization_3d, utilization_copy, utilization_video_encode, utilization_video_decode)", metric)
+		return nil, fmt.Errorf("unsupported GPU metric: %q (supported: utilization, utilization_3d, utilization_copy, utilization_video_encode, utilization_video_decode, memory_dedicated, memory_shared)", metric)
 	}
 
 	// Initialize reader (platform-specific)
@@ -142,6 +151,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		Renderer:     mr.Renderer,
 		adapter:      adapter,
 		metric:       metric,
+		textFormat:   textFormat,
 		reader:       reader,
 		readerFailed: readerFailed,
 		history:      util.NewRingBuffer[float64](mr.HistoryLen),
@@ -203,11 +213,17 @@ func (w *Widget) Render() (image.Image, error) {
 		return img, nil
 	}
 
+	// Determine text format: use configured format for text mode, default for others
+	textFmt := "%.0f"
+	if w.textFormat != "" {
+		textFmt = w.textFormat
+	}
+
 	// Use strategy pattern for rendering
 	w.strategy.Render(img, render.MetricData{
 		Value:       w.currentValue,
 		History:     w.history.ToSlice(),
-		TextFormat:  "%.0f",
+		TextFormat:  textFmt,
 		ContentArea: image.Rect(content.X, content.Y, content.X+content.Width, content.Y+content.Height),
 		GaugeArea:   image.Rect(0, 0, pos.W, pos.H),
 	}, w.Renderer)

@@ -1004,13 +1004,13 @@ Displays GPU utilization metrics from Windows Performance Data Helper counters.
 Each widget instance shows a single metric for a single adapter, so use multiple
 widgets to monitor several metrics or GPUs at once (see examples below).
 
-**Adapter identification:** GPUs are identified by LUID (Locally Unique Identifier),
-not by the `phys_N` field in PDH counters (which is always 0 for all GPUs).
-LUIDs are sorted and mapped to sequential indices (0, 1, 2, ...).
-Adapter names are enriched from WMI (`Win32_VideoController`) when available.
-Both AMD and NVIDIA GPUs are supported; engine type naming differences
-(AMD uses spaces like "video decode 1", NVIDIA uses "videodecode") are
-handled transparently through normalization.
+**Adapter identification:** GPUs are enumerated via DXGI, which provides exact
+LUID-to-name mapping and automatically filters out software adapters (e.g.,
+Microsoft Basic Render Driver) that appear in PDH counters but are not real GPUs.
+Adapters are numbered sequentially in DXGI enumeration order (typically discrete
+GPU first, then integrated). Both AMD and NVIDIA GPUs are supported; engine type
+naming differences (AMD uses spaces like "video decode 1", NVIDIA uses
+"videodecode") are handled transparently through normalization.
 
 ```json
 {
@@ -1047,10 +1047,11 @@ handled transparently through normalization.
 | `utilization_copy`         | Copy engine utilization (%)                        | AMD + NVIDIA            |
 | `utilization_video_encode` | Video encode engine utilization (%)                | AMD + NVIDIA            |
 | `utilization_video_decode` | Video decode engine utilization (%)                | AMD + NVIDIA            |
+| `memory_dedicated`         | Dedicated VRAM usage (%)                           | Requires DXGI           |
+| `memory_shared`            | Shared system memory usage (%)                     | Requires DXGI           |
 
-Memory metrics (`memory_dedicated`, `memory_shared`) are defined but not yet
-supported because PDH does not expose total VRAM counters needed for percentage
-calculation.
+Memory metrics use PDH `GPU Adapter Memory` counters for usage and DXGI for total
+capacity. If DXGI is unavailable (PDH-only fallback), memory metrics report 0%.
 
 **Multi-GPU Setup:**
 
@@ -1066,18 +1067,22 @@ To monitor multiple GPUs, create separate widgets with different `adapter` value
 
 **Multi-Metric Dashboard:**
 
-Four metrics in a 2x2 grid (see `profiles/gpu.json`):
+Four metrics in a 2x2 grid with text overlay (see `profiles/gpu.json`):
 ```json
 {
   "widgets": [
     {"type": "gpu", "position": {"x": 0, "y": 0, "w": 64, "h": 20},
-     "mode": "bar", "gpu": {"adapter": 0, "metric": "utilization_3d"}},
+     "mode": "bar", "gpu": {"adapter": 0, "metric": "utilization_3d"},
+     "text": {"format": "3D %.0f%%"}},
     {"type": "gpu", "position": {"x": 64, "y": 0, "w": 64, "h": 20},
-     "mode": "bar", "gpu": {"adapter": 0, "metric": "utilization_copy"}},
+     "mode": "bar", "gpu": {"adapter": 0, "metric": "memory_dedicated"},
+     "text": {"format": "VRAM %.0f%%"}},
     {"type": "gpu", "position": {"x": 0, "y": 20, "w": 64, "h": 20},
-     "mode": "bar", "gpu": {"adapter": 0, "metric": "utilization_video_encode"}},
+     "mode": "bar", "gpu": {"adapter": 0, "metric": "utilization_video_encode"},
+     "text": {"format": "ENC %.0f%%"}},
     {"type": "gpu", "position": {"x": 64, "y": 20, "w": 64, "h": 20},
-     "mode": "bar", "gpu": {"adapter": 0, "metric": "utilization_video_decode"}}
+     "mode": "bar", "gpu": {"adapter": 0, "metric": "utilization_video_decode"},
+     "text": {"format": "DEC %.0f%%"}}
   ]
 }
 ```

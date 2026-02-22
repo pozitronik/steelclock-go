@@ -1373,17 +1373,17 @@
               },
               "gpu": {
                 "type": "object",
-                "description": "GPU widget settings. Adapters are identified by LUID and mapped to sequential indices. Both AMD and NVIDIA naming conventions are supported.",
+                "description": "GPU widget settings. Adapters are enumerated via DXGI (software adapters filtered out) and mapped to sequential indices. Both AMD and NVIDIA naming conventions are supported.",
                 "properties": {
                   "adapter": {
                     "type": "integer",
-                    "description": "GPU adapter index (0 = first GPU, 1 = second GPU, etc.). Adapters are identified by LUID and sorted for stable numbering.",
+                    "description": "GPU adapter index (0 = first GPU, 1 = second GPU, etc.). Adapters are enumerated via DXGI in preference order (discrete GPU first).",
                     "minimum": 0,
                     "default": 0
                   },
                   "metric": {
                     "type": "string",
-                    "description": "GPU metric to display. Memory metrics are defined but not yet supported (PDH lacks total VRAM counters).",
+                    "description": "GPU metric to display. Utilization metrics show engine usage percentage; memory metrics show VRAM usage percentage (dedicated or shared).",
                     "enum": [
                       "utilization",
                       "utilization_3d",

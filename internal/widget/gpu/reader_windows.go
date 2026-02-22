@@ -7,6 +7,7 @@ import (
 	"log"
 	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -15,16 +16,19 @@ import (
 	"github.com/yusufpapurcu/wmi"
 )
 
+// ---------------------------------------------------------------------------
+// PDH (Performance Data Helper) — metric collection
+// ---------------------------------------------------------------------------
+
 var (
-	pdh                          = syscall.NewLazyDLL("pdh.dll")
-	pdhOpenQuery                 = pdh.NewProc("PdhOpenQueryW")
-	pdhCloseQuery                = pdh.NewProc("PdhCloseQuery")
-	pdhAddEnglishCounter         = pdh.NewProc("PdhAddEnglishCounterW")
-	pdhCollectQueryData          = pdh.NewProc("PdhCollectQueryData")
-	pdhGetFormattedCounterArrayW = pdh.NewProc("PdhGetFormattedCounterArrayW")
+	pdhDLL                       = syscall.NewLazyDLL("pdh.dll")
+	pdhOpenQuery                 = pdhDLL.NewProc("PdhOpenQueryW")
+	pdhCloseQuery                = pdhDLL.NewProc("PdhCloseQuery")
+	pdhAddEnglishCounter         = pdhDLL.NewProc("PdhAddEnglishCounterW")
+	pdhCollectQueryData          = pdhDLL.NewProc("PdhCollectQueryData")
+	pdhGetFormattedCounterArrayW = pdhDLL.NewProc("PdhGetFormattedCounterArrayW")
 )
 
-// PDH constants
 const (
 	pdhFmtDouble      = 0x00000200
 	pdhMoreData       = 0x800007D2
@@ -47,6 +51,157 @@ type pdhFmtCountervalueDouble struct {
 	doubleValue float64
 }
 
+// ---------------------------------------------------------------------------
+// DXGI (DirectX Graphics Infrastructure) — adapter enumeration
+// ---------------------------------------------------------------------------
+
+var (
+	dxgiDLL                = syscall.NewLazyDLL("dxgi.dll")
+	procCreateDXGIFactory1 = dxgiDLL.NewProc("CreateDXGIFactory1")
+)
+
+// IID_IDXGIFactory1 = {770aae78-f26f-4dba-a829-253c83d1b387}
+// Stored as a GUID struct in little-endian byte order.
+var iidIDXGIFactory1 = [16]byte{
+	0x78, 0xae, 0x0a, 0x77, // Data1: 0x770aae78
+	0x6f, 0xf2, // Data2: 0xf26f
+	0xba, 0x4d, // Data3: 0x4dba
+	0xa8, 0x29, 0x25, 0x3c, 0x83, 0xd1, 0xb3, 0x87, // Data4
+}
+
+const dxgiAdapterFlagSoftware = 2
+
+// dxgiLUID matches the Windows LUID struct layout: {LowPart uint32, HighPart int32}.
+type dxgiLUID struct {
+	LowPart  uint32
+	HighPart int32
+}
+
+// dxgiAdapterDesc1 matches the DXGI_ADAPTER_DESC1 struct layout.
+type dxgiAdapterDesc1 struct {
+	Description           [128]uint16
+	VendorId              uint32
+	DeviceId              uint32
+	SubSysId              uint32
+	Revision              uint32
+	DedicatedVideoMemory  uintptr
+	DedicatedSystemMemory uintptr
+	SharedSystemMemory    uintptr
+	AdapterLuid           dxgiLUID
+	Flags                 uint32
+}
+
+// dxgiAdapterEntry holds information about a hardware GPU adapter from DXGI.
+type dxgiAdapterEntry struct {
+	Name                 string
+	LUID                 string // Formatted as "0xHHHHHHHH_0xHHHHHHHH" to match PDH instance names
+	DedicatedVideoMemory uint64 // Total dedicated VRAM in bytes
+	SharedSystemMemory   uint64 // Total shared system memory in bytes
+}
+
+// formatDXGILUID formats a DXGI LUID to match the PDH instance name format.
+// PDH uses "luid_<HighPart>_<LowPart>" with zero-padded 8-digit hex values.
+func formatDXGILUID(luid dxgiLUID) string {
+	return fmt.Sprintf("0x%08x_0x%08x", uint32(luid.HighPart), luid.LowPart)
+}
+
+// comCall invokes a COM method at the given vtable index on the object.
+// The object pointer is passed as the first argument (the implicit "this" in COM).
+func comCall(obj uintptr, vtblIndex uintptr, args ...uintptr) uintptr {
+	vtbl := *(*uintptr)(unsafe.Pointer(obj))
+	method := *(*uintptr)(unsafe.Pointer(vtbl + vtblIndex*unsafe.Sizeof(uintptr(0))))
+	allArgs := append([]uintptr{obj}, args...)
+	ret, _, _ := syscall.SyscallN(method, allArgs...)
+	return ret
+}
+
+// comRelease calls IUnknown::Release (vtable index 2) on a COM object.
+func comRelease(obj uintptr) {
+	comCall(obj, 2)
+}
+
+// queryDXGIAdapters enumerates GPU adapters using DXGI, returning only hardware
+// adapters. Software adapters (Microsoft Basic Render Driver / WARP) are filtered
+// out via DXGI_ADAPTER_FLAG_SOFTWARE.
+//
+// Returns nil if DXGI is unavailable or enumeration fails.
+func queryDXGIAdapters() []dxgiAdapterEntry {
+	var factory uintptr
+	ret, _, _ := procCreateDXGIFactory1.Call(
+		uintptr(unsafe.Pointer(&iidIDXGIFactory1)),
+		uintptr(unsafe.Pointer(&factory)),
+	)
+	if ret != 0 || factory == 0 {
+		log.Printf("[GPU] DXGI: CreateDXGIFactory1 failed: 0x%x", ret)
+		return nil
+	}
+	defer comRelease(factory)
+
+	var adapters []dxgiAdapterEntry
+	for i := uintptr(0); ; i++ {
+		var adapter uintptr
+		// IDXGIFactory1::EnumAdapters1 is at vtable index 12
+		if comCall(factory, 12, i, uintptr(unsafe.Pointer(&adapter))) != 0 {
+			break // DXGI_ERROR_NOT_FOUND or other error
+		}
+
+		var desc dxgiAdapterDesc1
+		// IDXGIAdapter1::GetDesc1 is at vtable index 10
+		ret := comCall(adapter, 10, uintptr(unsafe.Pointer(&desc)))
+		comRelease(adapter)
+
+		if ret != 0 {
+			continue
+		}
+
+		// Skip software adapters (Microsoft Basic Render Driver, WARP)
+		if desc.Flags&dxgiAdapterFlagSoftware != 0 {
+			continue
+		}
+
+		name := syscall.UTF16ToString(desc.Description[:])
+		luid := formatDXGILUID(desc.AdapterLuid)
+		adapters = append(adapters, dxgiAdapterEntry{
+			Name:                 name,
+			LUID:                 luid,
+			DedicatedVideoMemory: uint64(desc.DedicatedVideoMemory),
+			SharedSystemMemory:   uint64(desc.SharedSystemMemory),
+		})
+	}
+
+	return adapters
+}
+
+// ---------------------------------------------------------------------------
+// WMI — fallback adapter name enumeration
+// ---------------------------------------------------------------------------
+
+// win32VideoController is a WMI result struct for GPU adapter names.
+type win32VideoController struct {
+	Name string
+}
+
+// queryAdapterNames returns GPU adapter names from WMI, ordered by device index.
+// Used as fallback when DXGI enumeration is unavailable.
+// Returns nil if the query fails.
+func queryAdapterNames() []string {
+	var controllers []win32VideoController
+	if err := wmi.Query("SELECT Name FROM Win32_VideoController", &controllers); err != nil {
+		log.Printf("[GPU] WMI adapter query failed: %v", err)
+		return nil
+	}
+
+	names := make([]string, len(controllers))
+	for i, c := range controllers {
+		names[i] = c.Name
+	}
+	return names
+}
+
+// ---------------------------------------------------------------------------
+// pdhReader — main Reader implementation
+// ---------------------------------------------------------------------------
+
 // collectionCache holds the aggregated metric values from the last PDH collection.
 type collectionCache struct {
 	// values maps adapter sequential index -> metric name -> value.
@@ -64,18 +219,26 @@ type collectionCache struct {
 //
 //	pid_<N>_luid_0x<HH>_0x<HH>_phys_<N>_eng_<N>_engtype_<TYPE>
 //
-// LUIDs are discovered during initialization and mapped to sequential indices
-// (0, 1, 2, ...) in sorted order for stable adapter numbering.
+// Adapter discovery uses DXGI as the primary source: it provides both the adapter
+// name and LUID, and has a software adapter flag to filter out phantom adapters
+// (e.g., Microsoft Basic Render Driver) that appear in PDH but are not real GPUs.
+// Falls back to PDH LUID enumeration + WMI name enrichment if DXGI is unavailable.
 type pdhReader struct {
 	mu            sync.Mutex
 	queryHandle   uintptr
 	engineCounter uintptr // PDH counter handle for GPU Engine utilization
-	adapterCache  []AdapterInfo
-	initialized   bool
-	luidRegex     *regexp.Regexp // Extracts LUID from PDH instance name
-	engtypeRegex  *regexp.Regexp // Extracts engine type (including spaces) from PDH instance name
-	luidToIndex   map[string]int // Maps LUID string -> sequential adapter index
-	cache         collectionCache
+
+	// Memory counters (GPU Adapter Memory category)
+	memDedicatedCounter  uintptr // PDH counter handle for dedicated memory usage
+	memSharedCounter     uintptr // PDH counter handle for shared memory usage
+	memCountersAvailable bool    // True if memory counters were successfully added
+
+	adapterCache []AdapterInfo
+	initialized  bool
+	luidRegex    *regexp.Regexp // Extracts LUID from PDH instance name
+	engtypeRegex *regexp.Regexp // Extracts engine type (including spaces) from PDH instance name
+	luidToIndex  map[string]int // Maps LUID string -> sequential adapter index
+	cache        collectionCache
 }
 
 // newReader creates a new PDH-based GPU metrics reader.
@@ -108,9 +271,7 @@ func (r *pdhReader) initialize() error {
 	}
 	r.queryHandle = queryHandle
 
-	// Add engine utilization counter (the only currently supported counter category).
-	// Memory counters (memory_dedicated, memory_shared) are intentionally omitted:
-	// PDH doesn't provide total VRAM counters needed for percentage calculation.
+	// Add engine utilization counter (GPU Engine category).
 	enginePath := `\GPU Engine(*)\Utilization Percentage`
 	pathPtr, _ := syscall.UTF16PtrFromString(enginePath)
 	var counterHandle uintptr
@@ -126,72 +287,155 @@ func (r *pdhReader) initialize() error {
 	}
 	r.engineCounter = counterHandle
 
-	// Initial data collection to populate counters
+	// Add memory counters (GPU Adapter Memory category).
+	// These are instantaneous gauges (not rate-based), so they work with the
+	// dual-collection approach without issues. Failure is non-fatal — memory
+	// metrics will simply report 0%.
+	r.memCountersAvailable = true
+	memDedicatedPath := `\GPU Adapter Memory(*)\Dedicated Usage`
+	memDedicatedPtr, _ := syscall.UTF16PtrFromString(memDedicatedPath)
+	var memDedicatedHandle uintptr
+	ret, _, _ = pdhAddEnglishCounter.Call(
+		r.queryHandle,
+		uintptr(unsafe.Pointer(memDedicatedPtr)),
+		0,
+		uintptr(unsafe.Pointer(&memDedicatedHandle)),
+	)
+	if ret != 0 {
+		log.Printf("[GPU] Memory counter 'Dedicated Usage' unavailable (0x%x), memory metrics disabled", ret)
+		r.memCountersAvailable = false
+	} else {
+		r.memDedicatedCounter = memDedicatedHandle
+	}
+
+	memSharedPath := `\GPU Adapter Memory(*)\Shared Usage`
+	memSharedPtr, _ := syscall.UTF16PtrFromString(memSharedPath)
+	var memSharedHandle uintptr
+	ret, _, _ = pdhAddEnglishCounter.Call(
+		r.queryHandle,
+		uintptr(unsafe.Pointer(memSharedPtr)),
+		0,
+		uintptr(unsafe.Pointer(&memSharedHandle)),
+	)
+	if ret != 0 {
+		log.Printf("[GPU] Memory counter 'Shared Usage' unavailable (0x%x), memory metrics disabled", ret)
+		r.memCountersAvailable = false
+	} else {
+		r.memSharedCounter = memSharedHandle
+	}
+
+	// Two data collections are required for rate-based counters like
+	// "Utilization Percentage". The first establishes a baseline; the second
+	// produces valid values and makes instance names available via
+	// PdhGetFormattedCounterArrayW.
+	pdhCollectQueryData.Call(r.queryHandle)
+	time.Sleep(200 * time.Millisecond)
 	pdhCollectQueryData.Call(r.queryHandle)
 
-	// Discover adapters (with name enrichment)
+	// Discover adapters
 	r.discoverAdapters()
 
 	r.initialized = true
 	return nil
 }
 
-// discoverAdapters builds the adapter list from PDH instances using LUID-based
-// identification. LUIDs are sorted lexicographically for deterministic adapter
-// numbering, then enriched with human-readable names from WMI when available.
+// discoverAdapters builds the adapter list using two sources:
+//
+// Primary (DXGI): Enumerates hardware adapters with exact LUID-to-name mapping,
+// filtering out software adapters (Microsoft Basic Render Driver) that appear
+// in PDH counters but are not real GPUs. Only adapters that also have PDH
+// counters are included.
+//
+// Fallback (PDH + WMI): If DXGI is unavailable, collects all LUIDs from PDH
+// counter instances and enriches names from WMI by index. This may include
+// phantom software adapters and may have mismatched names when the count of
+// PDH LUIDs differs from the count of WMI entries.
 func (r *pdhReader) discoverAdapters() {
-	luidSet := make(map[string]bool)
-
+	// Collect all unique LUIDs from PDH counter instances
+	pdhLUIDs := make(map[string]bool)
+	var pdhInstanceCount int
 	r.forEachCounterInstance(r.engineCounter, func(name string, _ *pdhFmtCountervalueItemDouble) {
+		pdhInstanceCount++
 		if luid := r.extractLUID(name); luid != "" {
-			luidSet[luid] = true
+			pdhLUIDs[luid] = true
 		}
 	})
+	log.Printf("[GPU] PDH: %d counter instances, %d unique LUIDs", pdhInstanceCount, len(pdhLUIDs))
 
-	// Sort LUIDs for deterministic ordering across runs
-	luids := make([]string, 0, len(luidSet))
-	for luid := range luidSet {
-		luids = append(luids, luid)
-	}
-	sort.Strings(luids)
-
-	// Build LUID -> sequential index mapping
-	r.luidToIndex = make(map[string]int, len(luids))
-	for i, luid := range luids {
-		r.luidToIndex[luid] = i
+	// Try DXGI for authoritative adapter enumeration
+	if dxgiAdapters := queryDXGIAdapters(); len(dxgiAdapters) > 0 {
+		r.buildFromDXGI(dxgiAdapters, pdhLUIDs)
+	} else {
+		r.buildFromPDH(pdhLUIDs)
 	}
 
-	// Try to enrich adapter names from WMI.
-	// WMI returns adapters ordered by device index, which typically matches
-	// the LUID sort order.
-	wmiNames := queryAdapterNames()
-
-	r.adapterCache = make([]AdapterInfo, len(luids))
-	for i, luid := range luids {
-		name := fmt.Sprintf("GPU %d", i)
-		if i < len(wmiNames) && wmiNames[i] != "" {
-			name = wmiNames[i]
-		}
-		r.adapterCache[i] = AdapterInfo{
-			Index: i,
-			Name:  name,
-			LUID:  luid,
-		}
-	}
-
-	log.Printf("[GPU] Discovered %d adapter(s) via LUID:", len(r.adapterCache))
+	log.Printf("[GPU] Discovered %d adapter(s):", len(r.adapterCache))
 	for _, a := range r.adapterCache {
 		log.Printf("[GPU]   %d: %s (LUID: %s)", a.Index, a.Name, a.LUID)
 	}
 }
 
-// extractLUID extracts the LUID string from a PDH instance name.
-// Example input: "pid_1234_luid_0x00000000_0x0001332d_phys_0_eng_0_engtype_3D"
+// buildFromDXGI builds the adapter list from DXGI hardware adapters, keeping
+// only those that also have PDH counters. DXGI provides exact LUID-to-name
+// mapping and naturally filters software adapters.
+func (r *pdhReader) buildFromDXGI(dxgiAdapters []dxgiAdapterEntry, pdhLUIDs map[string]bool) {
+	var adapters []AdapterInfo
+	luidToIdx := make(map[string]int)
+
+	for _, da := range dxgiAdapters {
+		if !pdhLUIDs[da.LUID] {
+			log.Printf("[GPU] DXGI adapter %q (LUID: %s) has no PDH counters, skipping", da.Name, da.LUID)
+			continue
+		}
+		idx := len(adapters)
+		luidToIdx[da.LUID] = idx
+		adapters = append(adapters, AdapterInfo{
+			Index:                idx,
+			Name:                 da.Name,
+			LUID:                 da.LUID,
+			DedicatedVideoMemory: da.DedicatedVideoMemory,
+			SharedSystemMemory:   da.SharedSystemMemory,
+		})
+	}
+
+	r.adapterCache = adapters
+	r.luidToIndex = luidToIdx
+}
+
+// buildFromPDH builds the adapter list from PDH LUIDs with WMI name enrichment.
+// Used as fallback when DXGI is unavailable. LUIDs are sorted lexicographically
+// for deterministic ordering.
+func (r *pdhReader) buildFromPDH(pdhLUIDs map[string]bool) {
+	luids := make([]string, 0, len(pdhLUIDs))
+	for luid := range pdhLUIDs {
+		luids = append(luids, luid)
+	}
+	sort.Strings(luids)
+
+	wmiNames := queryAdapterNames()
+
+	r.luidToIndex = make(map[string]int, len(luids))
+	r.adapterCache = make([]AdapterInfo, len(luids))
+	for i, luid := range luids {
+		r.luidToIndex[luid] = i
+		name := fmt.Sprintf("GPU %d", i)
+		if i < len(wmiNames) && wmiNames[i] != "" {
+			name = wmiNames[i]
+		}
+		r.adapterCache[i] = AdapterInfo{Index: i, Name: name, LUID: luid}
+	}
+}
+
+// extractLUID extracts the LUID string from a PDH instance name and lowercases it.
+// PDH uses uppercase hex (0x000143DE), DXGI uses lowercase (0x000143de);
+// lowercasing here ensures both sources produce matching strings.
+//
+// Example input: "pid_1234_luid_0x00000000_0x0001332D_phys_0_eng_0_engtype_3D"
 // Returns: "0x00000000_0x0001332d"
 func (r *pdhReader) extractLUID(instanceName string) string {
 	matches := r.luidRegex.FindStringSubmatch(instanceName)
 	if len(matches) > 1 {
-		return matches[1]
+		return strings.ToLower(matches[1])
 	}
 	return ""
 }
@@ -284,8 +528,63 @@ func (r *pdhReader) collectAndCache() error {
 		}
 	})
 
+	// Collect memory metrics if counters are available
+	if r.memCountersAvailable {
+		r.collectMemoryCounter(values, r.memDedicatedCounter, MetricMemoryDedicated, func(a AdapterInfo) uint64 {
+			return a.DedicatedVideoMemory
+		})
+		r.collectMemoryCounter(values, r.memSharedCounter, MetricMemoryShared, func(a AdapterInfo) uint64 {
+			return a.SharedSystemMemory
+		})
+	}
+
 	r.cache = collectionCache{values: values, timestamp: time.Now()}
 	return nil
+}
+
+// collectMemoryCounter iterates memory counter instances, extracts usage bytes,
+// and computes percentage relative to the adapter's total memory.
+//
+// GPU Adapter Memory instance names use the format:
+//
+//	luid_0x<HH>_0x<HH>_phys_<N>
+//
+// (no pid/eng/engtype fields). LUID extraction reuses the existing regex.
+// totalGetter returns the total memory for the adapter (e.g., DedicatedVideoMemory).
+func (r *pdhReader) collectMemoryCounter(values map[int]map[string]float64, handle uintptr, metric string, totalGetter func(AdapterInfo) uint64) {
+	if handle == 0 {
+		return
+	}
+
+	r.forEachCounterInstance(handle, func(name string, item *pdhFmtCountervalueItemDouble) {
+		if item.FmtValue.CStatus != pdhCstatValidData && item.FmtValue.CStatus != 0 {
+			return
+		}
+
+		luid := r.extractLUID(name)
+		if luid == "" {
+			return
+		}
+		adapterIdx, known := r.luidToIndex[luid]
+		if !known {
+			return
+		}
+
+		usageBytes := item.FmtValue.doubleValue
+		if adapterIdx >= len(r.adapterCache) {
+			return
+		}
+		totalBytes := totalGetter(r.adapterCache[adapterIdx])
+		if totalBytes == 0 {
+			return // Avoid division by zero; no total memory info available
+		}
+
+		pct := usageBytes / float64(totalBytes) * 100
+		if values[adapterIdx] == nil {
+			values[adapterIdx] = make(map[string]float64)
+		}
+		values[adapterIdx][metric] = pct
+	})
 }
 
 // GetMetric returns the current value for the specified metric and adapter.
@@ -340,25 +639,4 @@ func (r *pdhReader) Close() {
 	}
 
 	r.initialized = false
-}
-
-// win32VideoController is a WMI result struct for GPU adapter names.
-type win32VideoController struct {
-	Name string
-}
-
-// queryAdapterNames returns GPU adapter names from WMI, ordered by device index.
-// Returns nil if the query fails.
-func queryAdapterNames() []string {
-	var controllers []win32VideoController
-	if err := wmi.Query("SELECT Name FROM Win32_VideoController", &controllers); err != nil {
-		log.Printf("[GPU] WMI adapter query failed: %v", err)
-		return nil
-	}
-
-	names := make([]string, len(controllers))
-	for i, c := range controllers {
-		names[i] = c.Name
-	}
-	return names
 }

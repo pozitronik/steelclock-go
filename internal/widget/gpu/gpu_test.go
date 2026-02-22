@@ -139,6 +139,8 @@ func TestNew_WithGPUConfig(t *testing.T) {
 		{"adapter 0 copy", 0, MetricUtilizationCopy},
 		{"adapter 0 encode", 0, MetricUtilizationEncode},
 		{"adapter 0 decode", 0, MetricUtilizationDecode},
+		{"adapter 0 memory dedicated", 0, MetricMemoryDedicated},
+		{"adapter 0 memory shared", 0, MetricMemoryShared},
 	}
 
 	for _, tt := range tests {
@@ -180,8 +182,6 @@ func TestNew_InvalidMetric(t *testing.T) {
 		metric string
 	}{
 		{"unknown metric", "nonexistent"},
-		{"memory_dedicated (unsupported)", MetricMemoryDedicated},
-		{"memory_shared (unsupported)", MetricMemoryShared},
 		{"empty with explicit config", ""},
 	}
 
@@ -208,7 +208,7 @@ func TestNew_InvalidMetric(t *testing.T) {
 	}
 }
 
-// TestNew_SupportedMetricsCompleteness verifies that all utilization metric constants
+// TestNew_SupportedMetricsCompleteness verifies that all metric constants
 // are present in the supportedMetrics map
 func TestNew_SupportedMetricsCompleteness(t *testing.T) {
 	expectedSupported := []string{
@@ -217,22 +217,13 @@ func TestNew_SupportedMetricsCompleteness(t *testing.T) {
 		MetricUtilizationCopy,
 		MetricUtilizationEncode,
 		MetricUtilizationDecode,
+		MetricMemoryDedicated,
+		MetricMemoryShared,
 	}
 
 	for _, metric := range expectedSupported {
 		if !supportedMetrics[metric] {
 			t.Errorf("metric %q should be in supportedMetrics", metric)
-		}
-	}
-
-	expectedUnsupported := []string{
-		MetricMemoryDedicated,
-		MetricMemoryShared,
-	}
-
-	for _, metric := range expectedUnsupported {
-		if supportedMetrics[metric] {
-			t.Errorf("metric %q should NOT be in supportedMetrics (memory metrics not yet supported)", metric)
 		}
 	}
 }
@@ -413,6 +404,44 @@ func TestWidget_ValueClamping(t *testing.T) {
 
 			if value != tt.expected {
 				t.Errorf("currentValue = %f, want %f", value, tt.expected)
+			}
+		})
+	}
+}
+
+// TestNew_TextFormat tests that text format is correctly extracted from config
+func TestNew_TextFormat(t *testing.T) {
+	tests := []struct {
+		name       string
+		textConfig *config.TextConfig
+		wantFormat string
+	}{
+		{"no text config", nil, ""},
+		{"empty format", &config.TextConfig{Size: 10}, ""},
+		{"custom format", &config.TextConfig{Format: "GPU %.0f%%", Size: 10}, "GPU %.0f%%"},
+		{"vram format", &config.TextConfig{Format: "VRAM %.0f%%", Size: 10}, "VRAM %.0f%%"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := config.WidgetConfig{
+				Type:    "gpu",
+				ID:      "test_gpu_format",
+				Enabled: config.BoolPtr(true),
+				Position: config.PositionConfig{
+					X: 0, Y: 0, W: 128, H: 40,
+				},
+				Mode: "bar",
+				Text: tt.textConfig,
+			}
+
+			w, err := New(cfg)
+			if err != nil {
+				t.Fatalf("New() error = %v", err)
+			}
+
+			if w.textFormat != tt.wantFormat {
+				t.Errorf("textFormat = %q, want %q", w.textFormat, tt.wantFormat)
 			}
 		})
 	}
