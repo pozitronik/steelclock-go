@@ -1373,17 +1373,17 @@
               },
               "gpu": {
                 "type": "object",
-                "description": "GPU widget settings",
+                "description": "GPU widget settings. Adapters are identified by LUID and mapped to sequential indices. Both AMD and NVIDIA naming conventions are supported.",
                 "properties": {
                   "adapter": {
                     "type": "integer",
-                    "description": "GPU adapter index (0 = first GPU, 1 = second GPU, etc.)",
+                    "description": "GPU adapter index (0 = first GPU, 1 = second GPU, etc.). Adapters are identified by LUID and sorted for stable numbering.",
                     "minimum": 0,
                     "default": 0
                   },
                   "metric": {
                     "type": "string",
-                    "description": "GPU metric to display",
+                    "description": "GPU metric to display. Memory metrics are defined but not yet supported (PDH lacks total VRAM counters).",
                     "enum": [
                       "utilization",
                       "utilization_3d",

@@ -998,7 +998,19 @@ Same structure as CPU widget, without `per_core`.
 
 **Modes:** `text`, `bar`, `graph`, `gauge`
 
-**Note:** GPU monitoring is only available on Windows (uses PDH API). On Linux, the widget displays "GPU N/A".
+**Platform:** Windows only (uses PDH API). On Linux, the widget displays "GPU N/A".
+
+Displays GPU utilization metrics from Windows Performance Data Helper counters.
+Each widget instance shows a single metric for a single adapter, so use multiple
+widgets to monitor several metrics or GPUs at once (see examples below).
+
+**Adapter identification:** GPUs are identified by LUID (Locally Unique Identifier),
+not by the `phys_N` field in PDH counters (which is always 0 for all GPUs).
+LUIDs are sorted and mapped to sequential indices (0, 1, 2, ...).
+Adapter names are enriched from WMI (`Win32_VideoController`) when available.
+Both AMD and NVIDIA GPUs are supported; engine type naming differences
+(AMD uses spaces like "video decode 1", NVIDIA uses "videodecode") are
+handled transparently through normalization.
 
 ```json
 {
@@ -1017,34 +1029,55 @@ Same structure as CPU widget, without `per_core`.
       "ticks": 150
     }
   },
-  "update_interval": 1.0
+  "update_interval": 0.5
 }
 ```
 
-| Property       | Options                            | Default        | Description                              |
-|----------------|------------------------------------|----------------|------------------------------------------|
-| `gpu.adapter`  | 0, 1, 2, ...                       | 0              | GPU index (0 = first GPU)                |
-| `gpu.metric`   | see below                          | `utilization`  | Metric to display                        |
+| Property       | Options                            | Default        | Description                               |
+|----------------|------------------------------------|----------------|-------------------------------------------|
+| `gpu.adapter`  | 0, 1, 2, ...                       | 0              | GPU adapter index (0 = first, 1 = second) |
+| `gpu.metric`   | see below                          | `utilization`  | Metric to display                         |
 
 **Available Metrics:**
 
-| Metric                    | Description                        |
-|---------------------------|------------------------------------|
-| `utilization`             | Overall GPU utilization (%)        |
-| `utilization_3d`          | 3D engine utilization (%)          |
-| `utilization_copy`        | Copy engine utilization (%)        |
-| `utilization_video_encode`| Video encode engine utilization (%)|
-| `utilization_video_decode`| Video decode engine utilization (%)|
-| `memory_dedicated`        | Dedicated VRAM usage (%)           |
-| `memory_shared`           | Shared memory usage (%)            |
+| Metric                     | Description                                        | Notes                   |
+|----------------------------|----------------------------------------------------|-------------------------|
+| `utilization`              | Overall GPU utilization (%)                        | Max across all engines  |
+| `utilization_3d`           | 3D engine utilization (%)                          | AMD + NVIDIA            |
+| `utilization_copy`         | Copy engine utilization (%)                        | AMD + NVIDIA            |
+| `utilization_video_encode` | Video encode engine utilization (%)                | AMD + NVIDIA            |
+| `utilization_video_decode` | Video decode engine utilization (%)                | AMD + NVIDIA            |
+
+Memory metrics (`memory_dedicated`, `memory_shared`) are defined but not yet
+supported because PDH does not expose total VRAM counters needed for percentage
+calculation.
 
 **Multi-GPU Setup:**
-To monitor multiple GPUs, create separate GPU widgets with different `adapter` values:
+
+To monitor multiple GPUs, create separate widgets with different `adapter` values:
 ```json
 {
   "widgets": [
     {"type": "gpu", "position": {"x": 0, "y": 0, "w": 64, "h": 40}, "gpu": {"adapter": 0}},
     {"type": "gpu", "position": {"x": 64, "y": 0, "w": 64, "h": 40}, "gpu": {"adapter": 1}}
+  ]
+}
+```
+
+**Multi-Metric Dashboard:**
+
+Four metrics in a 2x2 grid (see `profiles/gpu.json`):
+```json
+{
+  "widgets": [
+    {"type": "gpu", "position": {"x": 0, "y": 0, "w": 64, "h": 20},
+     "mode": "bar", "gpu": {"adapter": 0, "metric": "utilization_3d"}},
+    {"type": "gpu", "position": {"x": 64, "y": 0, "w": 64, "h": 20},
+     "mode": "bar", "gpu": {"adapter": 0, "metric": "utilization_copy"}},
+    {"type": "gpu", "position": {"x": 0, "y": 20, "w": 64, "h": 20},
+     "mode": "bar", "gpu": {"adapter": 0, "metric": "utilization_video_encode"}},
+    {"type": "gpu", "position": {"x": 64, "y": 20, "w": 64, "h": 20},
+     "mode": "bar", "gpu": {"adapter": 0, "metric": "utilization_video_decode"}}
   ]
 }
 ```
