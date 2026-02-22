@@ -536,6 +536,7 @@
             "clipboard",
             "clock",
             "cpu",
+            "gpu",
             "memory",
             "network",
             "disk",
@@ -1227,6 +1228,172 @@
                     "type": "boolean",
                     "description": "Draw border around each core bar",
                     "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "gpu"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "text": {
+                "$ref": "#/definitions/textObject"
+              },
+              "mode": {
+                "type": "string",
+                "description": "Display mode for GPU metrics",
+                "enum": [
+                  "text",
+                  "bar",
+                  "graph",
+                  "gauge"
+                ],
+                "default": "text"
+              },
+              "bar": {
+                "type": "object",
+                "description": "Bar mode settings",
+                "properties": {
+                  "direction": {
+                    "type": "string",
+                    "description": "Bar orientation",
+                    "enum": [
+                      "horizontal",
+                      "vertical"
+                    ],
+                    "default": "horizontal"
+                  },
+                  "border": {
+                    "type": "boolean",
+                    "description": "Draw border around bars",
+                    "default": false
+                  },
+                  "colors": {
+                    "type": "object",
+                    "description": "Bar colors",
+                    "properties": {
+                      "fill": {
+                        "type": "integer",
+                        "description": "Bar fill color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      }
+                    }
+                  }
+                }
+              },
+              "graph": {
+                "type": "object",
+                "description": "Graph mode settings",
+                "properties": {
+                  "history": {
+                    "type": "integer",
+                    "description": "Number of data points to display",
+                    "minimum": 2,
+                    "default": 60
+                  },
+                  "colors": {
+                    "type": "object",
+                    "description": "Graph colors",
+                    "properties": {
+                      "fill": {
+                        "type": "integer",
+                        "description": "Graph fill density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "line": {
+                        "type": "integer",
+                        "description": "Graph line density",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      }
+                    }
+                  }
+                }
+              },
+              "gauge": {
+                "type": "object",
+                "description": "Gauge mode settings",
+                "properties": {
+                  "show_ticks": {
+                    "type": "boolean",
+                    "description": "Show gauge tick marks",
+                    "default": true
+                  },
+                  "colors": {
+                    "type": "object",
+                    "description": "Gauge colors",
+                    "properties": {
+                      "fill": {
+                        "type": "integer",
+                        "description": "Gauge fill color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "arc": {
+                        "type": "integer",
+                        "description": "Gauge arc outline color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 200
+                      },
+                      "needle": {
+                        "type": "integer",
+                        "description": "Gauge needle color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "ticks": {
+                        "type": "integer",
+                        "description": "Gauge tick marks color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 150
+                      }
+                    }
+                  }
+                }
+              },
+              "gpu": {
+                "type": "object",
+                "description": "GPU widget settings. Adapters are enumerated via DXGI (software adapters filtered out) and mapped to sequential indices. Both AMD and NVIDIA naming conventions are supported.",
+                "properties": {
+                  "adapter": {
+                    "type": "integer",
+                    "description": "GPU adapter index (0 = first GPU, 1 = second GPU, etc.). Adapters are enumerated via DXGI in preference order (discrete GPU first).",
+                    "minimum": 0,
+                    "default": 0
+                  },
+                  "metric": {
+                    "type": "string",
+                    "description": "GPU metric to display. Utilization metrics show engine usage percentage; memory metrics show VRAM usage percentage (dedicated or shared).",
+                    "enum": [
+                      "utilization",
+                      "utilization_3d",
+                      "utilization_copy",
+                      "utilization_video_encode",
+                      "utilization_video_decode",
+                      "memory_dedicated",
+                      "memory_shared"
+                    ],
+                    "default": "utilization"
                   }
                 }
               }

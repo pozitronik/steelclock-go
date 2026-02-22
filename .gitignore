@@ -45,3 +45,8 @@ Thumbs.db
 *.ttf
 *.wad
 *.session
+.claude/
+CLAUDE.md
+icon/
+img/
+/profiles/debug.json

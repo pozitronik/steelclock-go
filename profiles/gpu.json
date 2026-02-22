@@ -1,0 +1,136 @@
+{
+  "$schema": "schema/config.schema.json",
+  "config_name": "GPU Monitor",
+  "refresh_rate_ms": 100,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "gpu",
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 20
+      },
+      "style": {
+        "background": 0,
+        "border": 255,
+        "padding": 0
+      },
+      "mode": "graph",
+      "gpu": {
+        "adapter": 0,
+        "metric": "utilization_3d"
+      },
+      "graph": {
+        "history": 60
+      },
+      "text": {
+        "format": "3D %.0f%%",
+        "size": 10,
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
+      },
+      "update_interval": 0.5
+    },
+    {
+      "type": "gpu",
+      "position": {
+        "x": 64,
+        "y": 0,
+        "w": 64,
+        "h": 20
+      },
+      "style": {
+        "background": 0,
+        "border": 255,
+        "padding": 0
+      },
+      "mode": "graph",
+      "gpu": {
+        "adapter": 0,
+        "metric": "memory_dedicated"
+      },
+      "graph": {
+        "history": 60
+      },
+      "text": {
+        "format": "VRAM %.0f%%",
+        "size": 10,
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
+      },
+      "update_interval": 0.5
+    },
+    {
+      "type": "gpu",
+      "position": {
+        "x": 0,
+        "y": 20,
+        "w": 64,
+        "h": 20
+      },
+      "style": {
+        "background": 0,
+        "border": 255,
+        "padding": 0
+      },
+      "mode": "graph",
+      "gpu": {
+        "adapter": 0,
+        "metric": "utilization_video_encode"
+      },
+      "graph": {
+        "history": 60
+      },
+      "text": {
+        "format": "ENC %.0f%%",
+        "size": 10,
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
+      },
+      "update_interval": 0.5
+    },
+    {
+      "type": "gpu",
+      "position": {
+        "x": 64,
+        "y": 20,
+        "w": 64,
+        "h": 20
+      },
+      "style": {
+        "background": 0,
+        "border": 255,
+        "padding": 0
+      },
+      "mode": "graph",
+      "gpu": {
+        "adapter": 0,
+        "metric": "utilization_video_decode"
+      },
+      "graph": {
+        "history": 60
+      },
+      "text": {
+        "format": "DEC %.0f%%",
+        "size": 10,
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
+      },
+      "update_interval": 0.5
+    }
+  ]
+}

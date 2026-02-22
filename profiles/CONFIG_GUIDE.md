@@ -994,6 +994,99 @@ Examples:
 
 Same structure as CPU widget, without `per_core`.
 
+### GPU Widget
+
+**Modes:** `text`, `bar`, `graph`, `gauge`
+
+**Platform:** Windows only (uses PDH API). On Linux, the widget displays "GPU N/A".
+
+Displays GPU utilization metrics from Windows Performance Data Helper counters.
+Each widget instance shows a single metric for a single adapter, so use multiple
+widgets to monitor several metrics or GPUs at once (see examples below).
+
+**Adapter identification:** GPUs are enumerated via DXGI, which provides exact
+LUID-to-name mapping and automatically filters out software adapters (e.g.,
+Microsoft Basic Render Driver) that appear in PDH counters but are not real GPUs.
+Adapters are numbered sequentially in DXGI enumeration order (typically discrete
+GPU first, then integrated). Both AMD and NVIDIA GPUs are supported; engine type
+naming differences (AMD uses spaces like "video decode 1", NVIDIA uses
+"videodecode") are handled transparently through normalization.
+
+```json
+{
+  "type": "gpu",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "mode": "gauge",
+  "gpu": {
+    "adapter": 0,
+    "metric": "utilization"
+  },
+  "gauge": {
+    "show_ticks": true,
+    "colors": {
+      "arc": 200,
+      "needle": 255,
+      "ticks": 150
+    }
+  },
+  "update_interval": 0.5
+}
+```
+
+| Property       | Options                            | Default        | Description                               |
+|----------------|------------------------------------|----------------|-------------------------------------------|
+| `gpu.adapter`  | 0, 1, 2, ...                       | 0              | GPU adapter index (0 = first, 1 = second) |
+| `gpu.metric`   | see below                          | `utilization`  | Metric to display                         |
+
+**Available Metrics:**
+
+| Metric                     | Description                                        | Notes                   |
+|----------------------------|----------------------------------------------------|-------------------------|
+| `utilization`              | Overall GPU utilization (%)                        | Max across all engines  |
+| `utilization_3d`           | 3D engine utilization (%)                          | AMD + NVIDIA            |
+| `utilization_copy`         | Copy engine utilization (%)                        | AMD + NVIDIA            |
+| `utilization_video_encode` | Video encode engine utilization (%)                | AMD + NVIDIA            |
+| `utilization_video_decode` | Video decode engine utilization (%)                | AMD + NVIDIA            |
+| `memory_dedicated`         | Dedicated VRAM usage (%)                           | Requires DXGI           |
+| `memory_shared`            | Shared system memory usage (%)                     | Requires DXGI           |
+
+Memory metrics use PDH `GPU Adapter Memory` counters for usage and DXGI for total
+capacity. If DXGI is unavailable (PDH-only fallback), memory metrics report 0%.
+
+**Multi-GPU Setup:**
+
+To monitor multiple GPUs, create separate widgets with different `adapter` values:
+```json
+{
+  "widgets": [
+    {"type": "gpu", "position": {"x": 0, "y": 0, "w": 64, "h": 40}, "gpu": {"adapter": 0}},
+    {"type": "gpu", "position": {"x": 64, "y": 0, "w": 64, "h": 40}, "gpu": {"adapter": 1}}
+  ]
+}
+```
+
+**Multi-Metric Dashboard:**
+
+Four metrics in a 2x2 grid with text overlay (see `profiles/gpu.json`):
+```json
+{
+  "widgets": [
+    {"type": "gpu", "position": {"x": 0, "y": 0, "w": 64, "h": 20},
+     "mode": "bar", "gpu": {"adapter": 0, "metric": "utilization_3d"},
+     "text": {"format": "3D %.0f%%"}},
+    {"type": "gpu", "position": {"x": 64, "y": 0, "w": 64, "h": 20},
+     "mode": "bar", "gpu": {"adapter": 0, "metric": "memory_dedicated"},
+     "text": {"format": "VRAM %.0f%%"}},
+    {"type": "gpu", "position": {"x": 0, "y": 20, "w": 64, "h": 20},
+     "mode": "bar", "gpu": {"adapter": 0, "metric": "utilization_video_encode"},
+     "text": {"format": "ENC %.0f%%"}},
+    {"type": "gpu", "position": {"x": 64, "y": 20, "w": 64, "h": 20},
+     "mode": "bar", "gpu": {"adapter": 0, "metric": "utilization_video_decode"},
+     "text": {"format": "DEC %.0f%%"}}
+  ]
+}
+```
+
 ### Network Widget
 
 **Modes:** `text`, `bar`, `graph`, `gauge`

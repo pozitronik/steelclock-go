@@ -191,6 +191,8 @@ func applyTypeSpecificDefaults(w *WidgetConfig) {
 		applyClockDefaults(w)
 	case "cpu", "memory":
 		applyMetricWidgetDefaults(w)
+	case "gpu":
+		applyGPUDefaults(w)
 	case "network":
 		applyNetworkDefaults(w)
 	case "disk":
@@ -224,6 +226,35 @@ func applyMetricWidgetDefaults(w *WidgetConfig) {
 	if w.Mode == "" {
 		w.Mode = ModeText
 	}
+
+	if w.Colors == nil {
+		w.Colors = &ColorsConfig{}
+	}
+	if w.Colors.Fill == nil {
+		w.Colors.Fill = IntPtr(255)
+	}
+
+	if w.Graph == nil {
+		w.Graph = &GraphConfig{}
+	}
+	if w.Graph.History == 0 {
+		w.Graph.History = DefaultGraphHistory
+	}
+}
+
+// applyGPUDefaults sets default values for GPU widgets
+func applyGPUDefaults(w *WidgetConfig) {
+	if w.Mode == "" {
+		w.Mode = ModeText
+	}
+
+	if w.GPU == nil {
+		w.GPU = &GPUConfig{}
+	}
+	if w.GPU.Metric == "" {
+		w.GPU.Metric = "utilization"
+	}
+	// Adapter defaults to 0 (first GPU) - no need to set explicitly since int zero value is 0
 
 	if w.Colors == nil {
 		w.Colors = &ColorsConfig{}

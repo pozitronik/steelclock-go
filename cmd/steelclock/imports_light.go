@@ -27,6 +27,7 @@ import (
 	_ "github.com/pozitronik/steelclock-go/internal/widget/disk"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/doom"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/gameoflife"
+	_ "github.com/pozitronik/steelclock-go/internal/widget/gpu"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/hyperspace"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/keyboard"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/keyboardlayout"
