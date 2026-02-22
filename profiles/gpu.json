@@ -10,8 +10,17 @@
   "widgets": [
     {
       "type": "gpu",
-      "position": {"x": 0, "y": 0, "w": 64, "h": 20},
-      "style": {"background": 0, "border": 80, "padding": 1},
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 20
+      },
+      "style": {
+        "background": 0,
+        "border": 255,
+        "padding": 0
+      },
       "mode": "bar",
       "gpu": {
         "adapter": 0,
@@ -19,19 +28,33 @@
       },
       "bar": {
         "direction": "horizontal",
-        "colors": {"fill": 255}
+        "colors": {
+          "fill": 255
+        }
       },
       "text": {
         "format": "3D %.0f%%",
         "size": 10,
-        "align": {"h": "center", "v": "center"}
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
       },
       "update_interval": 0.5
     },
     {
       "type": "gpu",
-      "position": {"x": 64, "y": 0, "w": 64, "h": 20},
-      "style": {"background": 0, "border": 80, "padding": 1},
+      "position": {
+        "x": 64,
+        "y": 0,
+        "w": 64,
+        "h": 20
+      },
+      "style": {
+        "background": 0,
+        "border": 255,
+        "padding": 0
+      },
       "mode": "bar",
       "gpu": {
         "adapter": 0,
@@ -39,19 +62,33 @@
       },
       "bar": {
         "direction": "horizontal",
-        "colors": {"fill": 200}
+        "colors": {
+          "fill": 200
+        }
       },
       "text": {
         "format": "CPY %.0f%%",
         "size": 10,
-        "align": {"h": "center", "v": "center"}
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
       },
       "update_interval": 0.5
     },
     {
       "type": "gpu",
-      "position": {"x": 0, "y": 20, "w": 64, "h": 20},
-      "style": {"background": 0, "border": 80, "padding": 1},
+      "position": {
+        "x": 0,
+        "y": 20,
+        "w": 64,
+        "h": 20
+      },
+      "style": {
+        "background": 0,
+        "border": 255,
+        "padding": 0
+      },
       "mode": "bar",
       "gpu": {
         "adapter": 0,
@@ -59,19 +96,33 @@
       },
       "bar": {
         "direction": "horizontal",
-        "colors": {"fill": 200}
+        "colors": {
+          "fill": 200
+        }
       },
       "text": {
         "format": "ENC %.0f%%",
         "size": 10,
-        "align": {"h": "center", "v": "center"}
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
       },
       "update_interval": 0.5
     },
     {
       "type": "gpu",
-      "position": {"x": 64, "y": 20, "w": 64, "h": 20},
-      "style": {"background": 0, "border": 80, "padding": 1},
+      "position": {
+        "x": 64,
+        "y": 20,
+        "w": 64,
+        "h": 20
+      },
+      "style": {
+        "background": 0,
+        "border": 255,
+        "padding": 0
+      },
       "mode": "bar",
       "gpu": {
         "adapter": 0,
@@ -79,12 +130,17 @@
       },
       "bar": {
         "direction": "horizontal",
-        "colors": {"fill": 200}
+        "colors": {
+          "fill": 200
+        }
       },
       "text": {
         "format": "DEC %.0f%%",
         "size": 10,
-        "align": {"h": "center", "v": "center"}
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
       },
       "update_interval": 0.5
     }
