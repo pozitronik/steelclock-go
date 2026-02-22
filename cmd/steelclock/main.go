@@ -41,10 +41,14 @@ func main() {
 
 	// If CWD doesn't look like the app directory, fall back to executable's directory.
 	// This handles autostart and shortcut scenarios where CWD differs from app location.
+	// We os.Chdir so that all relative paths (fonts, profiles, etc.) resolve correctly.
 	if !looksLikeAppDir(baseDir) {
 		if exePath, exeErr := os.Executable(); exeErr == nil {
 			if altDir := filepath.Dir(exePath); looksLikeAppDir(altDir) {
-				log.Printf("CWD %q has no config; using executable directory %q instead", baseDir, altDir)
+				log.Printf("CWD %q has no config; changing working directory to %q", baseDir, altDir)
+				if err := os.Chdir(altDir); err != nil {
+					log.Printf("Warning: failed to chdir to %q: %v", altDir, err)
+				}
 				baseDir = altDir
 			}
 		}
