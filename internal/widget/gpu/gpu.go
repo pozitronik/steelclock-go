@@ -148,7 +148,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 // Update updates the GPU metrics
 func (w *Widget) Update() error {
 	if w.readerFailed || w.reader == nil {
-		return fmt.Errorf("GPU reader not available")
+		return nil // Render shows "GPU N/A"; no point logging every tick
 	}
 
 	value, err := w.reader.GetMetric(w.adapter, w.metric)
