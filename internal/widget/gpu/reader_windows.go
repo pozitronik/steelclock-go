@@ -470,12 +470,24 @@ func (r *pdhReader) forEachCounterInstance(handle uintptr, fn func(name string, 
 	}
 
 	itemSize := unsafe.Sizeof(pdhFmtCountervalueItemDouble{})
+	bufEnd := uintptr(unsafe.Pointer(&buffer[0])) + uintptr(len(buffer))
 	for i := uint32(0); i < itemCount; i++ {
 		item := (*pdhFmtCountervalueItemDouble)(unsafe.Pointer(&buffer[uintptr(i)*itemSize]))
 		if item.szName == nil {
 			continue
 		}
-		name := syscall.UTF16ToString(unsafe.Slice(item.szName, 256))
+		// szName points within buffer; bound the slice to not exceed the allocation.
+		// Without this, a hardcoded length like 256 can extend past the buffer end,
+		// which Go 1.25's checkptr rejects as straddling multiple allocations.
+		nameAddr := uintptr(unsafe.Pointer(item.szName))
+		maxChars := int((bufEnd - nameAddr) / 2) // uint16 = 2 bytes
+		if maxChars <= 0 {
+			continue
+		}
+		if maxChars > 256 {
+			maxChars = 256
+		}
+		name := syscall.UTF16ToString(unsafe.Slice(item.szName, maxChars))
 		fn(name, item)
 	}
 }
