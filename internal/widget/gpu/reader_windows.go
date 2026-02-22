@@ -7,8 +7,6 @@ import (
 	"log"
 	"regexp"
 	"sort"
-	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -38,14 +36,6 @@ const (
 // query different metrics within the same update cycle.
 const cacheValidDuration = 100 * time.Millisecond
 
-// engineTypeMetrics maps PDH engine type strings (lowercased) to metric constants.
-var engineTypeMetrics = map[string]string{
-	"3d":          MetricUtilization3D,
-	"copy":        MetricUtilizationCopy,
-	"videoencode": MetricUtilizationEncode,
-	"videodecode": MetricUtilizationDecode,
-}
-
 // PDH_FMT_COUNTERVALUE_ITEM_DOUBLE for array results
 type pdhFmtCountervalueItemDouble struct {
 	szName   *uint16
@@ -59,28 +49,44 @@ type pdhFmtCountervalueDouble struct {
 
 // collectionCache holds the aggregated metric values from the last PDH collection.
 type collectionCache struct {
-	// values maps adapter index -> metric name -> value.
+	// values maps adapter sequential index -> metric name -> value.
 	values    map[int]map[string]float64
 	timestamp time.Time
 }
 
 // pdhReader implements the Reader interface using Windows PDH API.
+//
+// Adapter identification uses LUID (Locally Unique Identifier) rather than the
+// phys_N field from PDH instance names. All GPUs on a system report phys_0,
+// making LUID the only reliable differentiator for multi-GPU systems.
+//
+// PDH instance name format:
+//
+//	pid_<N>_luid_0x<HH>_0x<HH>_phys_<N>_eng_<N>_engtype_<TYPE>
+//
+// LUIDs are discovered during initialization and mapped to sequential indices
+// (0, 1, 2, ...) in sorted order for stable adapter numbering.
 type pdhReader struct {
 	mu            sync.Mutex
 	queryHandle   uintptr
 	engineCounter uintptr // PDH counter handle for GPU Engine utilization
 	adapterCache  []AdapterInfo
 	initialized   bool
-	physRegex     *regexp.Regexp
-	engtypeRegex  *regexp.Regexp
+	luidRegex     *regexp.Regexp // Extracts LUID from PDH instance name
+	engtypeRegex  *regexp.Regexp // Extracts engine type (including spaces) from PDH instance name
+	luidToIndex   map[string]int // Maps LUID string -> sequential adapter index
 	cache         collectionCache
 }
 
 // newReader creates a new PDH-based GPU metrics reader.
 func newReader() (Reader, error) {
 	r := &pdhReader{
-		physRegex:    regexp.MustCompile(`phys_(\d+)`),
-		engtypeRegex: regexp.MustCompile(`engtype_(\w+)`),
+		// Matches the LUID portion: "luid_0x00000000_0x0001332d"
+		luidRegex: regexp.MustCompile(`luid_(0x[0-9a-fA-F]+_0x[0-9a-fA-F]+)`),
+		// Matches everything after "engtype_" to end of string, including spaces.
+		// AMD uses "video decode 1", "high priority compute", etc.
+		// NVIDIA uses "videodecode", "3d", etc.
+		engtypeRegex: regexp.MustCompile(`engtype_(.+)$`),
 	}
 
 	if err := r.initialize(); err != nil {
@@ -130,41 +136,64 @@ func (r *pdhReader) initialize() error {
 	return nil
 }
 
-// discoverAdapters builds the adapter list from PDH instances, sorted by index,
-// with names enriched from WMI when available.
+// discoverAdapters builds the adapter list from PDH instances using LUID-based
+// identification. LUIDs are sorted lexicographically for deterministic adapter
+// numbering, then enriched with human-readable names from WMI when available.
 func (r *pdhReader) discoverAdapters() {
-	adapterSet := make(map[int]bool)
+	luidSet := make(map[string]bool)
 
 	r.forEachCounterInstance(r.engineCounter, func(name string, _ *pdhFmtCountervalueItemDouble) {
-		matches := r.physRegex.FindStringSubmatch(name)
-		if len(matches) > 1 {
-			if idx, err := strconv.Atoi(matches[1]); err == nil {
-				adapterSet[idx] = true
-			}
+		if luid := r.extractLUID(name); luid != "" {
+			luidSet[luid] = true
 		}
 	})
 
-	// Sort adapter indices for deterministic ordering
-	indices := make([]int, 0, len(adapterSet))
-	for idx := range adapterSet {
-		indices = append(indices, idx)
+	// Sort LUIDs for deterministic ordering across runs
+	luids := make([]string, 0, len(luidSet))
+	for luid := range luidSet {
+		luids = append(luids, luid)
 	}
-	sort.Ints(indices)
+	sort.Strings(luids)
 
-	// Try to enrich adapter names from WMI
+	// Build LUID -> sequential index mapping
+	r.luidToIndex = make(map[string]int, len(luids))
+	for i, luid := range luids {
+		r.luidToIndex[luid] = i
+	}
+
+	// Try to enrich adapter names from WMI.
+	// WMI returns adapters ordered by device index, which typically matches
+	// the LUID sort order.
 	wmiNames := queryAdapterNames()
 
-	r.adapterCache = make([]AdapterInfo, len(indices))
-	for i, idx := range indices {
-		name := fmt.Sprintf("GPU %d", idx)
-		if idx < len(wmiNames) && wmiNames[idx] != "" {
-			name = wmiNames[idx]
+	r.adapterCache = make([]AdapterInfo, len(luids))
+	for i, luid := range luids {
+		name := fmt.Sprintf("GPU %d", i)
+		if i < len(wmiNames) && wmiNames[i] != "" {
+			name = wmiNames[i]
 		}
 		r.adapterCache[i] = AdapterInfo{
-			Index: idx,
+			Index: i,
 			Name:  name,
+			LUID:  luid,
 		}
 	}
+
+	log.Printf("[GPU] Discovered %d adapter(s) via LUID:", len(r.adapterCache))
+	for _, a := range r.adapterCache {
+		log.Printf("[GPU]   %d: %s (LUID: %s)", a.Index, a.Name, a.LUID)
+	}
+}
+
+// extractLUID extracts the LUID string from a PDH instance name.
+// Example input: "pid_1234_luid_0x00000000_0x0001332d_phys_0_eng_0_engtype_3D"
+// Returns: "0x00000000_0x0001332d"
+func (r *pdhReader) extractLUID(instanceName string) string {
+	matches := r.luidRegex.FindStringSubmatch(instanceName)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return ""
 }
 
 // forEachCounterInstance iterates over all instances in a PDH counter array.
@@ -208,7 +237,7 @@ func (r *pdhReader) forEachCounterInstance(handle uintptr, fn func(name string, 
 }
 
 // collectAndCache performs a single PDH data collection and aggregates all engine
-// utilization values per adapter and metric type into the cache.
+// utilization values per adapter (identified by LUID) and metric type into the cache.
 func (r *pdhReader) collectAndCache() error {
 	ret, _, _ := pdhCollectQueryData.Call(r.queryHandle)
 	if ret != 0 {
@@ -222,13 +251,13 @@ func (r *pdhReader) collectAndCache() error {
 			return
 		}
 
-		// Parse adapter index from instance name
-		matches := r.physRegex.FindStringSubmatch(name)
-		if len(matches) <= 1 {
+		// Identify adapter by LUID
+		luid := r.extractLUID(name)
+		if luid == "" {
 			return
 		}
-		adapterIdx, err := strconv.Atoi(matches[1])
-		if err != nil {
+		adapterIdx, known := r.luidToIndex[luid]
+		if !known {
 			return
 		}
 
@@ -246,8 +275,8 @@ func (r *pdhReader) collectAndCache() error {
 		// Per-engine-type metric
 		engMatches := r.engtypeRegex.FindStringSubmatch(name)
 		if len(engMatches) > 1 {
-			engType := strings.ToLower(engMatches[1])
-			if metric, known := engineTypeMetrics[engType]; known {
+			normalized := normalizeEngineType(engMatches[1])
+			if metric, ok := engineTypeMetrics[normalized]; ok {
 				if val > av[metric] {
 					av[metric] = val
 				}

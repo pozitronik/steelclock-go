@@ -42,11 +42,14 @@ var supportedMetrics = map[string]bool{
 	MetricUtilizationDecode: true,
 }
 
-// AdapterInfo contains information about a GPU adapter
+// AdapterInfo contains information about a GPU adapter.
+// Index is a sequential number (0, 1, 2, ...) assigned during discovery.
+// On Windows, LUID (Locally Unique Identifier) is the primary key used to
+// distinguish adapters, since all GPUs report phys_0 in PDH instance names.
 type AdapterInfo struct {
 	Index int
 	Name  string
-	LUID  string // Locally Unique Identifier (Windows)
+	LUID  string // Locally Unique Identifier from PDH instance names (Windows only)
 }
 
 // Reader is the interface for reading GPU metrics
