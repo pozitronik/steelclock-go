@@ -10,16 +10,17 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/bitmap/glyphs"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/shared/render"
 )
 
 // renderTokens renders all tokens to the image
-func (w *Widget) renderTokens(img *image.Gray, tokens []Token, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData, scrollOffset float64) {
+func (w *Widget) renderTokens(img *image.Gray, tokens []render.Token, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData, scrollOffset float64) {
 	pos := w.GetPosition()
 
 	// Check if format contains newlines (multi-line layout)
 	hasNewlines := false
 	for _, t := range tokens {
-		if t.Type == TokenLiteral && strings.Contains(t.Literal, "\n") {
+		if t.Type == render.TokenLiteral && strings.Contains(t.Literal, "\n") {
 			hasNewlines = true
 			break
 		}
@@ -84,20 +85,20 @@ func (w *Widget) renderTokens(img *image.Gray, tokens []Token, weather *WData, f
 }
 
 // renderMultiLine renders tokens with newline support
-func (w *Widget) renderMultiLine(img *image.Gray, tokens []Token, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData, scrollOffset float64) {
+func (w *Widget) renderMultiLine(img *image.Gray, tokens []render.Token, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData, scrollOffset float64) {
 	pos := w.GetPosition()
 
 	// Split tokens into lines
-	var lines [][]Token
-	var currentLine []Token
+	var lines [][]render.Token
+	var currentLine []render.Token
 
 	for _, t := range tokens {
-		if t.Type == TokenLiteral && strings.Contains(t.Literal, "\n") {
+		if t.Type == render.TokenLiteral && strings.Contains(t.Literal, "\n") {
 			// Split literal by newlines
 			parts := strings.Split(t.Literal, "\n")
 			for i, part := range parts {
 				if part != "" {
-					currentLine = append(currentLine, Token{Type: TokenLiteral, Literal: part})
+					currentLine = append(currentLine, render.Token{Type: render.TokenLiteral, Literal: part})
 				}
 				if i < len(parts)-1 {
 					lines = append(lines, currentLine)
@@ -144,7 +145,7 @@ func (w *Widget) renderMultiLine(img *image.Gray, tokens []Token, weather *WData
 }
 
 // renderLine renders a single line of tokens
-func (w *Widget) renderLine(img *image.Gray, tokens []Token, y, height int, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData, scrollOffset float64) {
+func (w *Widget) renderLine(img *image.Gray, tokens []render.Token, y, height int, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData, scrollOffset float64) {
 	pos := w.GetPosition()
 
 	// Measure line width
@@ -205,14 +206,14 @@ func (w *Widget) renderLine(img *image.Gray, tokens []Token, y, height int, weat
 }
 
 // measureToken returns the width of a token
-func (w *Widget) measureToken(t *Token, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
+func (w *Widget) measureToken(t *render.Token, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
 	switch t.Type {
-	case TokenLiteral:
+	case render.TokenLiteral:
 		width, _ := bitmap.SmartMeasureText(t.Literal, w.fontFace, w.fontName)
 		return width
-	case TokenIcon:
+	case render.TokenIcon:
 		return w.getIconSize(t)
-	case TokenText:
+	case render.TokenText:
 		text := getWeatherTokenText(t, weather, forecast, aqi, uv, w.units)
 		width, _ := bitmap.SmartMeasureText(text, w.fontFace, w.fontName)
 		return width
@@ -223,7 +224,7 @@ func (w *Widget) measureToken(t *Token, weather *WData, forecast *ForecastData, 
 }
 
 // getIconSize returns the icon size for an icon token
-func (w *Widget) getIconSize(t *Token) int {
+func (w *Widget) getIconSize(t *render.Token) int {
 	if t.Param != "" {
 		// Parse size from parameter
 		var size int
@@ -236,22 +237,22 @@ func (w *Widget) getIconSize(t *Token) int {
 }
 
 // renderTokenInRect renders a token within a rectangle using widget's vertical alignment
-func (w *Widget) renderTokenInRect(img *image.Gray, t *Token, x, y, height int, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
+func (w *Widget) renderTokenInRect(img *image.Gray, t *render.Token, x, y, height int, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
 	return w.renderTokenInRectWithAlign(img, t, x, y, height, w.vertAlign, weather, forecast, aqi, uv)
 }
 
 // renderTokenInRectWithAlign renders a token within a rectangle with explicit vertical alignment
-func (w *Widget) renderTokenInRectWithAlign(img *image.Gray, t *Token, x, y, height int, vAlign config.VAlign, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
+func (w *Widget) renderTokenInRectWithAlign(img *image.Gray, t *render.Token, x, y, height int, vAlign config.VAlign, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
 	switch t.Type {
-	case TokenLiteral:
+	case render.TokenLiteral:
 		width, _ := bitmap.SmartMeasureText(t.Literal, w.fontFace, w.fontName)
 		bitmap.SmartDrawTextInRect(img, t.Literal, w.fontFace, w.fontName, x, y, width+10, height, config.AlignLeft, vAlign, 0)
 		return width
 
-	case TokenIcon:
+	case render.TokenIcon:
 		return w.renderIconTokenWithAlign(img, t, x, y, height, vAlign, weather, forecast, aqi, uv)
 
-	case TokenText:
+	case render.TokenText:
 		text := getWeatherTokenText(t, weather, forecast, aqi, uv, w.units)
 		width, _ := bitmap.SmartMeasureText(text, w.fontFace, w.fontName)
 		bitmap.SmartDrawTextInRect(img, text, w.fontFace, w.fontName, x, y, width+10, height, config.AlignLeft, vAlign, 0)
@@ -265,7 +266,7 @@ func (w *Widget) renderTokenInRectWithAlign(img *image.Gray, t *Token, x, y, hei
 }
 
 // renderIconTokenWithAlign renders an icon token with explicit vertical alignment
-func (w *Widget) renderIconTokenWithAlign(img *image.Gray, t *Token, x, y, height int, vAlign config.VAlign, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
+func (w *Widget) renderIconTokenWithAlign(img *image.Gray, t *render.Token, x, y, height int, vAlign config.VAlign, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData) int {
 	iconSize := w.getIconSize(t)
 
 	var iconSet *glyphs.GlyphSet
@@ -329,7 +330,7 @@ func (w *Widget) renderIconTokenWithAlign(img *image.Gray, t *Token, x, y, heigh
 }
 
 // getForecastIconName handles {day:+N:icon} and {hour:+N:icon} tokens
-func (w *Widget) getForecastIconName(t *Token, forecast *ForecastData) string {
+func (w *Widget) getForecastIconName(t *render.Token, forecast *ForecastData) string {
 	if forecast == nil {
 		return "sun"
 	}
@@ -363,7 +364,7 @@ func (w *Widget) getForecastIconName(t *Token, forecast *ForecastData) string {
 }
 
 // renderLargeTokenInRect renders a large token within a rectangle
-func (w *Widget) renderLargeTokenInRect(img *image.Gray, t *Token, x, y, width, height int, weather *WData, forecast *ForecastData, scrollOffset float64) {
+func (w *Widget) renderLargeTokenInRect(img *image.Gray, t *render.Token, x, y, width, height int, weather *WData, forecast *ForecastData, scrollOffset float64) {
 	if width < 10 || height < 5 {
 		return
 	}

@@ -110,7 +110,6 @@ func TestNew_Defaults(t *testing.T) {
 }
 
 func TestNew_CustomConfig(t *testing.T) {
-	trueVal := true
 	falseVal := false
 
 	cfg := config.WidgetConfig{
@@ -174,8 +173,6 @@ func TestNew_CustomConfig(t *testing.T) {
 		t.Error("scrollEnabled should be true")
 	}
 
-	// Verify auto show duration with nil safety
-	_ = trueVal // silence unused variable warning
 }
 
 func TestFormatDuration(t *testing.T) {

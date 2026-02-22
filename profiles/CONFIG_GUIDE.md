@@ -144,27 +144,29 @@ Widgets can reference default colors with `@name` syntax: `"fill": "@primary"`.
 
 SteelClock supports these widget types:
 
-| Type               | Description             | Modes                         |
-|--------------------|-------------------------|-------------------------------|
-| `clipboard`        | Clipboard content       | text                          |
-| `clock`            | Time display            | text, analog, binary, segment |
-| `cpu`              | CPU usage monitor       | text, bar, graph, gauge       |
-| `memory`           | RAM usage monitor       | text, bar, graph, gauge       |
-| `network`          | Network I/O monitor     | text, bar, graph, gauge       |
-| `disk`             | Disk I/O monitor        | text, bar, graph              |
-| `volume`           | System volume           | text, bar, gauge, triangle    |
-| `volume_meter`     | Audio peak meter        | text, bar, gauge              |
-| `audio_visualizer` | Spectrum/oscilloscope   | spectrum, oscilloscope        |
-| `keyboard`         | Lock key indicators     | -                             |
-| `keyboard_layout`  | Current keyboard layout | -                             |
-| `doom`             | DOOM game               | -                             |
-| `winamp`           | Winamp media player     | -                             |
-| `matrix`           | Matrix digital rain     | -                             |
-| `weather`          | Current weather         | icon, text                    |
-| `game_of_life`     | Conway's Game of Life   | -                             |
-| `hacker_code`      | Procedural code typing  | c, asm, mixed                 |
-| `hyperspace`       | Star Wars lightspeed    | continuous, cycle             |
-| `screen_mirror`    | Screen capture display  | -                             |
+| Type               | Description             | Modes                            |
+|--------------------|-------------------------|----------------------------------|
+| `battery`          | Device battery level    | battery, text, bar, gauge, graph |
+| `bluetooth`        | Bluetooth device status | format string                    |
+| `clipboard`        | Clipboard content       | text                             |
+| `clock`            | Time display            | text, analog, binary, segment    |
+| `cpu`              | CPU usage monitor       | text, bar, graph, gauge          |
+| `memory`           | RAM usage monitor       | text, bar, graph, gauge          |
+| `network`          | Network I/O monitor     | text, bar, graph, gauge          |
+| `disk`             | Disk I/O monitor        | text, bar, graph                 |
+| `volume`           | System volume           | text, bar, gauge, triangle       |
+| `volume_meter`     | Audio peak meter        | text, bar, gauge                 |
+| `audio_visualizer` | Spectrum/oscilloscope   | spectrum, oscilloscope           |
+| `keyboard`         | Lock key indicators     | -                                |
+| `keyboard_layout`  | Current keyboard layout | -                                |
+| `doom`             | DOOM game               | -                                |
+| `winamp`           | Winamp media player     | -                                |
+| `matrix`           | Matrix digital rain     | -                                |
+| `weather`          | Current weather         | icon, text                       |
+| `game_of_life`     | Conway's Game of Life   | -                                |
+| `hacker_code`      | Procedural code typing  | c, asm, mixed                    |
+| `hyperspace`       | Star Wars lightspeed    | continuous, cycle                |
+| `screen_mirror`    | Screen capture display  | -                                |
 
 ## Common Properties
 
@@ -2016,6 +2018,143 @@ For bar/graph/gauge modes, use the shared widget-level configurations:
 - Vertical: Battery with terminal on top, status icon at bottom-center
 - Status indicators (charging bolt, AC plug) have white fill with black border for visibility
 - All colors support 0 (black) values
+
+### Bluetooth Widget
+
+Displays Bluetooth device status (connection state, battery level, device name) from the **bqc** REST API. Each widget instance tracks a single device by MAC address.
+
+**Requires**: [bqc](https://github.com/nickolay/bqc) (Bluetooth Query Client) running and serving device data.
+
+```json
+{
+  "type": "bluetooth",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 20},
+  "bluetooth": {
+    "address": "AA:BB:CC:DD:EE:FF",
+    "api_url": "127.0.0.1:8765",
+    "format": "{icon} {name} {battery:20}",
+    "low_battery_threshold": 20
+  },
+  "colors": {
+    "on": 255,
+    "off": 100
+  },
+  "text": {
+    "size": 16,
+    "align": {"h": "center", "v": "center"}
+  },
+  "update_interval": 1
+}
+```
+
+#### Bluetooth Configuration
+
+| Property                | Type   | Default                        | Description                                      |
+|-------------------------|--------|--------------------------------|--------------------------------------------------|
+| `address`               | string | **required**                   | Bluetooth MAC address of the device to track     |
+| `api_url`               | string | `"127.0.0.1:8765"`             | bqc API host:port (no `http://` prefix)          |
+| `format`                | string | `"{icon} {name} {battery:20}"` | Display format string (see Format Tokens below)  |
+| `low_battery_threshold` | int    | `0` (disabled)                 | Battery % at or below which the indicator blinks |
+
+#### Colors
+
+| Property | Type | Default | Description                                      |
+|----------|------|---------|--------------------------------------------------|
+| `on`     | int  | `255`   | Color for connected state and active elements    |
+| `off`    | int  | `100`   | Color for disconnected state and dimmed elements |
+
+#### Format String
+
+The `format` field controls what elements are displayed, their order, and spacing. It uses `{token}` placeholders mixed with literal text. Any text outside of `{...}` is rendered as-is (spaces, separators, labels).
+
+**Text tokens:**
+
+| Token     | Description         | Example output |
+|-----------|---------------------|----------------|
+| `{name}`  | Device display name | `WH-1000XM5`   |
+| `{level}` | Battery percentage  | `85%`          |
+| `{state}` | Connection state    | `Connected`    |
+
+Text tokens produce empty output when the device is not found, the API is unreachable, or the adapter is off. `{level}` also produces empty output when the device is disconnected or battery is not supported.
+
+**Icon token:**
+
+| Token    | Description                                           |
+|----------|-------------------------------------------------------|
+| `{icon}` | Device type glyph (sized automatically from icon set) |
+
+The icon is selected based on the device type reported by bqc (AudioOutput/Headset -> headphones, Mouse -> mouse, Keyboard -> keyboard, Gamepad -> gamepad, Computer -> computer, Phone -> phone, other -> generic BT logo). Special states: API unreachable or adapter off shows "BT off" icon in `off` color; device not found shows blinking "?" icon in `on` color; disconnected shows device type icon in `off` color.
+
+**Shape tokens:**
+
+| Token           | Description                                   |
+|-----------------|-----------------------------------------------|
+| `{battery:N}`   | Battery outline shape (horizontal), N px wide |
+| `{battery_h:N}` | Same as `{battery:N}`                         |
+| `{battery_v:N}` | Battery outline shape (vertical), N px wide   |
+| `{bar:N}`       | Simple fill bar (horizontal), N px wide       |
+| `{bar_h:N}`     | Same as `{bar:N}`                             |
+| `{bar_v:N}`     | Simple fill bar (vertical), N px wide         |
+
+The `:N` parameter always specifies **horizontal width in pixels** regardless of orientation. Vertical height is derived from the widget's content area. Shape tokens only render when the device is connected and battery level is available; otherwise they are invisible but still reserve layout space.
+
+**Format examples:**
+- `"{icon} {name} {battery:20}"` - icon, name, and battery shape (default)
+- `"{icon}"` - icon only (compact)
+- `"{icon} {level}"` - icon with battery percentage text
+- `"{name} - {state}"` - name and connection state
+- `"{icon} | {name}"` - icon and name with a pipe separator
+
+#### Icon Set Selection
+
+The icon set is selected automatically based on widget height:
+
+| Widget height | Icon set |
+|---------------|----------|
+| >= 16 px      | 16x16    |
+| >= 12 px      | 12x12    |
+| < 12 px       | 8x8      |
+
+#### Low Battery Blink
+
+When `low_battery_threshold` > 0 and battery level falls at or below the threshold, one element blinks. The blink target is chosen by priority:
+
+1. First shape token (`{battery:N}`, `{bar:N}`, etc.)
+2. First `{icon}` token - if no shape tokens exist
+3. First `{name}` token - if neither shape nor icon tokens exist
+
+The blinking element's layout space is always reserved to prevent other elements from shifting.
+
+#### Visual States
+
+| State            | Icon                 | Icon color | Text tokens    | Shape tokens |
+|------------------|----------------------|------------|----------------|--------------|
+| Connected        | Device type icon     | `on`       | Shown          | Shown        |
+| Disconnected     | Device type icon     | `off`      | Shown (dimmed) | Hidden       |
+| Connecting       | Device type icon     | `on`       | Shown          | Hidden       |
+| Disconnecting    | Device type icon     | `on`       | Shown          | Hidden       |
+| Device not found | "?" icon (blinking)  | `on`       | Hidden         | Hidden       |
+| API unreachable  | "BT off" icon        | `off`      | Hidden         | Hidden       |
+| Adapter disabled | "BT off" icon        | `off`      | Hidden         | Hidden       |
+
+#### Multiple Devices
+
+To monitor multiple Bluetooth devices, add multiple bluetooth widgets with different `address` values and positions.
+
+#### Finding Your Device MAC Address
+
+- **From bqc API**: Open `http://127.0.0.1:8765/api/devices` in a browser. Each device entry has an `"address"` field.
+- **Windows**: Settings > Bluetooth & devices > click device > Properties
+- **Linux**: `bluetoothctl devices`
+
+Note: bqc may use addresses without colons (e.g., `581862015DAE`). The widget passes the address directly to the API, so use whichever format bqc expects.
+
+#### Troubleshooting
+
+- **"BT off" icon**: Check that bqc is running (`http://127.0.0.1:8765/api/devices` in browser), verify `api_url`, and ensure the Bluetooth adapter is enabled.
+- **Blinking "?" icon**: Device not found - verify MAC address against `http://127.0.0.1:8765/api/devices`.
+- **Battery not shown**: Requires connected device with battery support. Check `http://127.0.0.1:8765/api/devices/<address>` to verify `battery.supported` is `true`. Also ensure the format string includes a shape token.
+- **Text tokens empty**: Text tokens are hidden when API is unreachable, adapter is off, or device is not found.
 
 ### Game of Life Widget
 

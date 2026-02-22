@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/getlantern/systray"
+	"github.com/pozitronik/steelclock-go/internal/autostart"
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/webeditor"
 )
@@ -40,6 +41,7 @@ type Manager struct {
 	profileMenuItems []*systray.MenuItem
 	menuEdit         *systray.MenuItem
 	menuReload       *systray.MenuItem
+	menuAutostart    *systray.MenuItem
 	menuExit         *systray.MenuItem
 
 	// State
@@ -104,6 +106,8 @@ func (m *Manager) buildLegacyMenu() {
 	m.menuEdit = systray.AddMenuItem("Edit Config", "Open config file in default editor")
 	m.menuReload = systray.AddMenuItem("Reload Config", "Reload configuration")
 	systray.AddSeparator()
+	m.addAutostartMenuItem()
+	systray.AddSeparator()
 	m.menuExit = systray.AddMenuItem("Exit", "Exit SteelClock")
 }
 
@@ -141,6 +145,9 @@ func (m *Manager) buildProfileMenu() {
 	m.menuEdit = systray.AddMenuItem("Edit Active Config", "Open active config file in default editor")
 	m.menuReload = systray.AddMenuItem("Reload Active Config", "Reload current configuration")
 
+	systray.AddSeparator()
+	m.addAutostartMenuItem()
+
 	// Separator before Exit
 	systray.AddSeparator()
 	m.menuExit = systray.AddMenuItem("Exit", "Exit SteelClock")
@@ -155,9 +162,13 @@ func (m *Manager) onQuit() {
 
 // handleMenuClicks processes menu item clicks
 func (m *Manager) handleMenuClicks() {
-	// Build select cases once - menu structure doesn't change at runtime
-	// Cases: [edit, reload, exit, profile0, profile1, ...]
-	cases := make([]reflect.SelectCase, 0, 3+len(m.profileMenuItems))
+	// Build select cases once — menu structure doesn't change at runtime.
+	// Cases: [edit, reload, autostart, exit, profile0, profile1, ...]
+	//
+	// When autostart is not supported (menuAutostart == nil), the autostart
+	// case is still present but uses a nil channel that never fires, keeping
+	// the index arithmetic consistent across platforms.
+	cases := make([]reflect.SelectCase, 0, 4+len(m.profileMenuItems))
 
 	// Add fixed menu items
 	cases = append(cases, reflect.SelectCase{
@@ -168,6 +179,14 @@ func (m *Manager) handleMenuClicks() {
 		Dir:  reflect.SelectRecv,
 		Chan: reflect.ValueOf(m.menuReload.ClickedCh),
 	})
+
+	// Autostart case — nil channel when unsupported (never fires)
+	autostartCase := reflect.SelectCase{Dir: reflect.SelectRecv}
+	if m.menuAutostart != nil {
+		autostartCase.Chan = reflect.ValueOf(m.menuAutostart.ClickedCh)
+	}
+	cases = append(cases, autostartCase)
+
 	cases = append(cases, reflect.SelectCase{
 		Dir:  reflect.SelectRecv,
 		Chan: reflect.ValueOf(m.menuExit.ClickedCh),
@@ -190,11 +209,13 @@ func (m *Manager) handleMenuClicks() {
 			m.handleEditConfig()
 		case 1: // Reload
 			m.handleReloadConfig()
-		case 2: // Exit
+		case 2: // Autostart
+			m.handleAutostartToggle()
+		case 3: // Exit
 			systray.Quit()
 			return
-		default: // Profile item (index = chosen - 3)
-			profileIndex := chosen - 3
+		default: // Profile item (index = chosen - 4)
+			profileIndex := chosen - 4
 			m.handleProfileSwitch(profileIndex)
 		}
 	}
@@ -426,6 +447,41 @@ func parseDesktopExec(path string) string {
 	}
 
 	return ""
+}
+
+// addAutostartMenuItem adds the autostart toggle to the tray menu.
+// If the platform does not support autostart, the menu item is hidden.
+func (m *Manager) addAutostartMenuItem() {
+	m.menuAutostart = systray.AddMenuItem("Autostart", "Start SteelClock automatically at login")
+
+	enabled, err := autostart.IsEnabled()
+	if err != nil {
+		// Platform not supported — hide the item entirely
+		m.menuAutostart.Hide()
+		m.menuAutostart = nil
+		return
+	}
+
+	if enabled {
+		m.menuAutostart.Check()
+	}
+}
+
+// handleAutostartToggle toggles the autostart registration
+func (m *Manager) handleAutostartToggle() {
+	enabled, err := autostart.Toggle()
+	if err != nil {
+		log.Printf("Failed to toggle autostart: %v", err)
+		return
+	}
+
+	if enabled {
+		m.menuAutostart.Check()
+		log.Println("Autostart enabled")
+	} else {
+		m.menuAutostart.Uncheck()
+		log.Println("Autostart disabled")
+	}
 }
 
 // handleReloadConfig reloads the configuration

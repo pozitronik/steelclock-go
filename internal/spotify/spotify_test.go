@@ -2,6 +2,7 @@ package spotify
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -261,32 +262,41 @@ func TestFileTokenStore_DefaultPath(t *testing.T) {
 }
 
 func TestAuthMode_Constants(t *testing.T) {
-	if AuthModeOAuth != "oauth" {
-		t.Errorf("AuthModeOAuth = %v, want oauth", AuthModeOAuth)
+	tests := []struct {
+		name string
+		got  string
+		want string
+	}{
+		{"AuthModeOAuth", string(AuthModeOAuth), "oauth"},
+		{"AuthModeManual", string(AuthModeManual), "manual"},
 	}
-	if AuthModeManual != "manual" {
-		t.Errorf("AuthModeManual = %v, want manual", AuthModeManual)
+	for _, tt := range tests {
+		if tt.got != tt.want {
+			t.Errorf("%s = %v, want %v", tt.name, tt.got, tt.want)
+		}
 	}
 }
 
 func TestConstants(t *testing.T) {
-	if DefaultCallbackPort != 8888 {
-		t.Errorf("DefaultCallbackPort = %v, want 8888", DefaultCallbackPort)
+	stringTests := []struct {
+		name string
+		got  string
+		want string
+	}{
+		{"DefaultTokenPath", DefaultTokenPath, "spotify_token.json"},
+		{"AuthURL", AuthURL, "https://accounts.spotify.com/authorize"},
+		{"TokenURL", TokenURL, "https://accounts.spotify.com/api/token"},
+		{"APIURL", APIURL, "https://api.spotify.com/v1"},
+		{"RequiredScope", RequiredScope, "user-read-currently-playing"},
 	}
-	if DefaultTokenPath != "spotify_token.json" {
-		t.Errorf("DefaultTokenPath = %v, want spotify_token.json", DefaultTokenPath)
+	for _, tt := range stringTests {
+		if tt.got != tt.want {
+			t.Errorf("%s = %v, want %v", tt.name, tt.got, tt.want)
+		}
 	}
-	if SpotifyAuthURL != "https://accounts.spotify.com/authorize" {
-		t.Errorf("SpotifyAuthURL = %v", SpotifyAuthURL)
-	}
-	if SpotifyTokenURL != "https://accounts.spotify.com/api/token" {
-		t.Errorf("SpotifyTokenURL = %v", SpotifyTokenURL)
-	}
-	if SpotifyAPIURL != "https://api.spotify.com/v1" {
-		t.Errorf("SpotifyAPIURL = %v", SpotifyAPIURL)
-	}
-	if RequiredScope != "user-read-currently-playing" {
-		t.Errorf("RequiredScope = %v", RequiredScope)
+
+	if got := fmt.Sprintf("%d", DefaultCallbackPort); got != "8888" {
+		t.Errorf("DefaultCallbackPort = %v, want 8888", got)
 	}
 }
 

@@ -290,6 +290,9 @@ type WidgetConfig struct {
 	// Claude Code status widget
 	ClaudeCode *ClaudeCodeConfig `json:"claude_code,omitempty"` // Claude Code status widget settings
 
+	// Bluetooth widget
+	Bluetooth *BluetoothConfig `json:"bluetooth,omitempty"` // Bluetooth device status settings
+
 	// Beefweb widget (Foobar2000/DeaDBeeF)
 	Beefweb         *BeefwebConfig         `json:"beefweb,omitempty"`           // Beefweb settings
 	BeefwebAutoShow *BeefwebAutoShowConfig `json:"beefweb_auto_show,omitempty"` // Beefweb auto-show events
@@ -1238,4 +1241,20 @@ type ClaudeCodeNotifyConfig struct {
 	Idle *int `json:"idle,omitempty"`
 	// NotRunning: duration when Claude Code is not running (default: 0)
 	NotRunning *int `json:"not_running,omitempty"`
+}
+
+// BluetoothConfig contains settings for the Bluetooth device status widget.
+// Each widget instance tracks a single Bluetooth device by MAC address.
+type BluetoothConfig struct {
+	// Address: Bluetooth MAC address of the device to track (required)
+	Address string `json:"address"`
+	// APIURL: bqc API host:port (default: "127.0.0.1:8765")
+	APIURL string `json:"api_url,omitempty"`
+	// Format: display format string with tokens: {icon}, {name}, {level}, {state},
+	// {battery:N}, {battery_h:N}, {battery_v:N}, {bar:N}, {bar_h:N}, {bar_v:N}.
+	// N is always the horizontal width in pixels; vertical height comes from the content area.
+	// (default: "{icon} {name} {battery:20}")
+	Format string `json:"format,omitempty"`
+	// LowBatteryThreshold: battery percentage at or below which the indicator blinks (0 = disabled, default: 0)
+	LowBatteryThreshold int `json:"low_battery_threshold,omitempty"`
 }

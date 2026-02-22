@@ -1,8 +1,6 @@
 {
   "schema_version": 2,
   "config_name": "Spotify",
-  "game_name": "SPOTIFY",
-  "game_display_name": "Spotify Widget",
   "refresh_rate_ms": 100,
   "display": {
     "width": 128,

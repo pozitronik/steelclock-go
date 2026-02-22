@@ -125,14 +125,14 @@ const DefaultCallbackPort = 8888
 // DefaultTokenPath is the default token storage filename.
 const DefaultTokenPath = "spotify_token.json"
 
-// SpotifyAuthURL is the Spotify authorization endpoint.
-const SpotifyAuthURL = "https://accounts.spotify.com/authorize"
+// AuthURL is the Spotify authorization endpoint.
+const AuthURL = "https://accounts.spotify.com/authorize"
 
-// SpotifyTokenURL is the Spotify token endpoint.
-const SpotifyTokenURL = "https://accounts.spotify.com/api/token"
+// TokenURL is the Spotify token endpoint.
+const TokenURL = "https://accounts.spotify.com/api/token"
 
-// SpotifyAPIURL is the base URL for Spotify Web API.
-const SpotifyAPIURL = "https://api.spotify.com/v1"
+// APIURL is the base URL for Spotify Web API.
+const APIURL = "https://api.spotify.com/v1"
 
 // RequiredScope is the OAuth scope required for current playback.
 const RequiredScope = "user-read-currently-playing"

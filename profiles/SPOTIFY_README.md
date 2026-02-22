@@ -146,6 +146,12 @@ Note: In manual mode, tokens will still be automatically refreshed when they exp
 
 ## Troubleshooting
 
+### "Missing required parameter: redirect_uri"
+
+- Verify the Redirect URI in your Spotify Developer Dashboard matches **exactly**: `http://127.0.0.1:8888/callback`
+- If you configured a custom `callback_port`, the URI must use that port (e.g., `http://127.0.0.1:9999/callback` for port 9999)
+- Use `127.0.0.1`, not `localhost` -- Spotify treats them as different URIs
+
 ### "Auth required - check browser"
 
 - Make sure you completed the OAuth flow in your browser

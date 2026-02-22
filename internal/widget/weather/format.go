@@ -2,66 +2,26 @@ package weather
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
+
+	"github.com/pozitronik/steelclock-go/internal/shared/render"
 )
 
 // parseWeatherFormat parses a format string into tokens
-func parseWeatherFormat(format string) []Token {
-	var tokens []Token
-
+func parseWeatherFormat(format string) []render.Token {
 	// Handle newlines - split by \n and process each line
 	format = strings.ReplaceAll(format, "\\n", "\n")
 
-	// Regex to match {token} or {token:param}
-	re := regexp.MustCompile(`\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([^}]*))?\}`)
-
-	lastEnd := 0
-	for _, match := range re.FindAllStringSubmatchIndex(format, -1) {
-		// Add literal text before this token
-		if match[0] > lastEnd {
-			tokens = append(tokens, Token{
-				Type:    TokenLiteral,
-				Literal: format[lastEnd:match[0]],
-			})
-		}
-
-		// Extract token name and optional parameter
-		name := format[match[2]:match[3]]
-		param := ""
-		if match[4] >= 0 && match[5] >= 0 {
-			param = format[match[4]:match[5]]
-		}
-
-		// Determine token type
-		tokenType := getWeatherTokenType(name)
-		tokens = append(tokens, Token{
-			Type:  tokenType,
-			Name:  name,
-			Param: param,
-		})
-
-		lastEnd = match[1]
-	}
-
-	// Add any remaining literal text
-	if lastEnd < len(format) {
-		tokens = append(tokens, Token{
-			Type:    TokenLiteral,
-			Literal: format[lastEnd:],
-		})
-	}
-
-	return tokens
+	return render.ParseFormatTokens(format, getWeatherTokenType)
 }
 
 // getWeatherTokenType determines the type of token by name
-func getWeatherTokenType(name string) TokenType {
+func getWeatherTokenType(name string) render.TokenType {
 	switch name {
 	// Icon tokens
 	case "icon", "aqi_icon", "uv_icon", "humidity_icon", "wind_icon", "wind_dir_icon":
-		return TokenIcon
+		return render.TokenIcon
 	// Large tokens (expand to fill space)
 	case "forecast":
 		return TokenLarge
@@ -69,18 +29,18 @@ func getWeatherTokenType(name string) TokenType {
 	default:
 		// Check for day/hour icon tokens
 		if strings.HasPrefix(name, "day") && strings.HasSuffix(name, "icon") {
-			return TokenIcon
+			return render.TokenIcon
 		}
 		if strings.HasPrefix(name, "hour") && strings.HasSuffix(name, "icon") {
-			return TokenIcon
+			return render.TokenIcon
 		}
-		return TokenText
+		return render.TokenText
 	}
 }
 
 // getWeatherTokenText returns the text value for a text token
 // units should be "metric" or "imperial"
-func getWeatherTokenText(t *Token, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData, units string) string {
+func getWeatherTokenText(t *render.Token, weather *WData, forecast *ForecastData, aqi *AirQualityData, uv *UVIndexData, units string) string {
 	// Guard against nil weather data
 	if weather == nil {
 		return "-"
@@ -164,7 +124,7 @@ func getWeatherTokenText(t *Token, weather *WData, forecast *ForecastData, aqi *
 }
 
 // getForecastTokenText handles {day:+N:temp} and {hour:+N:temp} tokens
-func getForecastTokenText(t *Token, forecast *ForecastData, unit string) string {
+func getForecastTokenText(t *render.Token, forecast *ForecastData, unit string) string {
 	if forecast == nil {
 		return "-"
 	}

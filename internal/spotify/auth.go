@@ -6,9 +6,11 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os/exec"
@@ -126,7 +128,7 @@ func (p *PKCEAuth) buildAuthURL() string {
 	params.Set("code_challenge", p.codeChallenge)
 	params.Set("state", p.state)
 
-	return SpotifyAuthURL + "?" + params.Encode()
+	return AuthURL + "?" + params.Encode()
 }
 
 // startCallbackServer starts the local HTTP server for OAuth callback.
@@ -134,20 +136,35 @@ func (p *PKCEAuth) startCallbackServer(ctx context.Context) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/callback", p.handleCallback)
 
+	addr := fmt.Sprintf("127.0.0.1:%d", p.callbackPort)
+
+	// Bind the port synchronously so we detect failures (port busy, firewall
+	// block, etc.) immediately instead of losing them in a goroutine.
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("failed to listen on %s: %w", addr, err)
+	}
+
 	p.server = &http.Server{
-		Addr:              fmt.Sprintf("127.0.0.1:%d", p.callbackPort),
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
+		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 	}
 
 	go func() {
-		if err := p.server.ListenAndServe(); err != http.ErrServerClosed {
+		if err := p.server.Serve(listener); !errors.Is(err, http.ErrServerClosed) {
 			log.Printf("spotify: callback server error: %v", err)
 		}
 	}()
 
-	// Give server time to start
-	time.Sleep(100 * time.Millisecond)
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := p.server.Shutdown(shutdownCtx); err != nil {
+			log.Printf("spotify: callback server shutdown error: %v", err)
+		}
+	}()
 
 	return nil
 }
@@ -250,7 +267,7 @@ func (p *PKCEAuth) exchangeCode(code string) (*TokenInfo, error) {
 	data.Set("client_id", p.clientID)
 	data.Set("code_verifier", p.codeVerifier)
 
-	req, err := http.NewRequest("POST", SpotifyTokenURL, strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", TokenURL, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create token request: %w", err)
 	}
@@ -261,7 +278,7 @@ func (p *PKCEAuth) exchangeCode(code string) (*TokenInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("token request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -311,16 +328,18 @@ func generateRandomString(length int) string {
 }
 
 // openBrowser opens the URL in the default browser.
-func openBrowser(url string) error {
+func openBrowser(rawURL string) error {
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {
 	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", url)
+		// Use rundll32 to avoid cmd.exe, which interprets & as a command separator
+		// and has complex quoting rules that conflict with Go's argument escaping.
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", rawURL)
 	case "darwin":
-		cmd = exec.Command("open", url)
+		cmd = exec.Command("open", rawURL)
 	default: // Linux and others
-		cmd = exec.Command("xdg-open", url)
+		cmd = exec.Command("xdg-open", rawURL)
 	}
 
 	return cmd.Start()
