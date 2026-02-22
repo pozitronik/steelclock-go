@@ -475,7 +475,7 @@ func (r *pdhReader) forEachCounterInstance(handle uintptr, fn func(name string, 
 		if item.szName == nil {
 			continue
 		}
-		name := syscall.UTF16ToString((*[256]uint16)(unsafe.Pointer(item.szName))[:])
+		name := syscall.UTF16ToString(unsafe.Slice(item.szName, 256))
 		fn(name, item)
 	}
 }
