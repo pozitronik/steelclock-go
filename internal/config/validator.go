@@ -77,12 +77,65 @@ func Validate(cfg *Config) error {
 		return err
 	}
 
+	// Mutual exclusion: top-level widgets and devices cannot coexist
+	if len(cfg.Widgets) > 0 && len(cfg.Devices) > 0 {
+		return fmt.Errorf("config cannot have both top-level 'widgets' and 'devices'")
+	}
+
+	// Multi-device mode
+	if len(cfg.Devices) > 0 {
+		return validateDevices(cfg)
+	}
+
+	// Single-device mode
 	if err := validateDisplayConfig(cfg); err != nil {
 		return err
 	}
 
 	if err := validateWidgets(cfg); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// validateDevices validates all device configurations in multi-device mode
+func validateDevices(cfg *Config) error {
+	ids := make(map[string]bool)
+
+	for i, dev := range cfg.Devices {
+		// Validate unique IDs
+		if dev.ID != "" {
+			if ids[dev.ID] {
+				return fmt.Errorf("devices[%d]: duplicate device ID '%s'", i, dev.ID)
+			}
+			ids[dev.ID] = true
+		}
+
+		// Validate display dimensions
+		if dev.Display.Width <= 0 {
+			return fmt.Errorf("devices[%d]: display width must be positive (got %d)", i, dev.Display.Width)
+		}
+		if dev.Display.Height <= 0 {
+			return fmt.Errorf("devices[%d]: display height must be positive (got %d)", i, dev.Display.Height)
+		}
+
+		// Validate backend
+		if !IsValidBackend(dev.Backend) {
+			return fmt.Errorf("devices[%d]: invalid backend '%s' (valid: %s)", i, dev.Backend, GetValidBackendsList())
+		}
+
+		// Validate widgets
+		if len(dev.Widgets) == 0 {
+			return fmt.Errorf("devices[%d]: at least one widget must be configured", i)
+		}
+
+		generateWidgetIDs(dev.Widgets)
+		for j := range dev.Widgets {
+			if err := validateWidgetType(j, &dev.Widgets[j]); err != nil {
+				return fmt.Errorf("devices[%d]: %w", i, err)
+			}
+		}
 	}
 
 	return nil

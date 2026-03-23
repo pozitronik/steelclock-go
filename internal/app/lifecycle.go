@@ -1,7 +1,6 @@
 package app
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -18,15 +17,15 @@ import (
 const ErrorDisplayRefreshRateMs = 500
 
 // LifecycleManager handles the lifecycle of the display system.
-// It manages the compositor, backend client, and transitions between states.
+// It orchestrates multiple DeviceInstances, one per configured device.
 type LifecycleManager struct {
-	comp           *compositor.Compositor
-	client         display.Backend
-	currentBackend string
+	devices        []*DeviceInstance
+	errorComp      *compositor.Compositor // Used only for error display mode
+	errorClient    display.Backend        // Used only for error display mode
 	lastGoodConfig *config.Config
 	isFirstStart   bool
 	retryCancel    chan struct{}
-	widgetMgr      *WidgetManager
+	widgetMgr      *WidgetManager // For error display only
 	mu             sync.Mutex
 }
 
@@ -39,9 +38,10 @@ func NewLifecycleManager() *LifecycleManager {
 	}
 }
 
-// Start initializes and starts the compositor with the given configuration.
-// Returns NoWidgetsError if no widgets are enabled.
-// Returns BackendUnavailableError if the backend cannot be reached.
+// Start initializes and starts all devices from the given configuration.
+// In single-device mode (top-level widgets), a single DeviceInstance is created.
+// In multi-device mode (devices array), one DeviceInstance per device is created.
+// Returns the first error encountered; other devices may still start successfully.
 func (m *LifecycleManager) Start(cfg *config.Config) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -54,66 +54,69 @@ func (m *LifecycleManager) Start(cfg *config.Config) error {
 		log.Printf("Using custom bundled font URL: %s", *cfg.BundledFontURL)
 	}
 
-	// Determine if we need a new client
-	if err := m.ensureClient(cfg); err != nil {
-		return err
-	}
+	// Stop any active error display
+	m.stopErrorDisplay()
 
-	// Show startup animation on first start
-	if m.isFirstStart {
-		splash := NewSplashRenderer(m.client, cfg.Display.Width, cfg.Display.Height)
-		if err := splash.ShowStartupAnimation(); err != nil {
-			log.Printf("Warning: Startup animation failed: %v", err)
+	// Get per-device configurations
+	deviceConfigs := cfg.GetDevices()
+	showSplash := m.isFirstStart
+	m.isFirstStart = false
+
+	var firstErr error
+	var startedDevices []*DeviceInstance
+
+	for _, devCfg := range deviceConfigs {
+		deviceID := devCfg.ID
+		if deviceID == "" {
+			deviceID = fmt.Sprintf("device_%d", len(startedDevices))
 		}
-		m.isFirstStart = false
-	}
 
-	// Create widgets and compositor using WidgetManager
-	setup, err := m.widgetMgr.CreateFromConfig(m.client, cfg)
-	if err != nil {
-		var noWidgetsErr *NoWidgetsError
-		if errors.As(err, &noWidgetsErr) {
-			log.Println("WARNING: No widgets enabled in configuration")
+		// Build per-device config by merging global + device-specific settings
+		perDeviceCfg := cfg.ConfigForDevice(devCfg)
+
+		// Try to reuse existing DeviceInstance with same ID
+		instance := m.findDevice(deviceID)
+		if instance == nil {
+			instance = NewDeviceInstance(deviceID, m.retryCancel)
 		}
-		return err
-	}
 
-	log.Printf("Created %d widgets", len(setup.Widgets))
-	for i := range setup.Widgets {
-		log.Printf("  Widget %d: %s (type: %s)", i+1, cfg.Widgets[i].ID, cfg.Widgets[i].Type)
-	}
-
-	m.comp = setup.Compositor
-
-	// Set up backend failover callback for auto-select mode
-	if cfg.Backend == "" {
-		m.comp.OnBackendFailure = func() {
-			m.handleBackendFailure(cfg)
+		if err := instance.Start(perDeviceCfg, showSplash); err != nil {
+			log.Printf("[%s] ERROR: Failed to start device: %v", deviceID, err)
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
 		}
+
+		startedDevices = append(startedDevices, instance)
 	}
 
-	if err := m.comp.Start(); err != nil {
-		return fmt.Errorf("failed to start compositor: %w", err)
+	// Shut down old devices that are no longer in the config
+	m.shutdownOldDevices(startedDevices)
+	m.devices = startedDevices
+
+	if len(startedDevices) == 0 && firstErr != nil {
+		return firstErr
 	}
 
 	m.lastGoodConfig = cfg
-	log.Println("SteelClock started successfully")
+	log.Printf("SteelClock started successfully (%d device(s))", len(startedDevices))
 	return nil
 }
 
-// Stop stops the compositor but keeps the client for reuse
+// Stop stops all device compositors but keeps clients for reuse
 func (m *LifecycleManager) Stop() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.comp != nil {
-		m.comp.Stop()
-		m.comp = nil
-		log.Println("Stopping compositor (keeping client and registration)")
+	m.stopErrorDisplay()
+
+	for _, dev := range m.devices {
+		dev.Stop()
 	}
 }
 
-// Shutdown performs a full shutdown including client cleanup
+// Shutdown performs a full shutdown including client cleanup for all devices
 func (m *LifecycleManager) Shutdown() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -126,56 +129,29 @@ func (m *LifecycleManager) Shutdown() {
 		close(m.retryCancel)
 	}
 
-	if m.comp != nil {
-		m.comp.Stop()
-		m.comp = nil
+	m.stopErrorDisplay()
+
+	shouldUnregister := m.lastGoodConfig != nil && m.lastGoodConfig.UnregisterOnExit
+
+	for _, dev := range m.devices {
+		dev.Shutdown(shouldUnregister)
 	}
+	m.devices = nil
 
-	if m.client != nil {
-		// Show exit message
-		displayWidth := config.DefaultDisplayWidth
-		displayHeight := config.DefaultDisplayHeight
-		if m.lastGoodConfig != nil {
-			displayWidth = m.lastGoodConfig.Display.Width
-			displayHeight = m.lastGoodConfig.Display.Height
-		}
-		splash := NewSplashRenderer(m.client, displayWidth, displayHeight)
-		if err := splash.ShowExitMessage(); err != nil {
-			log.Printf("Warning: Exit message failed: %v", err)
-		}
-
-		// Unregister if configured
-		shouldUnregister := m.lastGoodConfig != nil && m.lastGoodConfig.UnregisterOnExit
-		if shouldUnregister {
-			log.Println("Unregistering from GameSense (unregister_on_exit=true)...")
-			if err := m.client.RemoveGame(); err != nil {
-				log.Printf("Warning: Failed to unregister game: %v", err)
-			} else {
-				log.Println("Successfully unregistered from GameSense")
-			}
-		} else {
-			log.Println("Shutting down (keeping GameSense registration, unregister_on_exit=false)")
-		}
-		m.client = nil
+	if shouldUnregister {
+		log.Println("All devices unregistered (unregister_on_exit=true)")
+	} else {
+		log.Println("Shutting down (keeping registrations, unregister_on_exit=false)")
 	}
 }
 
-// ShowTransitionBanner displays a profile transition banner
+// ShowTransitionBanner displays a profile transition banner on all devices
 func (m *LifecycleManager) ShowTransitionBanner(profileName string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.client != nil {
-		displayWidth := config.DefaultDisplayWidth
-		displayHeight := config.DefaultDisplayHeight
-		if m.lastGoodConfig != nil {
-			displayWidth = m.lastGoodConfig.Display.Width
-			displayHeight = m.lastGoodConfig.Display.Height
-		}
-		splash := NewSplashRenderer(m.client, displayWidth, displayHeight)
-		if err := splash.ShowTransitionBanner(profileName); err != nil {
-			log.Printf("Warning: Transition banner failed: %v", err)
-		}
+	for _, dev := range m.devices {
+		dev.ShowTransitionBanner(profileName)
 	}
 }
 
@@ -186,7 +162,8 @@ func (m *LifecycleManager) StartErrorDisplay(message string, width, height int) 
 
 	log.Printf("Starting error display: %s", message)
 
-	errorClient := m.client
+	// Try to get an existing client from a device
+	errorClient := m.findAnyClient()
 	if errorClient == nil {
 		log.Println("No existing client, creating one for error display...")
 
@@ -207,6 +184,7 @@ func (m *LifecycleManager) StartErrorDisplay(message string, width, height int) 
 			log.Printf("ERROR: Failed to create client for error display: %v", err)
 			return fmt.Errorf("failed to create client: %w", err)
 		}
+		m.errorClient = errorClient
 
 		// Bind screen event (no-op for direct driver)
 		deviceType := DeviceTypeForDisplay(width, height)
@@ -217,9 +195,9 @@ func (m *LifecycleManager) StartErrorDisplay(message string, width, height int) 
 	}
 
 	setup := m.widgetMgr.CreateErrorDisplay(errorClient, message, width, height)
-	m.comp = setup.Compositor
+	m.errorComp = setup.Compositor
 
-	if err := m.comp.Start(); err != nil {
+	if err := m.errorComp.Start(); err != nil {
 		log.Printf("ERROR: Failed to start compositor for error display: %v", err)
 		return fmt.Errorf("failed to start compositor: %w", err)
 	}
@@ -237,165 +215,100 @@ func (m *LifecycleManager) GetLastGoodConfig() *config.Config {
 	return m.lastGoodConfig
 }
 
-// GetDisplayDimensions returns the display dimensions from config or defaults
+// GetDisplayDimensions returns the display dimensions from the first device or defaults
 func (m *LifecycleManager) GetDisplayDimensions() (width, height int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if m.lastGoodConfig != nil {
+		devices := m.lastGoodConfig.GetDevices()
+		if len(devices) > 0 {
+			return devices[0].Display.Width, devices[0].Display.Height
+		}
 		return m.lastGoodConfig.Display.Width, m.lastGoodConfig.Display.Height
 	}
 	return config.DefaultDisplayWidth, config.DefaultDisplayHeight
 }
 
-// ensureClient ensures a valid backend client exists, creating one if needed
-func (m *LifecycleManager) ensureClient(cfg *config.Config) error {
-	needNewClient := m.client == nil
-
-	if m.client != nil {
-		// Check if backend changed
-		if m.currentBackend != cfg.Backend {
-			log.Printf("Backend changed from %s to %s, recreating client...", m.currentBackend, cfg.Backend)
-			needNewClient = true
-		}
-	}
-
-	if !needNewClient {
-		log.Printf("Reusing existing %s client", m.currentBackend)
-		return nil
-	}
-
-	// Clean up old client
-	if m.client != nil {
-		_ = m.client.RemoveGame()
-		m.client = nil
-	}
-
-	// Create new client
-	var err error
-	var backendName string
-	m.client, backendName, err = CreateBackendClient(cfg)
-	if err != nil {
-		return err
-	}
-	m.currentBackend = backendName
-
-	// Bind screen event (no-op for direct driver)
-	deviceType := DeviceTypeForDisplay(cfg.Display.Width, cfg.Display.Height)
-	if err := m.bindEventWithRetry(10, deviceType); err != nil {
-		log.Printf("ERROR: Failed to bind screen event after retries: %v", err)
-		m.client = nil
-		return err
-	}
-
-	return nil
-}
-
-// bindEventWithRetry attempts to bind the screen event with exponential backoff
-func (m *LifecycleManager) bindEventWithRetry(maxAttempts int, deviceType string) error {
-	return RetryWithBackoff(maxAttempts, m.retryCancel, func(attempt int) error {
-		log.Printf("Attempting to bind screen event (attempt %d/%d)...", attempt, maxAttempts)
-		if err := m.client.BindScreenEvent(EventName, deviceType); err != nil {
-			log.Printf("ERROR: Failed to bind screen event: %v", err)
-			return err
-		}
-		log.Println("Screen event bound successfully")
-		return nil
-	})
-}
-
-// handleBackendFailure attempts to switch to alternative backend when current backend fails
-func (m *LifecycleManager) handleBackendFailure(cfg *config.Config) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	log.Println("========================================")
-	log.Printf("Backend failure detected (current: %s)", m.currentBackend)
-	log.Println("Attempting to switch to alternative backend...")
-
-	if m.comp != nil {
-		m.comp.Stop()
-		m.comp = nil
-	}
-
-	// Try to create a backend, excluding the current one
-	newClient, newBackend, err := CreateBackendExcluding(cfg, m.currentBackend)
-	if err != nil {
-		log.Printf("ERROR: Failed to switch to alternative backend: %v", err)
-		log.Println("Will retry on next heartbeat cycle...")
-		return
-	}
-
-	m.client = newClient
-	m.currentBackend = newBackend
-	log.Printf("Successfully switched to %s backend", m.currentBackend)
-
-	// Bind screen event (no-op for direct driver)
-	deviceType := DeviceTypeForDisplay(cfg.Display.Width, cfg.Display.Height)
-	if err := m.client.BindScreenEvent(EventName, deviceType); err != nil {
-		log.Printf("ERROR: Failed to bind screen event: %v", err)
-		return
-	}
-
-	setup, err := m.widgetMgr.CreateFromConfig(m.client, cfg)
-	if err != nil {
-		log.Printf("ERROR: Failed to recreate widgets: %v", err)
-		return
-	}
-
-	m.comp = setup.Compositor
-	m.comp.OnBackendFailure = func() {
-		m.handleBackendFailure(cfg)
-	}
-
-	if err := m.comp.Start(); err != nil {
-		log.Printf("ERROR: Failed to start compositor with new backend: %v", err)
-		return
-	}
-
-	log.Println("Successfully recovered with alternative backend")
-	log.Println("========================================")
-}
-
-// GetWebClient returns the webclient if the webclient backend is active
+// GetWebClient returns the webclient if any device uses the webclient backend
 func (m *LifecycleManager) GetWebClient() *webclient.Client {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.currentBackend == "webclient" {
-		if webClient, ok := m.client.(*webclient.Client); ok {
-			return webClient
+	for _, dev := range m.devices {
+		if wc := dev.GetWebClient(); wc != nil {
+			return wc
 		}
 	}
 	return nil
 }
 
-// GetCurrentBackend returns the name of the current backend
+// GetCurrentBackend returns the name of the first device's backend
 func (m *LifecycleManager) GetCurrentBackend() string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return m.currentBackend
+
+	if len(m.devices) > 0 {
+		return m.devices[0].GetCurrentBackend()
+	}
+	return ""
 }
 
-// ShowWebClientModeMessage displays "WEB CLIENT" on the current backend
-// This is called before switching to webclient backend
+// ShowWebClientModeMessage displays "WEB CLIENT" on all devices
 func (m *LifecycleManager) ShowWebClientModeMessage() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.client == nil {
-		return
+	for _, dev := range m.devices {
+		dev.ShowWebClientModeMessage()
+	}
+}
+
+// findDevice returns an existing DeviceInstance by ID, or nil
+func (m *LifecycleManager) findDevice(id string) *DeviceInstance {
+	for _, dev := range m.devices {
+		if dev.id == id {
+			return dev
+		}
+	}
+	return nil
+}
+
+// findAnyClient returns a backend client from any active device
+func (m *LifecycleManager) findAnyClient() display.Backend {
+	for _, dev := range m.devices {
+		dev.mu.Lock()
+		client := dev.client
+		dev.mu.Unlock()
+		if client != nil {
+			return client
+		}
+	}
+	return nil
+}
+
+// shutdownOldDevices shuts down devices that are not in the new set
+func (m *LifecycleManager) shutdownOldDevices(newDevices []*DeviceInstance) {
+	newSet := make(map[*DeviceInstance]bool, len(newDevices))
+	for _, dev := range newDevices {
+		newSet[dev] = true
 	}
 
-	displayWidth := config.DefaultDisplayWidth
-	displayHeight := config.DefaultDisplayHeight
-	if m.lastGoodConfig != nil {
-		displayWidth = m.lastGoodConfig.Display.Width
-		displayHeight = m.lastGoodConfig.Display.Height
+	for _, dev := range m.devices {
+		if !newSet[dev] {
+			dev.Shutdown(false) // Don't unregister on config reload
+		}
 	}
+}
 
-	splash := NewSplashRenderer(m.client, displayWidth, displayHeight)
-	if err := splash.ShowWebClientModeMessage(); err != nil {
-		log.Printf("Warning: Failed to show webclient mode message: %v", err)
+// stopErrorDisplay stops the error display compositor if active
+func (m *LifecycleManager) stopErrorDisplay() {
+	if m.errorComp != nil {
+		m.errorComp.Stop()
+		m.errorComp = nil
+	}
+	if m.errorClient != nil {
+		_ = m.errorClient.RemoveGame()
+		m.errorClient = nil
 	}
 }

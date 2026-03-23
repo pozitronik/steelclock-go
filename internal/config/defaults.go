@@ -98,6 +98,27 @@ func applyDefaults(cfg *Config) {
 	for i := range cfg.Widgets {
 		applyWidgetDefaults(&cfg.Widgets[i])
 	}
+
+	// Apply defaults per device in multi-device mode
+	for i := range cfg.Devices {
+		applyDeviceDefaults(&cfg.Devices[i])
+	}
+}
+
+// applyDeviceDefaults sets default values for a device configuration
+func applyDeviceDefaults(dev *DeviceConfig) {
+	if dev.Display.Width == 0 {
+		dev.Display.Width = DefaultDisplayWidth
+	}
+	if dev.Display.Height == 0 {
+		dev.Display.Height = DefaultDisplayHeight
+	}
+	if dev.DirectDriver != nil && dev.DirectDriver.Interface == "" {
+		dev.DirectDriver.Interface = "mi_01"
+	}
+	for i := range dev.Widgets {
+		applyWidgetDefaults(&dev.Widgets[i])
+	}
 }
 
 // applyGlobalDefaults sets default values for global configuration
