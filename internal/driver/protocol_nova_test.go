@@ -470,6 +470,84 @@ func TestResolveProtocol_AllNovaProDevices(t *testing.T) {
 	}
 }
 
+func TestNovaProProtocol_ImplementsBrightnessSupport(t *testing.T) {
+	var _ BrightnessSupport = (*NovaProProtocol)(nil)
+}
+
+func TestNovaProProtocol_ImplementsUIReturnSupport(t *testing.T) {
+	var _ UIReturnSupport = (*NovaProProtocol)(nil)
+}
+
+func TestNovaProProtocol_BuildBrightnessPacket(t *testing.T) {
+	p := &NovaProProtocol{}
+
+	tests := []struct {
+		level     int
+		wantLevel byte
+	}{
+		{0, 0},
+		{5, 5},
+		{10, 10},
+		{-1, 0},   // Clamped to 0
+		{15, 10},  // Clamped to 10
+		{100, 10}, // Clamped to 10
+	}
+
+	for _, tt := range tests {
+		packet := p.BuildBrightnessPacket(tt.level)
+
+		if len(packet) != novaReportSize {
+			t.Errorf("BuildBrightnessPacket(%d) size = %d, want %d", tt.level, len(packet), novaReportSize)
+		}
+		if packet[0] != novaReportID {
+			t.Errorf("report ID = 0x%02X, want 0x%02X", packet[0], novaReportID)
+		}
+		if packet[1] != novaBrightnessCommand {
+			t.Errorf("command = 0x%02X, want 0x%02X", packet[1], novaBrightnessCommand)
+		}
+		if packet[2] != tt.wantLevel {
+			t.Errorf("BuildBrightnessPacket(%d) level byte = %d, want %d", tt.level, packet[2], tt.wantLevel)
+		}
+	}
+}
+
+func TestNovaProProtocol_BuildReturnToUIPacket(t *testing.T) {
+	p := &NovaProProtocol{}
+
+	packet := p.BuildReturnToUIPacket()
+
+	if len(packet) != novaReportSize {
+		t.Errorf("packet size = %d, want %d", len(packet), novaReportSize)
+	}
+	if packet[0] != novaReportID {
+		t.Errorf("report ID = 0x%02X, want 0x%02X", packet[0], novaReportID)
+	}
+	if packet[1] != novaReturnToUICommand {
+		t.Errorf("command = 0x%02X, want 0x%02X", packet[1], novaReturnToUICommand)
+	}
+	// Rest should be zero
+	for i := 2; i < novaReportSize; i++ {
+		if packet[i] != 0 {
+			t.Errorf("packet[%d] = 0x%02X, want 0x00", i, packet[i])
+			break
+		}
+	}
+}
+
+func TestApexProtocol_NoBrightnessSupport(t *testing.T) {
+	p := &ApexProtocol{}
+	if _, ok := interface{}(p).(BrightnessSupport); ok {
+		t.Error("ApexProtocol should not implement BrightnessSupport")
+	}
+}
+
+func TestApexProtocol_NoUIReturnSupport(t *testing.T) {
+	p := &ApexProtocol{}
+	if _, ok := interface{}(p).(UIReturnSupport); ok {
+		t.Error("ApexProtocol should not implement UIReturnSupport")
+	}
+}
+
 func BenchmarkBuildNovaPacket(b *testing.B) {
 	bitmap := make([]byte, 512) // 64 * 64/8
 

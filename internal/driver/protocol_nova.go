@@ -2,11 +2,14 @@ package driver
 
 // Nova Pro protocol constants
 const (
-	novaReportID      = 0x06 // HID Report ID for Nova Pro feature reports
-	novaScreenCommand = 0x93 // Command byte for screen update
-	novaHeaderSize    = 6    // [ReportID, Command, DstX, DstY, Width, PaddedHeight]
-	novaReportSize    = 1024 // Fixed HID feature report size
-	novaMaxStripWidth = 64   // Maximum pixels per strip (hardware limit)
+	novaReportID          = 0x06 // HID Report ID for Nova Pro feature reports
+	novaScreenCommand     = 0x93 // Command byte for screen update
+	novaBrightnessCommand = 0x85 // Command byte for brightness control
+	novaReturnToUICommand = 0x95 // Command byte for returning to device UI
+	novaHeaderSize        = 6    // [ReportID, Command, DstX, DstY, Width, PaddedHeight]
+	novaReportSize        = 1024 // Fixed HID feature report size
+	novaMaxStripWidth     = 64   // Maximum pixels per strip (hardware limit)
+	novaMaxBrightness     = 10   // Maximum brightness level
 )
 
 // NovaProProtocol implements the Protocol interface for SteelSeries Nova Pro headsets
@@ -42,6 +45,30 @@ func (p *NovaProProtocol) Interface() string {
 // DeviceFamily returns the device family name.
 func (p *NovaProProtocol) DeviceFamily() string {
 	return "Nova Pro"
+}
+
+// BuildBrightnessPacket builds a 1024-byte HID feature report to set display brightness.
+// Level ranges from 0 (off) to 10 (maximum).
+func (p *NovaProProtocol) BuildBrightnessPacket(level int) []byte {
+	if level < 0 {
+		level = 0
+	}
+	if level > novaMaxBrightness {
+		level = novaMaxBrightness
+	}
+	packet := make([]byte, novaReportSize)
+	packet[0] = novaReportID
+	packet[1] = novaBrightnessCommand
+	packet[2] = byte(level)
+	return packet
+}
+
+// BuildReturnToUIPacket builds a 1024-byte HID feature report to return to the device's native UI.
+func (p *NovaProProtocol) BuildReturnToUIPacket() []byte {
+	packet := make([]byte, novaReportSize)
+	packet[0] = novaReportID
+	packet[1] = novaReturnToUICommand
+	return packet
 }
 
 // buildNovaPacket constructs a 1024-byte HID feature report for Nova Pro devices.

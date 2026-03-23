@@ -14,3 +14,13 @@ type Protocol interface {
 	// DeviceFamily returns a human-readable name for logging.
 	DeviceFamily() string
 }
+
+// BrightnessSupport is an optional interface for protocols that support display brightness.
+type BrightnessSupport interface {
+	BuildBrightnessPacket(level int) []byte
+}
+
+// UIReturnSupport is an optional interface for protocols that support returning to device UI.
+type UIReturnSupport interface {
+	BuildReturnToUIPacket() []byte
+}

@@ -26,6 +26,13 @@ type Client struct {
 // Ensure Client implements display.Backend
 var _ display.Backend = (*Client)(nil)
 
+// Compile-time check that Client implements optional interfaces when protocol supports them.
+// These are checked at runtime via type assertions on the protocol.
+var (
+	_ display.BrightnessControl = (*Client)(nil)
+	_ display.UIControl         = (*Client)(nil)
+)
+
 // NewClient creates a new direct driver client
 func NewClient(cfg Config) (*Client, error) {
 	driver := NewDriver(cfg)
@@ -114,6 +121,32 @@ func (c *Client) DeviceInfo() DeviceInfo {
 // Driver returns the underlying HID driver
 func (c *Client) Driver() *HIDDriver {
 	return c.driver
+}
+
+// SetBrightness sets the display brightness if the device protocol supports it.
+// Level ranges from 0 (off) to 10 (maximum). No-op for protocols without brightness support.
+func (c *Client) SetBrightness(level int) error {
+	if bs, ok := c.driver.protocol.(BrightnessSupport); ok {
+		packet := bs.BuildBrightnessPacket(level)
+		if err := c.driver.SendRawPacket(packet); err != nil {
+			return fmt.Errorf("failed to set brightness: %w", err)
+		}
+		log.Printf("Direct driver: brightness set to %d", level)
+	}
+	return nil
+}
+
+// ReturnToUI sends a command to return to the device's native UI.
+// No-op for protocols without UI return support.
+func (c *Client) ReturnToUI() error {
+	if uis, ok := c.driver.protocol.(UIReturnSupport); ok {
+		packet := uis.BuildReturnToUIPacket()
+		if err := c.driver.SendRawPacket(packet); err != nil {
+			return fmt.Errorf("failed to return to UI: %w", err)
+		}
+		log.Printf("Direct driver: returned to device UI")
+	}
+	return nil
 }
 
 // SupportsMultipleEvents returns false - USB HID doesn't benefit from HTTP batching optimization

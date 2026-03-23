@@ -50,6 +50,15 @@ func (d *DeviceInstance) Start(cfg *config.Config, showSplash bool) error {
 	d.displayWidth = cfg.Display.Width
 	d.displayHeight = cfg.Display.Height
 
+	// Apply brightness if configured and supported
+	if cfg.DirectDriver != nil && cfg.DirectDriver.Brightness != nil {
+		if bc, ok := d.client.(display.BrightnessControl); ok {
+			if err := bc.SetBrightness(*cfg.DirectDriver.Brightness); err != nil {
+				log.Printf("[%s] Warning: Failed to set brightness: %v", d.id, err)
+			}
+		}
+	}
+
 	if showSplash {
 		splash := NewSplashRenderer(d.client, d.displayWidth, d.displayHeight)
 		if err := splash.ShowStartupAnimation(); err != nil {
@@ -113,6 +122,13 @@ func (d *DeviceInstance) Shutdown(unregisterOnExit bool) {
 	}
 
 	if d.client != nil {
+		// Return to device's native UI if supported
+		if uc, ok := d.client.(display.UIControl); ok {
+			if err := uc.ReturnToUI(); err != nil {
+				log.Printf("[%s] Warning: Failed to return to UI: %v", d.id, err)
+			}
+		}
+
 		// Show exit message
 		w, h := d.displayWidth, d.displayHeight
 		if w == 0 {

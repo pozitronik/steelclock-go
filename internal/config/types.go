@@ -190,9 +190,10 @@ func (cfg *Config) ConfigForDevice(dev DeviceConfig) *Config {
 
 // DirectDriverConfig represents settings for direct USB HID driver
 type DirectDriverConfig struct {
-	VID       string `json:"vid,omitempty"`
-	PID       string `json:"pid,omitempty"`
-	Interface string `json:"interface,omitempty"`
+	VID        string `json:"vid,omitempty"`
+	PID        string `json:"pid,omitempty"`
+	Interface  string `json:"interface,omitempty"`
+	Brightness *int   `json:"brightness,omitempty"` // Display brightness 0-10; nil = device default
 }
 
 // WebClientConfig represents settings for web client backend

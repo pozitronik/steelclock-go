@@ -166,6 +166,26 @@ func (d *HIDDriver) SendFrame(pixelData []byte) error {
 	return nil
 }
 
+// SendRawPacket sends a pre-built packet directly to the device via HID SetFeature.
+// Used for control packets (brightness, return-to-UI) that bypass the protocol's frame building.
+func (d *HIDDriver) SendRawPacket(packet []byte) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if !d.connected {
+		return fmt.Errorf("device not connected")
+	}
+
+	if err := sendFeatureReport(d.handle, packet); err != nil {
+		d.connected = false
+		_ = closeDevice(d.handle)
+		d.handle = InvalidHandle
+		return fmt.Errorf("send failed: %w", err)
+	}
+
+	return nil
+}
+
 // IsConnected returns true if device is currently connected
 func (d *HIDDriver) IsConnected() bool {
 	d.mu.RLock()
