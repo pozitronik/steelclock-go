@@ -18,9 +18,15 @@ import (
 // GameSense API constants
 const (
 	EventName     = "STEELCLOCK_DISPLAY"
-	DeviceType    = "screened-128x40"
 	DeveloperName = "Pozitronik"
 )
+
+// DeviceTypeForDisplay returns the GameSense device type string for the given
+// display dimensions. GameSense uses device types like "screened-128x40",
+// "screened-128x52" (GameDAC Gen 1), "screened-128x64" (Nova Pro / GameDAC Gen 2).
+func DeviceTypeForDisplay(width, height int) string {
+	return fmt.Sprintf("screened-%dx%d", width, height)
+}
 
 // BackendUnavailableError indicates display backend is not available
 type BackendUnavailableError struct {

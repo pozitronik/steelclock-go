@@ -209,7 +209,8 @@ func (m *LifecycleManager) StartErrorDisplay(message string, width, height int) 
 		}
 
 		// Bind screen event (no-op for direct driver)
-		if err := errorClient.BindScreenEvent(EventName, DeviceType); err != nil {
+		deviceType := DeviceTypeForDisplay(width, height)
+		if err := errorClient.BindScreenEvent(EventName, deviceType); err != nil {
 			log.Printf("ERROR: Failed to bind screen event for error display: %v", err)
 			return fmt.Errorf("failed to bind screen event: %w", err)
 		}
@@ -280,7 +281,8 @@ func (m *LifecycleManager) ensureClient(cfg *config.Config) error {
 	m.currentBackend = backendName
 
 	// Bind screen event (no-op for direct driver)
-	if err := m.bindEventWithRetry(10); err != nil {
+	deviceType := DeviceTypeForDisplay(cfg.Display.Width, cfg.Display.Height)
+	if err := m.bindEventWithRetry(10, deviceType); err != nil {
 		log.Printf("ERROR: Failed to bind screen event after retries: %v", err)
 		m.client = nil
 		return err
@@ -290,10 +292,10 @@ func (m *LifecycleManager) ensureClient(cfg *config.Config) error {
 }
 
 // bindEventWithRetry attempts to bind the screen event with exponential backoff
-func (m *LifecycleManager) bindEventWithRetry(maxAttempts int) error {
+func (m *LifecycleManager) bindEventWithRetry(maxAttempts int, deviceType string) error {
 	return RetryWithBackoff(maxAttempts, m.retryCancel, func(attempt int) error {
 		log.Printf("Attempting to bind screen event (attempt %d/%d)...", attempt, maxAttempts)
-		if err := m.client.BindScreenEvent(EventName, DeviceType); err != nil {
+		if err := m.client.BindScreenEvent(EventName, deviceType); err != nil {
 			log.Printf("ERROR: Failed to bind screen event: %v", err)
 			return err
 		}
@@ -329,7 +331,8 @@ func (m *LifecycleManager) handleBackendFailure(cfg *config.Config) {
 	log.Printf("Successfully switched to %s backend", m.currentBackend)
 
 	// Bind screen event (no-op for direct driver)
-	if err := m.client.BindScreenEvent(EventName, DeviceType); err != nil {
+	deviceType := DeviceTypeForDisplay(cfg.Display.Width, cfg.Display.Height)
+	if err := m.client.BindScreenEvent(EventName, deviceType); err != nil {
 		log.Printf("ERROR: Failed to bind screen event: %v", err)
 		return
 	}
