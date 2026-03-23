@@ -632,3 +632,105 @@ func TestApplyVolumeDefaults_PresetValues(t *testing.T) {
 		t.Errorf("Bar.Direction was overwritten: got %q, want %q", w.Bar.Direction, "vertical")
 	}
 }
+
+func TestApplyDeviceDefaults_DisplayDimensions(t *testing.T) {
+	dev := &DeviceConfig{}
+
+	applyDeviceDefaults(dev)
+
+	if dev.Display.Width != DefaultDisplayWidth {
+		t.Errorf("Display.Width = %d, want %d", dev.Display.Width, DefaultDisplayWidth)
+	}
+	if dev.Display.Height != DefaultDisplayHeight {
+		t.Errorf("Display.Height = %d, want %d", dev.Display.Height, DefaultDisplayHeight)
+	}
+}
+
+func TestApplyDeviceDefaults_PreservesExistingDimensions(t *testing.T) {
+	dev := &DeviceConfig{
+		Display: DisplayConfig{Width: 256, Height: 64},
+	}
+
+	applyDeviceDefaults(dev)
+
+	if dev.Display.Width != 256 {
+		t.Errorf("Display.Width = %d, want 256", dev.Display.Width)
+	}
+	if dev.Display.Height != 64 {
+		t.Errorf("Display.Height = %d, want 64", dev.Display.Height)
+	}
+}
+
+func TestApplyDeviceDefaults_DirectDriverInterface(t *testing.T) {
+	dev := &DeviceConfig{
+		DirectDriver: &DirectDriverConfig{VID: "1038"},
+	}
+
+	applyDeviceDefaults(dev)
+
+	if dev.DirectDriver.Interface != "mi_01" {
+		t.Errorf("DirectDriver.Interface = %q, want %q", dev.DirectDriver.Interface, "mi_01")
+	}
+}
+
+func TestApplyDeviceDefaults_PreservesCustomInterface(t *testing.T) {
+	dev := &DeviceConfig{
+		DirectDriver: &DirectDriverConfig{Interface: "mi_04"},
+	}
+
+	applyDeviceDefaults(dev)
+
+	if dev.DirectDriver.Interface != "mi_04" {
+		t.Errorf("DirectDriver.Interface = %q, want %q", dev.DirectDriver.Interface, "mi_04")
+	}
+}
+
+func TestApplyDeviceDefaults_NilDirectDriver(t *testing.T) {
+	dev := &DeviceConfig{DirectDriver: nil}
+
+	// Should not panic
+	applyDeviceDefaults(dev)
+
+	if dev.DirectDriver != nil {
+		t.Error("nil DirectDriver should remain nil")
+	}
+}
+
+func TestApplyDeviceDefaults_WidgetDefaults(t *testing.T) {
+	dev := &DeviceConfig{
+		Widgets: []WidgetConfig{
+			{Type: "clock"},
+		},
+	}
+
+	applyDeviceDefaults(dev)
+
+	w := &dev.Widgets[0]
+	if w.UpdateInterval != DefaultUpdateInterval {
+		t.Errorf("widget UpdateInterval = %v, want %v", w.UpdateInterval, DefaultUpdateInterval)
+	}
+	if w.Text == nil || w.Text.Size != DefaultFontSize {
+		t.Errorf("widget Text.Size not defaulted")
+	}
+}
+
+func TestApplyDefaults_IncludesDevices(t *testing.T) {
+	cfg := &Config{
+		Devices: []DeviceConfig{
+			{Widgets: []WidgetConfig{{Type: "clock"}}},
+			{Widgets: []WidgetConfig{{Type: "cpu"}}},
+		},
+	}
+
+	applyDefaults(cfg)
+
+	// Both devices should have defaults applied
+	for i, dev := range cfg.Devices {
+		if dev.Display.Width != DefaultDisplayWidth {
+			t.Errorf("devices[%d].Display.Width = %d, want %d", i, dev.Display.Width, DefaultDisplayWidth)
+		}
+		if dev.Widgets[0].UpdateInterval != DefaultUpdateInterval {
+			t.Errorf("devices[%d] widget UpdateInterval not defaulted", i)
+		}
+	}
+}

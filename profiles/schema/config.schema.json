@@ -4,15 +4,9 @@
   "title": "SteelClock Configuration",
   "description": "Configuration schema for SteelClock v2 - display manager for SteelSeries devices",
   "type": "object",
-  "oneOf": [
-    {
-      "required": ["display", "widgets"],
-      "not": {"required": ["devices"]}
-    },
-    {
-      "required": ["devices"],
-      "not": {"required": ["widgets"]}
-    }
+  "anyOf": [
+    {"required": ["display", "widgets"]},
+    {"required": ["devices"]}
   ],
   "properties": {
     "schema_version": {
