@@ -82,4 +82,55 @@ var KnownDevices = []KnownDevice{
 			Height int
 		}{128, 40},
 	},
+	// Nova Pro / GameDAC Gen 2 family (128x64 OLED, column-major LSB protocol)
+	{
+		VID:  SteelSeriesVID,
+		PID:  0x12cb,
+		Name: "Arctis Nova Pro (Wired)",
+		DisplaySize: struct {
+			Width  int
+			Height int
+		}{128, 64},
+		NewProtocol: func() Protocol { return &NovaProProtocol{} },
+	},
+	{
+		VID:  SteelSeriesVID,
+		PID:  0x12cd,
+		Name: "Arctis Nova Pro Wireless (Base Station)",
+		DisplaySize: struct {
+			Width  int
+			Height int
+		}{128, 64},
+		NewProtocol: func() Protocol { return &NovaProProtocol{} },
+	},
+	{
+		VID:  SteelSeriesVID,
+		PID:  0x12e0,
+		Name: "Arctis Nova Pro Wireless (USB-C Dongle)",
+		DisplaySize: struct {
+			Width  int
+			Height int
+		}{128, 64},
+		NewProtocol: func() Protocol { return &NovaProProtocol{} },
+	},
+	{
+		VID:  SteelSeriesVID,
+		PID:  0x12e5,
+		Name: "Arctis Nova Pro Wireless (Xbox)",
+		DisplaySize: struct {
+			Width  int
+			Height int
+		}{128, 64},
+		NewProtocol: func() Protocol { return &NovaProProtocol{} },
+	},
+	{
+		VID:  SteelSeriesVID,
+		PID:  0x225d,
+		Name: "Arctis Nova 5P (USB-C Dongle)",
+		DisplaySize: struct {
+			Width  int
+			Height int
+		}{128, 64},
+		NewProtocol: func() Protocol { return &NovaProProtocol{} },
+	},
 }

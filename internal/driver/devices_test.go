@@ -54,15 +54,37 @@ func TestKnownDevices_AllHaveValidDisplaySize(t *testing.T) {
 	}
 }
 
-func TestKnownDevices_DisplaySize128x40(t *testing.T) {
-	// All known Apex keyboards have 128x40 displays
+func TestKnownDevices_AllWidth128(t *testing.T) {
+	// All known devices have 128px wide displays
 	for _, device := range KnownDevices {
 		if device.DisplaySize.Width != 128 {
 			t.Errorf("device %s has display width %d, expected 128",
 				device.Name, device.DisplaySize.Width)
 		}
+	}
+}
+
+func TestKnownDevices_ApexDisplaySize(t *testing.T) {
+	// Apex keyboards (nil NewProtocol) have 128x40 displays
+	for _, device := range KnownDevices {
+		if device.NewProtocol != nil {
+			continue // Skip non-Apex devices
+		}
 		if device.DisplaySize.Height != 40 {
-			t.Errorf("device %s has display height %d, expected 40",
+			t.Errorf("Apex device %s has display height %d, expected 40",
+				device.Name, device.DisplaySize.Height)
+		}
+	}
+}
+
+func TestKnownDevices_NovaProDisplaySize(t *testing.T) {
+	// Nova Pro devices have 128x64 displays
+	for _, device := range KnownDevices {
+		if device.NewProtocol == nil {
+			continue // Skip Apex devices
+		}
+		if device.DisplaySize.Height != 64 {
+			t.Errorf("Nova Pro device %s has display height %d, expected 64",
 				device.Name, device.DisplaySize.Height)
 		}
 	}
@@ -81,6 +103,7 @@ func TestKnownDevices_UniquePIDs(t *testing.T) {
 func TestKnownDevices_ContainsExpectedDevices(t *testing.T) {
 	// Verify some expected devices are present
 	expectedDevices := map[uint16]string{
+		// Apex keyboards
 		0x1612: "Apex 7",
 		0x1618: "Apex 7 TKL",
 		0x1610: "Apex Pro",
@@ -88,6 +111,12 @@ func TestKnownDevices_ContainsExpectedDevices(t *testing.T) {
 		0x161C: "Apex 5",
 		0x1630: "Apex Pro (2023)",
 		0x1632: "Apex Pro TKL (2023)",
+		// Nova Pro / GameDAC Gen 2
+		0x12cb: "Arctis Nova Pro (Wired)",
+		0x12cd: "Arctis Nova Pro Wireless (Base Station)",
+		0x12e0: "Arctis Nova Pro Wireless (USB-C Dongle)",
+		0x12e5: "Arctis Nova Pro Wireless (Xbox)",
+		0x225d: "Arctis Nova 5P (USB-C Dongle)",
 	}
 
 	deviceByPID := make(map[uint16]KnownDevice)
