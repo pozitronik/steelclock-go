@@ -204,17 +204,20 @@ func (a *App) Stop() {
 	a.lifecycle.Stop()
 }
 
-// updateWebClientProvider updates the web editor with the webclient provider if webclient backend is active
+// updateWebClientProvider updates the web editor with webclient providers for all devices
 func (a *App) updateWebClientProvider() {
 	if a.webEditor == nil {
 		return
 	}
 
-	webClient := a.lifecycle.GetWebClient()
-	if webClient != nil {
-		adapter := NewWebClientProviderAdapter(webClient)
-		a.webEditor.SetPreviewProvider(adapter)
-		log.Println("WebClient provider connected to web editor")
+	clients := a.lifecycle.GetWebClients()
+	if len(clients) > 0 {
+		providers := make(map[string]webeditor.PreviewProvider, len(clients))
+		for id, client := range clients {
+			providers[id] = NewWebClientProviderAdapter(client)
+		}
+		a.webEditor.SetPreviewProviders(providers)
+		log.Printf("WebClient providers connected to web editor (%d device(s))", len(clients))
 
 		// Auto-open browser for webclient if web editor is running
 		a.openWebClientBrowser()
@@ -315,6 +318,16 @@ func (a *App) enableWebClientOverride() error {
 	webclientCfg := *cfg
 	webclientCfg.Backend = "webclient"
 
+	// In multi-device mode, clear per-device backends so all inherit "webclient"
+	if len(webclientCfg.Devices) > 0 {
+		devices := make([]config.DeviceConfig, len(webclientCfg.Devices))
+		copy(devices, webclientCfg.Devices)
+		for i := range devices {
+			devices[i].Backend = ""
+		}
+		webclientCfg.Devices = devices
+	}
+
 	// Start with webclient backend
 	log.Println("Starting with webclient backend...")
 	if err := a.lifecycle.Start(&webclientCfg); err != nil {
@@ -388,11 +401,14 @@ func (a *App) updateWebClientProviderUnlocked() {
 		return
 	}
 
-	webClient := a.lifecycle.GetWebClient()
-	if webClient != nil {
-		adapter := NewWebClientProviderAdapter(webClient)
-		a.webEditor.SetPreviewProvider(adapter)
-		log.Println("WebClient provider connected to web editor")
+	clients := a.lifecycle.GetWebClients()
+	if len(clients) > 0 {
+		providers := make(map[string]webeditor.PreviewProvider, len(clients))
+		for id, client := range clients {
+			providers[id] = NewWebClientProviderAdapter(client)
+		}
+		a.webEditor.SetPreviewProviders(providers)
+		log.Printf("WebClient providers connected to web editor (%d device(s))", len(clients))
 	} else {
 		a.webEditor.SetPreviewProvider(nil)
 	}

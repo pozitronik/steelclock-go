@@ -32,6 +32,13 @@ type PreviewDisplayConfig struct {
 	TargetFPS int `json:"target_fps"`
 }
 
+// DevicePreviewInfo describes a device available for preview
+type DevicePreviewInfo struct {
+	ID     string `json:"id"`
+	Width  int    `json:"width"`
+	Height int    `json:"height"`
+}
+
 // ProfileProvider abstracts profile management operations
 type ProfileProvider interface {
 	// GetProfiles returns all available profiles

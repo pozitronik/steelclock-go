@@ -243,6 +243,21 @@ func (m *LifecycleManager) GetWebClient() *webclient.Client {
 	return nil
 }
 
+// GetWebClients returns all webclient backends keyed by device ID.
+// Used for multi-device preview in the web editor.
+func (m *LifecycleManager) GetWebClients() map[string]*webclient.Client {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	clients := make(map[string]*webclient.Client)
+	for _, dev := range m.devices {
+		if wc := dev.GetWebClient(); wc != nil {
+			clients[dev.id] = wc
+		}
+	}
+	return clients
+}
+
 // GetCurrentBackend returns the name of the first device's backend
 func (m *LifecycleManager) GetCurrentBackend() string {
 	m.mu.Lock()

@@ -226,7 +226,7 @@ func TestServer_SetPreviewProvider(t *testing.T) {
 
 	server.SetPreviewProvider(previewProvider)
 
-	if server.previewProvider != previewProvider {
+	if server.previewProviders == nil || server.previewProviders["default"] != previewProvider {
 		t.Error("previewProvider not set correctly")
 	}
 }
