@@ -12,6 +12,7 @@ type KnownDevice struct {
 		Width  int
 		Height int
 	}
+	NewProtocol func() Protocol // Factory for device-specific protocol; nil = ApexProtocol
 }
 
 // KnownDevices is a list of known SteelSeries devices with OLED displays

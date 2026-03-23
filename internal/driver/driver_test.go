@@ -152,8 +152,9 @@ func TestHIDDriver_Reconnect_AutoDetect(t *testing.T) {
 }
 
 // Packet building tests are in platform-specific files:
-// - packet_test_linux.go
-// - packet_test_windows.go
+// - protocol_apex_linux_test.go
+// - protocol_apex_windows_test.go
+// Protocol interface tests are in protocol_test.go
 
 func TestConfig_ZeroValues(t *testing.T) {
 	cfg := Config{}
