@@ -269,6 +269,23 @@ func (m *LifecycleManager) GetCurrentBackend() string {
 	return ""
 }
 
+// AllDevicesUseBackend returns true if every device is using the given backend name.
+// Returns false if there are no devices.
+func (m *LifecycleManager) AllDevicesUseBackend(name string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if len(m.devices) == 0 {
+		return false
+	}
+	for _, dev := range m.devices {
+		if dev.GetCurrentBackend() != name {
+			return false
+		}
+	}
+	return true
+}
+
 // ShowWebClientModeMessage displays "WEB CLIENT" on all devices
 func (m *LifecycleManager) ShowWebClientModeMessage() {
 	m.mu.Lock()

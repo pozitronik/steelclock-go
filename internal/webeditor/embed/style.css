@@ -894,6 +894,161 @@ main.container {
     font-size: 0.75rem;
 }
 
+/* Device tab panel (content area) */
+/*noinspection CssUnresolvedCustomProperty*/
+.device-tab-panel {
+    margin-bottom: 1rem;
+}
+
+.device-tab-bar {
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+    border-bottom: 2px solid var(--muted-border-color);
+    margin-bottom: 0;
+    padding-left: 4px;
+}
+
+/*noinspection CssUnresolvedCustomProperty*/
+.device-tab {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    background: rgba(0, 0, 0, 0.03);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    color: var(--muted-color);
+    height: auto;
+    margin: 0 2px 0 0;
+    position: relative;
+    bottom: -2px;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+[data-theme="dark"] .device-tab {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.device-tab:hover:not(.active) {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--color);
+}
+
+[data-theme="dark"] .device-tab:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+/*noinspection CssUnresolvedCustomProperty*/
+.device-tab.active {
+    background: #fff;
+    color: var(--color);
+    border-color: var(--muted-border-color);
+    border-bottom: 2px solid #fff;
+    font-weight: 600;
+    z-index: 1;
+}
+
+[data-theme="dark"] .device-tab.active {
+    background: #1e2430;
+    border-bottom-color: #1e2430;
+    border-color: var(--muted-border-color);
+    border-bottom-color: #1e2430;
+}
+
+/*noinspection CssUnresolvedCustomProperty*/
+.device-tab-name {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/*noinspection CssUnresolvedCustomProperty*/
+.device-tab-size {
+    font-size: 0.7rem;
+    color: var(--muted-color);
+    font-weight: 400;
+    opacity: 0.7;
+}
+
+.device-tab.active .device-tab-size {
+    opacity: 1;
+}
+
+.device-tab .remove-device {
+    font-size: 0.7rem;
+    opacity: 0;
+    cursor: pointer;
+    padding: 1px 3px;
+    margin-left: 2px;
+    line-height: 1;
+    border-radius: 3px;
+    transition: opacity 0.15s, background 0.15s;
+}
+
+.device-tab:hover .remove-device {
+    opacity: 0.5;
+}
+
+.device-tab .remove-device:hover {
+    opacity: 1;
+    color: #c62828;
+    background: rgba(198, 40, 40, 0.1);
+}
+
+.device-tab-add {
+    padding: 0.5rem 0.7rem;
+    font-size: 1rem;
+    font-weight: 300;
+    border: 1px dashed transparent;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    background: transparent;
+    cursor: pointer;
+    color: var(--muted-color);
+    height: auto;
+    margin: 0;
+    position: relative;
+    bottom: -2px;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+/*noinspection CssUnresolvedCustomProperty*/
+.device-tab-add:hover {
+    color: var(--primary);
+    border-color: var(--muted-border-color);
+}
+
+[data-theme="dark"] .device-tab-add:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* Device tab content area */
+/*noinspection CssUnresolvedCustomProperty*/
+.device-tab-content {
+    border: 1px solid var(--muted-border-color);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    padding: 0.8rem;
+    background: #fff;
+}
+
+[data-theme="dark"] .device-tab-content {
+    background: #1e2430;
+}
+
+/* Device settings section in form */
+/*noinspection CssUnresolvedCustomProperty*/
+.device-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.5rem;
+}
+
 /* Dark mode preview panel */
 [data-theme="dark"] .preview-panel {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);

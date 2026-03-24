@@ -288,13 +288,13 @@ func (a *App) enableWebClientOverride() error {
 		return nil
 	}
 
-	// Get current backend name
-	currentBackend := a.lifecycle.GetCurrentBackend()
-	if currentBackend == "webclient" {
-		log.Println("WebClient override: already using webclient backend")
+	// Check if all devices already use webclient — no override needed
+	if a.lifecycle.AllDevicesUseBackend("webclient") {
+		log.Println("WebClient override: all devices already using webclient backend")
 		return nil
 	}
 
+	currentBackend := a.lifecycle.GetCurrentBackend()
 	log.Println("========================================")
 	log.Printf("Enabling webclient override (current backend: %s)", currentBackend)
 
@@ -451,6 +451,13 @@ func (a *App) ReloadConfig() error {
 	log.Println("New config validated successfully")
 	log.Printf("Loaded config: %s (%s) with %d widgets", newCfg.GameName, newCfg.GameDisplayName, len(newCfg.Widgets))
 
+	// Reset webclient override state — the reloaded config defines its own backends
+	if a.webclientOverrideActive {
+		log.Println("Resetting webclient override state for config reload")
+		a.webclientOverrideActive = false
+		a.webclientOverrideOriginal = ""
+	}
+
 	log.Println("Stopping current instance...")
 	a.lifecycle.Stop()
 
@@ -501,6 +508,13 @@ func (a *App) SwitchProfile(path string) error {
 	profileName := a.configMgr.GetActiveProfileName()
 	if profileName == "" {
 		profileName = "Unknown"
+	}
+
+	// Reset webclient override state — the new profile defines its own backends
+	if a.webclientOverrideActive {
+		log.Println("Resetting webclient override state for profile switch")
+		a.webclientOverrideActive = false
+		a.webclientOverrideOriginal = ""
 	}
 
 	// Stop compositor first to free the display

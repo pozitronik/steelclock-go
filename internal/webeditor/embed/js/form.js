@@ -401,9 +401,8 @@ class FormBuilder {
 
         const rootProps = this.schema.getRootProperties();
 
-        // Define which properties to show in general section
-        // Note: game_name and game_display_name are hidden (advanced settings, edit in JSON)
-        const generalProps = ['config_name', 'refresh_rate_ms', 'backend'];
+        // Backend is always per-device (editor normalizes to devices[])
+        const generalProps = ['config_name', 'refresh_rate_ms'];
 
         for (const propName of generalProps) {
             if (!rootProps[propName]) continue;
@@ -425,6 +424,90 @@ class FormBuilder {
         }
 
         section.appendChild(grid);
+        return section;
+    }
+
+    /**
+     * Render per-device settings section (display, backend, driver config)
+     * @param {Object} device - The device object from config.devices[i]
+     * @param {Function} onUpdate - Callback when device config changes
+     * @returns {HTMLElement}
+     */
+    renderDeviceConfig(device, onUpdate) {
+        const section = this.createSection('Device Settings', 'section-device');
+        const grid = document.createElement('div');
+        grid.className = 'device-settings-grid';
+
+        const rootProps = this.schema.getRootProperties();
+
+        // Device ID
+        const idField = this.createField('id', {
+            type: 'string',
+            description: 'Unique device identifier',
+        }, device.id, (newVal) => {
+            device.id = newVal || '';
+            onUpdate();
+        });
+        grid.appendChild(idField);
+
+        // Backend (per-device)
+        if (rootProps.backend) {
+            const backendField = this.createField('backend', rootProps.backend, device.backend, (newVal) => {
+                if (newVal === undefined) {
+                    delete device.backend;
+                } else {
+                    device.backend = newVal;
+                }
+                onUpdate();
+            });
+            grid.appendChild(backendField);
+        }
+
+        section.appendChild(grid);
+
+        // Display subsection
+        device.display = device.display || {};
+        const displayProps = rootProps.display?.properties || {};
+        const { container: displayContainer, content: displayContent } = this.createCollapsibleSection('Display', true);
+        const displayGrid = document.createElement('div');
+        displayGrid.className = 'form-grid';
+
+        for (const [propName, propDef] of Object.entries(displayProps)) {
+            const field = this.createField(propName, propDef, device.display[propName], (newVal) => {
+                if (newVal === undefined) {
+                    delete device.display[propName];
+                } else {
+                    device.display[propName] = newVal;
+                }
+                onUpdate();
+            });
+            displayGrid.appendChild(field);
+        }
+        displayContent.appendChild(displayGrid);
+        section.appendChild(displayContainer);
+
+        // Direct driver subsection (collapsible, collapsed by default)
+        if (rootProps.direct_driver?.properties) {
+            device.direct_driver = device.direct_driver || {};
+            const { container: driverContainer, content: driverContent } = this.createCollapsibleSection('Direct Driver', false);
+            const driverGrid = document.createElement('div');
+            driverGrid.className = 'form-grid';
+
+            for (const [propName, propDef] of Object.entries(rootProps.direct_driver.properties)) {
+                const field = this.createField(propName, propDef, device.direct_driver[propName], (newVal) => {
+                    if (newVal === undefined) {
+                        delete device.direct_driver[propName];
+                    } else {
+                        device.direct_driver[propName] = newVal;
+                    }
+                    onUpdate();
+                });
+                driverGrid.appendChild(field);
+            }
+            driverContent.appendChild(driverGrid);
+            section.appendChild(driverContainer);
+        }
+
         return section;
     }
 

@@ -17,6 +17,11 @@ class ConfigEditor {
         this.profiles = [];
         this.editingProfilePath = null; // Path of profile being edited (may differ from active)
 
+        // Device state: editor always works with devices[] internally.
+        // loadedAsSingleDevice tracks original format for save-time flattening.
+        this.loadedAsSingleDevice = false;
+        this.selectedDeviceIndex = 0;
+
         // DOM elements
         this.formContainer = document.getElementById('form-container');
         this.formContent = document.getElementById('form-content');
@@ -135,8 +140,11 @@ class ConfigEditor {
                 this.config = this.schemaProcessor.applyDefaults(this.config);
             }
 
+            // Store original (save-format) and normalize to devices[]
             this.originalConfig = JSON.stringify(this.config, null, 2);
             this.editorEl.value = this.originalConfig;
+            this.normalizeConfig();
+
             this.isDirty = false;
             this.saveBtn.classList.remove('has-changes');
 
@@ -145,6 +153,9 @@ class ConfigEditor {
             if (activeProfile) {
                 this.editingProfilePath = activeProfile.path;
             }
+
+            // Update device selection and preview
+            this.onDevicesChanged();
 
             // Render form if schema is available
             if (this.schemaProcessor && this.currentView === 'form') {
@@ -172,10 +183,16 @@ class ConfigEditor {
             this.config = this.schemaProcessor.applyDefaults(this.config);
         }
 
+        // Store original (save-format) and normalize to devices[]
         this.originalConfig = JSON.stringify(this.config, null, 2);
         this.editorEl.value = this.originalConfig;
+        this.normalizeConfig();
+
         this.isDirty = false;
         this.saveBtn.classList.remove('has-changes');
+
+        // Update device selection and preview
+        this.onDevicesChanged();
 
         // Render form if schema is available
         if (this.schemaProcessor && this.currentView === 'form') {
@@ -186,7 +203,8 @@ class ConfigEditor {
     }
 
     /**
-     * Render the form view
+     * Render the form view.
+     * Always shows global settings + tabbed device panel.
      */
     renderForm() {
         if (!this.schemaProcessor || !this.config) {
@@ -196,34 +214,124 @@ class ConfigEditor {
 
         this.formContent.innerHTML = '';
 
-        // Render sections
+        // Global settings (always visible)
         const generalSection = this.formBuilder.renderGlobalConfig(this.config, () => this.onFormChange());
-        const displaySection = this.formBuilder.renderDisplayConfig(this.config, () => this.onFormChange());
-        const defaultsSection = this.formBuilder.renderDefaultsConfig(this.config, () => this.onFormChange());
-
-        // Use WidgetEditor for full widget editing
-        const widgetsSection = this.widgetEditor
-            ? this.widgetEditor.renderWidgetsSection(this.config, () => this.onFormChange())
-            : this.formBuilder.renderWidgetsSummary(this.config);
-
         if (generalSection) {
             this.formContent.appendChild(generalSection);
         }
-        if (displaySection) {
-            this.formContent.appendChild(displaySection);
+
+        // Device tabs (always visible — config is always normalized to devices[])
+        this.formContent.appendChild(this.buildDeviceTabPanel());
+    }
+
+    /**
+     * Build the tabbed device panel with tab bar + content for the selected device
+     * @returns {HTMLElement}
+     */
+    buildDeviceTabPanel() {
+        const panel = document.createElement('div');
+        panel.className = 'device-tab-panel';
+
+        // Tab bar
+        const tabBar = document.createElement('div');
+        tabBar.className = 'device-tab-bar';
+
+        this.config.devices.forEach((device, index) => {
+            const tab = document.createElement('button');
+            tab.className = 'device-tab' + (index === this.selectedDeviceIndex ? ' active' : '');
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'device-tab-name';
+            nameSpan.textContent = device.id || `device_${index}`;
+            tab.appendChild(nameSpan);
+
+            if (device.display?.width && device.display?.height) {
+                const sizeSpan = document.createElement('span');
+                sizeSpan.className = 'device-tab-size';
+                sizeSpan.textContent = `${device.display.width}x${device.display.height}`;
+                tab.appendChild(sizeSpan);
+            }
+
+            if (this.config.devices.length > 1) {
+                const removeBtn = document.createElement('span');
+                removeBtn.className = 'remove-device';
+                removeBtn.textContent = 'x';
+                removeBtn.title = 'Remove device';
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.removeDevice(index);
+                });
+                tab.appendChild(removeBtn);
+            }
+
+            tab.addEventListener('click', () => this.selectDevice(index));
+            tabBar.appendChild(tab);
+        });
+
+        // Add device button (as a tab-styled button)
+        const addTab = document.createElement('button');
+        addTab.className = 'device-tab-add';
+        addTab.textContent = '+';
+        addTab.title = 'Add device';
+        addTab.addEventListener('click', () => this.addDevice());
+        tabBar.appendChild(addTab);
+
+        panel.appendChild(tabBar);
+
+        // Tab content for selected device
+        const device = this.config.devices[this.selectedDeviceIndex];
+        if (device) {
+            const content = document.createElement('div');
+            content.className = 'device-tab-content';
+
+            const deviceSection = this.formBuilder.renderDeviceConfig(device, () => {
+                this.onFormChange();
+                // Update tab labels when device ID or display changes
+                this.refreshDeviceTabLabels(tabBar);
+            });
+            if (deviceSection) {
+                content.appendChild(deviceSection);
+            }
+
+            const widgetsSection = this.widgetEditor
+                ? this.widgetEditor.renderWidgetsSection(device, () => this.onFormChange())
+                : this.formBuilder.renderWidgetsSummary(device);
+            content.appendChild(widgetsSection);
+
+            panel.appendChild(content);
         }
-        if (defaultsSection) {
-            this.formContent.appendChild(defaultsSection);
-        }
-        this.formContent.appendChild(widgetsSection);
+
+        return panel;
+    }
+
+    /**
+     * Update tab labels without full re-render (for live ID/size updates)
+     * @param {HTMLElement} tabBar - The tab bar element
+     */
+    refreshDeviceTabLabels(tabBar) {
+        const tabs = tabBar.querySelectorAll('.device-tab');
+        tabs.forEach((tab, index) => {
+            if (index >= this.config.devices.length) return;
+            const device = this.config.devices[index];
+
+            const nameSpan = tab.querySelector('.device-tab-name');
+            if (nameSpan) {
+                nameSpan.textContent = device.id || `device_${index}`;
+            }
+
+            const sizeSpan = tab.querySelector('.device-tab-size');
+            if (sizeSpan && device.display) {
+                sizeSpan.textContent = `${device.display.width || '?'}x${device.display.height || '?'}`;
+            }
+        });
     }
 
     /**
      * Handle form field changes
      */
     onFormChange() {
-        // Update JSON editor with current config
-        this.editorEl.value = JSON.stringify(this.config, null, 2);
+        // Update JSON editor with save-format config
+        this.editorEl.value = JSON.stringify(this.configForSave(), null, 2);
     }
 
     /**
@@ -235,16 +343,18 @@ class ConfigEditor {
 
         // Sync data between views before switching
         if (this.currentView === 'json') {
-            // Switching from JSON to Form - parse JSON and update config
+            // Switching from JSON to Form — parse, detect format, normalize
             try {
                 this.config = JSON.parse(this.editorEl.value);
+                this.normalizeConfig();
+                this.onDevicesChanged();
             } catch (_err) {
                 this.showNotification('Invalid JSON - please fix before switching to Form view', 'error');
                 return;
             }
         } else {
-            // Switching from Form to JSON - update textarea
-            this.editorEl.value = JSON.stringify(this.config, null, 2);
+            // Switching from Form to JSON — show save format
+            this.editorEl.value = JSON.stringify(this.configForSave(), null, 2);
         }
 
         this.currentView = view;
@@ -286,7 +396,7 @@ class ConfigEditor {
         try {
             this.setStatus('Saving...');
 
-            // Get config from current view
+            // Get config in save format
             let configToSave;
             if (this.currentView === 'json') {
                 try {
@@ -297,13 +407,12 @@ class ConfigEditor {
                     return;
                 }
             } else {
-                configToSave = this.config;
+                configToSave = this.configForSave();
             }
 
             // Save to the editing profile path
             await API.saveConfig(configToSave, this.editingProfilePath);
 
-            this.config = configToSave;
             this.originalConfig = JSON.stringify(configToSave, null, 2);
             this.editorEl.value = this.originalConfig;
             this.isDirty = false;
@@ -349,7 +458,8 @@ class ConfigEditor {
     }
 
     /**
-     * Switch to a different profile (load into editor without applying)
+     * Switch to a different profile (load into editor).
+     * When preview is visible, auto-applies so the preview matches.
      */
     async switchProfile() {
         const selectedPath = this.profileSelect.value;
@@ -364,19 +474,38 @@ class ConfigEditor {
             }
         }
 
+        const previewVisible = window.previewPanel && window.previewPanel.isVisible;
+
         try {
             this.setStatus('Loading profile...');
             this.editingProfilePath = selectedPath;
+
+            // Enter transition BEFORE loading config — prevents detectMultiDevice →
+            // syncPreviewDevice → setDeviceId from triggering init() on the old server
+            if (previewVisible) {
+                window.previewPanel.beginTransition();
+            }
 
             // Load the config file directly (without switching active profile)
             await this.loadConfigFromPath(selectedPath);
 
             this.updateApplyButtonState();
-            this.showNotification('Profile loaded into editor', 'success');
+
+            // When preview is visible, auto-apply so preview matches the editor
+            if (previewVisible) {
+                await this.apply();
+            } else {
+                this.showNotification('Profile loaded into editor', 'success');
+            }
         } catch (err) {
             this.showNotification('Failed to load profile: ' + err.message, 'error');
             // Reset select to currently editing profile
             this.profileSelect.value = this.editingProfilePath;
+            // End transition on error
+            if (previewVisible && window.previewPanel.transitioning) {
+                window.previewPanel.transitioning = false;
+                window.previewPanel.showUnavailable();
+            }
         }
     }
 
@@ -389,17 +518,21 @@ class ConfigEditor {
         try {
             this.setStatus('Applying...');
 
+            // Enter preview transition early to avoid error flashes during restart
+            if (window.previewPanel && window.previewPanel.isVisible) {
+                window.previewPanel.beginTransition();
+            }
+
             // Save first if there are unsaved changes
             if (this.isDirty) {
                 let configToSave;
                 if (this.currentView === 'json') {
                     configToSave = JSON.parse(this.editorEl.value);
                 } else {
-                    configToSave = this.config;
+                    configToSave = this.configForSave();
                 }
                 await API.saveConfig(configToSave, this.editingProfilePath);
 
-                this.config = configToSave;
                 this.originalConfig = JSON.stringify(configToSave, null, 2);
                 this.editorEl.value = this.originalConfig;
                 this.isDirty = false;
@@ -415,6 +548,10 @@ class ConfigEditor {
             });
 
             this.updateApplyButtonState();
+
+            // Re-initialize preview if visible (new devices may now be available)
+            await this.reinitPreviewAfterApply();
+
             this.showNotification('Configuration applied', 'success');
             this.setStatus('Ready');
         } catch (err) {
@@ -498,6 +635,181 @@ class ConfigEditor {
         } catch (err) {
             this.showNotification('Failed to rename profile: ' + err.message, 'error');
             this.setStatus('Error');
+        }
+    }
+
+    // ========== Device management ==========
+
+    /**
+     * Normalize config to always use devices[] array internally.
+     * Single-device configs are wrapped into devices[0].
+     * Must be called after loading/parsing config.
+     */
+    normalizeConfig() {
+        if (Array.isArray(this.config.devices) && this.config.devices.length > 0) {
+            this.loadedAsSingleDevice = false;
+            return;
+        }
+
+        // Wrap single-device fields into devices[0]
+        this.loadedAsSingleDevice = true;
+        const device = {
+            id: 'default',
+            display: this.config.display || { width: 128, height: 40, background: 0 },
+            widgets: this.config.widgets || [],
+        };
+        if (this.config.backend) device.backend = this.config.backend;
+        if (this.config.direct_driver) device.direct_driver = this.config.direct_driver;
+        if (this.config.webclient) device.webclient = this.config.webclient;
+
+        this.config.devices = [device];
+        delete this.config.display;
+        delete this.config.widgets;
+        delete this.config.backend;
+        delete this.config.direct_driver;
+        delete this.config.webclient;
+    }
+
+    /**
+     * Produce the config in save format.
+     * If originally single-device and still has exactly one device, flattens back.
+     * Otherwise keeps devices[] array.
+     * @returns {Object} Config object ready for save/JSON display
+     */
+    configForSave() {
+        const result = JSON.parse(JSON.stringify(this.config));
+
+        if (this.loadedAsSingleDevice && result.devices && result.devices.length === 1) {
+            // Flatten back to single-device format
+            const device = result.devices[0];
+            result.display = device.display;
+            result.widgets = device.widgets;
+            if (device.backend) result.backend = device.backend;
+            if (device.direct_driver) result.direct_driver = device.direct_driver;
+            if (device.webclient) result.webclient = device.webclient;
+            delete result.devices;
+        }
+
+        return result;
+    }
+
+    /**
+     * Called after devices[] changes (load, add, remove).
+     * Clamps selected index and syncs preview.
+     */
+    onDevicesChanged() {
+        if (this.selectedDeviceIndex >= this.config.devices.length) {
+            this.selectedDeviceIndex = 0;
+        }
+        this.syncPreviewDevice();
+    }
+
+    /**
+     * Select a device by index
+     * @param {number} index - Device index
+     */
+    selectDevice(index) {
+        if (index === this.selectedDeviceIndex) return;
+        this.selectedDeviceIndex = index;
+
+        if (this.currentView === 'form' && this.schemaProcessor) {
+            this.renderForm();
+        }
+
+        this.syncPreviewDevice();
+    }
+
+    /**
+     * Add a new device to the config
+     */
+    addDevice() {
+        const newIndex = this.config.devices.length;
+        this.config.devices.push({
+            id: `device_${newIndex}`,
+            display: { width: 128, height: 40, background: 0 },
+            widgets: [],
+        });
+
+        // Once we have multiple devices, always save as devices[] format
+        if (this.config.devices.length > 1) {
+            this.loadedAsSingleDevice = false;
+        }
+
+        this.markDirty();
+        this.selectedDeviceIndex = this.config.devices.length - 1;
+        this.onDevicesChanged();
+
+        if (this.currentView === 'form' && this.schemaProcessor) {
+            this.renderForm();
+        }
+        this.onFormChange();
+        this.showNotification('Device added', 'success');
+    }
+
+    /**
+     * Remove a device by index
+     * @param {number} index - Device index to remove
+     */
+    removeDevice(index) {
+        if (this.config.devices.length <= 1) return;
+
+        const deviceId = this.config.devices[index].id || `device_${index}`;
+        if (!confirm(`Remove device "${deviceId}"?`)) return;
+
+        this.config.devices.splice(index, 1);
+
+        // Back to single device — save in original format if it was single-device
+        if (this.config.devices.length === 1 && this.loadedAsSingleDevice) {
+            // loadedAsSingleDevice stays true — will flatten on save
+        }
+
+        this.markDirty();
+        this.onDevicesChanged();
+
+        if (this.currentView === 'form' && this.schemaProcessor) {
+            this.renderForm();
+        }
+        this.onFormChange();
+        this.showNotification('Device removed', 'success');
+    }
+
+    /**
+     * Re-initialize preview after config apply / profile switch.
+     * Enters transition state (suppresses errors), re-enables override,
+     * then reconnects with retries.
+     */
+    async reinitPreviewAfterApply() {
+        const panel = window.previewPanel;
+        if (!panel || !panel.isVisible) return;
+
+        // Enter transition — shows "Reloading..." and suppresses error flashes
+        panel.beginTransition();
+
+        // Re-enable preview override for the (possibly new) config
+        try {
+            await API.setPreviewOverride(true);
+        } catch (_err) {
+            // Ignore — backends may already be webclient
+        }
+
+        // Sync device ID to match the currently selected tab
+        this.syncPreviewDevice();
+
+        // Reconnect with retries (handles variable backend startup time)
+        await panel.reconnect();
+    }
+
+    /**
+     * Sync the preview panel to show the currently selected device
+     */
+    syncPreviewDevice() {
+        if (!window.previewPanel) return;
+
+        if (this.isMultiDevice && this.config.devices[this.selectedDeviceIndex]) {
+            const device = this.config.devices[this.selectedDeviceIndex];
+            window.previewPanel.setDeviceId(device.id || null);
+        } else {
+            window.previewPanel.setDeviceId(null);
         }
     }
 
