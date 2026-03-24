@@ -51,6 +51,7 @@ type Config struct {
 // HIDDriver implements Driver interface using USB HID
 type HIDDriver struct {
 	config     Config
+	protocol   Protocol
 	handle     DeviceHandle
 	deviceInfo DeviceInfo
 	connected  bool
@@ -62,8 +63,10 @@ type HIDDriver struct {
 
 // NewDriver creates a new HID driver with the given configuration
 func NewDriver(cfg Config) *HIDDriver {
+	protocol := resolveProtocol(cfg.VID, cfg.PID)
+
 	if cfg.Interface == "" {
-		cfg.Interface = "mi_01"
+		cfg.Interface = protocol.Interface()
 	}
 	if cfg.Width == 0 {
 		cfg.Width = 128
@@ -73,7 +76,8 @@ func NewDriver(cfg Config) *HIDDriver {
 	}
 
 	return &HIDDriver{
-		config: cfg,
+		config:   cfg,
+		protocol: protocol,
 	}
 }
 
@@ -145,12 +149,34 @@ func (d *HIDDriver) SendFrame(pixelData []byte) error {
 		return fmt.Errorf("device not connected")
 	}
 
-	// Build packet: [00 ReportID] + [61 CMD] + [32 Padding] + [Data]
-	packet := buildPacket(pixelData, d.config.Width, d.config.Height)
+	// Build packets using the device-specific protocol
+	packets := d.protocol.BuildFramePackets(pixelData, d.config.Width, d.config.Height)
 
-	// Send via HID SetFeature
+	// Send each packet via HID SetFeature
+	for _, packet := range packets {
+		if err := sendFeatureReport(d.handle, packet); err != nil {
+			// Mark as disconnected on send failure
+			d.connected = false
+			_ = closeDevice(d.handle)
+			d.handle = InvalidHandle
+			return fmt.Errorf("send failed: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// SendRawPacket sends a pre-built packet directly to the device via HID SetFeature.
+// Used for control packets (brightness, return-to-UI) that bypass the protocol's frame building.
+func (d *HIDDriver) SendRawPacket(packet []byte) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if !d.connected {
+		return fmt.Errorf("device not connected")
+	}
+
 	if err := sendFeatureReport(d.handle, packet); err != nil {
-		// Mark as disconnected on send failure
 		d.connected = false
 		_ = closeDevice(d.handle)
 		d.handle = InvalidHandle
@@ -182,7 +208,7 @@ func (d *HIDDriver) Reconnect() error {
 	return d.Open()
 }
 
-// buildPacket is defined in platform-specific files:
-// - packet_windows.go: Format [00 ReportID] + [61 CMD] + [pixelData] + [1 Padding] = 643 bytes (Report ID stripped by OS)
-// - packet_linux.go: Format [61 CMD] + [pixelData] + [1 Padding] = 642 bytes
+// buildApexPacket is defined in platform-specific files:
+// - protocol_apex_windows.go: Format [00 ReportID] + [61 CMD] + [pixelData] + [1 Padding] = 643 bytes (Report ID stripped by OS)
+// - protocol_apex_linux.go: Format [61 CMD] + [pixelData] + [1 Padding] = 642 bytes
 // Both send the same data to device: [61 CMD] + [pixelData] + [1 Padding] = 642 bytes (for 128x40)

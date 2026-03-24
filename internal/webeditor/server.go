@@ -23,7 +23,7 @@ type Server struct {
 
 	configProvider    ConfigProvider
 	profileProvider   ProfileProvider
-	previewProvider   PreviewProvider
+	previewProviders  map[string]PreviewProvider
 	schemaPath        string
 	onReload          func() error
 	onProfileSwitch   func(path string) error
@@ -44,11 +44,42 @@ func NewServer(configProvider ConfigProvider, profileProvider ProfileProvider, s
 	}
 }
 
-// SetPreviewProvider sets the preview provider for live preview support
+// SetPreviewProvider sets a single preview provider (backward compatible).
+// The provider is stored with device ID "default".
 func (s *Server) SetPreviewProvider(provider PreviewProvider) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.previewProvider = provider
+	if provider == nil {
+		s.previewProviders = nil
+	} else {
+		s.previewProviders = map[string]PreviewProvider{"default": provider}
+	}
+}
+
+// SetPreviewProviders sets multiple preview providers keyed by device ID.
+func (s *Server) SetPreviewProviders(providers map[string]PreviewProvider) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.previewProviders = providers
+}
+
+// getPreviewProvider returns the provider for the given device ID,
+// or the first available provider if deviceID is empty.
+func (s *Server) getPreviewProvider(deviceID string) PreviewProvider {
+	if len(s.previewProviders) == 0 {
+		return nil
+	}
+	if deviceID != "" {
+		return s.previewProviders[deviceID]
+	}
+	// Return first provider (deterministic: try "default" first)
+	if p, ok := s.previewProviders["default"]; ok {
+		return p
+	}
+	for _, p := range s.previewProviders {
+		return p
+	}
+	return nil
 }
 
 // SetPreviewOverrideCallback sets the callback for preview override requests

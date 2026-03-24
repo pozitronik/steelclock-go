@@ -226,7 +226,7 @@ func TestServer_SetPreviewProvider(t *testing.T) {
 
 	server.SetPreviewProvider(previewProvider)
 
-	if server.previewProvider != previewProvider {
+	if server.previewProviders == nil || server.previewProviders["default"] != previewProvider {
 		t.Error("previewProvider not set correctly")
 	}
 }
@@ -1453,4 +1453,200 @@ func TestServer_ConcurrentProviderAccess(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+// --- Multi-device preview tests ---
+
+func TestServer_SetPreviewProviders(t *testing.T) {
+	server, _, _ := createTestServer(t)
+
+	providers := map[string]PreviewProvider{
+		"keyboard": &mockPreviewProvider{config: PreviewDisplayConfig{Width: 128, Height: 40}},
+		"gamedac":  &mockPreviewProvider{config: PreviewDisplayConfig{Width: 128, Height: 64}},
+	}
+
+	server.SetPreviewProviders(providers)
+
+	if len(server.previewProviders) != 2 {
+		t.Errorf("previewProviders count = %d, want 2", len(server.previewProviders))
+	}
+}
+
+func TestServer_SetPreviewProvider_ClearsOnNil(t *testing.T) {
+	server, _, _ := createTestServer(t)
+
+	server.SetPreviewProvider(&mockPreviewProvider{})
+	server.SetPreviewProvider(nil)
+
+	if server.previewProviders != nil {
+		t.Error("previewProviders should be nil after SetPreviewProvider(nil)")
+	}
+}
+
+func TestServer_GetPreviewProvider_ByID(t *testing.T) {
+	server, _, _ := createTestServer(t)
+
+	keyboard := &mockPreviewProvider{config: PreviewDisplayConfig{Width: 128, Height: 40}}
+	gamedac := &mockPreviewProvider{config: PreviewDisplayConfig{Width: 128, Height: 64}}
+
+	server.SetPreviewProviders(map[string]PreviewProvider{
+		"keyboard": keyboard,
+		"gamedac":  gamedac,
+	})
+
+	got := server.getPreviewProvider("gamedac")
+	if got != gamedac {
+		t.Error("getPreviewProvider('gamedac') returned wrong provider")
+	}
+
+	got = server.getPreviewProvider("keyboard")
+	if got != keyboard {
+		t.Error("getPreviewProvider('keyboard') returned wrong provider")
+	}
+}
+
+func TestServer_GetPreviewProvider_UnknownID(t *testing.T) {
+	server, _, _ := createTestServer(t)
+
+	server.SetPreviewProviders(map[string]PreviewProvider{
+		"keyboard": &mockPreviewProvider{},
+	})
+
+	got := server.getPreviewProvider("nonexistent")
+	if got != nil {
+		t.Error("getPreviewProvider for unknown ID should return nil")
+	}
+}
+
+func TestServer_GetPreviewProvider_EmptyIDFallback(t *testing.T) {
+	server, _, _ := createTestServer(t)
+
+	provider := &mockPreviewProvider{config: PreviewDisplayConfig{Width: 128, Height: 40}}
+	server.SetPreviewProvider(provider)
+
+	got := server.getPreviewProvider("")
+	if got != provider {
+		t.Error("getPreviewProvider('') should return default provider")
+	}
+}
+
+func TestServer_GetPreviewProvider_EmptyMap(t *testing.T) {
+	server, _, _ := createTestServer(t)
+
+	got := server.getPreviewProvider("")
+	if got != nil {
+		t.Error("getPreviewProvider on empty map should return nil")
+	}
+}
+
+func TestHandlePreviewDevices_MultipleDevices(t *testing.T) {
+	server, _, _ := createTestServer(t)
+
+	server.SetPreviewProviders(map[string]PreviewProvider{
+		"keyboard": &mockPreviewProvider{config: PreviewDisplayConfig{Width: 128, Height: 40, TargetFPS: 30}},
+		"gamedac":  &mockPreviewProvider{config: PreviewDisplayConfig{Width: 128, Height: 64, TargetFPS: 30}},
+	})
+	mux := createTestMux(server)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/preview/devices", nil)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+
+	var result struct {
+		Devices []DevicePreviewInfo `json:"devices"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&result); err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
+
+	if len(result.Devices) != 2 {
+		t.Errorf("devices count = %d, want 2", len(result.Devices))
+	}
+}
+
+func TestHandlePreviewDevices_Empty(t *testing.T) {
+	server, _, _ := createTestServer(t)
+	mux := createTestMux(server)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/preview/devices", nil)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+
+	var result struct {
+		Devices []DevicePreviewInfo `json:"devices"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&result); err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
+
+	if len(result.Devices) != 0 {
+		t.Errorf("devices should be empty, got %d", len(result.Devices))
+	}
+}
+
+func TestHandlePreviewInfo_DeviceParam(t *testing.T) {
+	server, _, _ := createTestServer(t)
+
+	server.SetPreviewProviders(map[string]PreviewProvider{
+		"keyboard": &mockPreviewProvider{config: PreviewDisplayConfig{Width: 128, Height: 40, TargetFPS: 30}},
+		"gamedac":  &mockPreviewProvider{config: PreviewDisplayConfig{Width: 128, Height: 64, TargetFPS: 30}},
+	})
+	mux := createTestMux(server)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/preview?device=gamedac", nil)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	var result map[string]interface{}
+	if err := json.NewDecoder(rr.Body).Decode(&result); err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
+
+	if result["available"] != true {
+		t.Error("should be available")
+	}
+	if int(result["height"].(float64)) != 64 {
+		t.Errorf("height = %v, want 64", result["height"])
+	}
+}
+
+func TestHandlePreviewFrame_DeviceParam(t *testing.T) {
+	server, _, _ := createTestServer(t)
+
+	server.SetPreviewProviders(map[string]PreviewProvider{
+		"dev1": &mockPreviewProvider{
+			frameData: []byte{0xAA},
+			frameNum:  1,
+			timestamp: time.Now(),
+			config:    PreviewDisplayConfig{Width: 128, Height: 40},
+		},
+		"dev2": &mockPreviewProvider{
+			frameData: []byte{0xBB},
+			frameNum:  2,
+			timestamp: time.Now(),
+			config:    PreviewDisplayConfig{Width: 128, Height: 64},
+		},
+	})
+	mux := createTestMux(server)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/preview/frame?device=dev2", nil)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	var result map[string]interface{}
+	if err := json.NewDecoder(rr.Body).Decode(&result); err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
+
+	if int(result["frame_number"].(float64)) != 2 {
+		t.Errorf("frame_number = %v, want 2", result["frame_number"])
+	}
 }

@@ -18,9 +18,15 @@ import (
 // GameSense API constants
 const (
 	EventName     = "STEELCLOCK_DISPLAY"
-	DeviceType    = "screened-128x40"
 	DeveloperName = "Pozitronik"
 )
+
+// DeviceTypeForDisplay returns the GameSense device type string for the given
+// display dimensions. GameSense uses device types like "screened-128x40",
+// "screened-128x52" (GameDAC Gen 1), "screened-128x64" (Nova Pro / GameDAC Gen 2).
+func DeviceTypeForDisplay(width, height int) string {
+	return fmt.Sprintf("screened-%dx%d", width, height)
+}
 
 // BackendUnavailableError indicates display backend is not available
 type BackendUnavailableError struct {
@@ -198,17 +204,20 @@ func (a *App) Stop() {
 	a.lifecycle.Stop()
 }
 
-// updateWebClientProvider updates the web editor with the webclient provider if webclient backend is active
+// updateWebClientProvider updates the web editor with webclient providers for all devices
 func (a *App) updateWebClientProvider() {
 	if a.webEditor == nil {
 		return
 	}
 
-	webClient := a.lifecycle.GetWebClient()
-	if webClient != nil {
-		adapter := NewWebClientProviderAdapter(webClient)
-		a.webEditor.SetPreviewProvider(adapter)
-		log.Println("WebClient provider connected to web editor")
+	clients := a.lifecycle.GetWebClients()
+	if len(clients) > 0 {
+		providers := make(map[string]webeditor.PreviewProvider, len(clients))
+		for id, client := range clients {
+			providers[id] = NewWebClientProviderAdapter(client)
+		}
+		a.webEditor.SetPreviewProviders(providers)
+		log.Printf("WebClient providers connected to web editor (%d device(s))", len(clients))
 
 		// Auto-open browser for webclient if web editor is running
 		a.openWebClientBrowser()
@@ -279,13 +288,13 @@ func (a *App) enableWebClientOverride() error {
 		return nil
 	}
 
-	// Get current backend name
-	currentBackend := a.lifecycle.GetCurrentBackend()
-	if currentBackend == "webclient" {
-		log.Println("WebClient override: already using webclient backend")
+	// Check if all devices already use webclient — no override needed
+	if a.lifecycle.AllDevicesUseBackend("webclient") {
+		log.Println("WebClient override: all devices already using webclient backend")
 		return nil
 	}
 
+	currentBackend := a.lifecycle.GetCurrentBackend()
 	log.Println("========================================")
 	log.Printf("Enabling webclient override (current backend: %s)", currentBackend)
 
@@ -308,6 +317,16 @@ func (a *App) enableWebClientOverride() error {
 	// Create a modified config with webclient backend
 	webclientCfg := *cfg
 	webclientCfg.Backend = "webclient"
+
+	// In multi-device mode, clear per-device backends so all inherit "webclient"
+	if len(webclientCfg.Devices) > 0 {
+		devices := make([]config.DeviceConfig, len(webclientCfg.Devices))
+		copy(devices, webclientCfg.Devices)
+		for i := range devices {
+			devices[i].Backend = ""
+		}
+		webclientCfg.Devices = devices
+	}
 
 	// Start with webclient backend
 	log.Println("Starting with webclient backend...")
@@ -382,11 +401,14 @@ func (a *App) updateWebClientProviderUnlocked() {
 		return
 	}
 
-	webClient := a.lifecycle.GetWebClient()
-	if webClient != nil {
-		adapter := NewWebClientProviderAdapter(webClient)
-		a.webEditor.SetPreviewProvider(adapter)
-		log.Println("WebClient provider connected to web editor")
+	clients := a.lifecycle.GetWebClients()
+	if len(clients) > 0 {
+		providers := make(map[string]webeditor.PreviewProvider, len(clients))
+		for id, client := range clients {
+			providers[id] = NewWebClientProviderAdapter(client)
+		}
+		a.webEditor.SetPreviewProviders(providers)
+		log.Printf("WebClient providers connected to web editor (%d device(s))", len(clients))
 	} else {
 		a.webEditor.SetPreviewProvider(nil)
 	}
@@ -428,6 +450,13 @@ func (a *App) ReloadConfig() error {
 
 	log.Println("New config validated successfully")
 	log.Printf("Loaded config: %s (%s) with %d widgets", newCfg.GameName, newCfg.GameDisplayName, len(newCfg.Widgets))
+
+	// Reset webclient override state — the reloaded config defines its own backends
+	if a.webclientOverrideActive {
+		log.Println("Resetting webclient override state for config reload")
+		a.webclientOverrideActive = false
+		a.webclientOverrideOriginal = ""
+	}
 
 	log.Println("Stopping current instance...")
 	a.lifecycle.Stop()
@@ -479,6 +508,13 @@ func (a *App) SwitchProfile(path string) error {
 	profileName := a.configMgr.GetActiveProfileName()
 	if profileName == "" {
 		profileName = "Unknown"
+	}
+
+	// Reset webclient override state — the new profile defines its own backends
+	if a.webclientOverrideActive {
+		log.Println("Resetting webclient override state for profile switch")
+		a.webclientOverrideActive = false
+		a.webclientOverrideOriginal = ""
 	}
 
 	// Stop compositor first to free the display

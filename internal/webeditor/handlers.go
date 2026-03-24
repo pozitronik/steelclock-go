@@ -43,6 +43,7 @@ func (s *Server) registerHandlers(mux *http.ServeMux) {
 
 	// Preview endpoints
 	mux.HandleFunc("/api/preview", s.handlePreviewInfo)
+	mux.HandleFunc("/api/preview/devices", s.handlePreviewDevices)
 	mux.HandleFunc("/api/preview/frame", s.handlePreviewFrame)
 	mux.HandleFunc("/api/preview/ws", s.handlePreviewWebSocket)
 	mux.HandleFunc("/api/preview/override", s.handlePreviewOverride)
@@ -421,14 +422,18 @@ func respondError(w http.ResponseWriter, message string, code int) {
 	})
 }
 
-// handlePreviewInfo returns preview configuration and availability
+// handlePreviewInfo returns preview configuration and availability.
+// Supports ?device=<id> query parameter for multi-device.
 func (s *Server) handlePreviewInfo(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	if s.previewProvider == nil {
+	deviceID := r.URL.Query().Get("device")
+	provider := s.getPreviewProvider(deviceID)
+
+	if provider == nil {
 		respondJSON(w, map[string]interface{}{
 			"available": false,
 			"message":   "Preview backend not enabled. Set backend to 'preview' in config.",
@@ -436,7 +441,7 @@ func (s *Server) handlePreviewInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg := s.previewProvider.GetPreviewConfig()
+	cfg := provider.GetPreviewConfig()
 	respondJSON(w, map[string]interface{}{
 		"available":  true,
 		"width":      cfg.Width,
@@ -445,21 +450,50 @@ func (s *Server) handlePreviewInfo(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handlePreviewFrame returns the current frame as raw bytes (for static preview)
+// handlePreviewDevices returns a list of devices available for preview
+func (s *Server) handlePreviewDevices(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.Lock()
+	providers := s.previewProviders
+	s.mu.Unlock()
+
+	var devices []DevicePreviewInfo
+	for id, p := range providers {
+		cfg := p.GetPreviewConfig()
+		devices = append(devices, DevicePreviewInfo{
+			ID:     id,
+			Width:  cfg.Width,
+			Height: cfg.Height,
+		})
+	}
+
+	respondJSON(w, map[string]interface{}{
+		"devices": devices,
+	})
+}
+
+// handlePreviewFrame returns the current frame as raw bytes (for static preview).
+// Supports ?device=<id> query parameter for multi-device.
 func (s *Server) handlePreviewFrame(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	if s.previewProvider == nil {
+	deviceID := r.URL.Query().Get("device")
+	provider := s.getPreviewProvider(deviceID)
+
+	if provider == nil {
 		respondError(w, "Preview not available", http.StatusNotImplemented)
 		return
 	}
 
-	frame, frameNum, timestamp := s.previewProvider.GetCurrentFrame()
+	frame, frameNum, timestamp := provider.GetCurrentFrame()
 	if frame == nil {
-		// No frame yet, return empty response with metadata
 		respondJSON(w, map[string]interface{}{
 			"frame":        nil,
 			"frame_number": 0,
@@ -468,9 +502,9 @@ func (s *Server) handlePreviewFrame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg := s.previewProvider.GetPreviewConfig()
+	cfg := provider.GetPreviewConfig()
 	respondJSON(w, map[string]interface{}{
-		"frame":        frame, // Will be base64 encoded by JSON
+		"frame":        frame,
 		"frame_number": frameNum,
 		"timestamp":    timestamp.UnixMilli(),
 		"width":        cfg.Width,
@@ -478,15 +512,18 @@ func (s *Server) handlePreviewFrame(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handlePreviewWebSocket upgrades to WebSocket for live preview
+// handlePreviewWebSocket upgrades to WebSocket for live preview.
+// Supports ?device=<id> query parameter for multi-device.
 func (s *Server) handlePreviewWebSocket(w http.ResponseWriter, r *http.Request) {
-	if s.previewProvider == nil {
+	deviceID := r.URL.Query().Get("device")
+	provider := s.getPreviewProvider(deviceID)
+
+	if provider == nil {
 		http.Error(w, "Preview not available", http.StatusNotImplemented)
 		return
 	}
 
-	// Delegate to the preview provider's WebSocket handler
-	s.previewProvider.HandleWebSocket(w, r)
+	provider.HandleWebSocket(w, r)
 }
 
 // handlePreviewOverride enables/disables temporary preview backend override

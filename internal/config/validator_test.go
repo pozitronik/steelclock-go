@@ -732,3 +732,118 @@ func TestValidate(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateDevices_MutualExclusion(t *testing.T) {
+	cfg := Config{
+		GameName:      "TEST",
+		RefreshRateMs: 100,
+		Display:       DisplayConfig{Width: 128, Height: 40},
+		Widgets:       []WidgetConfig{{Type: "clock", Position: PositionConfig{W: 128, H: 40}}},
+		Devices: []DeviceConfig{
+			{ID: "dev1", Display: DisplayConfig{Width: 128, Height: 40}, Widgets: []WidgetConfig{{Type: "clock"}}},
+		},
+	}
+
+	err := Validate(&cfg)
+	if err == nil {
+		t.Fatal("expected error for widgets + devices, got nil")
+	}
+	if !strings.Contains(err.Error(), "cannot have both") {
+		t.Errorf("error %q should mention mutual exclusion", err.Error())
+	}
+}
+
+func TestValidateDevices_DuplicateIDs(t *testing.T) {
+	cfg := Config{
+		GameName:      "TEST",
+		RefreshRateMs: 100,
+		Devices: []DeviceConfig{
+			{ID: "keyboard", Display: DisplayConfig{Width: 128, Height: 40}, Widgets: []WidgetConfig{{Type: "clock"}}},
+			{ID: "keyboard", Display: DisplayConfig{Width: 128, Height: 64}, Widgets: []WidgetConfig{{Type: "cpu"}}},
+		},
+	}
+
+	err := Validate(&cfg)
+	if err == nil {
+		t.Fatal("expected error for duplicate IDs, got nil")
+	}
+	if !strings.Contains(err.Error(), "duplicate device ID") {
+		t.Errorf("error %q should mention duplicate ID", err.Error())
+	}
+}
+
+func TestValidateDevices_InvalidDisplay(t *testing.T) {
+	cfg := Config{
+		GameName:      "TEST",
+		RefreshRateMs: 100,
+		Devices: []DeviceConfig{
+			{ID: "bad", Display: DisplayConfig{Width: 0, Height: 40}, Widgets: []WidgetConfig{{Type: "clock"}}},
+		},
+	}
+
+	err := Validate(&cfg)
+	if err == nil {
+		t.Fatal("expected error for invalid display, got nil")
+	}
+	if !strings.Contains(err.Error(), "display width must be positive") {
+		t.Errorf("error %q should mention display width", err.Error())
+	}
+}
+
+func TestValidateDevices_NoWidgets(t *testing.T) {
+	cfg := Config{
+		GameName:      "TEST",
+		RefreshRateMs: 100,
+		Devices: []DeviceConfig{
+			{ID: "empty", Display: DisplayConfig{Width: 128, Height: 40}, Widgets: nil},
+		},
+	}
+
+	err := Validate(&cfg)
+	if err == nil {
+		t.Fatal("expected error for no widgets, got nil")
+	}
+	if !strings.Contains(err.Error(), "at least one widget") {
+		t.Errorf("error %q should mention widgets required", err.Error())
+	}
+}
+
+func TestValidateDevices_ValidMultiDevice(t *testing.T) {
+	cfg := Config{
+		GameName:      "TEST",
+		RefreshRateMs: 100,
+		Devices: []DeviceConfig{
+			{
+				ID:      "keyboard",
+				Display: DisplayConfig{Width: 128, Height: 40},
+				Widgets: []WidgetConfig{{Type: "clock"}},
+			},
+			{
+				ID:      "gamedac",
+				Display: DisplayConfig{Width: 128, Height: 64},
+				Widgets: []WidgetConfig{{Type: "cpu"}},
+			},
+		},
+	}
+
+	err := Validate(&cfg)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateDevices_EmptyIDsAllowed(t *testing.T) {
+	cfg := Config{
+		GameName:      "TEST",
+		RefreshRateMs: 100,
+		Devices: []DeviceConfig{
+			{Display: DisplayConfig{Width: 128, Height: 40}, Widgets: []WidgetConfig{{Type: "clock"}}},
+			{Display: DisplayConfig{Width: 128, Height: 64}, Widgets: []WidgetConfig{{Type: "cpu"}}},
+		},
+	}
+
+	err := Validate(&cfg)
+	if err != nil {
+		t.Errorf("empty device IDs should be allowed: %v", err)
+	}
+}

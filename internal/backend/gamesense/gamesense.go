@@ -26,7 +26,7 @@ func init() {
 
 // newBackend creates a GameSense backend from configuration
 func newBackend(cfg *config.Config) (display.Backend, error) {
-	client, err := NewClient(cfg.GameName, cfg.GameDisplayName)
+	client, err := NewClient(cfg.GameName, cfg.GameDisplayName, cfg.Display.Width, cfg.Display.Height)
 	if err != nil {
 		log.Printf("ERROR: Failed to create GameSense client: %v", err)
 		log.Println("SteelSeries GG may not be running or GameSense API is unavailable")
@@ -49,13 +49,17 @@ type Client struct {
 	gameName        string
 	gameDisplayName string
 	httpClient      *http.Client
+	displayWidth    int // Display width in pixels (e.g., 128)
+	displayHeight   int // Display height in pixels (e.g., 40, 52, 64)
 }
 
 // Ensure Client implements display.Backend
 var _ display.Backend = (*Client)(nil)
 
-// NewClient creates a new GameSense API client
-func NewClient(gameName, gameDisplayName string) (*Client, error) {
+// NewClient creates a new GameSense API client.
+// displayWidth and displayHeight specify the target device's OLED resolution,
+// used to derive the correct image-data key and bitmap sizes.
+func NewClient(gameName, gameDisplayName string, displayWidth, displayHeight int) (*Client, error) {
 	address, err := DiscoverServer()
 	if err != nil {
 		return nil, err
@@ -66,10 +70,24 @@ func NewClient(gameName, gameDisplayName string) (*Client, error) {
 		baseURL:         "http://" + address,
 		gameName:        gameName,
 		gameDisplayName: gameDisplayName,
+		displayWidth:    displayWidth,
+		displayHeight:   displayHeight,
 		httpClient: &http.Client{
 			Timeout: 500 * time.Millisecond,
 		},
 	}, nil
+}
+
+// imageDataKey returns the GameSense image data key for this client's display
+// dimensions, e.g., "image-data-128x40" or "image-data-128x64".
+func (c *Client) imageDataKey() string {
+	return fmt.Sprintf("image-data-%dx%d", c.displayWidth, c.displayHeight)
+}
+
+// expectedBitmapSize returns the expected byte count for a packed 1-bit bitmap
+// at this client's display dimensions.
+func (c *Client) expectedBitmapSize() int {
+	return (c.displayWidth*c.displayHeight + 7) / 8
 }
 
 // RegisterGame registers the application with SteelSeries Engine
@@ -95,8 +113,7 @@ func (c *Client) RegisterGame(developer string, deinitializeTimerMs int) error {
 
 // BindScreenEvent creates a screen binding for displaying images
 func (c *Client) BindScreenEvent(eventName, deviceType string) error {
-	// Create default blank screen (640 zeros for 128x40)
-	blankScreen := make([]int, 640)
+	blankScreen := make([]int, c.expectedBitmapSize())
 
 	payload := map[string]interface{}{
 		"game":           c.gameName,
@@ -137,8 +154,9 @@ func bytesToInts(data []byte) []int {
 
 // SendScreenData sends bitmap data to the display
 func (c *Client) SendScreenData(eventName string, bitmapData []byte) error {
-	if len(bitmapData) != 640 {
-		return fmt.Errorf("invalid bitmap size: expected 640 bytes, got %d", len(bitmapData))
+	expected := c.expectedBitmapSize()
+	if len(bitmapData) != expected {
+		return fmt.Errorf("invalid bitmap size: expected %d bytes, got %d", expected, len(bitmapData))
 	}
 
 	payload := map[string]interface{}{
@@ -146,7 +164,7 @@ func (c *Client) SendScreenData(eventName string, bitmapData []byte) error {
 		"event": eventName,
 		"data": map[string]interface{}{
 			"frame": map[string]interface{}{
-				"image-data-128x40": bytesToInts(bitmapData),
+				c.imageDataKey(): bytesToInts(bitmapData),
 			},
 		},
 	}
@@ -231,20 +249,22 @@ func (c *Client) SendMultipleScreenData(eventName string, bitmaps [][]byte) erro
 	}
 
 	// Validate all bitmaps
+	expected := c.expectedBitmapSize()
 	for i, bitmap := range bitmaps {
-		if len(bitmap) != 640 {
-			return fmt.Errorf("invalid bitmap %d size: expected 640 bytes, got %d", i, len(bitmap))
+		if len(bitmap) != expected {
+			return fmt.Errorf("invalid bitmap %d size: expected %d bytes, got %d", i, expected, len(bitmap))
 		}
 	}
 
 	// Build events array, converting to []int for JSON
+	imageKey := c.imageDataKey()
 	events := make([]map[string]interface{}, len(bitmaps))
 	for i, bitmap := range bitmaps {
 		events[i] = map[string]interface{}{
 			"event": eventName,
 			"data": map[string]interface{}{
 				"frame": map[string]interface{}{
-					"image-data-128x40": bytesToInts(bitmap),
+					imageKey: bytesToInts(bitmap),
 				},
 			},
 		}

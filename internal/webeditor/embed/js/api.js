@@ -160,10 +160,14 @@ const API = {
 
     /**
      * Get preview availability and configuration
+     * @param {string} [deviceId] - Optional device ID for multi-device preview
      * @returns {Promise<Object>} Preview info with available, width, height, target_fps
      */
-    async getPreviewInfo() {
-        const response = await fetch('/api/preview');
+    async getPreviewInfo(deviceId) {
+        const url = deviceId
+            ? `/api/preview?device=${encodeURIComponent(deviceId)}`
+            : '/api/preview';
+        const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`Failed to get preview info: ${response.statusText}`);
         }
@@ -171,12 +175,29 @@ const API = {
     },
 
     /**
+     * Get list of preview devices
+     * @returns {Promise<Object>} Device list with devices array
+     */
+    async getPreviewDevices() {
+        const response = await fetch('/api/preview/devices');
+        if (!response.ok) {
+            throw new Error(`Failed to get preview devices: ${response.statusText}`);
+        }
+        return response.json();
+    },
+
+    /**
      * Create a WebSocket connection for live preview
+     * @param {string} [deviceId] - Optional device ID for multi-device preview
      * @returns {WebSocket} WebSocket connection
      */
-    createPreviewWebSocket() {
+    createPreviewWebSocket(deviceId) {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        return new WebSocket(`${protocol}//${window.location.host}/api/preview/ws`);
+        let url = `${protocol}//${window.location.host}/api/preview/ws`;
+        if (deviceId) {
+            url += `?device=${encodeURIComponent(deviceId)}`;
+        }
+        return new WebSocket(url);
     },
 
     /**

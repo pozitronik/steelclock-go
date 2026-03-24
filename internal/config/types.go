@@ -144,23 +144,73 @@ type Config struct {
 	Backend              string              `json:"backend,omitempty"`
 	DirectDriver         *DirectDriverConfig `json:"direct_driver,omitempty"`
 	WebClient            *WebClientConfig    `json:"webclient,omitempty"`
+	Devices              []DeviceConfig      `json:"devices,omitempty"`
 	Display              DisplayConfig       `json:"display"`
 	Defaults             *DefaultsConfig     `json:"defaults,omitempty"`
 	Layout               *LayoutConfig       `json:"layout,omitempty"`
 	Widgets              []WidgetConfig      `json:"widgets"`
 }
 
+// GetDevices returns the list of device configurations.
+// For single-device configs (no "devices" array), it synthesizes a single DeviceConfig
+// from the top-level fields, ensuring backward compatibility.
+func (cfg *Config) GetDevices() []DeviceConfig {
+	if len(cfg.Devices) > 0 {
+		return cfg.Devices
+	}
+	return []DeviceConfig{{
+		ID:           "default",
+		Display:      cfg.Display,
+		Backend:      cfg.Backend,
+		DirectDriver: cfg.DirectDriver,
+		WebClient:    cfg.WebClient,
+		Widgets:      cfg.Widgets,
+	}}
+}
+
+// ConfigForDevice creates a Config with device-specific fields merged over global settings.
+// Global fields (GameName, RefreshRateMs, etc.) are preserved; device-specific fields
+// (Display, Backend, Widgets, etc.) are overridden from the DeviceConfig.
+func (cfg *Config) ConfigForDevice(dev DeviceConfig) *Config {
+	merged := *cfg // Shallow copy preserves global fields
+	merged.Display = dev.Display
+	merged.Widgets = dev.Widgets
+	if dev.Backend != "" {
+		merged.Backend = dev.Backend
+	}
+	if dev.DirectDriver != nil {
+		merged.DirectDriver = dev.DirectDriver
+	}
+	if dev.WebClient != nil {
+		merged.WebClient = dev.WebClient
+	}
+	merged.Devices = nil // Don't carry devices in per-device config
+	return &merged
+}
+
 // DirectDriverConfig represents settings for direct USB HID driver
 type DirectDriverConfig struct {
-	VID       string `json:"vid,omitempty"`
-	PID       string `json:"pid,omitempty"`
-	Interface string `json:"interface,omitempty"`
+	VID        string `json:"vid,omitempty"`
+	PID        string `json:"pid,omitempty"`
+	Interface  string `json:"interface,omitempty"`
+	Brightness *int   `json:"brightness,omitempty"` // Display brightness 0-10; nil = device default
 }
 
 // WebClientConfig represents settings for web client backend
 type WebClientConfig struct {
 	// TargetFPS limits the frame rate sent to web clients (default: 30)
 	TargetFPS int `json:"target_fps,omitempty"`
+}
+
+// DeviceConfig represents per-device settings for multi-device configurations.
+// Each device has its own display, backend, and widget set.
+type DeviceConfig struct {
+	ID           string              `json:"id,omitempty"`
+	Display      DisplayConfig       `json:"display"`
+	Backend      string              `json:"backend,omitempty"`
+	DirectDriver *DirectDriverConfig `json:"direct_driver,omitempty"`
+	WebClient    *WebClientConfig    `json:"webclient,omitempty"`
+	Widgets      []WidgetConfig      `json:"widgets"`
 }
 
 // ResolutionConfig represents an additional display resolution

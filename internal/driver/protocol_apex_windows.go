@@ -2,12 +2,12 @@
 
 package driver
 
-// buildPacket constructs the HID packet for sending pixel data on Windows.
+// buildApexPacket constructs the HID packet for sending pixel data on Windows.
 // Windows HidD_SetFeature expects report ID as first byte (stripped by HID driver).
 // After Report ID is stripped, device receives: [61 CMD] + [data] + [1 padding]
 // This matches the Linux implementation format.
 // Format: [00 ReportID] + [61 CMD] + [pixelData] + [1 padding]
-func buildPacket(pixelData []byte, width, height int) []byte {
+func buildApexPacket(pixelData []byte, width, height int) []byte {
 	dataSize := width * height / 8
 	// ReportID(1) + CMD(1) + Data + Padding(1)
 	// After Windows strips ReportID, device gets: CMD(1) + Data + Padding(1)

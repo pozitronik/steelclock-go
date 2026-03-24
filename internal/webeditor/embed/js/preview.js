@@ -39,6 +39,7 @@ class PreviewPanel {
         this.isVisible = false;
         this.available = false;
         this.position = null; // {left, top} or null for default
+        this.deviceId = null; // Active device ID for multi-device preview
 
         this.frameCount = 0;
         this.lastFrameTime = 0;
@@ -149,8 +150,8 @@ class PreviewPanel {
                 </div>
             </div>
             <div class="preview-unavailable" style="display: none;">
-                <p>Preview not available.</p>
-                <p>Set <code>backend: "webclient"</code> in config to enable.</p>
+                <p class="preview-unavailable-message">Preview not available for this device.</p>
+                <p class="preview-unavailable-hint">Click <b>Apply</b> to start the device and enable preview.</p>
             </div>
         `;
 
@@ -225,12 +226,46 @@ class PreviewPanel {
     }
 
     /**
+     * Set the active device ID for multi-device preview.
+     * If the panel is visible and live, reconnects the WebSocket.
+     * During transitions (e.g. profile switch), only stores the ID — reconnect() handles the rest.
+     * @param {string|null} deviceId - The device ID, or null for default
+     */
+    setDeviceId(deviceId) {
+        if (this.deviceId === deviceId) return;
+        this.deviceId = deviceId;
+
+        // Update title
+        const titleEl = this.container.querySelector('.preview-title');
+        if (titleEl) {
+            titleEl.textContent = deviceId
+                ? `Preview: ${deviceId}`
+                : 'Display Preview';
+        }
+
+        // During transitions, don't auto-reconnect — reconnect() handles it
+        if (this.transitioning) return;
+
+        // Reconnect if live
+        if (this.isVisible && this.isLive) {
+            this.stopLive();
+            this.init().then(() => {
+                if (this.available) {
+                    this.startLive();
+                }
+            });
+        } else if (this.isVisible) {
+            this.init();
+        }
+    }
+
+    /**
      * Initialize the preview panel by checking availability
      */
     async init() {
         try {
             /** @type {PreviewInfo} */
-            const info = await API.getPreviewInfo();
+            const info = await API.getPreviewInfo(this.deviceId);
 
             if (info.available) {
                 this.available = true;
@@ -249,16 +284,68 @@ class PreviewPanel {
                 this.container.querySelector('.preview-unavailable').style.display = 'none';
             } else {
                 this.available = false;
-                // Show unavailable message
-                this.container.querySelector('.preview-content').style.display = 'none';
-                this.container.querySelector('.preview-unavailable').style.display = 'block';
+                this.showUnavailable();
             }
         } catch (err) {
             console.warn('Preview not available:', err);
             this.available = false;
-            this.container.querySelector('.preview-content').style.display = 'none';
-            this.container.querySelector('.preview-unavailable').style.display = 'block';
+            this.showUnavailable();
         }
+    }
+
+    /**
+     * Show the unavailable message with context-aware text
+     */
+    showUnavailable() {
+        if (this.transitioning) return; // Don't show error during transitions
+        this.container.querySelector('.preview-content').style.display = 'none';
+        const unavail = this.container.querySelector('.preview-unavailable');
+        unavail.style.display = 'block';
+
+        const msgEl = unavail.querySelector('.preview-unavailable-message');
+        const hintEl = unavail.querySelector('.preview-unavailable-hint');
+
+        if (this.deviceId) {
+            msgEl.textContent = `No preview for "${this.deviceId}".`;
+            hintEl.innerHTML = 'Click <b>Apply</b> to start this device.';
+        } else {
+            msgEl.textContent = 'Preview not available.';
+            hintEl.innerHTML = 'Click <b>Apply</b> to start the display backend.';
+        }
+    }
+
+    /**
+     * Enter transition state — suppresses error display and shows loading text.
+     * Call endTransition() or reconnect() when done.
+     */
+    beginTransition() {
+        this.transitioning = true;
+        this.stopLive();
+        const unavail = this.container.querySelector('.preview-unavailable');
+        unavail.style.display = 'block';
+        unavail.querySelector('.preview-unavailable-message').textContent = 'Reloading...';
+        unavail.querySelector('.preview-unavailable-hint').textContent = '';
+        this.container.querySelector('.preview-content').style.display = 'none';
+    }
+
+    /**
+     * End transition state and attempt to reconnect with retries.
+     * @param {number} [maxRetries=5] - Number of retry attempts
+     * @param {number} [delayMs=600] - Delay between retries in ms
+     */
+    async reconnect(maxRetries = 5, delayMs = 600) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+            await this.init();
+            if (this.available) {
+                this.transitioning = false;
+                this.startLive();
+                return;
+            }
+        }
+        // All retries exhausted — show actual error
+        this.transitioning = false;
+        this.showUnavailable();
     }
 
     /**
@@ -361,8 +448,8 @@ class PreviewPanel {
         this.frameCount = 0;
         this.lastFrameTime = performance.now();
 
-        // Connect WebSocket
-        this.ws = API.createPreviewWebSocket();
+        // Connect WebSocket (with device ID for multi-device)
+        this.ws = API.createPreviewWebSocket(this.deviceId);
 
         this.ws.onmessage = (event) => {
             try {
@@ -387,10 +474,10 @@ class PreviewPanel {
         };
 
         this.ws.onclose = () => {
-            if (this.isLive) {
-                // Reconnect after a delay
+            if (this.isLive && !this.transitioning) {
+                // Reconnect after a delay (skip during transitions — handled by reconnect())
                 setTimeout(() => {
-                    if (this.isLive) {
+                    if (this.isLive && !this.transitioning) {
                         this.startLive();
                     }
                 }, 1000);

@@ -41,3 +41,15 @@ type Backend interface {
 	Client
 	GameRegistrar
 }
+
+// BrightnessControl is an optional interface for backends that support display brightness.
+// Backends can be tested with a type assertion: if bc, ok := backend.(BrightnessControl); ok { ... }
+type BrightnessControl interface {
+	SetBrightness(level int) error // level: 0-10
+}
+
+// UIControl is an optional interface for backends that support returning to the device's native UI.
+// Called during shutdown to restore the device's default screen.
+type UIControl interface {
+	ReturnToUI() error
+}

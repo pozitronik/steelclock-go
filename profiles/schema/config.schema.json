@@ -4,9 +4,9 @@
   "title": "SteelClock Configuration",
   "description": "Configuration schema for SteelClock v2 - display manager for SteelSeries devices",
   "type": "object",
-  "required": [
-    "display",
-    "widgets"
+  "anyOf": [
+    {"required": ["display", "widgets"]},
+    {"required": ["devices"]}
   ],
   "properties": {
     "schema_version": {
@@ -73,6 +73,12 @@
           "type": "string",
           "description": "USB interface identifier",
           "default": "mi_01"
+        },
+        "brightness": {
+          "type": "integer",
+          "description": "Display brightness level (0=off, 10=maximum). Only supported by Nova Pro / GameDAC Gen 2 devices.",
+          "minimum": 0,
+          "maximum": 10
         }
       }
     },
@@ -86,6 +92,35 @@
           "minimum": 1,
           "maximum": 60,
           "default": 30
+        }
+      }
+    },
+    "devices": {
+      "type": "array",
+      "description": "Multi-device configuration. Each device has its own display, backend, and widgets. Cannot be used together with top-level 'widgets'.",
+      "items": {
+        "type": "object",
+        "required": ["display", "widgets"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique device identifier for logging and web editor"
+          },
+          "display": {
+            "$ref": "#/properties/display"
+          },
+          "backend": {
+            "$ref": "#/properties/backend"
+          },
+          "direct_driver": {
+            "$ref": "#/properties/direct_driver"
+          },
+          "webclient": {
+            "$ref": "#/properties/webclient"
+          },
+          "widgets": {
+            "$ref": "#/properties/widgets"
+          }
         }
       }
     },

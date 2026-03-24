@@ -25,8 +25,12 @@ func TestNewLifecycleManager(t *testing.T) {
 		t.Error("lastGoodConfig should be nil initially")
 	}
 
-	if lm.currentBackend != "" {
-		t.Errorf("currentBackend should be empty, got %q", lm.currentBackend)
+	if lm.GetCurrentBackend() != "" {
+		t.Errorf("currentBackend should be empty, got %q", lm.GetCurrentBackend())
+	}
+
+	if len(lm.devices) != 0 {
+		t.Errorf("devices should be empty initially, got %d", len(lm.devices))
 	}
 }
 
@@ -300,24 +304,24 @@ func TestLifecycleManagerWidgetManagerInitialized(t *testing.T) {
 func TestLifecycleManagerCurrentBackendEmpty(t *testing.T) {
 	lm := NewLifecycleManager()
 
-	if lm.currentBackend != "" {
-		t.Errorf("currentBackend should be empty initially, got %q", lm.currentBackend)
+	if lm.GetCurrentBackend() != "" {
+		t.Errorf("currentBackend should be empty initially, got %q", lm.GetCurrentBackend())
 	}
 }
 
-func TestLifecycleManagerClientNil(t *testing.T) {
+func TestLifecycleManagerNoDevicesInitially(t *testing.T) {
 	lm := NewLifecycleManager()
 
-	if lm.client != nil {
-		t.Error("client should be nil initially")
+	if len(lm.devices) != 0 {
+		t.Errorf("devices should be empty initially, got %d", len(lm.devices))
 	}
 }
 
-func TestLifecycleManagerCompNil(t *testing.T) {
+func TestLifecycleManagerErrorCompNil(t *testing.T) {
 	lm := NewLifecycleManager()
 
-	if lm.comp != nil {
-		t.Error("comp should be nil initially")
+	if lm.errorComp != nil {
+		t.Error("errorComp should be nil initially")
 	}
 }
 
