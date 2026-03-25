@@ -6,7 +6,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 
-High-performance display manager for SteelSeries devices written in Go.
+High-performance display manager for SteelSeries OLED devices written in Go. Supports Apex keyboards (128x40), GameDAC Gen 2 and Arctis Nova Pro base stations (128x64), with multi-device configurations.
 
 https://github.com/user-attachments/assets/58f607cb-be31-4af4-bb3d-6e0628f0748c
 
@@ -133,6 +133,7 @@ The application uses `steelclock.json` as the main configuration file. The appli
 
 **For complete configuration documentation**, see:
 - **[CONFIG_GUIDE.md](profiles/CONFIG_GUIDE.md)** - Comprehensive guide with all properties and examples
+- **[GAMEDAC_README.md](profiles/GAMEDAC_README.md)** - GameDAC / Nova Pro setup and multi-device configuration
 - **[config.schema.json](profiles/schema/config.schema.json)** - JSON schema for IDE autocomplete and validation
 - **[profiles/](profiles/)** - Example configurations for each widget type
 
@@ -213,6 +214,22 @@ The `config_name` field determines how the profile appears in the tray menu. If 
 **Note:** The `spotify` widget requires a Spotify Developer Application. See [SPOTIFY_README.md](profiles/SPOTIFY_README.md) for setup instructions.
 
 See [CONFIG_GUIDE.md](profiles/CONFIG_GUIDE.md) for detailed widget properties and configuration examples.
+
+## Supported Devices
+
+| Device Family                    | Display | Backend            | Notes                            |
+|----------------------------------|---------|--------------------|----------------------------------|
+| Apex keyboards (7, Pro, 5, etc.) | 128x40  | direct, gamesense  | Default `mi_01` interface        |
+| GameDAC Gen 2 / Arctis Nova Pro  | 128x64  | direct, gamesense* | Brightness control, Return-to-UI |
+| Arctis Nova 5P                   | 128x64  | direct             | Same protocol as Nova Pro        |
+
+\* GameSense backend for GameDAC has limited features (no brightness, no Return-to-UI) and requires SteelSeries GG on Windows.
+
+For GameDAC setup details, see **[GAMEDAC_README.md](profiles/GAMEDAC_README.md)**.
+
+### Multi-Device Support
+
+SteelClock can drive multiple displays simultaneously (e.g. Apex keyboard + GameDAC). Each device gets its own display settings, backend, and widget set. See [GAMEDAC_README.md](profiles/GAMEDAC_README.md#multi-device-setup-keyboard--gamedac) for configuration examples.
 
 ## Direct Mode Connection
 
