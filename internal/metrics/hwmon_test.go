@@ -270,7 +270,7 @@ func TestLHMHTTPProvider_Sensors(t *testing.T) {
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(root)
+			_ = json.NewEncoder(w).Encode(root)
 		}))
 		defer server.Close()
 
@@ -304,7 +304,7 @@ func TestLHMHTTPProvider_Sensors(t *testing.T) {
 				http.NotFound(w, r)
 				return
 			}
-			json.NewEncoder(w).Encode(root)
+			_ = json.NewEncoder(w).Encode(root)
 		}))
 		defer server.Close()
 
@@ -341,7 +341,7 @@ func TestLHMHTTPProvider_Sensors(t *testing.T) {
 
 	t.Run("invalid JSON response", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.Write([]byte("not valid json"))
+			_, _ = w.Write([]byte("not valid json"))
 		}))
 		defer server.Close()
 
@@ -355,7 +355,7 @@ func TestLHMHTTPProvider_Sensors(t *testing.T) {
 	t.Run("empty sensor tree", func(t *testing.T) {
 		root := lhmNode{Text: "Computer"} // no children
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			json.NewEncoder(w).Encode(root)
+			_ = json.NewEncoder(w).Encode(root)
 		}))
 		defer server.Close()
 
@@ -375,7 +375,7 @@ func TestLHMHTTPProvider_Sensors(t *testing.T) {
 			},
 		}
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			json.NewEncoder(w).Encode(root)
+			_ = json.NewEncoder(w).Encode(root)
 		}))
 		defer server.Close()
 

@@ -107,7 +107,7 @@ func TestRegisterGame(t *testing.T) {
 			if r.URL.Path != "/game_metadata" {
 				t.Errorf("unexpected path: %s", r.URL.Path)
 			}
-			json.NewDecoder(r.Body).Decode(&received)
+			_ = json.NewDecoder(r.Body).Decode(&received)
 			w.WriteHeader(http.StatusOK)
 		}))
 		defer server.Close()
@@ -132,7 +132,7 @@ func TestRegisterGame(t *testing.T) {
 	t.Run("no deinitialize timer when zero", func(t *testing.T) {
 		var received map[string]interface{}
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			json.NewDecoder(r.Body).Decode(&received)
+			_ = json.NewDecoder(r.Body).Decode(&received)
 			w.WriteHeader(http.StatusOK)
 		}))
 		defer server.Close()
@@ -168,7 +168,7 @@ func TestSendScreenData(t *testing.T) {
 			if r.URL.Path != "/game_event" {
 				t.Errorf("unexpected path: %s", r.URL.Path)
 			}
-			json.NewDecoder(r.Body).Decode(&receivedPayload)
+			_ = json.NewDecoder(r.Body).Decode(&receivedPayload)
 			w.WriteHeader(http.StatusOK)
 		}))
 		defer server.Close()
@@ -373,7 +373,7 @@ func TestBindScreenEvent(t *testing.T) {
 			if r.URL.Path != "/bind_game_event" {
 				t.Errorf("unexpected path: %s", r.URL.Path)
 			}
-			json.NewDecoder(r.Body).Decode(&received)
+			_ = json.NewDecoder(r.Body).Decode(&received)
 			w.WriteHeader(http.StatusOK)
 		}))
 		defer server.Close()

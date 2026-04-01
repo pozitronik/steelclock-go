@@ -7,6 +7,16 @@ import (
 	"testing"
 )
 
+// writeTempFile creates a file in a temp directory for testing.
+func writeTempFile(t *testing.T, dir, name, content string) string {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write temp file %s: %v", path, err)
+	}
+	return path
+}
+
 func TestDiscoverServer(t *testing.T) {
 	// Save original DI variables and restore after test
 	origFunc := findCorePropsPathFunc
@@ -17,9 +27,7 @@ func TestDiscoverServer(t *testing.T) {
 	}()
 
 	t.Run("valid coreProps", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		propsFile := filepath.Join(tmpDir, "coreProps.json")
-		os.WriteFile(propsFile, []byte(`{"address":"127.0.0.1:54321"}`), 0644)
+		propsFile := writeTempFile(t, t.TempDir(), "coreProps.json", `{"address":"127.0.0.1:54321"}`)
 
 		findCorePropsPathFunc = func() (string, error) {
 			return propsFile, nil
@@ -35,9 +43,7 @@ func TestDiscoverServer(t *testing.T) {
 	})
 
 	t.Run("empty address", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		propsFile := filepath.Join(tmpDir, "coreProps.json")
-		os.WriteFile(propsFile, []byte(`{"address":""}`), 0644)
+		propsFile := writeTempFile(t, t.TempDir(), "coreProps.json", `{"address":""}`)
 
 		findCorePropsPathFunc = func() (string, error) {
 			return propsFile, nil
@@ -53,9 +59,7 @@ func TestDiscoverServer(t *testing.T) {
 	})
 
 	t.Run("missing address field", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		propsFile := filepath.Join(tmpDir, "coreProps.json")
-		os.WriteFile(propsFile, []byte(`{"version":"3.0"}`), 0644)
+		propsFile := writeTempFile(t, t.TempDir(), "coreProps.json", `{"version":"3.0"}`)
 
 		findCorePropsPathFunc = func() (string, error) {
 			return propsFile, nil
@@ -68,9 +72,7 @@ func TestDiscoverServer(t *testing.T) {
 	})
 
 	t.Run("invalid JSON", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		propsFile := filepath.Join(tmpDir, "coreProps.json")
-		os.WriteFile(propsFile, []byte(`not json`), 0644)
+		propsFile := writeTempFile(t, t.TempDir(), "coreProps.json", `not json`)
 
 		findCorePropsPathFunc = func() (string, error) {
 			return propsFile, nil
@@ -105,9 +107,7 @@ func TestDiscoverServer(t *testing.T) {
 	})
 
 	t.Run("invalid address format (no port)", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		propsFile := filepath.Join(tmpDir, "coreProps.json")
-		os.WriteFile(propsFile, []byte(`{"address":"localhost"}`), 0644)
+		propsFile := writeTempFile(t, t.TempDir(), "coreProps.json", `{"address":"localhost"}`)
 
 		findCorePropsPathFunc = func() (string, error) {
 			return propsFile, nil
@@ -123,9 +123,7 @@ func TestDiscoverServer(t *testing.T) {
 	})
 
 	t.Run("invalid port number", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		propsFile := filepath.Join(tmpDir, "coreProps.json")
-		os.WriteFile(propsFile, []byte(`{"address":"localhost:abc"}`), 0644)
+		propsFile := writeTempFile(t, t.TempDir(), "coreProps.json", `{"address":"localhost:abc"}`)
 
 		findCorePropsPathFunc = func() (string, error) {
 			return propsFile, nil
@@ -151,9 +149,10 @@ func TestFindCorePropsPath(t *testing.T) {
 	t.Run("finds via PROGRAMDATA env", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		ssDir := filepath.Join(tmpDir, "SteelSeries", "SteelSeries Engine 3")
-		os.MkdirAll(ssDir, 0755)
-		propsFile := filepath.Join(ssDir, "coreProps.json")
-		os.WriteFile(propsFile, []byte(`{}`), 0644)
+		if err := os.MkdirAll(ssDir, 0755); err != nil {
+			t.Fatalf("failed to create dir: %v", err)
+		}
+		propsFile := writeTempFile(t, ssDir, "coreProps.json", `{}`)
 
 		t.Setenv("PROGRAMDATA", tmpDir)
 		defaultFallbackPath = "/nonexistent/path" // ensure fallback is not used
@@ -168,9 +167,7 @@ func TestFindCorePropsPath(t *testing.T) {
 	})
 
 	t.Run("falls back to default path", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		fallbackFile := filepath.Join(tmpDir, "coreProps.json")
-		os.WriteFile(fallbackFile, []byte(`{}`), 0644)
+		fallbackFile := writeTempFile(t, t.TempDir(), "coreProps.json", `{}`)
 
 		t.Setenv("PROGRAMDATA", "/nonexistent/programdata")
 		defaultFallbackPath = fallbackFile

@@ -97,7 +97,7 @@ func TestGetCurrentFrame_NoData(t *testing.T) {
 
 func TestGetCurrentFrame_ReturnsCopy(t *testing.T) {
 	c := NewClient(Config{TargetFPS: 0, Width: 128, Height: 40})
-	c.SendScreenData("SCREEN", []byte{1, 2, 3})
+	_ = c.SendScreenData("SCREEN", []byte{1, 2, 3})
 
 	frame1, _, _ := c.GetCurrentFrame()
 	frame2, _, _ := c.GetCurrentFrame()
@@ -112,13 +112,13 @@ func TestGetCurrentFrame_ReturnsCopy(t *testing.T) {
 func TestSendScreenData_IncrementsFrameNumber(t *testing.T) {
 	c := NewClient(Config{TargetFPS: 0, Width: 128, Height: 40})
 
-	c.SendScreenData("SCREEN", []byte{1})
+	_ = c.SendScreenData("SCREEN", []byte{1})
 	_, n1, _ := c.GetCurrentFrame()
 
-	c.SendScreenData("SCREEN", []byte{2})
+	_ = c.SendScreenData("SCREEN", []byte{2})
 	_, n2, _ := c.GetCurrentFrame()
 
-	c.SendScreenData("SCREEN", []byte{3})
+	_ = c.SendScreenData("SCREEN", []byte{3})
 	_, n3, _ := c.GetCurrentFrame()
 
 	if n1 != 1 || n2 != 2 || n3 != 3 {
@@ -195,11 +195,11 @@ func TestRateLimiting(t *testing.T) {
 	c := NewClient(Config{TargetFPS: 10, Width: 128, Height: 40})
 
 	// First frame: always stored and broadcast
-	c.SendScreenData("SCREEN", []byte{1})
+	_ = c.SendScreenData("SCREEN", []byte{1})
 	_, n1, _ := c.GetCurrentFrame()
 
 	// Immediate second frame: stored but rate-limited (no broadcast, still increments frame counter)
-	c.SendScreenData("SCREEN", []byte{2})
+	_ = c.SendScreenData("SCREEN", []byte{2})
 	frame, n2, _ := c.GetCurrentFrame()
 
 	if n1 != 1 {
@@ -215,7 +215,7 @@ func TestRateLimiting(t *testing.T) {
 
 	// Wait for rate limit window to pass, then send third frame
 	time.Sleep(110 * time.Millisecond)
-	c.SendScreenData("SCREEN", []byte{3})
+	_ = c.SendScreenData("SCREEN", []byte{3})
 	frame, n3, _ := c.GetCurrentFrame()
 	if n3 != 3 {
 		t.Errorf("third frame number = %d, want 3", n3)
