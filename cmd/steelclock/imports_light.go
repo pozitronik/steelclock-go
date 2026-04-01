@@ -37,6 +37,7 @@ import (
 	_ "github.com/pozitronik/steelclock-go/internal/widget/spotifywidget"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/starwarsintro"
 	// EXCLUDED: _ "github.com/pozitronik/steelclock-go/internal/widget/telegramcounter"
+	_ "github.com/pozitronik/steelclock-go/internal/widget/hwmon"
 	// EXCLUDED: _ "github.com/pozitronik/steelclock-go/internal/widget/telegramwidget"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/volume"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/volumemeter"

@@ -71,3 +71,21 @@ func (m *MockDisk) IOCounters() (map[string]DiskStat, error) {
 		"sdb": {Name: "sdb", ReadBytes: 500000, WriteBytes: 250000},
 	}, nil
 }
+
+// MockHWMon is a mock implementation of HWMonProvider for testing
+type MockHWMon struct {
+	SensorsFunc func() ([]HWMonStat, error)
+}
+
+// Sensors calls the mock function if set, otherwise returns defaults
+func (m *MockHWMon) Sensors() ([]HWMonStat, error) {
+	if m.SensorsFunc != nil {
+		return m.SensorsFunc()
+	}
+	return []HWMonStat{
+		{SensorID: "/amdcpu/0/temperature/2", Name: "Core (Tctl/Tdie)", Type: "Temperature", Value: 65.0, Unit: "°C"},
+		{SensorID: "/amdcpu/0/load/0", Name: "CPU Total", Type: "Load", Value: 15.0, Unit: "%"},
+		{SensorID: "/gpu-nvidia/0/temperature/0", Name: "GPU Core", Type: "Temperature", Value: 48.0, Unit: "°C"},
+		{SensorID: "/gpu-nvidia/0/load/0", Name: "GPU Core", Type: "Load", Value: 26.0, Unit: "%"},
+	}, nil
+}

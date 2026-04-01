@@ -229,6 +229,8 @@ func applyTypeSpecificDefaults(w *WidgetConfig) {
 		applyVolumeMeterDefaults(w)
 	case "bluetooth":
 		applyBluetoothDefaults(w)
+	case "hwmon":
+		applyHWMonDefaults(w)
 	}
 }
 
@@ -246,6 +248,34 @@ func applyClockDefaults(w *WidgetConfig) {
 func applyMetricWidgetDefaults(w *WidgetConfig) {
 	if w.Mode == "" {
 		w.Mode = ModeText
+	}
+
+	if w.Colors == nil {
+		w.Colors = &ColorsConfig{}
+	}
+	if w.Colors.Fill == nil {
+		w.Colors.Fill = IntPtr(255)
+	}
+
+	if w.Graph == nil {
+		w.Graph = &GraphConfig{}
+	}
+	if w.Graph.History == 0 {
+		w.Graph.History = DefaultGraphHistory
+	}
+}
+
+// applyHWMonDefaults sets default values for Hardware Monitor widgets
+func applyHWMonDefaults(w *WidgetConfig) {
+	if w.Mode == "" {
+		w.Mode = ModeText
+	}
+
+	if w.HWMon == nil {
+		w.HWMon = &HWMonConfig{}
+	}
+	if w.HWMon.Max == 0 {
+		w.HWMon.Max = 100.0
 	}
 
 	if w.Colors == nil {

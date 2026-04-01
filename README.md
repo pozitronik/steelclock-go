@@ -203,6 +203,7 @@ The `config_name` field determines how the profile appears in the tray menu. If 
 | **hyperspace**       | Star Wars hyperspace animation    | -                                      |   Yes   |   Yes    |
 | **starwars_intro**   | Star Wars opening crawl text      | -                                      |   Yes   |   Yes    |
 | **matrix**           | Matrix "digital rain" effect      | -                                      |   Yes   |   Yes    |
+| **hwmon**            | Hardware monitor (LHM/OHM)        | text, bar, graph, gauge                |   Yes   |   Yes    |
 | **weather**          | Current weather conditions        | icon, text                             |   Yes   |   Yes    |
 
 \* See [Linux Limitations](#linux-limitations) section below.
@@ -237,11 +238,11 @@ SteelClock supports two connection backends for communicating with your SteelSer
 
 ### Backend Options
 
-| Backend     | Description                              | Refresh Rate        | Requirements                        |
-|-------------|------------------------------------------|---------------------|-------------------------------------|
-| `gamesense` | Uses SteelSeries GG/Engine API           | 100ms (10 Hz)       | SteelSeries GG/Engine running       |
-| `direct`    | Direct USB HID communication             | ~16-30ms (30-60 Hz) | Device VID/PID, udev rules on Linux |
-| (omitted)   | Auto-select: tries gamesense, then direct | Varies             | -                                   |
+| Backend     | Description                               | Refresh Rate        | Requirements                        |
+|-------------|-------------------------------------------|---------------------|-------------------------------------|
+| `gamesense` | Uses SteelSeries GG/Engine API            | 100ms (10 Hz)       | SteelSeries GG/Engine running       |
+| `direct`    | Direct USB HID communication              | ~16-30ms (30-60 Hz) | Device VID/PID, udev rules on Linux |
+| (omitted)   | Auto-select: tries gamesense, then direct | Varies              | -                                   |
 
 ### Configuration
 

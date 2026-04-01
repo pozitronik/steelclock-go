@@ -595,7 +595,8 @@
             "screen_mirror",
             "hacker_code",
             "claude_code",
-            "bluetooth"
+            "bluetooth",
+            "hwmon"
           ]
         },
         "enabled": {
@@ -4438,6 +4439,197 @@
                     "minimum": 0,
                     "maximum": 100,
                     "default": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "hwmon"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "text": {
+                "$ref": "#/definitions/textObject"
+              },
+              "mode": {
+                "type": "string",
+                "description": "Display mode for hardware monitor",
+                "enum": [
+                  "text",
+                  "bar",
+                  "graph",
+                  "gauge"
+                ],
+                "default": "text"
+              },
+              "bar": {
+                "type": "object",
+                "description": "Bar mode settings",
+                "properties": {
+                  "direction": {
+                    "type": "string",
+                    "description": "Bar orientation",
+                    "enum": [
+                      "horizontal",
+                      "vertical"
+                    ],
+                    "default": "horizontal"
+                  },
+                  "border": {
+                    "type": "boolean",
+                    "description": "Draw border around bars",
+                    "default": false
+                  },
+                  "colors": {
+                    "type": "object",
+                    "description": "Bar colors",
+                    "properties": {
+                      "fill": {
+                        "type": "integer",
+                        "description": "Bar fill color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      }
+                    }
+                  }
+                }
+              },
+              "graph": {
+                "type": "object",
+                "description": "Graph mode settings",
+                "properties": {
+                  "history": {
+                    "type": "integer",
+                    "description": "Number of data points to display",
+                    "minimum": 2,
+                    "default": 60
+                  },
+                  "colors": {
+                    "type": "object",
+                    "description": "Graph colors",
+                    "properties": {
+                      "fill": {
+                        "type": "integer",
+                        "description": "Graph fill density (-1 = none)",
+                        "minimum": -1,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "line": {
+                        "type": "integer",
+                        "description": "Graph line color",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      }
+                    }
+                  }
+                }
+              },
+              "gauge": {
+                "type": "object",
+                "description": "Gauge mode settings",
+                "properties": {
+                  "show_ticks": {
+                    "type": "boolean",
+                    "description": "Show tick marks",
+                    "default": true
+                  },
+                  "colors": {
+                    "type": "object",
+                    "description": "Gauge colors",
+                    "properties": {
+                      "arc": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 200
+                      },
+                      "fill": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "needle": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 255
+                      },
+                      "ticks": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 255,
+                        "default": 150
+                      }
+                    }
+                  }
+                }
+              },
+              "per_core": {
+                "type": "object",
+                "description": "Per-sensor display settings (grid layout)",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Show each sensor separately in a grid",
+                    "default": false
+                  },
+                  "border": {
+                    "type": "boolean",
+                    "description": "Draw border around each sensor cell",
+                    "default": false
+                  },
+                  "margin": {
+                    "type": "integer",
+                    "description": "Spacing between sensor cells",
+                    "minimum": 0,
+                    "default": 0
+                  }
+                }
+              },
+              "hwmon": {
+                "type": "object",
+                "description": "Hardware Monitor widget settings (requires LibreHardwareMonitor or OpenHardwareMonitor with web server enabled)",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "LHM/OHM web server URL (default: http://localhost:8085)"
+                  },
+                  "sensor_id": {
+                    "type": "string",
+                    "description": "Exact sensor path (e.g., '/amdcpu/0/temperature/2'). Takes priority over other filters."
+                  },
+                  "sensor_type": {
+                    "type": "string",
+                    "description": "Filter by sensor type (e.g., 'Temperature', 'Load', 'Voltage', 'Power', 'Clock')"
+                  },
+                  "sensor_filter": {
+                    "type": "string",
+                    "description": "Substring match on sensor ID or display name"
+                  },
+                  "min": {
+                    "type": "number",
+                    "description": "Minimum value for bar/gauge/graph normalization",
+                    "default": 0
+                  },
+                  "max": {
+                    "type": "number",
+                    "description": "Maximum value for bar/gauge/graph normalization",
+                    "minimum": 0,
+                    "default": 100
                   }
                 }
               }

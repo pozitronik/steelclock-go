@@ -340,6 +340,9 @@ type WidgetConfig struct {
 	// Claude Code status widget
 	ClaudeCode *ClaudeCodeConfig `json:"claude_code,omitempty"` // Claude Code status widget settings
 
+	// Hardware Monitor widget (LHM/OHM)
+	HWMon *HWMonConfig `json:"hwmon,omitempty"` // Hardware Monitor widget settings
+
 	// Bluetooth widget
 	Bluetooth *BluetoothConfig `json:"bluetooth,omitempty"` // Bluetooth device status settings
 
@@ -604,6 +607,22 @@ type PerCoreConfig struct {
 type GPUConfig struct {
 	Adapter int    `json:"adapter,omitempty"` // GPU index (0 = first, 1 = second, etc.)
 	Metric  string `json:"metric,omitempty"`  // Metric to display: utilization, utilization_3d, memory_dedicated, etc.
+}
+
+// HWMonConfig represents Hardware Monitor widget settings (LHM/OHM).
+type HWMonConfig struct {
+	// LHM/OHM web server URL (default: "http://localhost:8085")
+	URL string `json:"url,omitempty"`
+	// Exact sensor path for precise selection (e.g., "/amdcpu/0/temperature/2")
+	SensorID string `json:"sensor_id,omitempty"`
+	// Filter by sensor type (e.g., "Temperature", "Load", "Voltage", "Power", "Clock")
+	SensorType string `json:"sensor_type,omitempty"`
+	// Substring match on sensor ID or display name
+	SensorFilter string `json:"sensor_filter,omitempty"`
+	// Minimum value for bar/gauge/graph normalization (default: 0)
+	Min float64 `json:"min,omitempty"`
+	// Maximum value for bar/gauge/graph normalization (default: 100)
+	Max float64 `json:"max,omitempty"`
 }
 
 // StereoConfig represents stereo settings for volume meter

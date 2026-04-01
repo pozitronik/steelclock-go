@@ -55,3 +55,18 @@ type DiskProvider interface {
 	// IOCounters returns disk I/O statistics for all devices.
 	IOCounters() (map[string]DiskStat, error)
 }
+
+// HWMonStat represents a single hardware sensor reading from LHM/OHM.
+type HWMonStat struct {
+	SensorID string  // Unique sensor path (e.g., "/amdcpu/0/temperature/2")
+	Name     string  // Display name (e.g., "Core (Tctl/Tdie)")
+	Type     string  // Sensor type: "Temperature", "Load", "Voltage", "Power", "Clock", etc.
+	Value    float64 // Parsed numeric value in native units (Celsius, %, V, W, MHz, etc.)
+	Unit     string  // Unit string for display (e.g., "°C", "%", "V", "W", "MHz")
+}
+
+// HWMonProvider abstracts hardware sensor collection via LHM/OHM HTTP API.
+type HWMonProvider interface {
+	// Sensors returns all available sensor readings.
+	Sensors() ([]HWMonStat, error)
+}

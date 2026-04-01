@@ -96,7 +96,7 @@ func (g *GopsutilDisk) IOCounters() (map[string]DiskStat, error) {
 	return result, nil
 }
 
-// Default provider instances for convenience
+// Default provider instances for convenience.
 var (
 	DefaultCPU     CPUProvider     = NewGopsutilCPU()
 	DefaultMemory  MemoryProvider  = NewGopsutilMemory()
