@@ -10,11 +10,12 @@
   "widgets": [
     {
       "type": "hwmon",
+      "id": "cpu_temp",
       "enabled": true,
       "position": {
         "x": 0,
         "y": 0,
-        "w": 42,
+        "w": 64,
         "h": 20,
         "z": 0
       },
@@ -25,77 +26,234 @@
       },
       "mode": "text",
       "hwmon": {
+        "url": "http://localhost:8085",
         "sensor_type": "Temperature",
-        "sensor_filter": "amdcpu",
+        "sensor_filter": "cpu",
+        "min": 0,
         "max": 100
       },
-      "text": {
-        "font": null,
-        "size": 10,
-        "align": {
-          "h": "center",
-          "v": "center"
+      "bar": {
+        "direction": "horizontal",
+        "border": false,
+        "colors": {
+          "fill": 255
         }
-      },
-      "update_interval": 2
-    },
-    {
-      "type": "hwmon",
-      "enabled": true,
-      "position": {
-        "x": 43,
-        "y": 0,
-        "w": 42,
-        "h": 20,
-        "z": 0
-      },
-      "style": {
-        "background": 0,
-        "border": -1,
-        "padding": 0
-      },
-      "mode": "text",
-      "hwmon": {
-        "sensor_type": "Temperature",
-        "sensor_filter": "gpu",
-        "max": 100
-      },
-      "text": {
-        "font": null,
-        "size": 10,
-        "align": {
-          "h": "center",
-          "v": "center"
-        }
-      },
-      "update_interval": 2
-    },
-    {
-      "type": "hwmon",
-      "enabled": true,
-      "position": {
-        "x": 0,
-        "y": 20,
-        "w": 128,
-        "h": 20,
-        "z": 0
-      },
-      "style": {
-        "background": 0,
-        "border": -1,
-        "padding": 0
-      },
-      "mode": "graph",
-      "hwmon": {
-        "sensor_type": "Load",
-        "sensor_filter": "CPU Total",
-        "max": 100
       },
       "graph": {
         "history": 128,
         "colors": {
           "fill": 255,
           "line": 255
+        }
+      },
+      "gauge": {
+        "show_ticks": true,
+        "colors": {
+          "fill": 255,
+          "arc": 200,
+          "needle": 255,
+          "ticks": 150
+        }
+      },
+      "per_core": {
+        "enabled": false,
+        "margin": 0,
+        "border": false
+      },
+      "text": {
+        "format": "CPU:%.0f",
+        "font": null,
+        "size": 16,
+        "align": {
+          "h": "left",
+          "v": "center"
+        }
+      },
+      "update_interval": 2
+    },
+    {
+      "type": "hwmon",
+      "id": "gpu_temp",
+      "enabled": true,
+      "position": {
+        "x": 64,
+        "y": 0,
+        "w": 64,
+        "h": 20,
+        "z": 0
+      },
+      "style": {
+        "background": 0,
+        "border": -1,
+        "padding": 0
+      },
+      "mode": "text",
+      "hwmon": {
+        "url": "http://localhost:8085",
+        "sensor_type": "Temperature",
+        "sensor_filter": "gpu",
+        "min": 0,
+        "max": 100
+      },
+      "bar": {
+        "direction": "horizontal",
+        "border": false,
+        "colors": {
+          "fill": 255
+        }
+      },
+      "graph": {
+        "history": 128,
+        "colors": {
+          "fill": 255,
+          "line": 255
+        }
+      },
+      "gauge": {
+        "show_ticks": true,
+        "colors": {
+          "fill": 255,
+          "arc": 200,
+          "needle": 255,
+          "ticks": 150
+        }
+      },
+      "per_core": {
+        "enabled": false,
+        "margin": 0,
+        "border": false
+      },
+      "text": {
+        "format": "GPU:%.0f",
+        "font": null,
+        "size": 16,
+        "align": {
+          "h": "left",
+          "v": "center"
+        }
+      },
+      "update_interval": 2
+    },
+    {
+      "type": "hwmon",
+      "id": "cpu_load",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 20,
+        "w": 64,
+        "h": 20,
+        "z": 0
+      },
+      "style": {
+        "background": 0,
+        "border": -1,
+        "padding": 0
+      },
+      "mode": "gauge",
+      "hwmon": {
+        "url": "http://localhost:8085",
+        "sensor_type": "Load",
+        "sensor_filter": "CPU Total",
+        "min": 0,
+        "max": 100
+      },
+      "bar": {
+        "direction": "horizontal",
+        "border": false,
+        "colors": {
+          "fill": 255
+        }
+      },
+      "graph": {
+        "history": 128,
+        "colors": {
+          "fill": 255,
+          "line": 255
+        }
+      },
+      "gauge": {
+        "show_ticks": true,
+        "colors": {
+          "fill": 255,
+          "arc": 200,
+          "needle": 255,
+          "ticks": 150
+        }
+      },
+      "per_core": {
+        "enabled": false,
+        "margin": 0,
+        "border": false
+      },
+      "text": {
+        "font": null,
+        "size": 16,
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
+      },
+      "update_interval": 1
+    },
+    {
+      "type": "hwmon",
+      "id": "gpu_load",
+      "enabled": true,
+      "position": {
+        "x": 64,
+        "y": 20,
+        "w": 64,
+        "h": 20,
+        "z": 0
+      },
+      "style": {
+        "background": 0,
+        "border": -1,
+        "padding": 0
+      },
+      "mode": "gauge",
+      "hwmon": {
+        "url": "http://localhost:8085",
+        "sensor_type": "Load",
+        "sensor_filter": "GPU Core",
+        "min": 0,
+        "max": 100
+      },
+      "bar": {
+        "direction": "horizontal",
+        "border": false,
+        "colors": {
+          "fill": 255
+        }
+      },
+      "graph": {
+        "history": 128,
+        "colors": {
+          "fill": 255,
+          "line": 255
+        }
+      },
+      "gauge": {
+        "show_ticks": true,
+        "colors": {
+          "fill": 255,
+          "arc": 200,
+          "needle": 255,
+          "ticks": 150
+        }
+      },
+      "per_core": {
+        "enabled": false,
+        "margin": 0,
+        "border": false
+      },
+      "text": {
+        "font": null,
+        "size": 16,
+        "align": {
+          "h": "center",
+          "v": "center"
         }
       },
       "update_interval": 1

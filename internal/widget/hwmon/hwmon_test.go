@@ -429,6 +429,51 @@ func TestWidget_TextFormatString(t *testing.T) {
 	}
 }
 
+func TestWidget_UserTextFormat(t *testing.T) {
+	cfg := baseCfg()
+	cfg.HWMon = &config.HWMonConfig{SensorID: "/amdcpu/0/temperature/2"}
+	cfg.Text = &config.TextConfig{Format: "CPU: %.0f°C"}
+	w, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	if w.userTextFormat != "CPU: %.0f°C" {
+		t.Errorf("userTextFormat = %q, want %q", w.userTextFormat, "CPU: %.0f°C")
+	}
+
+	w.hwmonProvider = &metrics.MockHWMon{
+		SensorsFunc: func() ([]metrics.HWMonStat, error) {
+			return mockSensors(), nil
+		},
+	}
+
+	if err := w.Update(); err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	img, err := w.Render()
+	if err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+	if img == nil {
+		t.Error("Render() returned nil image")
+	}
+}
+
+func TestWidget_UserTextFormat_Empty(t *testing.T) {
+	cfg := baseCfg()
+	cfg.HWMon = &config.HWMonConfig{SensorID: "/amdcpu/0/temperature/2"}
+	w, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	if w.userTextFormat != "" {
+		t.Errorf("userTextFormat should be empty by default, got %q", w.userTextFormat)
+	}
+}
+
 func TestWidget_DefaultConfig(t *testing.T) {
 	cfg := baseCfg()
 	w, err := New(cfg)

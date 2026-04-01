@@ -66,6 +66,7 @@ type Widget struct {
 	unavailable    bool
 	unavailableMsg string
 	sensorCount    int
+	userTextFormat string // user-provided text.format override
 	fontFace       font.Face
 	fontName       string
 	mu             sync.RWMutex
@@ -90,6 +91,11 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	sensorFilter := ""
 	minVal := 0.0
 	maxVal := 100.0
+
+	userTextFormat := ""
+	if cfg.Text != nil && cfg.Text.Format != "" {
+		userTextFormat = cfg.Text.Format
+	}
 
 	if cfg.HWMon != nil {
 		if cfg.HWMon.URL != "" {
@@ -126,6 +132,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		hwmonProvider:  metrics.NewLHMHTTPProvider(url),
 		historySingle:  util.NewRingBuffer[float64](mr.HistoryLen),
 		historyPerCore: util.NewRingBuffer[[]float64](mr.HistoryLen),
+		userTextFormat: userTextFormat,
 		fontFace:       mr.FontFace,
 		fontName:       mr.FontName,
 	}, nil
@@ -341,7 +348,11 @@ func (w *Widget) Render() (image.Image, error) {
 	textFormat := "%.0f"
 	if w.displayMode == render.DisplayModeText {
 		value = w.rawValue
-		textFormat = w.textFormatString()
+		if w.userTextFormat != "" {
+			textFormat = w.userTextFormat
+		} else {
+			textFormat = w.textFormatString()
+		}
 	}
 
 	w.strategy.Render(img, render.MetricData{
