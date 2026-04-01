@@ -195,19 +195,10 @@ func (w *Widget) Render() (image.Image, error) {
 		}
 
 		// For graph mode, transpose history from [time][core] to [core][time]
-		if w.displayMode == render.DisplayModeGraph && w.historyPerCore.Len() >= 2 {
-			historySlice := w.historyPerCore.ToSlice()
-			numCores := len(historySlice[0])
-			coreHistories := make([][]float64, numCores)
-			for i := 0; i < numCores; i++ {
-				coreHistories[i] = make([]float64, len(historySlice))
-				for t, cores := range historySlice {
-					if i < len(cores) {
-						coreHistories[i][t] = cores[i]
-					}
-				}
+		if w.displayMode == render.DisplayModeGraph {
+			if h := render.TransposeHistory(w.historyPerCore.ToSlice()); h != nil {
+				gridData.History = h
 			}
-			gridData.History = coreHistories
 		}
 
 		w.gridStrategy.Render(img, gridData, w.Renderer)

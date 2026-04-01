@@ -8,6 +8,75 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
 
+func TestTransposeHistory(t *testing.T) {
+	t.Run("normal 3x2", func(t *testing.T) {
+		// 3 time samples, 2 items each
+		input := [][]float64{
+			{10, 20},
+			{30, 40},
+			{50, 60},
+		}
+		got := TransposeHistory(input)
+		if len(got) != 2 {
+			t.Fatalf("got %d items, want 2", len(got))
+		}
+		// Item 0: [10, 30, 50]
+		want0 := []float64{10, 30, 50}
+		for i, v := range got[0] {
+			if v != want0[i] {
+				t.Errorf("got[0][%d] = %.0f, want %.0f", i, v, want0[i])
+			}
+		}
+		// Item 1: [20, 40, 60]
+		want1 := []float64{20, 40, 60}
+		for i, v := range got[1] {
+			if v != want1[i] {
+				t.Errorf("got[1][%d] = %.0f, want %.0f", i, v, want1[i])
+			}
+		}
+	})
+
+	t.Run("single time sample returns nil", func(t *testing.T) {
+		got := TransposeHistory([][]float64{{10, 20}})
+		if got != nil {
+			t.Errorf("expected nil for single sample, got %v", got)
+		}
+	})
+
+	t.Run("empty input returns nil", func(t *testing.T) {
+		got := TransposeHistory([][]float64{})
+		if got != nil {
+			t.Errorf("expected nil for empty input, got %v", got)
+		}
+	})
+
+	t.Run("nil input returns nil", func(t *testing.T) {
+		got := TransposeHistory(nil)
+		if got != nil {
+			t.Errorf("expected nil for nil input, got %v", got)
+		}
+	})
+
+	t.Run("ragged rows", func(t *testing.T) {
+		// Second row has fewer items - should not panic, missing values stay 0
+		input := [][]float64{
+			{10, 20, 30},
+			{40, 50},
+		}
+		got := TransposeHistory(input)
+		if len(got) != 3 {
+			t.Fatalf("got %d items, want 3", len(got))
+		}
+		// Item 2: [30, 0] (second row had no index 2)
+		if got[2][0] != 30 {
+			t.Errorf("got[2][0] = %.0f, want 30", got[2][0])
+		}
+		if got[2][1] != 0 {
+			t.Errorf("got[2][1] = %.0f, want 0 (missing)", got[2][1])
+		}
+	})
+}
+
 func TestGetGridMetricStrategy(t *testing.T) {
 	tests := []struct {
 		mode DisplayMode

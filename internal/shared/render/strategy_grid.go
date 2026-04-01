@@ -72,6 +72,27 @@ func calculateGridLayout(numCells, totalWidth, totalHeight, margin int) (cols, r
 	return
 }
 
+// TransposeHistory transposes a time-major history matrix [time][item] into
+// an item-major matrix [item][time], suitable for per-cell graph rendering.
+// Returns nil if the input has fewer than 2 time samples.
+func TransposeHistory(history [][]float64) [][]float64 {
+	if len(history) < 2 || len(history[0]) == 0 {
+		return nil
+	}
+
+	numItems := len(history[0])
+	result := make([][]float64, numItems)
+	for i := 0; i < numItems; i++ {
+		result[i] = make([]float64, len(history))
+		for t, items := range history {
+			if i < len(items) {
+				result[i][t] = items[i]
+			}
+		}
+	}
+	return result
+}
+
 // GridTextDisplayStrategy renders per-core metrics as text in a grid.
 type GridTextDisplayStrategy struct{}
 

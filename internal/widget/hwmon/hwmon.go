@@ -324,19 +324,10 @@ func (w *Widget) Render() (image.Image, error) {
 			FontName:    w.fontName,
 		}
 
-		if w.displayMode == render.DisplayModeGraph && w.historyPerCore.Len() >= 2 {
-			historySlice := w.historyPerCore.ToSlice()
-			numSensors := len(historySlice[0])
-			sensorHistories := make([][]float64, numSensors)
-			for i := 0; i < numSensors; i++ {
-				sensorHistories[i] = make([]float64, len(historySlice))
-				for t, sensors := range historySlice {
-					if i < len(sensors) {
-						sensorHistories[i][t] = sensors[i]
-					}
-				}
+		if w.displayMode == render.DisplayModeGraph {
+			if h := render.TransposeHistory(w.historyPerCore.ToSlice()); h != nil {
+				gridData.History = h
 			}
-			gridData.History = sensorHistories
 		}
 
 		w.gridStrategy.Render(img, gridData, w.Renderer)
