@@ -83,43 +83,41 @@ type Widget struct {
 	fontFace font.Face
 	fontName string
 
-	// Status
+	// Status (protected by statusMu)
 	status     StatusData
 	lastStatus StatusData
 	statusMu   sync.RWMutex
 
-	// Notification visibility
+	// Animation and visibility state shared between Update() and Render() goroutines.
+	// Protected by animMu. Update() writes via onStateChange(), Render() reads and
+	// writes via updateAnimations() and getClawdSprite().
+	animMu sync.Mutex
+
+	// Notification visibility (protected by animMu)
 	visibleUntil       time.Time // When widget should auto-hide (zero = indefinite)
 	bubbleVisibleUntil time.Time // When bubble/message should hide (zero = indefinite)
 	shouldShow         bool      // Current visibility state
 
-	// Animation state
-	animFrame      int
-	lastFrameTime  time.Time
-	showingIntro   bool
-	introStartTime time.Time
-
-	// Celebration state
+	// Celebration state (protected by animMu)
 	celebrateUntil time.Time
-	sparklePhase   int
 
-	// Sleepy animation state (transition to idle)
+	// Sleepy animation state (protected by animMu)
 	sleepyStartTime time.Time // When sleepy animation started
 	isSleepy        bool      // Whether we're in sleepy transition
 
-	// Wake-up animation state (transition from idle)
+	// Wake-up animation state (protected by animMu)
 	wakeUpStartTime time.Time // When wake-up animation started
 	isWakingUp      bool      // Whether we're in wake-up transition
 
-	// Blinking animation state
+	// Blinking animation state (protected by animMu)
 	isBlinking     bool      // Whether currently blinking
 	blinkStartTime time.Time // When current blink started
 	nextBlinkTime  time.Time // When next blink should trigger
 
-	// Active state timing (for elapsed time display)
+	// Active state timing (protected by animMu)
 	activeStateStartTime time.Time // When current active state started
 
-	// Idle animation states
+	// Idle animation states (protected by animMu)
 	isLookingLeft  bool      // Looking left animation active
 	isLookingRight bool      // Looking right animation active
 	lookStartTime  time.Time // When look animation started
@@ -127,7 +125,14 @@ type Widget struct {
 	breathingPhase float64   // Phase for breathing animation (0 to 2*PI)
 	lastBreathTime time.Time // Last time breathing was updated
 
-	// Random for idle animations
+	// Render-only state (only accessed from Render goroutine, no lock needed)
+	animFrame      int
+	lastFrameTime  time.Time
+	showingIntro   bool
+	introStartTime time.Time
+	sparklePhase   int
+
+	// Random for idle animations (protected by animMu, used in updateAnimations)
 	rng *rand.Rand
 }
 
@@ -259,8 +264,8 @@ const blinkDuration = 200 * time.Millisecond
 // lookDuration is how long the looking animation lasts
 const lookDuration = 1200 * time.Millisecond
 
-// getClawdSprite returns the Clawd sprite based on configured size and animation state
-// Takes current time to avoid redundant time.Now() calls
+// getClawdSprite returns the Clawd sprite based on configured size and animation state.
+// Caller must hold w.animMu.
 func (w *Widget) getClawdSprite(currentState State, now time.Time) *ClawdSprite {
 	// For idle/not_running states, show sleepy/sleeping sprite
 	if isIdleState(currentState) {
@@ -418,27 +423,30 @@ func (w *Widget) Update() error {
 		}
 	}
 
-	// Check for state change
+	// Check for state change - update animation state under animMu.
+	// Lock ordering: statusMu -> animMu (never acquire statusMu while holding animMu).
 	if w.status.State != w.lastStatus.State {
+		w.animMu.Lock()
 		w.onStateChange(w.status.State)
-	}
-
-	// Trigger celebration on transition to success (duration from notify.success)
-	if w.status.State == StateSuccess && w.lastStatus.State != StateSuccess {
-		duration := w.cfg.Notify.Success
-		if duration > 0 {
-			w.celebrateUntil = time.Now().Add(time.Duration(duration) * time.Second)
-		} else if duration == -1 {
-			// -1 means until next state, use far future time
-			w.celebrateUntil = time.Now().Add(24 * time.Hour)
+		// Trigger celebration on transition to success (duration from notify.success)
+		if w.status.State == StateSuccess && w.lastStatus.State != StateSuccess {
+			duration := w.cfg.Notify.Success
+			if duration > 0 {
+				w.celebrateUntil = time.Now().Add(time.Duration(duration) * time.Second)
+			} else if duration == -1 {
+				// -1 means until next state, use far future time
+				w.celebrateUntil = time.Now().Add(24 * time.Hour)
+			}
+			// duration == 0 means no celebration
 		}
-		// duration == 0 means no celebration
+		w.animMu.Unlock()
 	}
 
 	return nil
 }
 
-// onStateChange handles notification visibility when state changes
+// onStateChange handles notification visibility when state changes.
+// Caller must hold w.animMu.
 func (w *Widget) onStateChange(newState State) {
 	oldState := w.lastStatus.State
 	wasIdle := isIdleState(oldState)
@@ -507,13 +515,19 @@ func (w *Widget) Render() (image.Image, error) {
 	// Update animation frame
 	w.animFrame++
 
-	// Get current status (single lock acquisition for the frame)
+	// Get current status
 	w.statusMu.RLock()
 	status := w.status
-	celebrating := now.Before(w.celebrateUntil)
 	w.statusMu.RUnlock()
 
-	// Update animations with current state (avoids extra mutex lock)
+	// Lock animation state for reads/writes during rendering.
+	// Lock ordering: statusMu -> animMu (never acquire statusMu while holding animMu).
+	w.animMu.Lock()
+	defer w.animMu.Unlock()
+
+	celebrating := now.Before(w.celebrateUntil)
+
+	// Update animations with current state
 	w.updateAnimations(now, status.State)
 
 	// Check if we should show intro
@@ -548,8 +562,8 @@ func (w *Widget) Render() (image.Image, error) {
 	return img, nil
 }
 
-// updateAnimations updates animation states for the current frame
-// Takes current time and state to avoid redundant time.Now() calls and mutex locks
+// updateAnimations updates animation states for the current frame.
+// Caller must hold w.animMu.
 func (w *Widget) updateAnimations(now time.Time, currentState State) {
 	if !w.cfg.IdleAnimations {
 		return
