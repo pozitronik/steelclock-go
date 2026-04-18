@@ -187,8 +187,8 @@ func (w *DualIOWidget) Render() (image.Image, error) {
 
 // formatText formats the text output with unit conversion
 func (w *DualIOWidget) formatText() string {
-	if w.Unit == "auto" {
-		// Auto-scale each value independently
+	if w.Unit == "auto" || util.IsPseudoUnit(w.Unit) {
+		// Auto-scale each value independently using the converter's family
 		primaryVal, primaryUnit := w.Converter.AutoScale(w.PrimaryValue)
 		secondaryVal, secondaryUnit := w.Converter.AutoScale(w.SecondaryValue)
 		return fmt.Sprintf("%s%s%s %s%s%s",

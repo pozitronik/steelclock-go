@@ -21,6 +21,9 @@ func TestDetermineUnitFamily(t *testing.T) {
 		{"Kbps", UnitFamilyBits},
 		{"Mbps", UnitFamilyBits},
 		{"Gbps", UnitFamilyBits},
+		{"auto_bits", UnitFamilyBits},
+		{"auto_bytes", UnitFamilyBytesDecimal},
+		{"auto_binary", UnitFamilyBytesBinary},
 		{"unknown", UnitFamilyBytesDecimal}, // Default
 	}
 
@@ -35,7 +38,7 @@ func TestDetermineUnitFamily(t *testing.T) {
 }
 
 func TestIsValidUnit(t *testing.T) {
-	validUnits := []string{"B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s", "bps", "Kbps", "Mbps", "Gbps"}
+	validUnits := []string{"B/s", "KB/s", "MB/s", "GB/s", "KiB/s", "MiB/s", "GiB/s", "bps", "Kbps", "Mbps", "Gbps", "auto_bits", "auto_bytes", "auto_binary"}
 	invalidUnits := []string{"bytes", "megabytes", "auto", "", "invalid"}
 
 	for _, unit := range validUnits {
@@ -59,6 +62,9 @@ func TestNewByteRateConverter(t *testing.T) {
 		{"MB/s", UnitFamilyBytesDecimal},
 		{"MiB/s", UnitFamilyBytesBinary},
 		{"Mbps", UnitFamilyBits},
+		{"auto_bits", UnitFamilyBits},
+		{"auto_bytes", UnitFamilyBytesDecimal},
+		{"auto_binary", UnitFamilyBytesBinary},
 	}
 
 	for _, tt := range tests {
@@ -110,6 +116,36 @@ func TestByteRateConverter_ConvertAuto(t *testing.T) {
 	}
 	if math.Abs(val-1.5) > 0.001 {
 		t.Errorf("Convert(1500000, auto) value = %v, want 1.5", val)
+	}
+}
+
+func TestByteRateConverter_ConvertPseudoUnits(t *testing.T) {
+	tests := []struct {
+		name          string
+		pseudoUnit    string
+		bps           float64
+		wantUnit      string
+		wantValApprox float64
+	}{
+		{"auto_bits kbps range", "auto_bits", 5000, "Kbps", 40.0},  // 5000 B/s = 40 Kbps
+		{"auto_bits mbps range", "auto_bits", 500000, "Mbps", 4.0}, // 500000 B/s = 4 Mbps
+		{"auto_bytes kb range", "auto_bytes", 5000, "KB/s", 5.0},
+		{"auto_bytes mb range", "auto_bytes", 5000000, "MB/s", 5.0},
+		{"auto_binary kib range", "auto_binary", 5000, "KiB/s", 4.882},
+		{"auto_binary mib range", "auto_binary", 5000000, "MiB/s", 4.768},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewByteRateConverter(tt.pseudoUnit)
+			gotVal, gotUnit := c.Convert(tt.bps, tt.pseudoUnit)
+			if gotUnit != tt.wantUnit {
+				t.Errorf("Convert(%v, %q) unit = %q, want %q", tt.bps, tt.pseudoUnit, gotUnit, tt.wantUnit)
+			}
+			if math.Abs(gotVal-tt.wantValApprox) > 0.01 {
+				t.Errorf("Convert(%v, %q) value = %v, want ~%v", tt.bps, tt.pseudoUnit, gotVal, tt.wantValApprox)
+			}
+		})
 	}
 }
 

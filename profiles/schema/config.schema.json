@@ -1618,6 +1618,9 @@
                 "description": "Speed unit for display",
                 "enum": [
                   "auto",
+                  "auto_bits",
+                  "auto_bytes",
+                  "auto_binary",
                   "bps",
                   "Kbps",
                   "Mbps",
@@ -1802,9 +1805,11 @@
               },
               "unit": {
                 "type": "string",
-                "description": "Speed unit for display",
+                "description": "Speed unit for display. Use 'auto_bytes' or 'auto_binary' for family-constrained auto-scaling (e.g. 'auto_bytes' scales B/s→KB/s→MB/s→GB/s)",
                 "enum": [
                   "auto",
+                  "auto_bytes",
+                  "auto_binary",
                   "B/s",
                   "KB/s",
                   "MB/s",

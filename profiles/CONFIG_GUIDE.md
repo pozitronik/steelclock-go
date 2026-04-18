@@ -1098,6 +1098,7 @@ Four metrics in a 2x2 grid with text overlay (see `profiles/gpu.json`):
   "mode": "gauge",
   "interface": null,
   "max_speed_mbps": 100,
+  "unit": "auto_bits",
   "gauge": {
     "show_ticks": true,
     "colors": {
@@ -1110,16 +1111,17 @@ Four metrics in a 2x2 grid with text overlay (see `profiles/gpu.json`):
 }
 ```
 
-| Property                 | Description                     |
-|--------------------------|---------------------------------|
-| `interface`              | Network interface (null=auto)   |
-| `max_speed_mbps`         | Max speed for scaling (-1=auto) |
-| `gauge.colors.rx`        | RX (download) arc color         |
-| `gauge.colors.tx`        | TX (upload) arc color           |
-| `gauge.colors.rx_needle` | RX needle color                 |
-| `gauge.colors.tx_needle` | TX needle color                 |
-| `graph.colors.rx`        | RX graph fill color             |
-| `graph.colors.tx`        | TX graph fill color             |
+| Property                 | Description                                                                                                                                                                                                                       |
+|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `interface`              | Network interface (null=auto)                                                                                                                                                                                                     |
+| `max_speed_mbps`         | Max speed for scaling (-1=auto)                                                                                                                                                                                                   |
+| `unit`                   | Speed unit: fixed (`"Mbps"`, `"MB/s"`, etc.), `"auto"` (auto-scales bytes), or family-scoped: `"auto_bits"` (bps→Kbps→Mbps→Gbps), `"auto_bytes"` (B/s→KB/s→MB/s→GB/s), `"auto_binary"` (B/s→KiB/s→MiB/s→GiB/s). Default: `"Mbps"` |
+| `gauge.colors.rx`        | RX (download) arc color                                                                                                                                                                                                           |
+| `gauge.colors.tx`        | TX (upload) arc color                                                                                                                                                                                                             |
+| `gauge.colors.rx_needle` | RX needle color                                                                                                                                                                                                                   |
+| `gauge.colors.tx_needle` | TX needle color                                                                                                                                                                                                                   |
+| `graph.colors.rx`        | RX graph fill color                                                                                                                                                                                                               |
+| `graph.colors.tx`        | TX graph fill color                                                                                                                                                                                                               |
 
 ### Disk Widget
 
@@ -1132,6 +1134,7 @@ Four metrics in a 2x2 grid with text overlay (see `profiles/gpu.json`):
   "mode": "graph",
   "disk": null,
   "max_speed_mbps": -1,
+  "unit": "auto_bytes",
   "graph": {
     "history": 60,
     "filled": true,
@@ -1142,6 +1145,12 @@ Four metrics in a 2x2 grid with text overlay (see `profiles/gpu.json`):
   }
 }
 ```
+
+| Property         | Description                                                                                                                                                      |
+|------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `disk`           | Disk device to monitor (null=all disks)                                                                                                                          |
+| `max_speed_mbps` | Max speed for scaling (-1=auto)                                                                                                                                  |
+| `unit`           | Speed unit: fixed (`"MB/s"`, `"KiB/s"`, etc.), `"auto"` (auto-scales bytes), or family-scoped: `"auto_bytes"` (B/s→KB/s→MB/s→GB/s), `"auto_binary"` (B/s→KiB/s→MiB/s→GiB/s). Default: `"MB/s"` |
 
 ### Volume Widget
 

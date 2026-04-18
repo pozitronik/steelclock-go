@@ -64,6 +64,20 @@ var autoScaleBytesDecimal = []string{"B/s", "KB/s", "MB/s", "GB/s"}
 var autoScaleBytesBinary = []string{"B/s", "KiB/s", "MiB/s", "GiB/s"}
 var autoScaleBits = []string{"bps", "Kbps", "Mbps", "Gbps"}
 
+// pseudoUnitFamilies maps pseudo-unit strings (e.g. "auto_bits") to their UnitFamily.
+// Pseudo-units trigger auto-scaling within a specific family.
+var pseudoUnitFamilies = map[string]UnitFamily{
+	"auto_bits":   UnitFamilyBits,
+	"auto_bytes":  UnitFamilyBytesDecimal,
+	"auto_binary": UnitFamilyBytesBinary,
+}
+
+// IsPseudoUnit reports whether unitName is an auto-scaling pseudo-unit.
+func IsPseudoUnit(unitName string) bool {
+	_, ok := pseudoUnitFamilies[unitName]
+	return ok
+}
+
 // ByteRateConverter handles conversion between byte rate units
 type ByteRateConverter struct {
 	units       map[string]ByteUnit
@@ -81,8 +95,11 @@ func NewByteRateConverter(defaultUnit string) *ByteRateConverter {
 	}
 }
 
-// DetermineUnitFamily determines which unit family a unit belongs to
+// DetermineUnitFamily determines which unit family a unit belongs to.
 func DetermineUnitFamily(unitName string) UnitFamily {
+	if family, ok := pseudoUnitFamilies[unitName]; ok {
+		return family
+	}
 	if unit, ok := AllUnits[unitName]; ok {
 		if unit.IsBits {
 			return UnitFamilyBits
@@ -94,15 +111,17 @@ func DetermineUnitFamily(unitName string) UnitFamily {
 	return UnitFamilyBytesDecimal
 }
 
-// IsValidUnit checks if a unit name is valid
+// IsValidUnit checks if a unit name is valid (real unit or pseudo-unit).
 func IsValidUnit(unitName string) bool {
-	_, ok := AllUnits[unitName]
-	return ok
+	if _, ok := AllUnits[unitName]; ok {
+		return true
+	}
+	return IsPseudoUnit(unitName)
 }
 
 // Convert converts bytes per second to the specified unit
 func (c *ByteRateConverter) Convert(bps float64, unitName string) (float64, string) {
-	if unitName == "auto" {
+	if unitName == "auto" || IsPseudoUnit(unitName) {
 		return c.AutoScale(bps)
 	}
 
