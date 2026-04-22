@@ -3,6 +3,7 @@ package hwmon
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
 	"github.com/pozitronik/steelclock-go/internal/metrics"
@@ -231,13 +232,118 @@ func TestWidget_ProviderError_MarksUnavailable(t *testing.T) {
 		t.Errorf("unavailableMsg = %q, want %q", msg, "No sensors")
 	}
 
-	// Second call should skip polling entirely
+	// Second call within cooldown should skip polling
 	err = w.Update()
 	if err != nil {
 		t.Errorf("second Update() error = %v", err)
 	}
 	if callCount != 1 {
-		t.Errorf("provider called %d times, want 1 (should skip after unavailable)", callCount)
+		t.Errorf("provider called %d times, want 1 (should skip during cooldown)", callCount)
+	}
+}
+
+func TestWidget_Retry_AfterCooldown(t *testing.T) {
+	cfg := baseCfg()
+	w, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	callCount := 0
+	w.hwmonProvider = &metrics.MockHWMon{
+		SensorsFunc: func() ([]metrics.HWMonStat, error) {
+			callCount++
+			return nil, errors.New("still down")
+		},
+	}
+
+	_ = w.Update()
+	if callCount != 1 {
+		t.Fatalf("initial call count = %d, want 1", callCount)
+	}
+
+	// Force cooldown to be in the past so the next Update retries.
+	w.mu.Lock()
+	w.nextRetryAt = time.Now().Add(-time.Second)
+	w.mu.Unlock()
+
+	_ = w.Update()
+	if callCount != 2 {
+		t.Errorf("provider called %d times after cooldown, want 2", callCount)
+	}
+}
+
+func TestWidget_Retry_BackoffProgression(t *testing.T) {
+	cfg := baseCfg()
+	w, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	w.hwmonProvider = &metrics.MockHWMon{
+		SensorsFunc: func() ([]metrics.HWMonStat, error) {
+			return nil, errors.New("down")
+		},
+	}
+
+	for i := 0; i < len(retryBackoff)+2; i++ {
+		_ = w.Update()
+		// Force cooldown past to allow next retry.
+		w.mu.Lock()
+		w.nextRetryAt = time.Now().Add(-time.Second)
+		w.mu.Unlock()
+	}
+
+	w.mu.RLock()
+	attempt := w.retryAttempt
+	w.mu.RUnlock()
+
+	if attempt != len(retryBackoff)-1 {
+		t.Errorf("retryAttempt = %d, want %d (capped at last index)", attempt, len(retryBackoff)-1)
+	}
+}
+
+func TestWidget_Recovery_ClearsUnavailable(t *testing.T) {
+	cfg := baseCfg()
+	w, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	failing := true
+	w.hwmonProvider = &metrics.MockHWMon{
+		SensorsFunc: func() ([]metrics.HWMonStat, error) {
+			if failing {
+				return nil, errors.New("down")
+			}
+			return []metrics.HWMonStat{
+				{SensorID: "/amdcpu/0/temperature/0", Type: "Temperature", Value: 50, Unit: "°C"},
+			}, nil
+		},
+	}
+
+	_ = w.Update()
+	w.mu.RLock()
+	if !w.unavailable {
+		t.Fatal("expected widget to be unavailable after failure")
+	}
+	w.mu.RUnlock()
+
+	// Simulate LHM coming back, and force cooldown past.
+	failing = false
+	w.mu.Lock()
+	w.nextRetryAt = time.Now().Add(-time.Second)
+	w.mu.Unlock()
+
+	_ = w.Update()
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	if w.unavailable {
+		t.Error("widget should be available again after successful retry")
+	}
+	if w.retryAttempt != 0 {
+		t.Errorf("retryAttempt = %d, want 0 after recovery", w.retryAttempt)
 	}
 }
 

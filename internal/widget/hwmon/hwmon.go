@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -18,6 +19,19 @@ import (
 )
 
 const defaultLHMURL = "http://localhost:8085"
+
+// retryBackoff is the cooldown sequence applied after consecutive sensor
+// fetch failures. Once the last entry is reached, the widget keeps retrying
+// at that interval.
+var retryBackoff = []time.Duration{
+	1 * time.Second,
+	3 * time.Second,
+	5 * time.Second,
+	10 * time.Second,
+	20 * time.Second,
+	40 * time.Second,
+	60 * time.Second,
+}
 
 func init() {
 	widget.Register("hwmon", func(cfg config.WidgetConfig) (widget.Widget, error) {
@@ -65,6 +79,8 @@ type Widget struct {
 	hasData        bool
 	unavailable    bool
 	unavailableMsg string
+	retryAttempt   int       // index into retryBackoff, capped at last entry
+	nextRetryAt    time.Time // earliest time at which the next retry may run
 	sensorCount    int
 	userTextFormat string // user-provided text.format override
 	fontFace       font.Face
@@ -220,22 +236,44 @@ func (w *Widget) formatValue(value float64, unit string) string {
 // Update reads current sensor data from LHM/OHM
 func (w *Widget) Update() error {
 	w.mu.RLock()
-	alreadyUnavailable := w.unavailable
+	unavail := w.unavailable
+	nextRetry := w.nextRetryAt
 	w.mu.RUnlock()
 
-	if alreadyUnavailable {
+	// While unavailable, respect the cooldown before the next attempt.
+	if unavail && time.Now().Before(nextRetry) {
 		return nil
 	}
 
 	stats, err := w.hwmonProvider.Sensors()
 	if err != nil {
-		log.Printf("hwmon: sensors unavailable: %v", err)
 		w.mu.Lock()
+		wasUnavailable := w.unavailable
+		if wasUnavailable && w.retryAttempt < len(retryBackoff)-1 {
+			w.retryAttempt++
+		} else if !wasUnavailable {
+			w.retryAttempt = 0
+		}
 		w.unavailable = true
 		w.unavailableMsg = "No sensors"
+		w.nextRetryAt = time.Now().Add(retryBackoff[w.retryAttempt])
 		w.mu.Unlock()
+
+		if !wasUnavailable {
+			log.Printf("hwmon: sensors unavailable, will retry: %v", err)
+		}
 		return nil
 	}
+
+	// Connection successful — clear any outage state.
+	w.mu.Lock()
+	if w.unavailable {
+		log.Printf("hwmon: sensors connection restored")
+	}
+	w.unavailable = false
+	w.retryAttempt = 0
+	w.nextRetryAt = time.Time{}
+	w.mu.Unlock()
 
 	filtered := w.filterSensors(stats)
 	if len(filtered) == 0 {
@@ -298,7 +336,15 @@ func (w *Widget) Render() (image.Image, error) {
 	defer w.mu.RUnlock()
 
 	if w.unavailable {
-		bitmap.SmartDrawAlignedText(img, w.unavailableMsg, nil, bitmap.FontNamePixel5x7, "center", "center", 0)
+		msg := w.unavailableMsg
+		if remaining := time.Until(w.nextRetryAt); remaining > 0 {
+			secs := int(remaining.Round(time.Second).Seconds())
+			if secs < 1 {
+				secs = 1
+			}
+			msg = fmt.Sprintf("%s (retry %ds)", msg, secs)
+		}
+		bitmap.SmartDrawAlignedText(img, msg, nil, bitmap.FontNamePixel5x7, "center", "center", 0)
 		return img, nil
 	}
 
