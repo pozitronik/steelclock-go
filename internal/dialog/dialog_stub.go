@@ -1,4 +1,4 @@
-//go:build !windows
+//go:build !windows && !darwin
 
 // Package dialog provides simple input dialogs
 package dialog
