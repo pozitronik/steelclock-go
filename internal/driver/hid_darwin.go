@@ -196,16 +196,12 @@ static int sendHIDFeatureReport(void *devicePtr, const uint8_t *data, int length
 	IOHIDDeviceRef device = (IOHIDDeviceRef)devicePtr;
 
 	// The report ID is the first byte of the data, per convention.
-	// On macOS, IOHIDDeviceSetReport takes the report ID separately.
+	// On macOS, IOHIDDeviceSetReport takes the report ID separately from the data buffer,
+	// so we always strip data[0] as the report ID. Report ID 0 means the device has no
+	// report IDs (single-report device per HID spec).
 	uint8_t reportID = data[0];
 	const uint8_t *reportData = data + 1;
 	CFIndex reportLength = length - 1;
-
-	// If report ID is 0, send the entire buffer as the report
-	if (reportID == 0) {
-		reportData = data;
-		reportLength = length;
-	}
 
 	IOReturn result = IOHIDDeviceSetReport(device,
 		kIOHIDReportTypeFeature, reportID,
