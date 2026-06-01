@@ -81,6 +81,31 @@ func NewDriver(cfg Config) *HIDDriver {
 	}
 }
 
+// deviceInterface returns the USB interface a known device exposes its display
+// on, derived from the device's protocol (Apex keyboards on mi_01, Nova Pro
+// family on mi_04). The protocol is the single source of truth for this.
+func deviceInterface(dev *KnownDevice) string {
+	if dev.NewProtocol != nil {
+		return dev.NewProtocol().Interface()
+	}
+	return (&ApexProtocol{}).Interface()
+}
+
+// autoDetectKnownDevice scans KnownDevices and returns the first one whose
+// VID/PID is present on its expected USB interface. Searching each device on
+// its own interface (rather than a single fixed one) is what lets Nova Pro
+// devices — whose OLED lives on mi_04, not the keyboards' mi_01 — be found.
+func autoDetectKnownDevice() (*KnownDevice, string, error) {
+	for i := range KnownDevices {
+		dev := &KnownDevices[i]
+		path, err := findDevicePath(dev.VID, dev.PID, deviceInterface(dev))
+		if err == nil {
+			return dev, path, nil
+		}
+	}
+	return nil, "", fmt.Errorf("no known SteelSeries device found")
+}
+
 // Open finds and opens a device connection
 func (d *HIDDriver) Open() error {
 	d.mu.Lock()
@@ -98,8 +123,17 @@ func (d *HIDDriver) Open() error {
 		// Use specified VID/PID
 		devicePath, err = findDevicePath(d.config.VID, d.config.PID, d.config.Interface)
 	} else {
-		// Auto-detect from known devices
-		devicePath, err = autoDetectDevice(d.config.Interface)
+		// Auto-detect from known devices. Each device family is searched on its
+		// own USB interface and, once matched, its protocol/interface/IDs are
+		// adopted so the correct frame format is used for whatever was found.
+		var matched *KnownDevice
+		matched, devicePath, err = autoDetectKnownDevice()
+		if err == nil {
+			d.protocol = resolveProtocol(matched.VID, matched.PID)
+			d.config.VID = matched.VID
+			d.config.PID = matched.PID
+			d.config.Interface = deviceInterface(matched)
+		}
 	}
 
 	if err != nil {

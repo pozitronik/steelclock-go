@@ -133,17 +133,6 @@ func findDevicePath(vid, pid uint16, targetInterface string) (string, error) {
 	return "", fmt.Errorf("device VID_%04X PID_%04X interface %s not found", vid, pid, targetInterface)
 }
 
-// autoDetectDevice tries to find any known SteelSeries device
-func autoDetectDevice(targetInterface string) (string, error) {
-	for _, device := range KnownDevices {
-		path, err := findDevicePath(device.VID, device.PID, targetInterface)
-		if err == nil {
-			return path, nil
-		}
-	}
-	return "", fmt.Errorf("no known SteelSeries device found")
-}
-
 // openDevice opens a HID device by path
 func openDevice(path string) (DeviceHandle, error) {
 	pathPtr, err := syscall.UTF16PtrFromString(path)

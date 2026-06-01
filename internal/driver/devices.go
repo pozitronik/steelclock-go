@@ -133,4 +133,18 @@ var KnownDevices = []KnownDevice{
 		}{128, 64},
 		NewProtocol: func() Protocol { return &NovaProProtocol{} },
 	},
+	// Arctis Nova Pro Omni — PID reported via the -list-devices diagnostic by a
+	// user whose base station exposes the OLED on mi_04 (same layout as the rest
+	// of the Nova Pro family). Treated as a 128x64 Nova Pro device pending
+	// hardware confirmation that the column-major protocol renders correctly.
+	{
+		VID:  SteelSeriesVID,
+		PID:  0x2290,
+		Name: "Arctis Nova Pro Omni",
+		DisplaySize: struct {
+			Width  int
+			Height int
+		}{128, 64},
+		NewProtocol: func() Protocol { return &NovaProProtocol{} },
+	},
 }

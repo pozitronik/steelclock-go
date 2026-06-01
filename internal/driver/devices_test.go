@@ -90,6 +90,57 @@ func TestKnownDevices_NovaProDisplaySize(t *testing.T) {
 	}
 }
 
+func TestDeviceInterface(t *testing.T) {
+	tests := []struct {
+		name string
+		dev  KnownDevice
+		want string
+	}{
+		{
+			name: "Apex device (nil protocol) defaults to mi_01",
+			dev:  KnownDevice{Name: "Apex Pro", NewProtocol: nil},
+			want: "mi_01",
+		},
+		{
+			name: "Nova Pro device uses mi_04",
+			dev:  KnownDevice{Name: "Nova Pro", NewProtocol: func() Protocol { return &NovaProProtocol{} }},
+			want: "mi_04",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dev := tt.dev
+			if got := deviceInterface(&dev); got != tt.want {
+				t.Errorf("deviceInterface(%s) = %q, want %q", tt.dev.Name, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestKnownDevices_NovaProOmni(t *testing.T) {
+	// The Omni must resolve to the Nova Pro protocol on mi_04 at 128x64,
+	// otherwise the direct driver would talk the wrong (Apex) protocol to it.
+	var omni *KnownDevice
+	for i := range KnownDevices {
+		if KnownDevices[i].PID == 0x2290 {
+			omni = &KnownDevices[i]
+			break
+		}
+	}
+	if omni == nil {
+		t.Fatal("Arctis Nova Pro Omni (PID 0x2290) not found in KnownDevices")
+	}
+	if got := deviceInterface(omni); got != "mi_04" {
+		t.Errorf("Omni interface = %q, want mi_04", got)
+	}
+	if _, ok := resolveProtocol(omni.VID, omni.PID).(*NovaProProtocol); !ok {
+		t.Errorf("Omni protocol = %T, want *NovaProProtocol", resolveProtocol(omni.VID, omni.PID))
+	}
+	if omni.DisplaySize.Width != 128 || omni.DisplaySize.Height != 64 {
+		t.Errorf("Omni display = %dx%d, want 128x64", omni.DisplaySize.Width, omni.DisplaySize.Height)
+	}
+}
+
 func TestKnownDevices_UniquePIDs(t *testing.T) {
 	seen := make(map[uint16]string)
 	for _, device := range KnownDevices {
@@ -117,6 +168,7 @@ func TestKnownDevices_ContainsExpectedDevices(t *testing.T) {
 		0x12e0: "Arctis Nova Pro Wireless (USB-C Dongle)",
 		0x12e5: "Arctis Nova Pro Wireless (Xbox)",
 		0x225d: "Arctis Nova 5P (USB-C Dongle)",
+		0x2290: "Arctis Nova Pro Omni",
 	}
 
 	deviceByPID := make(map[uint16]KnownDevice)

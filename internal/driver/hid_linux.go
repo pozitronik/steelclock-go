@@ -169,33 +169,6 @@ func findDevicePath(vid, pid uint16, targetInterface string) (string, error) {
 	return "", fmt.Errorf("device VID_%04X PID_%04X interface %s not found", vid, pid, targetInterface)
 }
 
-// autoDetectDevice tries to find any known SteelSeries device
-func autoDetectDevice(targetInterface string) (string, error) {
-	devices, err := enumerateHidrawDevices()
-	if err != nil {
-		return "", err
-	}
-
-	targetInterface = strings.ToLower(targetInterface)
-
-	// Try each known device
-	for _, known := range KnownDevices {
-		for _, dev := range devices {
-			if dev.vid == known.VID && dev.pid == known.PID {
-				// Check interface if specified
-				if targetInterface != "" && dev.interface_ != "" {
-					if strings.ToLower(dev.interface_) != targetInterface {
-						continue
-					}
-				}
-				return dev.path, nil
-			}
-		}
-	}
-
-	return "", fmt.Errorf("no known SteelSeries device found")
-}
-
 // openDevice opens a HID device by path
 func openDevice(path string) (DeviceHandle, error) {
 	fd, err := syscall.Open(path, syscall.O_RDWR, 0)

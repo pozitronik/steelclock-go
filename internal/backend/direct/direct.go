@@ -40,7 +40,11 @@ func newBackend(cfg *config.Config) (display.Backend, error) {
 		}
 	}
 
-	iface := "mi_01"
+	// Leave the interface empty unless explicitly configured, so the driver can
+	// derive it from the resolved device protocol (mi_01 for Apex keyboards,
+	// mi_04 for the Nova Pro family). Hardcoding "mi_01" here previously made it
+	// impossible to reach any Nova Pro device, whose OLED lives on mi_04.
+	iface := ""
 	if cfg.DirectDriver != nil && cfg.DirectDriver.Interface != "" {
 		iface = cfg.DirectDriver.Interface
 	}

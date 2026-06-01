@@ -18,11 +18,6 @@ func findDevicePath(vid, pid uint16, targetInterface string) (string, error) {
 	return "", ErrNotSupported
 }
 
-// autoDetectDevice is not supported on Unix
-func autoDetectDevice(targetInterface string) (string, error) {
-	return "", ErrNotSupported
-}
-
 // openDevice is not supported on Unix
 func openDevice(path string) (DeviceHandle, error) {
 	return InvalidHandle, ErrNotSupported
