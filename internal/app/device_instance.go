@@ -232,8 +232,7 @@ func (d *DeviceInstance) ensureClient(cfg *config.Config) error {
 	d.currentBackend = backendName
 
 	// Bind screen event (no-op for direct driver)
-	deviceType := DeviceTypeForDisplay(cfg.Display.Width, cfg.Display.Height)
-	if err := d.bindEventWithRetry(10, deviceType); err != nil {
+	if err := d.bindEventWithRetry(10, GameSenseScreenDeviceType); err != nil {
 		log.Printf("[%s] ERROR: Failed to bind screen event after retries: %v", d.id, err)
 		d.client = nil
 		return err
@@ -280,8 +279,7 @@ func (d *DeviceInstance) handleBackendFailure(cfg *config.Config) {
 	d.currentBackend = newBackend
 	log.Printf("[%s] Successfully switched to %s backend", d.id, d.currentBackend)
 
-	deviceType := DeviceTypeForDisplay(cfg.Display.Width, cfg.Display.Height)
-	if err := d.client.BindScreenEvent(EventName, deviceType); err != nil {
+	if err := d.client.BindScreenEvent(EventName, GameSenseScreenDeviceType); err != nil {
 		log.Printf("[%s] ERROR: Failed to bind screen event: %v", d.id, err)
 		return
 	}

@@ -21,12 +21,14 @@ const (
 	DeveloperName = "Pozitronik"
 )
 
-// DeviceTypeForDisplay returns the GameSense device type string for the given
-// display dimensions. GameSense uses device types like "screened-128x40",
-// "screened-128x52" (GameDAC Gen 1), "screened-128x64" (Nova Pro / GameDAC Gen 2).
-func DeviceTypeForDisplay(width, height int) string {
-	return fmt.Sprintf("screened-%dx%d", width, height)
-}
+// GameSenseScreenDeviceType is the generic GameSense device type for screen
+// (OLED/LCD) handlers. Binding to the generic "screened" type — rather than a
+// size-specific "screened-128x40" — lets GameSense deliver each frame's
+// image-data-<W>x<H> entry to whichever screened device is connected. A single
+// handler then drives 128x40 Apex keyboards and 128x64 Nova Pro / GameDAC Gen 2
+// base stations alike, and supported_resolutions can route a distinct image to
+// each connected device simultaneously.
+const GameSenseScreenDeviceType = "screened"
 
 // BackendUnavailableError indicates display backend is not available
 type BackendUnavailableError struct {

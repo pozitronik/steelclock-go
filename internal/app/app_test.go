@@ -125,27 +125,13 @@ func TestAppConstants(t *testing.T) {
 	}
 }
 
-func TestDeviceTypeForDisplay(t *testing.T) {
-	tests := []struct {
-		name   string
-		width  int
-		height int
-		want   string
-	}{
-		{"Apex keyboard", 128, 40, "screened-128x40"},
-		{"GameDAC Gen 1", 128, 52, "screened-128x52"},
-		{"Nova Pro / GameDAC Gen 2", 128, 64, "screened-128x64"},
-		{"Rival 700", 128, 36, "screened-128x36"},
-		{"Arctis Pro Wireless", 128, 48, "screened-128x48"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := DeviceTypeForDisplay(tt.width, tt.height)
-			if got != tt.want {
-				t.Errorf("DeviceTypeForDisplay(%d, %d) = %q, want %q", tt.width, tt.height, got, tt.want)
-			}
-		})
+func TestGameSenseScreenDeviceType(t *testing.T) {
+	// The screen event must bind to the generic "screened" device type so that
+	// GameSense routes each frame's image-data-<W>x<H> entry to whichever screened
+	// device is connected (e.g. 128x40 keyboards and 128x64 Nova Pro base stations),
+	// rather than locking the handler to a single size-specific device type.
+	if GameSenseScreenDeviceType != "screened" {
+		t.Errorf("GameSenseScreenDeviceType = %q, want %q", GameSenseScreenDeviceType, "screened")
 	}
 }
 

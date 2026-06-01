@@ -187,8 +187,7 @@ func (m *LifecycleManager) StartErrorDisplay(message string, width, height int) 
 		m.errorClient = errorClient
 
 		// Bind screen event (no-op for direct driver)
-		deviceType := DeviceTypeForDisplay(width, height)
-		if err := errorClient.BindScreenEvent(EventName, deviceType); err != nil {
+		if err := errorClient.BindScreenEvent(EventName, GameSenseScreenDeviceType); err != nil {
 			log.Printf("ERROR: Failed to bind screen event for error display: %v", err)
 			return fmt.Errorf("failed to bind screen event: %w", err)
 		}
