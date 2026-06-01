@@ -15,6 +15,16 @@ type DeviceInfo struct {
 	ProductName  string // Product name (if available)
 	Manufacturer string // Manufacturer name (if available)
 	Interface    string // Interface identifier (e.g., "mi_01")
+
+	// HID capabilities (populated for SteelSeries interfaces during diagnostics;
+	// HasCaps is false when they could not be read). Report lengths include the
+	// report ID byte, matching the Windows HIDP_CAPS convention.
+	HasCaps          bool
+	UsagePage        uint16
+	Usage            uint16
+	InputReportLen   int
+	OutputReportLen  int
+	FeatureReportLen int
 }
 
 // Driver interface for USB HID communication with OLED displays
@@ -55,7 +65,13 @@ type HIDDriver struct {
 	handle     DeviceHandle
 	deviceInfo DeviceInfo
 	connected  bool
-	mu         sync.RWMutex
+	// outputReport is true when the device protocol requires HID output reports
+	// (HidD_SetOutputReport) instead of feature reports (HidD_SetFeature).
+	outputReport bool
+	// outputReportLen is the device's expected output-report buffer length
+	// (including the report ID), read from HID capabilities at Open; 0 if unknown.
+	outputReportLen int
+	mu              sync.RWMutex
 }
 
 // DeviceHandle is a platform-specific device handle type
@@ -76,8 +92,9 @@ func NewDriver(cfg Config) *HIDDriver {
 	}
 
 	return &HIDDriver{
-		config:   cfg,
-		protocol: protocol,
+		config:       cfg,
+		protocol:     protocol,
+		outputReport: protocolUsesOutputReport(protocol),
 	}
 }
 
@@ -133,6 +150,7 @@ func (d *HIDDriver) Open() error {
 			d.config.VID = matched.VID
 			d.config.PID = matched.PID
 			d.config.Interface = deviceInterface(matched)
+			d.outputReport = protocolUsesOutputReport(d.protocol)
 		}
 	}
 
@@ -148,6 +166,11 @@ func (d *HIDDriver) Open() error {
 
 	d.handle = handle
 	d.connected = true
+	// For output-report devices, learn the exact report length from HID
+	// capabilities so packets can be padded to the size the device expects.
+	if d.outputReport {
+		d.outputReportLen = outputReportByteLength(handle)
+	}
 	d.deviceInfo = DeviceInfo{
 		VID:       d.config.VID,
 		PID:       d.config.PID,
@@ -186,9 +209,9 @@ func (d *HIDDriver) SendFrame(pixelData []byte) error {
 	// Build packets using the device-specific protocol
 	packets := d.protocol.BuildFramePackets(pixelData, d.config.Width, d.config.Height)
 
-	// Send each packet via HID SetFeature
+	// Send each packet using the transport the device protocol requires.
 	for _, packet := range packets {
-		if err := sendFeatureReport(d.handle, packet); err != nil {
+		if err := d.sendPacket(packet); err != nil {
 			// Mark as disconnected on send failure
 			d.connected = false
 			_ = closeDevice(d.handle)
@@ -200,8 +223,26 @@ func (d *HIDDriver) SendFrame(pixelData []byte) error {
 	return nil
 }
 
-// SendRawPacket sends a pre-built packet directly to the device via HID SetFeature.
-// Used for control packets (brightness, return-to-UI) that bypass the protocol's frame building.
+// sendPacket delivers a single HID packet using the transport the device
+// protocol requires: output reports for Nova Pro (mi_04 rejects feature
+// reports), feature reports otherwise. Output-report packets are padded to the
+// device's expected report length when it is known.
+func (d *HIDDriver) sendPacket(packet []byte) error {
+	if !d.outputReport {
+		return sendFeatureReport(d.handle, packet)
+	}
+	if d.outputReportLen > len(packet) {
+		buf := make([]byte, d.outputReportLen)
+		copy(buf, packet)
+		packet = buf
+	}
+	return sendOutputReport(d.handle, packet)
+}
+
+// SendRawPacket sends a pre-built packet directly to the device, using the
+// transport the device protocol requires (output report for Nova Pro, feature
+// report otherwise). Used for control packets (brightness, return-to-UI) that
+// bypass the protocol's frame building.
 func (d *HIDDriver) SendRawPacket(packet []byte) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -210,7 +251,7 @@ func (d *HIDDriver) SendRawPacket(packet []byte) error {
 		return fmt.Errorf("device not connected")
 	}
 
-	if err := sendFeatureReport(d.handle, packet); err != nil {
+	if err := d.sendPacket(packet); err != nil {
 		d.connected = false
 		_ = closeDevice(d.handle)
 		d.handle = InvalidHandle

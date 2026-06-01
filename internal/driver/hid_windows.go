@@ -26,8 +26,87 @@ var (
 	procSetupDiGetDeviceInterfaceDetailW = modSetupApi.NewProc("SetupDiGetDeviceInterfaceDetailW")
 	procSetupDiDestroyDeviceInfoList     = modSetupApi.NewProc("SetupDiDestroyDeviceInfoList")
 
-	procHidDSetFeature = modHid.NewProc("HidD_SetFeature")
+	procHidDSetFeature        = modHid.NewProc("HidD_SetFeature")
+	procHidDSetOutputReport   = modHid.NewProc("HidD_SetOutputReport")
+	procHidDGetPreparsedData  = modHid.NewProc("HidD_GetPreparsedData")
+	procHidDFreePreparsedData = modHid.NewProc("HidD_FreePreparsedData")
+	procHidPGetCaps           = modHid.NewProc("HidP_GetCaps")
 )
+
+// hidpStatusSuccess is HIDP_STATUS_SUCCESS returned by HidP_GetCaps.
+const hidpStatusSuccess = 0x00110000
+
+// hidpCaps mirrors the Windows HIDP_CAPS structure (all fields USHORT).
+// Only the leading fields are used; the trailing counts are kept for correct sizing.
+type hidpCaps struct {
+	Usage                     uint16
+	UsagePage                 uint16
+	InputReportByteLength     uint16
+	OutputReportByteLength    uint16
+	FeatureReportByteLength   uint16
+	Reserved                  [17]uint16
+	NumberLinkCollectionNodes uint16
+	NumberInputButtonCaps     uint16
+	NumberInputValueCaps      uint16
+	NumberInputDataIndices    uint16
+	NumberOutputButtonCaps    uint16
+	NumberOutputValueCaps     uint16
+	NumberOutputDataIndices   uint16
+	NumberFeatureButtonCaps   uint16
+	NumberFeatureValueCaps    uint16
+	NumberFeatureDataIndices  uint16
+}
+
+// readHidCaps reads the HID capabilities of an open device handle. The handle
+// only needs query access (AccessRights = 0 is sufficient for HidD_GetPreparsedData).
+func readHidCaps(handle DeviceHandle) (hidpCaps, error) {
+	var caps hidpCaps
+	var preparsed uintptr
+	r, _, _ := procHidDGetPreparsedData.Call(uintptr(handle), uintptr(unsafe.Pointer(&preparsed)))
+	if r == 0 || preparsed == 0 {
+		return caps, fmt.Errorf("HidD_GetPreparsedData failed")
+	}
+	defer func() { _, _, _ = procHidDFreePreparsedData.Call(preparsed) }()
+
+	st, _, _ := procHidPGetCaps.Call(preparsed, uintptr(unsafe.Pointer(&caps)))
+	if st != hidpStatusSuccess {
+		return caps, fmt.Errorf("HidP_GetCaps failed (status 0x%X)", st)
+	}
+	return caps, nil
+}
+
+// sendOutputReport sends a HID output report via HidD_SetOutputReport. Unlike
+// WriteFile, this goes through an IOCTL and works on a handle opened with
+// AccessRights = 0, preserving coexistence with SteelSeries GG. The first byte
+// of data must be the report ID.
+func sendOutputReport(handle DeviceHandle, data []byte) error {
+	if handle == InvalidHandle {
+		return fmt.Errorf("invalid handle")
+	}
+	if len(data) == 0 {
+		return fmt.Errorf("empty data")
+	}
+
+	r, _, err := procHidDSetOutputReport.Call(
+		uintptr(handle),
+		uintptr(unsafe.Pointer(&data[0])),
+		uintptr(len(data)),
+	)
+	if r == 0 {
+		return fmt.Errorf("HidD_SetOutputReport failed: %w", err)
+	}
+	return nil
+}
+
+// outputReportByteLength returns the device's expected output-report length
+// (including the report ID byte), or 0 if it cannot be determined.
+func outputReportByteLength(handle DeviceHandle) int {
+	caps, err := readHidCaps(handle)
+	if err != nil {
+		return 0
+	}
+	return int(caps.OutputReportByteLength)
+}
 
 // Windows constants
 const (
@@ -223,8 +302,10 @@ func parseHex16After(s, marker string) (uint16, bool) {
 }
 
 // EnumerateDevices lists all present HID interfaces, parsing VID/PID/interface
-// from each device path. It does not open the devices, so it is safe to call
-// while SteelSeries GG (or any other app) holds them. Intended for diagnostics.
+// from each device path. SteelSeries (VID 0x1038) interfaces are additionally
+// opened read-only to read their HID capabilities (report transport/sizes);
+// other devices are never opened. The read-only open coexists with SteelSeries
+// GG (or any other app) holding them. Intended for diagnostics.
 func EnumerateDevices() ([]DeviceInfo, error) {
 	hDevInfo, _, _ := procSetupDiGetClassDevsW.Call(
 		uintptr(unsafe.Pointer(&hidGUID)),
@@ -280,12 +361,32 @@ func EnumerateDevices() ([]DeviceInfo, error) {
 		}
 
 		vid, pid, iface := parseHidPath(path)
-		result = append(result, DeviceInfo{
+		info := DeviceInfo{
 			VID:       vid,
 			PID:       pid,
 			Path:      path,
 			Interface: iface,
-		})
+		}
+
+		// Read HID capabilities for SteelSeries interfaces only, so we learn the
+		// real report transport/sizes (e.g. whether the OLED interface supports
+		// feature vs output reports) without touching unrelated devices. The
+		// read-only open coexists with SteelSeries GG.
+		if vid == SteelSeriesVID {
+			if handle, oerr := openDevice(path); oerr == nil {
+				if caps, cerr := readHidCaps(handle); cerr == nil {
+					info.HasCaps = true
+					info.UsagePage = caps.UsagePage
+					info.Usage = caps.Usage
+					info.InputReportLen = int(caps.InputReportByteLength)
+					info.OutputReportLen = int(caps.OutputReportByteLength)
+					info.FeatureReportLen = int(caps.FeatureReportByteLength)
+				}
+				_ = closeDevice(handle)
+			}
+		}
+
+		result = append(result, info)
 	}
 
 	return result, nil

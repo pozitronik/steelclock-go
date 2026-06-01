@@ -47,6 +47,12 @@ func (p *NovaProProtocol) DeviceFamily() string {
 	return "Nova Pro"
 }
 
+// UsesOutputReport reports that Nova Pro frames must be sent as HID output
+// reports; the mi_04 OLED interface rejects feature reports.
+func (p *NovaProProtocol) UsesOutputReport() bool {
+	return true
+}
+
 // BuildBrightnessPacket builds a 1024-byte HID feature report to set display brightness.
 // Level ranges from 0 (off) to 10 (maximum).
 func (p *NovaProProtocol) BuildBrightnessPacket(level int) []byte {

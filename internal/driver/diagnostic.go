@@ -53,6 +53,10 @@ func FormatDeviceDiagnostic(devices []DeviceInfo) string {
 				iface = "(single)"
 			}
 			fmt.Fprintf(&b, "  PID 0x%04x  %-9s  %s\n", d.PID, iface, d.Path)
+			if d.HasCaps {
+				fmt.Fprintf(&b, "             caps: usage=0x%04x:0x%04x  reports(bytes incl. ID): in=%d out=%d feature=%d\n",
+					d.UsagePage, d.Usage, d.InputReportLen, d.OutputReportLen, d.FeatureReportLen)
+			}
 		}
 		b.WriteString("\n")
 

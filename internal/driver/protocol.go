@@ -24,3 +24,20 @@ type BrightnessSupport interface {
 type UIReturnSupport interface {
 	BuildReturnToUIPacket() []byte
 }
+
+// OutputReportSupport marks protocols whose HID reports must be delivered as
+// output reports (via HidD_SetOutputReport on Windows / write() on Linux) rather
+// than feature reports. The Nova Pro OLED interface (mi_04) rejects feature
+// reports with ERROR_INVALID_FUNCTION, so its frames must go out as output reports.
+type OutputReportSupport interface {
+	UsesOutputReport() bool
+}
+
+// protocolUsesOutputReport reports whether a protocol opts into HID output
+// reports instead of feature reports.
+func protocolUsesOutputReport(p Protocol) bool {
+	if or, ok := p.(OutputReportSupport); ok {
+		return or.UsesOutputReport()
+	}
+	return false
+}

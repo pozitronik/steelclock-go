@@ -225,6 +225,31 @@ func sendFeatureReport(handle DeviceHandle, data []byte) error {
 	return nil
 }
 
+// sendOutputReport sends a HID output report. On Linux hidraw, output reports
+// are delivered with a plain write() whose first byte is the report ID.
+func sendOutputReport(handle DeviceHandle, data []byte) error {
+	if handle == InvalidHandle {
+		return fmt.Errorf("invalid handle")
+	}
+	if len(data) == 0 {
+		return fmt.Errorf("empty data")
+	}
+	n, err := syscall.Write(int(handle), data)
+	if err != nil {
+		return fmt.Errorf("write output report failed: %w", err)
+	}
+	if n != len(data) {
+		return fmt.Errorf("write output report short: %d of %d bytes", n, len(data))
+	}
+	return nil
+}
+
+// outputReportByteLength is not queried on Linux; write() accepts any length, so
+// no padding is needed. Returns 0 (unknown).
+func outputReportByteLength(_ DeviceHandle) int {
+	return 0
+}
+
 // EnumerateDevices returns a list of all connected HID devices
 func EnumerateDevices() ([]DeviceInfo, error) {
 	devices, err := enumerateHidrawDevices()
