@@ -36,7 +36,30 @@ var (
 	procGetSystemMetrics = user32.NewProc("GetSystemMetrics")
 
 	procSetForegroundWindow = user32.NewProc("SetForegroundWindow")
+	procMessageBoxW         = user32.NewProc("MessageBoxW")
 )
+
+// MessageBox icon flags (winuser.h)
+const (
+	mbIconError       = 0x00000010
+	mbIconInformation = 0x00000040
+	mbSetForeground   = 0x00010000
+)
+
+// ShowMessage displays a native message box with the given title and message.
+// When isError is true the box uses the error icon, otherwise the info icon.
+func ShowMessage(title, message string, isError bool) {
+	flags := uintptr(mbIconInformation | mbSetForeground)
+	if isError {
+		flags = uintptr(mbIconError | mbSetForeground)
+	}
+	_, _, _ = procMessageBoxW.Call(
+		0,
+		uintptr(unsafe.Pointer(utf16Ptr(message))),
+		uintptr(unsafe.Pointer(utf16Ptr(title))),
+		flags,
+	)
+}
 
 //goland:noinspection GoUnusedConst,GoSnakeCaseUsage
 const (

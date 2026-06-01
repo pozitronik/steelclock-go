@@ -4,6 +4,7 @@ package driver
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"syscall"
 	"unsafe"
@@ -192,4 +193,111 @@ func sendFeatureReport(handle DeviceHandle, data []byte) error {
 	}
 
 	return nil
+}
+
+// parseHidPath extracts the VID, PID and interface (mi_xx) from a Windows HID
+// device interface path such as
+// `\\?\hid#vid_1038&pid_12cd&mi_04#...`. Fields that are absent yield zero / "".
+func parseHidPath(path string) (vid, pid uint16, iface string) {
+	lp := strings.ToLower(path)
+	if v, ok := parseHex16After(lp, "vid_"); ok {
+		vid = v
+	}
+	if p, ok := parseHex16After(lp, "pid_"); ok {
+		pid = p
+	}
+	if idx := strings.Index(lp, "&mi_"); idx != -1 {
+		start := idx + len("&mi_")
+		if start+2 <= len(lp) {
+			iface = "mi_" + lp[start:start+2]
+		}
+	}
+	return vid, pid, iface
+}
+
+// parseHex16After returns the 16-bit hex value of the 4 characters that follow
+// marker in s (e.g. marker "vid_" in "...vid_1038...").
+func parseHex16After(s, marker string) (uint16, bool) {
+	idx := strings.Index(s, marker)
+	if idx == -1 {
+		return 0, false
+	}
+	start := idx + len(marker)
+	if start+4 > len(s) {
+		return 0, false
+	}
+	v, err := strconv.ParseUint(s[start:start+4], 16, 16)
+	if err != nil {
+		return 0, false
+	}
+	return uint16(v), true
+}
+
+// EnumerateDevices lists all present HID interfaces, parsing VID/PID/interface
+// from each device path. It does not open the devices, so it is safe to call
+// while SteelSeries GG (or any other app) holds them. Intended for diagnostics.
+func EnumerateDevices() ([]DeviceInfo, error) {
+	hDevInfo, _, _ := procSetupDiGetClassDevsW.Call(
+		uintptr(unsafe.Pointer(&hidGUID)),
+		0,
+		0,
+		digcfPresent|digcfDeviceInterface,
+	)
+	if hDevInfo == 0 || hDevInfo == ^uintptr(0) {
+		return nil, fmt.Errorf("SetupDiGetClassDevsW failed")
+	}
+	defer func() { _, _, _ = procSetupDiDestroyDeviceInfoList.Call(hDevInfo) }()
+
+	var ifaceData spDeviceInterfaceData
+	if unsafe.Sizeof(uintptr(0)) == 8 {
+		ifaceData.cbSize = 32
+	} else {
+		ifaceData.cbSize = 28
+	}
+
+	var result []DeviceInfo
+	for i := 0; ; i++ {
+		r, _, _ := procSetupDiEnumDeviceInterfaces.Call(
+			hDevInfo,
+			0,
+			uintptr(unsafe.Pointer(&hidGUID)),
+			uintptr(i),
+			uintptr(unsafe.Pointer(&ifaceData)),
+		)
+		if r == 0 {
+			break
+		}
+
+		var detailData spDeviceInterfaceDetailData
+		if unsafe.Sizeof(uintptr(0)) == 8 {
+			detailData.cbSize = 8
+		} else {
+			detailData.cbSize = 5
+		}
+
+		var reqSize uint32
+		_, _, _ = procSetupDiGetDeviceInterfaceDetailW.Call(
+			hDevInfo,
+			uintptr(unsafe.Pointer(&ifaceData)),
+			uintptr(unsafe.Pointer(&detailData)),
+			unsafe.Sizeof(detailData),
+			uintptr(unsafe.Pointer(&reqSize)),
+			0,
+		)
+
+		path := syscall.UTF16ToString(detailData.DevicePath[:])
+		if path == "" {
+			continue
+		}
+
+		vid, pid, iface := parseHidPath(path)
+		result = append(result, DeviceInfo{
+			VID:       vid,
+			PID:       pid,
+			Path:      path,
+			Interface: iface,
+		})
+	}
+
+	return result, nil
 }

@@ -10,6 +10,8 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/app"
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/dialog"
+	"github.com/pozitronik/steelclock-go/internal/driver"
 )
 
 // looksLikeAppDir returns true if dir contains steelclock.json or a profiles/ subdirectory,
@@ -28,10 +30,17 @@ var logFile *os.File
 
 func main() {
 	configPathFlag := flag.String("config", "", "Path to configuration file (overrides profile system)")
+	listDevicesFlag := flag.Bool("list-devices", false, "Enumerate connected SteelSeries HID devices, write a report, and exit (diagnostic)")
 	flag.Parse()
 
 	setupLogging()
 	defer closeLogging()
+
+	// Diagnostic: enumerate HID devices and exit. Does not start the app.
+	if *listDevicesFlag {
+		runDeviceDiagnostic()
+		return
+	}
 
 	// Get current working directory for config search
 	baseDir, err := os.Getwd()
@@ -69,6 +78,33 @@ func main() {
 
 	application := app.NewAppWithProfiles(profileMgr)
 	application.Run()
+}
+
+// runDeviceDiagnostic enumerates connected HID devices, logs and saves a report,
+// and shows it in a dialog. Used by the -list-devices flag to discover a device's
+// USB identifiers and interfaces without requiring the user to inspect them manually.
+func runDeviceDiagnostic() {
+	var report string
+	if devices, err := driver.EnumerateDevices(); err != nil {
+		report = fmt.Sprintf("Device enumeration failed: %v", err)
+	} else {
+		report = driver.FormatDeviceDiagnostic(devices)
+	}
+
+	log.Print(report)
+
+	// Save next to the executable so it is easy to find and attach.
+	reportPath := "steelclock-devices.txt"
+	if exePath, err := os.Executable(); err == nil {
+		reportPath = filepath.Join(filepath.Dir(exePath), "steelclock-devices.txt")
+	}
+	if err := os.WriteFile(reportPath, []byte(report), 0644); err != nil {
+		log.Printf("Failed to write device report: %v", err)
+	} else {
+		report += fmt.Sprintf("\nSaved to:\n%s", reportPath)
+	}
+
+	dialog.ShowMessage("SteelClock device diagnostic", report, false)
 }
 
 // setupLogging configures logging to file
