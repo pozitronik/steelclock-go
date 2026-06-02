@@ -38,19 +38,17 @@ type Manager struct {
 	onProfileSwitch func(path string) error
 
 	// Menu items
-	// profileMenuItems has one item per profile across ALL groups, parallel to
-	// allProfiles; items not in the current group are hidden. systray cannot
-	// remove items at runtime, so group switching toggles visibility instead.
-	profileMenuItems []*systray.MenuItem
-	allProfiles      []*config.Profile
-	// groupMenuItems are the checkable items in the "Group" submenu, parallel to
-	// groupNames (empty when there is only one group).
-	groupMenuItems []*systray.MenuItem
-	groupNames     []string
-	menuEdit       *systray.MenuItem
-	menuReload     *systray.MenuItem
-	menuAutostart  *systray.MenuItem
-	menuExit       *systray.MenuItem
+	// profileMenuItems holds the clickable profile items, in creation order;
+	// profileMenuProfiles is the parallel profile each item represents. With
+	// multiple groups, each group is a submenu and these items are its children;
+	// with a single group they are flat top-level items. This avoids relying on
+	// systray Hide()/Show() (unreliable across backends) to filter by group.
+	profileMenuItems    []*systray.MenuItem
+	profileMenuProfiles []*config.Profile
+	menuEdit            *systray.MenuItem
+	menuReload          *systray.MenuItem
+	menuAutostart       *systray.MenuItem
+	menuExit            *systray.MenuItem
 
 	// State
 	readyChan       chan struct{}
@@ -119,45 +117,30 @@ func (m *Manager) buildLegacyMenu() {
 	m.menuExit = systray.AddMenuItem("Exit", "Exit SteelClock")
 }
 
-// buildProfileMenu creates the profile-aware menu
+// buildProfileMenu creates the profile-aware menu. With multiple groups, each
+// group becomes a submenu containing only its profiles; with a single group the
+// profiles are listed flat. Either way only a group's own profiles appear
+// together, without relying on systray Hide()/Show().
 func (m *Manager) buildProfileMenu() {
-	currentGroup := m.profileMgr.GetCurrentGroup()
-
-	// Group switcher: a "Group" submenu of checkable items, shown only when more
-	// than one group exists. Selecting a group filters the visible profiles.
-	if m.profileMgr.HasMultipleGroups() {
-		groupMenu := systray.AddMenuItem("Group", "Switch profile group")
-		for _, group := range m.profileMgr.GetGroups() {
-			item := groupMenu.AddSubMenuItemCheckbox(group, "Show "+group+" profiles", group == currentGroup)
-			m.groupMenuItems = append(m.groupMenuItems, item)
-			m.groupNames = append(m.groupNames, group)
-		}
-		systray.AddSeparator()
-	}
-
-	// One menu item per profile across all groups; items outside the current
-	// group are hidden (systray can't remove items, so visibility is toggled).
-	m.allProfiles = m.profileMgr.GetAllProfiles()
 	activeProfile := m.profileMgr.GetActiveProfile()
-	for _, profile := range m.allProfiles {
-		isActive := activeProfile != nil && profile.Path == activeProfile.Path
+	groups := m.profileMgr.GetGroups()
 
-		title := profile.Name
-		if isActive && runtime.GOOS == "linux" {
-			title = "✓ " + title // checkmarks don't display with AppIndicator
+	if len(groups) <= 1 {
+		// Single group: flat list of its profiles at the top level.
+		for _, profile := range m.profileMgr.GetAllProfiles() {
+			m.addProfileItem(systray.AddMenuItem, profile, activeProfile)
 		}
-
-		menuItem := systray.AddMenuItem(title, profile.Path)
-		if isActive {
-			menuItem.Check()
+	} else {
+		// Multiple groups: one submenu per group, holding only that group's profiles.
+		for _, group := range groups {
+			groupMenu := systray.AddMenuItem(group, group+" profiles")
+			for _, profile := range m.profileMgr.GetProfilesInGroup(group) {
+				m.addProfileItem(groupMenu.AddSubMenuItem, profile, activeProfile)
+			}
 		}
-		if profile.Group != currentGroup {
-			menuItem.Hide()
-		}
-		m.profileMenuItems = append(m.profileMenuItems, menuItem)
 	}
 
-	if len(m.allProfiles) > 0 {
+	if len(m.profileMenuItems) > 0 {
 		systray.AddSeparator()
 	}
 
@@ -173,6 +156,25 @@ func (m *Manager) buildProfileMenu() {
 	m.menuExit = systray.AddMenuItem("Exit", "Exit SteelClock")
 }
 
+// addProfileItem creates one clickable profile menu item via the given add
+// function (systray.AddMenuItem for a flat item, or parent.AddSubMenuItem for a
+// group submenu child), checkmarks it if active, and records it for click handling.
+func (m *Manager) addProfileItem(add func(title, tooltip string) *systray.MenuItem, profile, active *config.Profile) {
+	isActive := active != nil && profile.Path == active.Path
+
+	title := profile.Name
+	if isActive && runtime.GOOS == "linux" {
+		title = "✓ " + title // checkmarks don't display with AppIndicator
+	}
+
+	item := add(title, profile.Path)
+	if isActive {
+		item.Check()
+	}
+	m.profileMenuItems = append(m.profileMenuItems, item)
+	m.profileMenuProfiles = append(m.profileMenuProfiles, profile)
+}
+
 // onQuit is called when systray is quitting
 func (m *Manager) onQuit() {
 	if m.onExit != nil {
@@ -182,14 +184,13 @@ func (m *Manager) onQuit() {
 
 // handleMenuClicks processes menu item clicks
 func (m *Manager) handleMenuClicks() {
-	// Build select cases once — menu structure doesn't change at runtime (group
-	// switching only toggles item visibility, not the item set).
-	// Cases: [edit, reload, autostart, exit, group0..., profile0...]
+	// Build select cases once — the menu structure is fixed at build time.
+	// Cases: [edit, reload, autostart, exit, profile0, profile1, ...]
 	//
 	// When autostart is not supported (menuAutostart == nil), the autostart
 	// case is still present but uses a nil channel that never fires, keeping
 	// the index arithmetic consistent across platforms.
-	cases := make([]reflect.SelectCase, 0, 4+len(m.groupMenuItems)+len(m.profileMenuItems))
+	cases := make([]reflect.SelectCase, 0, 4+len(m.profileMenuItems))
 
 	// Add fixed menu items
 	cases = append(cases, reflect.SelectCase{
@@ -213,22 +214,13 @@ func (m *Manager) handleMenuClicks() {
 		Chan: reflect.ValueOf(m.menuExit.ClickedCh),
 	})
 
-	// Add group submenu items, then profile items.
-	for _, item := range m.groupMenuItems {
-		cases = append(cases, reflect.SelectCase{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(item.ClickedCh),
-		})
-	}
+	// Add profile items (group submenu children or flat items).
 	for _, item := range m.profileMenuItems {
 		cases = append(cases, reflect.SelectCase{
 			Dir:  reflect.SelectRecv,
 			Chan: reflect.ValueOf(item.ClickedCh),
 		})
 	}
-
-	groupBase := 4
-	profileBase := groupBase + len(m.groupMenuItems)
 
 	for {
 		// Wait for any channel to receive
@@ -244,70 +236,24 @@ func (m *Manager) handleMenuClicks() {
 		case chosen == 3: // Exit
 			systray.Quit()
 			return
-		case chosen < profileBase: // Group item
-			m.handleGroupSwitch(chosen - groupBase)
-		default: // Profile item
-			m.handleProfileSwitch(chosen - profileBase)
+		default: // Profile item (index = chosen - 4)
+			m.handleProfileSwitch(chosen - 4)
 		}
 	}
 }
 
-// handleGroupSwitch switches the active profile group, toggles which profile
-// items are visible, and loads the new group's active profile.
-func (m *Manager) handleGroupSwitch(index int) {
-	if m.profileMgr == nil || index < 0 || index >= len(m.groupNames) {
-		return
-	}
-	group := m.groupNames[index]
-	if group == m.profileMgr.GetCurrentGroup() {
-		return
-	}
-
-	if err := m.profileMgr.SetCurrentGroup(group); err != nil {
-		log.Printf("Failed to switch group: %v", err)
-		return
-	}
-	log.Printf("Switched to profile group: %s", group)
-
-	// Update group checkmarks.
-	for i, item := range m.groupMenuItems {
-		if i == index {
-			item.Check()
-		} else {
-			item.Uncheck()
-		}
-	}
-
-	// Show only the selected group's profile items.
-	for i, item := range m.profileMenuItems {
-		if i < len(m.allProfiles) && m.allProfiles[i].Group == group {
-			item.Show()
-		} else {
-			item.Hide()
-		}
-	}
-
-	// Load the group's now-active profile.
-	if active := m.profileMgr.GetActiveProfile(); active != nil && m.onProfileSwitch != nil {
-		if err := m.onProfileSwitch(active.Path); err != nil {
-			log.Printf("Failed to load group's active profile: %v", err)
-		}
-	}
-	m.UpdateActiveProfile()
-}
-
-// handleProfileSwitch handles clicking on a profile menu item (index into the
-// all-profiles list, which is parallel to profileMenuItems).
+// handleProfileSwitch handles clicking on a profile menu item (index into
+// profileMenuProfiles, which is parallel to profileMenuItems).
 func (m *Manager) handleProfileSwitch(index int) {
 	if m.profileMgr == nil {
 		return
 	}
 
-	if index < 0 || index >= len(m.allProfiles) {
+	if index < 0 || index >= len(m.profileMenuProfiles) {
 		return
 	}
 
-	profile := m.allProfiles[index]
+	profile := m.profileMenuProfiles[index]
 	activeProfile := m.profileMgr.GetActiveProfile()
 
 	// Don't switch if already active
@@ -561,7 +507,7 @@ func (m *Manager) handleReloadConfig() {
 		if activeProfile != nil {
 			m.profileMgr.RefreshProfile(activeProfile.Path)
 			// Refresh titles, then re-apply active checkmark/prefix.
-			for i, profile := range m.allProfiles {
+			for i, profile := range m.profileMenuProfiles {
 				if i < len(m.profileMenuItems) {
 					m.profileMenuItems[i].SetTitle(profile.Name)
 				}
@@ -596,7 +542,7 @@ func (m *Manager) UpdateActiveProfile() {
 
 	activeProfile := m.profileMgr.GetActiveProfile()
 
-	for i, profile := range m.allProfiles {
+	for i, profile := range m.profileMenuProfiles {
 		if i >= len(m.profileMenuItems) {
 			break
 		}

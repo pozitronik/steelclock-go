@@ -208,6 +208,12 @@ func (pm *ProfileManager) GetAllProfiles() []*Profile {
 	return pm.profiles
 }
 
+// GetProfilesInGroup returns the profiles belonging to the named group, in
+// display order. Used by the tray to populate a per-group submenu.
+func (pm *ProfileManager) GetProfilesInGroup(group string) []*Profile {
+	return pm.profilesInGroup(group)
+}
+
 // profilesInGroup returns the profiles belonging to the named group.
 func (pm *ProfileManager) profilesInGroup(group string) []*Profile {
 	var result []*Profile
