@@ -1,7 +1,7 @@
 {
-  "$schema": "schema/config.schema.json",
-  "config_name": "CPU Monitor",
-  "refresh_rate_ms": 1000,
+  "$schema": "../schema/config.schema.json",
+  "config_name": "Volume",
+  "refresh_rate_ms": 100,
   "display": {
     "width": 128,
     "height": 40,
@@ -9,7 +9,7 @@
   },
   "widgets": [
     {
-      "type": "cpu",
+      "type": "volume",
       "enabled": true,
       "position": {
         "x": 0,
@@ -23,7 +23,7 @@
         "border": -1,
         "padding": 0
       },
-      "mode": "graph",
+      "mode": "gauge",
       "bar": {
         "direction": "horizontal",
         "border": false,
@@ -31,37 +31,29 @@
           "fill": 255
         }
       },
-      "graph": {
-        "history": 128,
-        "colors": {
-          "fill": 255,
-          "line": 255
-        }
-      },
       "gauge": {
         "show_ticks": true,
         "colors": {
-          "fill": 255,
           "arc": 200,
           "needle": 255,
           "ticks": 150
         }
       },
-      "per_core": {
-        "enabled": false,
-        "margin": 0,
-        "border": false
-      },
       "text": {
         "format": "%d%%",
         "font": null,
-        "size": 10,
+        "size": 16,
         "align": {
           "h": "center",
           "v": "center"
         }
       },
-      "update_interval": 0.5
+      "auto_hide": {
+        "enabled": false,
+        "timeout": 3.0
+      },
+      "update_interval": 0.1,
+      "poll_interval": 0.1
     }
   ]
 }

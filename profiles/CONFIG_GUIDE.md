@@ -1067,7 +1067,7 @@ To monitor multiple GPUs, create separate widgets with different `adapter` value
 
 **Multi-Metric Dashboard:**
 
-Four metrics in a 2x2 grid with text overlay (see `profiles/gpu.json`):
+Four metrics in a 2x2 grid with text overlay (see `profiles/128x40/gpu.json`):
 ```json
 {
   "widgets": [
