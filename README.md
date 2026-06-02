@@ -134,7 +134,7 @@ The application uses `steelclock.json` as the main configuration file. The appli
 **For complete configuration documentation**, see:
 - **[CONFIG_GUIDE.md](profiles/CONFIG_GUIDE.md)** - Comprehensive guide with all properties and examples
 - **[GAMEDAC_README.md](profiles/GAMEDAC_README.md)** - GameDAC / Nova Pro setup and multi-device configuration
-- **[config.schema.json](profiles/schema/config.schema.json)** - JSON schema for IDE autocomplete and validation
+- **[config.schema.json](profiles/.schema/config.schema.json)** - JSON schema for IDE autocomplete and validation
 - **[profiles/](profiles/)** - Example configurations for each widget type
 
 ## Configuration Profiles
@@ -158,12 +158,12 @@ Groups are just folders — use them for whatever you like (themes, use-cases, �
 profiles/
 ├── 128x40/   # profiles for Apex keyboards (128x40)
 ├── 128x64/   # profiles for GameDAC / Nova Pro base stations (128x64)
-└── schema/   # JSON schema (shared)
+└── .schema/   # JSON schema (shared)
 ```
 
 Pick the group that matches your device from the tray, then choose one of its profiles. Each group remembers its last-active profile, so switching back to a group restores your previous selection.
 
-> A profile's `$schema` reference is relative to the file, so profiles inside a group subdirectory use `"../schema/config.schema.json"`.
+> A profile's `$schema` reference is relative to the file, so profiles inside a group subdirectory use `"../.schema/config.schema.json"`.
 
 ### Tray Menu Structure
 
@@ -191,7 +191,7 @@ Selecting a profile from any group's submenu switches to it (and makes that grou
 
 ```json
 {
-  "$schema": "schema/config.schema.json",
+  "$schema": ".schema/config.schema.json",
   "config_name": "My Gaming Profile",
   "refresh_rate_ms": 50,
   "display": { ... },

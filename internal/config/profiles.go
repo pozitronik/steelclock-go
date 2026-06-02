@@ -83,7 +83,10 @@ func (pm *ProfileManager) LoadProfiles() error {
 	if entries, err := os.ReadDir(profilesPath); err == nil {
 		for _, entry := range entries {
 			if entry.IsDir() {
-				pm.loadGroupDir(filepath.Join(profilesPath, entry.Name()), entry.Name())
+				// Skip hidden/utility directories (e.g. .schema) — they are not groups.
+				if !strings.HasPrefix(entry.Name(), ".") {
+					pm.loadGroupDir(filepath.Join(profilesPath, entry.Name()), entry.Name())
+				}
 				continue
 			}
 			if !strings.HasSuffix(strings.ToLower(entry.Name()), ".json") {

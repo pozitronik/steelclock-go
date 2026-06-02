@@ -44,7 +44,7 @@ Create a profile JSON file (e.g. `profiles/gamedac.json`):
 
 ```json
 {
-  "$schema": "schema/config.schema.json",
+  "$schema": ".schema/config.schema.json",
   "config_name": "GameDAC",
   "game_name": "STEELCLOCK",
   "game_display_name": "SteelClock",
@@ -129,7 +129,7 @@ SteelClock can drive multiple displays simultaneously. Use the `devices` array i
 
 ```json
 {
-  "$schema": "schema/config.schema.json",
+  "$schema": ".schema/config.schema.json",
   "config_name": "Keyboard + GameDAC",
   "game_name": "STEELCLOCK",
   "game_display_name": "SteelClock",

@@ -153,13 +153,13 @@ func (a *App) createWebEditor() {
 		return
 	}
 
-	// Schema is in profiles/schema/ relative to config file's directory
+	// Schema is in profiles/.schema/ relative to config file's directory
 	configDir := filepath.Dir(configPath)
-	schemaPath := filepath.Join(configDir, "profiles", "schema", "config.schema.json")
+	schemaPath := filepath.Join(configDir, "profiles", ".schema", "config.schema.json")
 
 	// If config is in profiles/ directory, adjust path
 	if filepath.Base(configDir) == "profiles" {
-		schemaPath = filepath.Join(configDir, "schema", "config.schema.json")
+		schemaPath = filepath.Join(configDir, ".schema", "config.schema.json")
 	}
 
 	// Create providers

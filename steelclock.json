@@ -1,5 +1,5 @@
 {
-  "$schema": "profiles/schema/config.schema.json",
+  "$schema": "profiles/.schema/config.schema.json",
   "config_name": "Main Profile",
   "refresh_rate_ms": 100,
   "unregister_on_exit": true,

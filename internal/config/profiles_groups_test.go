@@ -256,6 +256,33 @@ func TestProfileManager_CreateProfile_InCurrentGroup(t *testing.T) {
 	}
 }
 
+func TestProfileManager_DotDirsExcluded(t *testing.T) {
+	tmpDir, cleanup := setupTestDir(t)
+	defer cleanup()
+
+	createProfilesDir(t, tmpDir)
+	writeGroupConfig(t, tmpDir, "128x40", "clock.json", "Clock40")
+	// A dot-prefixed subdirectory (e.g. .schema) must not become a group, and
+	// its files must not appear as profiles.
+	writeGroupConfig(t, tmpDir, ".schema", "config.json", "Hidden")
+
+	pm := NewProfileManager(tmpDir)
+	if err := pm.LoadProfiles(); err != nil {
+		t.Fatalf("LoadProfiles failed: %v", err)
+	}
+
+	for _, g := range pm.GetGroups() {
+		if g == ".schema" {
+			t.Errorf("dot-prefixed directory %q must not be a group", g)
+		}
+	}
+	for _, p := range pm.GetAllProfiles() {
+		if p.Group == ".schema" {
+			t.Errorf("profile from a dot-prefixed directory leaked into groups: %s", p.Path)
+		}
+	}
+}
+
 // jsonString quotes a string as a JSON literal for embedding in test state.
 func jsonString(s string) string {
 	b, _ := json.Marshal(s)

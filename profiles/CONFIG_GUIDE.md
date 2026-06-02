@@ -35,7 +35,7 @@ Add these lines at the top of your configuration file:
 
 ```json
 {
-  "$schema": "schema/config.schema.json",
+  "$schema": ".schema/config.schema.json",
   "schema_version": 2,
   ...
 }
@@ -49,7 +49,7 @@ Supported IDEs: VS Code, JetBrains IDEs, Visual Studio, Sublime Text, and others
 
 ```json
 {
-  "$schema": "schema/config.schema.json",
+  "$schema": ".schema/config.schema.json",
   "schema_version": 2,
   "game_name": "STEELCLOCK",
   "game_display_name": "SteelClock",
@@ -2891,7 +2891,7 @@ You can use `telegram` and `telegram_counter` widgets simultaneously. They share
 
 ```json
 {
-  "$schema": "schema/config.schema.json",
+  "$schema": ".schema/config.schema.json",
   "schema_version": 2,
   "display": {
     "width": 128,
@@ -2925,7 +2925,7 @@ You can use `telegram` and `telegram_counter` widgets simultaneously. They share
 
 ```json
 {
-  "$schema": "schema/config.schema.json",
+  "$schema": ".schema/config.schema.json",
   "schema_version": 2,
   "display": {
     "width": 128,
@@ -2981,7 +2981,7 @@ You can use `telegram` and `telegram_counter` widgets simultaneously. They share
 
 ```json
 {
-  "$schema": "schema/config.schema.json",
+  "$schema": ".schema/config.schema.json",
   "schema_version": 2,
   "display": {
     "width": 128,
@@ -3033,7 +3033,7 @@ You can use `telegram` and `telegram_counter` widgets simultaneously. They share
 
 ```json
 {
-  "$schema": "schema/config.schema.json",
+  "$schema": ".schema/config.schema.json",
   "schema_version": 2,
   "display": {
     "width": 128,
@@ -3091,7 +3091,7 @@ You can use `telegram` and `telegram_counter` widgets simultaneously. They share
 
 ```json
 {
-  "$schema": "schema/config.schema.json",
+  "$schema": ".schema/config.schema.json",
   "schema_version": 2,
   "refresh_rate_ms": 33,
   "display": {
