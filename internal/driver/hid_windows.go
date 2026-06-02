@@ -27,7 +27,6 @@ var (
 	procSetupDiDestroyDeviceInfoList     = modSetupApi.NewProc("SetupDiDestroyDeviceInfoList")
 
 	procHidDSetFeature        = modHid.NewProc("HidD_SetFeature")
-	procHidDSetOutputReport   = modHid.NewProc("HidD_SetOutputReport")
 	procHidDGetPreparsedData  = modHid.NewProc("HidD_GetPreparsedData")
 	procHidDFreePreparsedData = modHid.NewProc("HidD_FreePreparsedData")
 	procHidPGetCaps           = modHid.NewProc("HidP_GetCaps")
@@ -73,39 +72,6 @@ func readHidCaps(handle DeviceHandle) (hidpCaps, error) {
 		return caps, fmt.Errorf("HidP_GetCaps failed (status 0x%X)", st)
 	}
 	return caps, nil
-}
-
-// sendOutputReport sends a HID output report via HidD_SetOutputReport. Unlike
-// WriteFile, this goes through an IOCTL and works on a handle opened with
-// AccessRights = 0, preserving coexistence with SteelSeries GG. The first byte
-// of data must be the report ID.
-func sendOutputReport(handle DeviceHandle, data []byte) error {
-	if handle == InvalidHandle {
-		return fmt.Errorf("invalid handle")
-	}
-	if len(data) == 0 {
-		return fmt.Errorf("empty data")
-	}
-
-	r, _, err := procHidDSetOutputReport.Call(
-		uintptr(handle),
-		uintptr(unsafe.Pointer(&data[0])),
-		uintptr(len(data)),
-	)
-	if r == 0 {
-		return fmt.Errorf("HidD_SetOutputReport failed: %w", err)
-	}
-	return nil
-}
-
-// outputReportByteLength returns the device's expected output-report length
-// (including the report ID byte), or 0 if it cannot be determined.
-func outputReportByteLength(handle DeviceHandle) int {
-	caps, err := readHidCaps(handle)
-	if err != nil {
-		return 0
-	}
-	return int(caps.OutputReportByteLength)
 }
 
 // Windows constants

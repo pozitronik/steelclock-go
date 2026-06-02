@@ -25,19 +25,19 @@ type UIReturnSupport interface {
 	BuildReturnToUIPacket() []byte
 }
 
-// OutputReportSupport marks protocols whose HID reports must be delivered as
-// output reports (via HidD_SetOutputReport on Windows / write() on Linux) rather
-// than feature reports. The Nova Pro OLED interface (mi_04) rejects feature
-// reports with ERROR_INVALID_FUNCTION, so its frames must go out as output reports.
-type OutputReportSupport interface {
-	UsesOutputReport() bool
+// ScreenByCapability marks protocols whose OLED interface must be located at
+// open time by scanning HID feature-report capabilities, because the interface
+// varies across device generations (e.g. the Nova Pro family exposes its screen
+// on mi_04 on older units but on mi_03/collection 01 on the Omni).
+type ScreenByCapability interface {
+	DetectScreenInterface() bool
 }
 
-// protocolUsesOutputReport reports whether a protocol opts into HID output
-// reports instead of feature reports.
-func protocolUsesOutputReport(p Protocol) bool {
-	if or, ok := p.(OutputReportSupport); ok {
-		return or.UsesOutputReport()
+// protocolDetectsScreenInterface reports whether a protocol's screen interface
+// should be discovered by HID capability rather than a fixed interface string.
+func protocolDetectsScreenInterface(p Protocol) bool {
+	if s, ok := p.(ScreenByCapability); ok {
+		return s.DetectScreenInterface()
 	}
 	return false
 }

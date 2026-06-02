@@ -4,6 +4,7 @@ package driver
 
 import (
 	"fmt"
+	"log"
 	"sync"
 )
 
@@ -65,13 +66,11 @@ type HIDDriver struct {
 	handle     DeviceHandle
 	deviceInfo DeviceInfo
 	connected  bool
-	// outputReport is true when the device protocol requires HID output reports
-	// (HidD_SetOutputReport) instead of feature reports (HidD_SetFeature).
-	outputReport bool
-	// outputReportLen is the device's expected output-report buffer length
-	// (including the report ID), read from HID capabilities at Open; 0 if unknown.
-	outputReportLen int
-	mu              sync.RWMutex
+	// reportLen is the device's expected HID feature-report length (including the
+	// report ID), discovered from capabilities at Open. Packets shorter than this
+	// are zero-padded up to it. 0 means no padding (use the packet as built).
+	reportLen int
+	mu        sync.RWMutex
 }
 
 // DeviceHandle is a platform-specific device handle type
@@ -92,9 +91,8 @@ func NewDriver(cfg Config) *HIDDriver {
 	}
 
 	return &HIDDriver{
-		config:       cfg,
-		protocol:     protocol,
-		outputReport: protocolUsesOutputReport(protocol),
+		config:   cfg,
+		protocol: protocol,
 	}
 }
 
@@ -123,6 +121,32 @@ func autoDetectKnownDevice() (*KnownDevice, string, error) {
 	return nil, "", fmt.Errorf("no known SteelSeries device found")
 }
 
+// findScreenInterfaceByCaps locates the OLED interface of a VID/PID by HID
+// capability rather than a fixed interface string. Among that device's
+// SteelSeries collections it picks the one with the largest FEATURE report that
+// is big enough to carry a frame, returning its device path and report length.
+// This is what lets the Nova Pro family work across generations whose OLED lives
+// on different interfaces (older units expose it on mi_04, the Omni on mi_03
+// collection 01, while mi_04 there is an unrelated consumer-control collection).
+// Returns ok=false when capabilities are unavailable (e.g. Linux) or no suitable
+// collection is found, so the caller can fall back to the interface-based path.
+func findScreenInterfaceByCaps(vid, pid uint16, minFeatureLen int) (path string, featureLen int, ok bool) {
+	devices, err := EnumerateDevices()
+	if err != nil {
+		return "", 0, false
+	}
+	for _, d := range devices {
+		if d.VID != vid || d.PID != pid || !d.HasCaps {
+			continue
+		}
+		if d.FeatureReportLen >= minFeatureLen && d.FeatureReportLen > featureLen {
+			featureLen = d.FeatureReportLen
+			path = d.Path
+		}
+	}
+	return path, featureLen, path != ""
+}
+
 // Open finds and opens a device connection
 func (d *HIDDriver) Open() error {
 	d.mu.Lock()
@@ -132,30 +156,42 @@ func (d *HIDDriver) Open() error {
 		return nil // Already connected
 	}
 
-	// Find device
+	// Resolve VID/PID (auto-detecting from the known-device table when not
+	// configured) and the protocol that goes with them.
 	var devicePath string
 	var err error
 
 	if d.config.VID != 0 && d.config.PID != 0 {
-		// Use specified VID/PID
 		devicePath, err = findDevicePath(d.config.VID, d.config.PID, d.config.Interface)
+		if err != nil {
+			return fmt.Errorf("device not found: %w", err)
+		}
 	} else {
-		// Auto-detect from known devices. Each device family is searched on its
-		// own USB interface and, once matched, its protocol/interface/IDs are
-		// adopted so the correct frame format is used for whatever was found.
 		var matched *KnownDevice
 		matched, devicePath, err = autoDetectKnownDevice()
-		if err == nil {
-			d.protocol = resolveProtocol(matched.VID, matched.PID)
-			d.config.VID = matched.VID
-			d.config.PID = matched.PID
-			d.config.Interface = deviceInterface(matched)
-			d.outputReport = protocolUsesOutputReport(d.protocol)
+		if err != nil {
+			return fmt.Errorf("device not found: %w", err)
 		}
+		d.protocol = resolveProtocol(matched.VID, matched.PID)
+		d.config.VID = matched.VID
+		d.config.PID = matched.PID
+		d.config.Interface = deviceInterface(matched)
 	}
 
-	if err != nil {
-		return fmt.Errorf("device not found: %w", err)
+	// Protocols whose OLED interface varies by device generation (Nova Pro)
+	// locate the screen collection by HID feature-report capability, overriding
+	// the interface-derived path. This finds mi_03/col01 on the Omni and mi_04 on
+	// older units, and yields the exact report length to pad frames to.
+	if protocolDetectsScreenInterface(d.protocol) {
+		minLen := d.config.Width * d.config.Height / 8
+		if p, flen, found := findScreenInterfaceByCaps(d.config.VID, d.config.PID, minLen); found {
+			devicePath = p
+			d.reportLen = flen
+			log.Printf("Direct driver: selected screen interface by capability (feature report %d bytes): %s", flen, p)
+		} else {
+			log.Printf("Direct driver: no capability-matched screen interface for %04X:%04X, using %s",
+				d.config.VID, d.config.PID, d.config.Interface)
+		}
 	}
 
 	// Open device
@@ -166,11 +202,6 @@ func (d *HIDDriver) Open() error {
 
 	d.handle = handle
 	d.connected = true
-	// For output-report devices, learn the exact report length from HID
-	// capabilities so packets can be padded to the size the device expects.
-	if d.outputReport {
-		d.outputReportLen = outputReportByteLength(handle)
-	}
 	d.deviceInfo = DeviceInfo{
 		VID:       d.config.VID,
 		PID:       d.config.PID,
@@ -223,26 +254,21 @@ func (d *HIDDriver) SendFrame(pixelData []byte) error {
 	return nil
 }
 
-// sendPacket delivers a single HID packet using the transport the device
-// protocol requires: output reports for Nova Pro (mi_04 rejects feature
-// reports), feature reports otherwise. Output-report packets are padded to the
-// device's expected report length when it is known.
+// sendPacket delivers a single HID feature report, zero-padding it up to the
+// device's expected report length when that is known (some devices, e.g. the
+// Nova Pro Omni, require a fixed 1036-byte feature report rather than 1024).
 func (d *HIDDriver) sendPacket(packet []byte) error {
-	if !d.outputReport {
-		return sendFeatureReport(d.handle, packet)
-	}
-	if d.outputReportLen > len(packet) {
-		buf := make([]byte, d.outputReportLen)
+	if d.reportLen > len(packet) {
+		buf := make([]byte, d.reportLen)
 		copy(buf, packet)
 		packet = buf
 	}
-	return sendOutputReport(d.handle, packet)
+	return sendFeatureReport(d.handle, packet)
 }
 
-// SendRawPacket sends a pre-built packet directly to the device, using the
-// transport the device protocol requires (output report for Nova Pro, feature
-// report otherwise). Used for control packets (brightness, return-to-UI) that
-// bypass the protocol's frame building.
+// SendRawPacket sends a pre-built packet directly to the device as a HID feature
+// report (padded to the device's report length when known). Used for control
+// packets (brightness, return-to-UI) that bypass the protocol's frame building.
 func (d *HIDDriver) SendRawPacket(packet []byte) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()

@@ -47,9 +47,10 @@ func (p *NovaProProtocol) DeviceFamily() string {
 	return "Nova Pro"
 }
 
-// UsesOutputReport reports that Nova Pro frames must be sent as HID output
-// reports; the mi_04 OLED interface rejects feature reports.
-func (p *NovaProProtocol) UsesOutputReport() bool {
+// DetectScreenInterface reports that the Nova Pro OLED interface must be located
+// by HID capability — it lives on mi_04 on older units but on mi_03/collection
+// 01 on the Omni, so a fixed interface string is not reliable across the family.
+func (p *NovaProProtocol) DetectScreenInterface() bool {
 	return true
 }
 

@@ -87,26 +87,13 @@ func TestNewDriver_InterfaceOverridesProtocol(t *testing.T) {
 	}
 }
 
-func TestProtocolUsesOutputReport(t *testing.T) {
-	// Nova Pro must use output reports (mi_04 rejects feature reports);
-	// Apex keyboards must stay on feature reports.
-	if !protocolUsesOutputReport(&NovaProProtocol{}) {
-		t.Error("NovaProProtocol should use output reports")
+func TestProtocolDetectsScreenInterface(t *testing.T) {
+	// Nova Pro must locate its screen interface by capability (it varies across
+	// generations); Apex keyboards use their fixed mi_01 interface.
+	if !protocolDetectsScreenInterface(&NovaProProtocol{}) {
+		t.Error("NovaProProtocol should detect its screen interface by capability")
 	}
-	if protocolUsesOutputReport(&ApexProtocol{}) {
-		t.Error("ApexProtocol should not use output reports")
-	}
-}
-
-func TestNewDriver_OutputReportFlagFromProtocol(t *testing.T) {
-	// A Nova Pro VID/PID should initialize the driver in output-report mode.
-	nova := NewDriver(Config{VID: SteelSeriesVID, PID: 0x12cd})
-	if !nova.outputReport {
-		t.Error("driver for Nova Pro device should have outputReport = true")
-	}
-	// An Apex device (and the zero default) should not.
-	apex := NewDriver(Config{VID: SteelSeriesVID, PID: 0x1612})
-	if apex.outputReport {
-		t.Error("driver for Apex device should have outputReport = false")
+	if protocolDetectsScreenInterface(&ApexProtocol{}) {
+		t.Error("ApexProtocol should not use capability-based screen detection")
 	}
 }
