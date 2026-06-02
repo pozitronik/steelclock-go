@@ -12,9 +12,9 @@
       "type": "screen_mirror",
       "position": {
         "x": 0,
-        "y": 0,
+        "y": 12,
         "w": 128,
-        "h": 64
+        "h": 40
       },
       "screen_mirror": {
         "scale_mode": "fit",

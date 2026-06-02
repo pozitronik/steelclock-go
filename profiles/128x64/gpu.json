@@ -14,7 +14,7 @@
         "x": 0,
         "y": 0,
         "w": 64,
-        "h": 20
+        "h": 32
       },
       "style": {
         "background": 0,
@@ -45,7 +45,7 @@
         "x": 64,
         "y": 0,
         "w": 64,
-        "h": 20
+        "h": 32
       },
       "style": {
         "background": 0,
@@ -74,9 +74,9 @@
       "type": "gpu",
       "position": {
         "x": 0,
-        "y": 20,
+        "y": 32,
         "w": 64,
-        "h": 20
+        "h": 32
       },
       "style": {
         "background": 0,
@@ -105,9 +105,9 @@
       "type": "gpu",
       "position": {
         "x": 64,
-        "y": 20,
+        "y": 32,
         "w": 64,
-        "h": 20
+        "h": 32
       },
       "style": {
         "background": 0,
