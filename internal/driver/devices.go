@@ -133,10 +133,12 @@ var KnownDevices = []KnownDevice{
 		}{128, 64},
 		NewProtocol: func() Protocol { return &NovaProProtocol{} },
 	},
-	// Arctis Nova Pro Omni — PID reported via the -list-devices diagnostic by a
-	// user whose base station exposes the OLED on mi_04 (same layout as the rest
-	// of the Nova Pro family). Treated as a 128x64 Nova Pro device pending
-	// hardware confirmation that the column-major protocol renders correctly.
+	// Arctis Nova Pro Omni — confirmed working via the direct driver. It uses the
+	// same Nova Pro image format (command 0x93, column-major LSB), but unlike older
+	// units (OLED on mi_04, report ID 0x06) it exposes its 128x64 OLED on mi_03
+	// collection 01 with feature report ID 0x01 and a 1036-byte report. The
+	// interface and report ID are auto-detected at runtime (capability-based
+	// selection + report-ID discovery), so only the protocol/resolution differ here.
 	{
 		VID:  SteelSeriesVID,
 		PID:  0x2290,

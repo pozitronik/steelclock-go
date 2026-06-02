@@ -4,15 +4,23 @@ SteelClock supports GameDAC Gen 2 and Arctis Nova Pro base stations via the dire
 
 ## Supported Devices
 
-| Device                                  | PID    | Display | USB Interface |
-|-----------------------------------------|--------|---------|---------------|
-| Arctis Nova Pro (Wired)                 | `12cb` | 128x64  | `mi_04`       |
-| Arctis Nova Pro Wireless (Base Station) | `12cd` | 128x64  | `mi_04`       |
-| Arctis Nova Pro Wireless (USB-C Dongle) | `12e0` | 128x64  | `mi_04`       |
-| Arctis Nova Pro Wireless (Xbox)         | `12e5` | 128x64  | `mi_04`       |
-| Arctis Nova 5P (USB-C Dongle)           | `225d` | 128x64  | `mi_04`       |
+| Device                                  | PID    | Display | USB Interface  |
+|-----------------------------------------|--------|---------|----------------|
+| Arctis Nova Pro (Wired)                 | `12cb` | 128x64  | `mi_04`        |
+| Arctis Nova Pro Wireless (Base Station) | `12cd` | 128x64  | `mi_04`        |
+| Arctis Nova Pro Wireless (USB-C Dongle) | `12e0` | 128x64  | `mi_04`        |
+| Arctis Nova Pro Wireless (Xbox)         | `12e5` | 128x64  | `mi_04`        |
+| Arctis Nova 5P (USB-C Dongle)           | `225d` | 128x64  | `mi_04`        |
+| Arctis Nova Pro Omni                    | `2290` | 128x64  | `mi_03` col 01 |
 
-All devices use SteelSeries VID `1038`.
+All devices use SteelSeries VID `1038`. The correct USB interface is selected
+automatically, so the `interface` config field is not needed.
+
+**Note on the Nova Pro Omni:** it uses the same image protocol as the other Nova
+Pro devices, but exposes its OLED on interface `mi_03` (collection 01) with HID
+feature report ID `0x01` instead of `mi_04`/`0x06`. SteelClock auto-detects this
+at runtime (it picks the interface whose feature report is large enough for a
+frame and discovers the accepted report ID), so no extra configuration is needed.
 
 **Note:** GameDAC Gen 1 (PID `1280`) is not supported due to an undocumented USB protocol. It may work via the GameSense backend on Windows if SteelSeries GG is running.
 
