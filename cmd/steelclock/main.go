@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/app"
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -32,7 +31,6 @@ var logFile *os.File
 func main() {
 	configPathFlag := flag.String("config", "", "Path to configuration file (overrides profile system)")
 	listDevicesFlag := flag.Bool("list-devices", false, "Enumerate connected SteelSeries HID devices, write a report, and exit (diagnostic)")
-	probeOLEDFlag := flag.Bool("probe-oled", false, "Sweep OLED command bytes on the SteelSeries screen interface so a person filming the screen can identify the working command, then exit (diagnostic)")
 	flag.Parse()
 
 	setupLogging()
@@ -41,12 +39,6 @@ func main() {
 	// Diagnostic: enumerate HID devices and exit. Does not start the app.
 	if *listDevicesFlag {
 		runDeviceDiagnostic()
-		return
-	}
-
-	// Diagnostic: sweep OLED command bytes and exit. Does not start the app.
-	if *probeOLEDFlag {
-		runOLEDProbe()
 		return
 	}
 
@@ -113,34 +105,6 @@ func runDeviceDiagnostic() {
 	}
 
 	dialog.ShowMessage("SteelClock device diagnostic", report, false)
-}
-
-// oledProbeDwell is how long each command byte is held during the sweep — long
-// enough to be visible to someone filming the OLED, short enough that the full
-// 256-byte sweep stays a few minutes.
-const oledProbeDwell = 1200 * time.Millisecond
-
-// runOLEDProbe sweeps OLED command bytes so a person filming the screen can spot
-// which command drives an undocumented SteelSeries display. Used by -probe-oled.
-func runOLEDProbe() {
-	dialog.ShowMessage("SteelClock OLED probe",
-		"This figures out how your headset OLED is driven by trying screen commands one by one.\n\n"+
-			"1. Make sure SteelSeries GG is fully closed.\n"+
-			"2. Watch the headset OLED screen.\n"+
-			"3. Click OK to begin.\n\n"+
-			"The moment ANYTHING appears on the OLED, press the SPACEBAR. It will then re-check a\n"+
-			"few nearby commands to pin it down — press SPACE again on the one that lights the screen.\n"+
-			"Known commands are tried first, so it usually only takes a few seconds.\n\n"+
-			"When the result popup appears, send me steelclock.log.",
-		false)
-
-	report, err := driver.RunOLEDProbe(oledProbeDwell)
-	if err != nil {
-		report = fmt.Sprintf("OLED probe failed: %v", err)
-	}
-	log.Print(report)
-
-	dialog.ShowMessage("SteelClock OLED probe — done", report, false)
 }
 
 // setupLogging configures logging to file
