@@ -70,7 +70,47 @@ type HIDDriver struct {
 	// report ID), discovered from capabilities at Open. Packets shorter than this
 	// are zero-padded up to it. 0 means no padding (use the packet as built).
 	reportLen int
-	mu        sync.RWMutex
+	// reportID is the HID feature report ID the device actually accepts, discovered
+	// at Open for capability-detected screens. When known, it overrides the report
+	// ID byte the protocol builds (older Nova units use 0x06, the Omni uses 0x01).
+	reportID      byte
+	reportIDKnown bool
+	mu            sync.RWMutex
+}
+
+// screenReportIDCandidates are tried first when discovering a screen's feature
+// report ID: 0x06 (older Nova/GameDAC), 0x01 (Nova Pro Omni), 0x00 (unnumbered).
+var screenReportIDCandidates = []byte{0x06, 0x01, 0x00}
+
+// discoverFeatureReportID returns the first HID feature report ID the device
+// accepts a full-size (featureLen) report under — a valid ID is accepted, others
+// error. Sends benign all-zero frames. Tries the known candidates first, then
+// scans the rest.
+func discoverFeatureReportID(handle DeviceHandle, featureLen int) (byte, bool) {
+	if featureLen < 1 {
+		return 0, false
+	}
+	accepts := func(rid byte) bool {
+		buf := make([]byte, featureLen)
+		buf[0] = rid
+		return sendFeatureReport(handle, buf) == nil
+	}
+	tried := make(map[byte]bool, 256)
+	for _, rid := range screenReportIDCandidates {
+		tried[rid] = true
+		if accepts(rid) {
+			return rid, true
+		}
+	}
+	for r := 0; r <= 0xFF; r++ {
+		if tried[byte(r)] {
+			continue
+		}
+		if accepts(byte(r)) {
+			return byte(r), true
+		}
+	}
+	return 0, false
 }
 
 // DeviceHandle is a platform-specific device handle type
@@ -202,6 +242,21 @@ func (d *HIDDriver) Open() error {
 
 	d.handle = handle
 	d.connected = true
+
+	// For capability-detected screens, discover the feature report ID the device
+	// actually accepts (older Nova units use 0x06, the Omni uses 0x01) and override
+	// whatever the protocol builds. Without this the device rejects frames with
+	// "the parameter is incorrect".
+	if protocolDetectsScreenInterface(d.protocol) && d.reportLen > 0 {
+		if rid, ok := discoverFeatureReportID(handle, d.reportLen); ok {
+			d.reportID = rid
+			d.reportIDKnown = true
+			log.Printf("Direct driver: using screen feature report ID 0x%02X", rid)
+		} else {
+			log.Printf("Direct driver: could not determine an accepted feature report ID")
+		}
+	}
+
 	d.deviceInfo = DeviceInfo{
 		VID:       d.config.VID,
 		PID:       d.config.PID,
@@ -262,6 +317,10 @@ func (d *HIDDriver) sendPacket(packet []byte) error {
 		buf := make([]byte, d.reportLen)
 		copy(buf, packet)
 		packet = buf
+	}
+	// Override the report ID byte with the one the device actually accepts.
+	if d.reportIDKnown && len(packet) > 0 {
+		packet[0] = d.reportID
 	}
 	return sendFeatureReport(d.handle, packet)
 }
