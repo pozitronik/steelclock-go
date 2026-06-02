@@ -144,23 +144,48 @@ SteelClock supports multiple configuration profiles that can be switched via the
 ### Profile System
 
 - **Main config**: `steelclock.json` in the current working directory
-- **Additional profiles**: JSON files in the `profiles/` subdirectory
+- **Profiles**: JSON files under `profiles/`. A profile placed directly in `profiles/` belongs to the implicit **"General"** group; each subdirectory of `profiles/` is its own group (see [Profile Groups](#profile-groups))
 - **Profile names**: Set via `config_name` field in JSON, or filename is used as fallback
-- **State persistence**: Last active profile is saved to `.steelclock.state` and restored on restart
+- **State persistence**: The active profile and group — and each group's last-active profile — are saved to `.steelclock.state` and restored on restart
+
+### Profile Groups
+
+Profiles are organized into **groups** by directory. Each subdirectory of `profiles/` is a group, and the tray shows a submenu per group containing only that group's profiles. The main config and any profiles placed directly in `profiles/` form an implicit **"General"** group.
+
+Groups are just folders — use them for whatever you like (themes, use-cases, …) — but the **shipped profiles are split by display resolution**, since a layout that is pixel-perfect on one screen size is not on another:
+
+```
+profiles/
+├── 128x40/   # profiles for Apex keyboards (128x40)
+├── 128x64/   # profiles for GameDAC / Nova Pro base stations (128x64)
+└── schema/   # JSON schema (shared)
+```
+
+Pick the group that matches your device from the tray, then choose one of its profiles. Each group remembers its last-active profile, so switching back to a group restores your previous selection.
+
+> A profile's `$schema` reference is relative to the file, so profiles inside a group subdirectory use `"../schema/config.schema.json"`.
 
 ### Tray Menu Structure
 
+With a single group, profiles are listed flat. With multiple groups, each group is a submenu containing only its profiles:
+
 ```
-Profile 1 (checkmark indicates active)
-Profile 2
-...
-Profile N
+128x40 ▸
+   Clock (checkmark indicates active)
+   CPU
+   ...
+128x64 ▸
+   Clock
+   CPU
+   ...
 ─────────
 Edit Active Config
 Reload Active Config
 ─────────
 Exit
 ```
+
+Selecting a profile from any group's submenu switches to it (and makes that group current).
 
 ### Example Profile Configuration
 
@@ -218,13 +243,17 @@ See [CONFIG_GUIDE.md](profiles/CONFIG_GUIDE.md) for detailed widget properties a
 
 ## Supported Devices
 
-| Device Family                    | Display | Backend            | Notes                            |
-|----------------------------------|---------|--------------------|----------------------------------|
-| Apex keyboards (7, Pro, 5, etc.) | 128x40  | direct, gamesense  | Default `mi_01` interface        |
-| GameDAC Gen 2 / Arctis Nova Pro  | 128x64  | direct, gamesense* | Brightness control, Return-to-UI |
-| Arctis Nova 5P                   | 128x64  | direct             | Same protocol as Nova Pro        |
+| Device Family                           | Display | Backend           | Notes                                       |
+|-----------------------------------------|---------|-------------------|---------------------------------------------|
+| Apex keyboards (7, Pro, 5, etc.)        | 128x40  | direct, gamesense | Default `mi_01` interface                   |
+| GameDAC Gen 2 / Arctis Nova Pro (+Omni) | 128x64  | direct            | Use `direct`; GameSense does not drive it\* |
+| Arctis Nova 5P                          | 128x64  | direct            | Same protocol as Nova Pro                   |
 
-\* GameSense backend for GameDAC has limited features (no brightness, no Return-to-UI) and requires SteelSeries GG on Windows.
+\* The Nova Pro / GameDAC base-station OLED must be driven via the **`direct`** backend. The GameSense
+backend does **not** drive it — confirmed on the Arctis Nova Pro Omni: SteelSeries GG's own apps use that
+screen, but third-party GameSense screen events do not reach it. Set `"backend": "direct"` **explicitly** for
+these devices: auto-select tries GameSense first, and because GameSense connects without error the app never
+falls through to `direct`, so the OLED stays blank.
 
 For GameDAC setup details, see **[GAMEDAC_README.md](profiles/GAMEDAC_README.md)**.
 

@@ -105,7 +105,7 @@ Create a profile JSON file (e.g. `profiles/gamedac.json`):
 | `pid`        | string  | No       | Product ID in hex (e.g. `"12cb"`). Omit for auto-detection.                     |
 | `brightness` | integer | No       | Display brightness, 0 (darkest) to 10 (brightest). Omit to keep device default. |
 
-The `interface` field is not needed for Nova Pro devices. The correct USB interface (`mi_04`) is selected automatically based on the detected device protocol.
+The `interface` field is not needed for Nova Pro devices — the correct USB interface is auto-detected (`mi_04` on most units, `mi_03` on the Omni). SteelClock picks the interface whose HID feature report is large enough to carry a frame, so it adapts across device generations.
 
 ### Auto-Detection
 
@@ -199,12 +199,15 @@ When SteelClock exits, it sends a Return-to-UI command to the Nova Pro, restorin
 
 ## Backends Comparison
 
-| Backend     | GameDAC Support | Brightness | Return-to-UI | Refresh Rate | Requirements                          |
-|-------------|-----------------|------------|--------------|--------------|---------------------------------------|
-| `direct`    | Full            | Yes        | Yes          | Up to 60 Hz  | Device connected via USB              |
-| `gamesense` | Partial         | No         | No           | ~10 Hz       | SteelSeries GG running (Windows only) |
+| Backend     | GameDAC Support | Brightness | Return-to-UI | Refresh Rate | Requirements              |
+|-------------|-----------------|------------|--------------|--------------|---------------------------|
+| `direct`    | Full            | Yes        | Yes          | Up to 60 Hz  | Device connected via USB  |
+| `gamesense` | None            | No         | No           | —            | Does not drive the OLED   |
 
-The direct driver is recommended for GameDAC devices.
+The `direct` backend is **required** for GameDAC / Nova Pro base stations — GameSense does not drive their
+OLED (confirmed on the Arctis Nova Pro Omni; SteelSeries GG's own apps use that screen, but third-party
+GameSense screen events do not reach it). Set `"backend": "direct"` **explicitly**: auto-select tries
+GameSense first and connects without error, so it never falls through to `direct` and the screen stays blank.
 
 ## Testing Without Hardware
 
@@ -232,9 +235,7 @@ Install the udev rules as described in the Quick Start section. The device must 
 
 ### Conflicts with SteelSeries GG
 
-The direct driver takes exclusive access to the HID device. If SteelSeries GG is running, it may hold the device open. Either:
-- Close SteelSeries GG before running SteelClock with the direct backend
-- Use `"backend": "gamesense"` to work through the GG API instead (limited features)
+The direct driver opens the HID device with shared access, so it generally coexists with SteelSeries GG. However, GG may periodically redraw the base station's native screen (e.g. the volume overlay), briefly overwriting SteelClock's output. For a clean, uninterrupted display, close SteelSeries GG while using the direct backend. (GameSense is not an alternative here — it does not drive the base-station OLED.)
 
 ### Display Shows Garbage or Nothing
 
