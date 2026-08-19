@@ -301,3 +301,54 @@ func TestCreateExcluding_AllExcluded(t *testing.T) {
 		t.Fatal("expected error when all backends excluded")
 	}
 }
+
+func TestRegisterExplicit_NotAutoSelected(t *testing.T) {
+	restore := saveAndClearRegistry()
+	defer restore()
+
+	Register("hardware", func(*config.Config) (display.Backend, error) {
+		return nil, errors.New("device missing")
+	}, 1)
+	RegisterExplicit("explicit_only", func(*config.Config) (display.Backend, error) {
+		return &mockBackend{}, nil
+	})
+
+	// Auto-selection must fail rather than fall back to the explicit-only backend
+	if _, err := Create(&config.Config{Backend: ""}); err == nil {
+		t.Fatal("auto-selection picked an explicit-only backend, want error")
+	}
+
+	// Failover must not reach it either
+	if _, err := CreateExcluding(&config.Config{}, "hardware"); err == nil {
+		t.Fatal("failover picked an explicit-only backend, want error")
+	}
+
+	// But naming it explicitly still works
+	result, err := Create(&config.Config{Backend: "explicit_only"})
+	if err != nil {
+		t.Fatalf("Create() with explicit name error = %v", err)
+	}
+	if result.Name != "explicit_only" {
+		t.Errorf("result.Name = %q, want %q", result.Name, "explicit_only")
+	}
+	if !IsRegistered("explicit_only") {
+		t.Error("explicit-only backend should still be registered (valid in config)")
+	}
+}
+
+func TestRegisterExplicit_OnlyExplicitRegistered(t *testing.T) {
+	restore := saveAndClearRegistry()
+	defer restore()
+
+	RegisterExplicit("explicit_only", func(*config.Config) (display.Backend, error) {
+		return &mockBackend{}, nil
+	})
+
+	_, err := Create(&config.Config{Backend: ""})
+	if err == nil {
+		t.Fatal("expected error when no auto-selectable backend is registered")
+	}
+	if !strings.Contains(err.Error(), "no backends registered") {
+		t.Errorf("error = %q, should mention 'no backends registered'", err.Error())
+	}
+}

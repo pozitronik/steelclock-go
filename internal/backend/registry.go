@@ -16,10 +16,14 @@ import (
 // Factory creates a backend from configuration
 type Factory func(cfg *config.Config) (display.Backend, error)
 
-// registration holds a factory and its priority for auto-selection
+// registration holds a factory and how the backend participates in selection
 type registration struct {
 	factory  Factory
 	priority int // Lower = higher priority (tried first in auto-selection)
+	// autoSelect reports whether auto-selection may pick this backend.
+	// Backends registered with RegisterExplicit are excluded from auto-selection
+	// and can only be created by name.
+	autoSelect bool
 }
 
 var (
@@ -33,16 +37,29 @@ func init() {
 	config.BackendTypesLister = RegisteredTypesList
 }
 
-// Register registers a backend factory with the given name and priority.
-// Lower priority values are tried first during auto-selection.
+// Register registers an auto-selectable backend factory with the given name and
+// priority. Lower priority values are tried first during auto-selection.
 // This should be called from init() functions in backend implementation packages.
 func Register(name string, factory Factory, priority int) {
+	register(name, registration{factory: factory, priority: priority, autoSelect: true})
+}
+
+// RegisterExplicit registers a backend that auto-selection never picks. Such a
+// backend is only created when the configuration names it, which keeps backends
+// that cannot fail to construct (and therefore always "succeed") from silently
+// replacing real hardware backends during auto-selection or failover.
+func RegisterExplicit(name string, factory Factory) {
+	register(name, registration{factory: factory, autoSelect: false})
+}
+
+// register stores a registration, warning on re-registration
+func register(name string, reg registration) {
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, exists := registry[name]; exists {
 		log.Printf("WARNING: Backend '%s' is being re-registered", name)
 	}
-	registry[name] = registration{factory: factory, priority: priority}
+	registry[name] = reg
 }
 
 // IsRegistered checks if a backend type is registered
@@ -129,6 +146,9 @@ func createAutoWithExclude(cfg *config.Config, exclude map[string]bool) (Result,
 	}
 	entries := make([]entry, 0, len(registry))
 	for name, reg := range registry {
+		if !reg.autoSelect {
+			continue // Explicit-only backends are never auto-selected
+		}
 		if exclude != nil && exclude[name] {
 			continue // Skip excluded backends
 		}
@@ -156,5 +176,5 @@ func createAutoWithExclude(cfg *config.Config, exclude map[string]bool) (Result,
 	if lastErr != nil {
 		return Result{}, fmt.Errorf("all backends failed, last error: %w", lastErr)
 	}
-	return Result{}, fmt.Errorf("no backends registered")
+	return Result{}, fmt.Errorf("no backends registered for auto-selection")
 }

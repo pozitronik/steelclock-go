@@ -17,11 +17,13 @@ import (
 	"github.com/pozitronik/steelclock-go/internal/display"
 )
 
-// Priority for auto-selection (highest = tried last, webclient should not be auto-selected)
-const Priority = 1000
-
 func init() {
-	backend.Register("webclient", newBackend, Priority)
+	// Registered as explicit-only: this backend always constructs successfully,
+	// so auto-selection (and backend failover) must never fall back to it —
+	// doing so silently replaced a disconnected hardware backend with a browser
+	// preview that no longer retried the hardware. The user selects it via
+	// "backend": "webclient" or the config editor preview override.
+	backend.RegisterExplicit("webclient", newBackend)
 }
 
 // Config holds webclient backend configuration
