@@ -33,6 +33,11 @@ func sendFeatureReport(handle DeviceHandle, data []byte) error {
 	return ErrNotSupported
 }
 
+// setFeatureReport is not supported on Unix
+func setFeatureReport(handle DeviceHandle, data []byte) error {
+	return ErrNotSupported
+}
+
 // EnumerateDevices is not supported on Unix
 func EnumerateDevices() ([]DeviceInfo, error) {
 	return nil, ErrNotSupported
