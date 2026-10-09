@@ -38,13 +38,32 @@ type CPUProvider interface {
 	Percent(interval time.Duration, perCore bool) ([]float64, error)
 }
 
+// MemoryUsage is a single, consistent sample of system memory usage.
+type MemoryUsage struct {
+	UsedPercent float64 // Percentage of memory in use (0-100)
+	UsedBytes   uint64  // Memory in use, in bytes
+	TotalBytes  uint64  // Total physical memory, in bytes
+}
+
+// gibibyte is the byte count of one gibibyte (1024^3), matching the unit
+// Windows Task Manager and most OS memory displays label "GB".
+const gibibyte = 1024 * 1024 * 1024
+
+// UsedGB returns the memory in use, in gibibytes.
+func (u MemoryUsage) UsedGB() float64 {
+	return float64(u.UsedBytes) / gibibyte
+}
+
+// TotalGB returns the total physical memory, in gibibytes.
+func (u MemoryUsage) TotalGB() float64 {
+	return float64(u.TotalBytes) / gibibyte
+}
+
 // MemoryProvider abstracts memory metrics collection
 type MemoryProvider interface {
-	// UsedPercent returns the percentage of memory currently in use.
-	UsedPercent() (float64, error)
-
-	// UsedGB returns memory usage in gibibytes (used, total).
-	UsedGB() (used float64, total float64, err error)
+	// Usage returns the used percentage and used/total bytes from one sample,
+	// so the figures are consistent with each other.
+	Usage() (MemoryUsage, error)
 }
 
 // NetworkProvider abstracts network I/O metrics collection

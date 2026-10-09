@@ -40,7 +40,7 @@ func (f *fakeRTSSSegment) setEntry(index int, pid, frameTime, time0, time1, fram
 }
 
 func (f *fakeRTSSSegment) reader() *rtssReader {
-	return &rtssReader{base: unsafe.Pointer(&f.buf[0])}
+	return &rtssReader{base: unsafe.Pointer(&f.buf[0]), size: uintptr(len(f.buf))}
 }
 
 func now() uint32 {
@@ -107,5 +107,41 @@ func TestGetFPS_StaleEntry_Skipped(t *testing.T) {
 	}
 	if fps != 0 || name != "" {
 		t.Errorf("GetFPS() = (%v, %q), want (0, \"\") for a stale entry", fps, name)
+	}
+}
+
+func TestGetFPS_ViewSmallerThanHeader_ReturnsErrRTSSGone(t *testing.T) {
+	seg := newFakeRTSSSegment(rtssSignature, rtssMinVersion, 1)
+	r := seg.reader()
+	r.size = rtssHeaderSize - 1
+
+	_, _, err := r.GetFPS()
+	if !errors.Is(err, errRTSSGone) {
+		t.Errorf("GetFPS() error = %v, want errRTSSGone", err)
+	}
+}
+
+func TestGetFPS_AppArrayPastView_ReturnsErrRTSSGone(t *testing.T) {
+	// The header claims two entries, but the view only holds one.
+	seg := newFakeRTSSSegment(rtssSignature, rtssMinVersion, 1)
+	binary.LittleEndian.PutUint32(seg.buf[offAppArrSize:], 2)
+	n := now()
+	seg.setEntry(0, 1234, 16, n-1000, n, 60)
+	r := seg.reader()
+
+	_, _, err := r.GetFPS()
+	if !errors.Is(err, errRTSSGone) {
+		t.Errorf("GetFPS() error = %v, want errRTSSGone", err)
+	}
+}
+
+func TestGetFPS_AppArrayOffsetPastView_ReturnsErrRTSSGone(t *testing.T) {
+	seg := newFakeRTSSSegment(rtssSignature, rtssMinVersion, 1)
+	binary.LittleEndian.PutUint32(seg.buf[offAppArrOffset:], uint32(len(seg.buf)))
+	r := seg.reader()
+
+	_, _, err := r.GetFPS()
+	if !errors.Is(err, errRTSSGone) {
+		t.Errorf("GetFPS() error = %v, want errRTSSGone", err)
 	}
 }

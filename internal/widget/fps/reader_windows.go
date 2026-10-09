@@ -8,6 +8,8 @@ import (
 	"sync"
 	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 // errRTSSGone reports that the mapped segment is no longer a valid RTSS
@@ -47,6 +49,9 @@ const (
 	offAppArrSize                 = 16
 	offLastForegroundAppProcessID = 68 // valid for shared memory v2.16+
 
+	// rtssHeaderSize covers every header field read above.
+	rtssHeaderSize = offLastForegroundAppProcessID + 4
+
 	// RTSS_SHARED_MEMORY_APP_ENTRY field byte offsets, relative to the
 	// entry's own base. These are the struct's leading fields, stable since
 	// v2.0 regardless of how much trailing data newer RTSS versions add.
@@ -84,6 +89,10 @@ type rtssReader struct {
 	// keeps pointer provenance intact for the checkptr instrumentation that
 	// -race enables.
 	base unsafe.Pointer
+	// size is the readable length of the view in bytes. Header-derived
+	// offsets are checked against it, since reading past the view is an
+	// access violation, which is fatal rather than a recoverable panic.
+	size uintptr
 	mu   sync.Mutex
 }
 
@@ -106,8 +115,13 @@ func newRTSSReader() (*rtssReader, error) {
 	if addr == 0 {
 		return nil, fmt.Errorf("failed to map RTSS shared memory")
 	}
+	var info windows.MemoryBasicInformation
+	if err := windows.VirtualQuery(addr, &info, unsafe.Sizeof(info)); err != nil {
+		_, _, _ = procUnmapViewOfFile.Call(addr)
+		return nil, fmt.Errorf("failed to query RTSS shared memory size: %w", err)
+	}
 	// The view is mapped outside the Go heap, so converting its address is safe.
-	return &rtssReader{base: unsafe.Pointer(addr)}, nil
+	return &rtssReader{base: unsafe.Pointer(addr), size: info.RegionSize}, nil
 }
 
 func readU32(base unsafe.Pointer, off uintptr) uint32 {
@@ -133,7 +147,7 @@ func (r *rtssReader) GetFPS() (fps float64, processName string, err error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if r.base == nil {
+	if r.base == nil || r.size < rtssHeaderSize {
 		return 0, "", errRTSSGone
 	}
 	// Per the RTSS SDK, only a segment carrying the 'RTSS' signature and a
@@ -160,6 +174,11 @@ func (r *rtssReader) GetFPS() (fps float64, processName string, err error) {
 	// Every entry must at least hold the fields read below.
 	if appEntrySize < entryOffFrameTime+4 || appArrSize == 0 {
 		return 0, "", nil
+	}
+	// The entries read below must lie inside the view; a header claiming
+	// otherwise is corrupt or truncated, so reopen rather than read past it.
+	if uint64(appArrOffset)+uint64(appArrSize)*uint64(appEntrySize) > uint64(r.size) {
+		return 0, "", errRTSSGone
 	}
 
 	var (
@@ -234,6 +253,7 @@ func (r *rtssReader) Close() {
 	if r.base != nil {
 		_, _, _ = procUnmapViewOfFile.Call(uintptr(r.base))
 		r.base = nil
+		r.size = 0
 	}
 }
 

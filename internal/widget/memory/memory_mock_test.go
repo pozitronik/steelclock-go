@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -27,8 +28,8 @@ func TestWidget_WithMockProvider(t *testing.T) {
 
 	// Inject mock provider
 	mockProvider := &metrics.MockMemory{
-		UsedPercentFunc: func() (float64, error) {
-			return 42.5, nil // Controlled value
+		UsageFunc: func() (metrics.MemoryUsage, error) {
+			return metrics.MemoryUsage{UsedPercent: 42.5}, nil // Controlled value
 		},
 	}
 	widget.memoryProvider = mockProvider
@@ -77,8 +78,8 @@ func TestWidget_MockProvider_EdgeCases(t *testing.T) {
 			}
 
 			widget.memoryProvider = &metrics.MockMemory{
-				UsedPercentFunc: func() (float64, error) {
-					return tt.mockValue, nil
+				UsageFunc: func() (metrics.MemoryUsage, error) {
+					return metrics.MemoryUsage{UsedPercent: tt.mockValue}, nil
 				},
 			}
 
@@ -168,8 +169,9 @@ func TestRender_DualFormat_UsesUsedGB(t *testing.T) {
 	}
 
 	widget.memoryProvider = &metrics.MockMemory{
-		UsedPercentFunc: func() (float64, error) { return 50.0, nil },
-		UsedGBFunc:      func() (float64, float64, error) { return 8.0, 16.0, nil },
+		UsageFunc: func() (metrics.MemoryUsage, error) {
+			return metrics.MemoryUsage{UsedPercent: 50.0, UsedBytes: 8 << 30, TotalBytes: 16 << 30}, nil
+		},
 	}
 
 	if err := widget.Update(); err != nil {
@@ -178,5 +180,82 @@ func TestRender_DualFormat_UsesUsedGB(t *testing.T) {
 
 	if _, err := widget.Render(); err != nil {
 		t.Errorf("Render() error = %v", err)
+	}
+}
+
+// TestWidget_Update_TakesGBFromSameSample verifies that the percentage and the
+// GB figures all come from one provider sample.
+func TestWidget_Update_TakesGBFromSameSample(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "memory",
+		ID:      "test_memory_sample",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 20,
+		},
+		Mode: "text",
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	calls := 0
+	widget.memoryProvider = &metrics.MockMemory{
+		UsageFunc: func() (metrics.MemoryUsage, error) {
+			calls++
+			return metrics.MemoryUsage{UsedPercent: 25.0, UsedBytes: 4 << 30, TotalBytes: 16 << 30}, nil
+		},
+	}
+
+	if err := widget.Update(); err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	if calls != 1 {
+		t.Errorf("provider sampled %d times per Update(), want 1", calls)
+	}
+	if widget.currentValue != 25.0 || widget.usedGB != 4.0 || widget.totalGB != 16.0 {
+		t.Errorf("got %.1f%% %.1f/%.1f GB, want 25.0%% 4.0/16.0 GB",
+			widget.currentValue, widget.usedGB, widget.totalGB)
+	}
+}
+
+// TestWidget_Update_ProviderError verifies that a failed sample is reported
+// and leaves the previous values untouched.
+func TestWidget_Update_ProviderError(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "memory",
+		ID:      "test_memory_error",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 20,
+		},
+		Mode: "text",
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	widget.memoryProvider = &metrics.MockMemory{}
+	if err := widget.Update(); err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	widget.memoryProvider = &metrics.MockMemory{
+		UsageFunc: func() (metrics.MemoryUsage, error) {
+			return metrics.MemoryUsage{}, errors.New("sample failed")
+		},
+	}
+	if err := widget.Update(); err == nil {
+		t.Error("Update() error = nil, want the provider error")
+	}
+
+	if widget.GetValue() != 65.0 || widget.usedGB != 13.0 || widget.totalGB != 20.0 {
+		t.Errorf("values changed after a failed sample: %.1f%% %.1f/%.1f GB",
+			widget.GetValue(), widget.usedGB, widget.totalGB)
 	}
 }

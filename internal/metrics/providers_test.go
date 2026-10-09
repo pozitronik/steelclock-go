@@ -122,43 +122,70 @@ func TestMockCPU_Percent(t *testing.T) {
 	})
 }
 
-func TestMockMemory_UsedPercent(t *testing.T) {
+func TestMockMemory_Usage(t *testing.T) {
 	t.Run("default value", func(t *testing.T) {
 		mock := &MockMemory{}
-		percent, err := mock.UsedPercent()
+		usage, err := mock.Usage()
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
-		if percent != 65.0 {
-			t.Errorf("expected 65.0, got %f", percent)
+		if usage.UsedPercent != 65.0 {
+			t.Errorf("expected 65.0, got %f", usage.UsedPercent)
+		}
+		if usage.UsedGB() != 13.0 || usage.TotalGB() != 20.0 {
+			t.Errorf("expected 13.0/20.0 GB, got %f/%f", usage.UsedGB(), usage.TotalGB())
 		}
 	})
 
 	t.Run("custom function", func(t *testing.T) {
 		mock := &MockMemory{
-			UsedPercentFunc: func() (float64, error) {
-				return 80.5, nil
+			UsageFunc: func() (MemoryUsage, error) {
+				return MemoryUsage{UsedPercent: 80.5}, nil
 			},
 		}
-		percent, _ := mock.UsedPercent()
-		if percent != 80.5 {
-			t.Errorf("expected 80.5, got %f", percent)
+		usage, _ := mock.Usage()
+		if usage.UsedPercent != 80.5 {
+			t.Errorf("expected 80.5, got %f", usage.UsedPercent)
 		}
 	})
 
 	t.Run("returns error", func(t *testing.T) {
 		expectedErr := errors.New("memory error")
 		mock := &MockMemory{
-			UsedPercentFunc: func() (float64, error) {
-				return 0, expectedErr
+			UsageFunc: func() (MemoryUsage, error) {
+				return MemoryUsage{}, expectedErr
 			},
 		}
 
-		_, err := mock.UsedPercent()
+		_, err := mock.Usage()
 		if !errors.Is(err, expectedErr) {
 			t.Errorf("expected error %v, got %v", expectedErr, err)
 		}
 	})
+}
+
+func TestMemoryUsage_GB(t *testing.T) {
+	tests := []struct {
+		name      string
+		usage     MemoryUsage
+		wantUsed  float64
+		wantTotal float64
+	}{
+		{"zero", MemoryUsage{}, 0, 0},
+		{"whole gibibytes", MemoryUsage{UsedBytes: 8 << 30, TotalBytes: 16 << 30}, 8, 16},
+		{"fractional", MemoryUsage{UsedBytes: 3 << 29, TotalBytes: 1 << 30}, 1.5, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.usage.UsedGB(); got != tt.wantUsed {
+				t.Errorf("UsedGB() = %f, want %f", got, tt.wantUsed)
+			}
+			if got := tt.usage.TotalGB(); got != tt.wantTotal {
+				t.Errorf("TotalGB() = %f, want %f", got, tt.wantTotal)
+			}
+		})
+	}
 }
 
 func TestMockNetwork_IOCounters(t *testing.T) {
@@ -315,18 +342,24 @@ func TestGopsutilCPU_Percent(t *testing.T) {
 	}
 }
 
-func TestGopsutilMemory_UsedPercent(t *testing.T) {
+func TestGopsutilMemory_Usage(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
 	}
 
 	mem := NewGopsutilMemory()
-	percent, err := mem.UsedPercent()
+	usage, err := mem.Usage()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if percent < 0 || percent > 100 {
-		t.Errorf("expected percentage between 0-100, got %f", percent)
+	if usage.UsedPercent < 0 || usage.UsedPercent > 100 {
+		t.Errorf("expected percentage between 0-100, got %f", usage.UsedPercent)
+	}
+	if usage.TotalBytes == 0 {
+		t.Error("expected non-zero total memory")
+	}
+	if usage.UsedBytes > usage.TotalBytes {
+		t.Errorf("used bytes %d exceed total %d", usage.UsedBytes, usage.TotalBytes)
 	}
 }
 
