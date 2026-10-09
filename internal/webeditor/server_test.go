@@ -3,6 +3,7 @@ package webeditor
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +16,17 @@ import (
 
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
+
+// testConfigJSON is a minimal configuration that config.Parse accepts
+// (with the "clock" widget type registered by TestMain).
+const testConfigJSON = `{"config_name": "%s", "widgets": [{"type": "clock", "position": {"x": 0, "y": 0, "w": 128, "h": 40}}]}`
+
+// TestMain registers the widget types used by the test configurations; the
+// widget packages that normally do this are not imported here.
+func TestMain(m *testing.M) {
+	config.WidgetTypeChecker = func(typeName string) bool { return typeName == "clock" }
+	os.Exit(m.Run())
+}
 
 // Mock implementations for testing
 
@@ -401,7 +413,7 @@ func TestHandleConfig_Post_Success(t *testing.T) {
 	server, configProvider, _ := createTestServer(t)
 	mux := createTestMux(server)
 
-	body := `{"config_name": "new_config"}`
+	body := fmt.Sprintf(testConfigJSON, "new_config")
 	req := httptest.NewRequest(http.MethodPost, "/api/config", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Origin", "http://127.0.0.1:8384")
@@ -441,7 +453,7 @@ func TestHandleConfig_Post_ForbiddenOrigin(t *testing.T) {
 	server, _, _ := createTestServer(t)
 	mux := createTestMux(server)
 
-	body := `{"config_name": "test"}`
+	body := fmt.Sprintf(testConfigJSON, "test")
 	req := httptest.NewRequest(http.MethodPost, "/api/config", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Origin", "http://evil.com")
@@ -459,7 +471,7 @@ func TestHandleConfig_Post_LocalhostOrigin(t *testing.T) {
 	server, configProvider, _ := createTestServer(t)
 	mux := createTestMux(server)
 
-	body := `{"config_name": "test"}`
+	body := fmt.Sprintf(testConfigJSON, "test")
 	req := httptest.NewRequest(http.MethodPost, "/api/config", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Origin", "http://localhost:8384")
@@ -481,7 +493,7 @@ func TestHandleConfig_Post_NoOrigin(t *testing.T) {
 	server, configProvider, _ := createTestServer(t)
 	mux := createTestMux(server)
 
-	body := `{"config_name": "test"}`
+	body := fmt.Sprintf(testConfigJSON, "test")
 	req := httptest.NewRequest(http.MethodPost, "/api/config", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	// No Origin header
@@ -511,7 +523,7 @@ func TestHandleConfig_Post_WrappedFormat(t *testing.T) {
 	// Use filepath.ToSlash for cross-platform JSON compatibility
 	savePathJSON := filepath.ToSlash(savePath)
 
-	body := `{"path": "` + savePathJSON + `", "config": {"config_name": "wrapped"}}`
+	body := `{"path": "` + savePathJSON + `", "config": ` + fmt.Sprintf(testConfigJSON, "wrapped") + `}`
 	req := httptest.NewRequest(http.MethodPost, "/api/config", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Origin", "http://127.0.0.1:8384")

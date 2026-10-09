@@ -129,21 +129,22 @@ func (s *Server) saveConfig(w http.ResponseWriter, r *http.Request) {
 		savePath = ""
 	}
 
-	// Validate JSON syntax
-	var cfg interface{}
-	if err := json.Unmarshal(configData, &cfg); err != nil {
-		respondError(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
+	// Save to a specific profile; never to an arbitrary path
+	if savePath != "" && !s.isKnownProfile(savePath) {
+		respondError(w, "Unknown profile: "+savePath, http.StatusForbidden)
+		return
+	}
+
+	// Accept only what the app can load, so a save never replaces a working
+	// config with one that fails on the next reload
+	if _, err := config.Parse(configData); err != nil {
+		respondError(w, "Invalid configuration: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Save to file
 	if savePath != "" {
-		// Save to a specific profile; never to an arbitrary path
-		if !s.isKnownProfile(savePath) {
-			respondError(w, "Unknown profile: "+savePath, http.StatusForbidden)
-			return
-		}
-		if err := os.WriteFile(savePath, configData, 0644); err != nil {
+		if err := config.WriteFileAtomic(savePath, configData); err != nil {
 			respondError(w, "Failed to save: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -217,18 +218,8 @@ func (s *Server) handleValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse JSON into config struct
-	var cfg config.Config
-	if err := json.Unmarshal(body, &cfg); err != nil {
-		respondJSON(w, map[string]interface{}{
-			"valid":  false,
-			"errors": []string{"Invalid JSON: " + err.Error()},
-		})
-		return
-	}
-
-	// Validate (defaults are applied when actually loading the config)
-	if err := config.Validate(&cfg); err != nil {
+	// Parse, apply defaults and validate exactly as loading does
+	if _, err := config.Parse(body); err != nil {
 		respondJSON(w, map[string]interface{}{
 			"valid":  false,
 			"errors": []string{err.Error()},
