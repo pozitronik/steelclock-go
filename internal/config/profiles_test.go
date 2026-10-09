@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -432,5 +433,187 @@ func TestProfileManager_CreateProfile_Duplicate(t *testing.T) {
 	_, err = pm.CreateProfile("Duplicate")
 	if err == nil {
 		t.Error("Expected error for duplicate profile name")
+	}
+}
+
+func TestSetTopLevelJSONField(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		value   string
+		want    string
+		wantErr bool
+	}{
+		{
+			name:  "replaces existing value only",
+			input: "{\n  \"$schema\": \"s.json\",\n  \"config_name\": \"Old\",\n  \"x\": {\"config_name\": \"nested\"}\n}\n",
+			value: `"New"`,
+			want:  "{\n  \"$schema\": \"s.json\",\n  \"config_name\": \"New\",\n  \"x\": {\"config_name\": \"nested\"}\n}\n",
+		},
+		{
+			name:  "keeps CRLF and tabs",
+			input: "{\r\n\t\"config_name\" :  \"Old\" ,\r\n\t\"a\": 1\r\n}",
+			value: `"New"`,
+			want:  "{\r\n\t\"config_name\" :  \"New\" ,\r\n\t\"a\": 1\r\n}",
+		},
+		{
+			name:  "replaces non-string value",
+			input: `{"config_name": null, "a": 1}`,
+			value: `"New"`,
+			want:  `{"config_name": "New", "a": 1}`,
+		},
+		{
+			name:  "replaces every duplicate",
+			input: `{"config_name": "First", "a": 1, "config_name": "Effective"}`,
+			value: `"New"`,
+			want:  `{"config_name": "New", "a": 1, "config_name": "New"}`,
+		},
+		{
+			name:  "replaces case variants the loader also reads",
+			input: `{"Config_Name": "Old", "a": 1}`,
+			value: `"New"`,
+			want:  `{"Config_Name": "New", "a": 1}`,
+		},
+		{
+			name:  "ignores nested field with same name",
+			input: "{\n  \"x\": {\"config_name\": \"nested\"}\n}",
+			value: `"New"`,
+			want:  "{\n  \"config_name\": \"New\",\n  \"x\": {\"config_name\": \"nested\"}\n}",
+		},
+		{
+			name:  "inserts into compact object",
+			input: `{"a":1}`,
+			value: `"New"`,
+			want:  `{"config_name": "New","a":1}`,
+		},
+		{
+			name:  "inserts into empty object",
+			input: `{ }`,
+			value: `"New"`,
+			want:  `{"config_name": "New" }`,
+		},
+		{name: "array document", input: `[1, 2]`, value: `"New"`, wantErr: true},
+		{name: "null document", input: `null`, value: `"New"`, wantErr: true},
+		{name: "invalid JSON", input: `{"a": }`, value: `"New"`, wantErr: true},
+		{name: "unterminated object", input: `{"a": 1`, value: `"New"`, wantErr: true},
+		{name: "empty input", input: ``, value: `"New"`, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := setTopLevelJSONField([]byte(tt.input), "config_name", []byte(tt.value))
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("setTopLevelJSONField() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			if string(got) != tt.want {
+				t.Errorf("setTopLevelJSONField() =\n%q\nwant\n%q", got, tt.want)
+			}
+			if !json.Valid(got) {
+				t.Errorf("result is not valid JSON: %q", got)
+			}
+		})
+	}
+}
+
+func TestRenameProfile_PreservesDocument(t *testing.T) {
+	tmpDir := t.TempDir()
+	profilesDir := createProfilesDir(t, tmpDir)
+	path := filepath.Join(profilesDir, "clock.json")
+	original := "{\n" +
+		"  \"$schema\": \"../profiles/.schema/config.schema.json\",\n" +
+		"  \"config_name\": \"Old Name\",\n" +
+		"  \"future_extension\": {\"keep\": true},\n" +
+		"  \"widgets\": [{\"type\": \"clock\", \"position\": {\"x\": 0, \"y\": 0, \"w\": 128, \"h\": 40}}]\n" +
+		"}\n"
+	if err := os.WriteFile(path, []byte(original), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	pm := NewProfileManager(tmpDir)
+	if err := pm.LoadProfiles(); err != nil {
+		t.Fatalf("LoadProfiles() error = %v", err)
+	}
+
+	newPath, err := pm.RenameProfile(path, `New "quoted" Name`)
+	if err != nil {
+		t.Fatalf("RenameProfile() error = %v", err)
+	}
+	if newPath != path {
+		t.Errorf("RenameProfile() path = %q, want %q", newPath, path)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := strings.Replace(original, `"Old Name"`, `"New \"quoted\" Name"`, 1)
+	if string(data) != want {
+		t.Errorf("file after rename =\n%s\nwant\n%s", data, want)
+	}
+
+	for _, p := range pm.GetAllProfiles() {
+		if p.Path == path && p.Name != `New "quoted" Name` {
+			t.Errorf("profile name = %q, want the new name", p.Name)
+		}
+	}
+}
+
+// TestRenameProfile_DuplicateName checks a file with config_name twice: the
+// loader uses the last one, so the rename must change the name it reads.
+func TestRenameProfile_DuplicateName(t *testing.T) {
+	tmpDir := t.TempDir()
+	profilesDir := createProfilesDir(t, tmpDir)
+	path := filepath.Join(profilesDir, "clock.json")
+	content := `{"config_name": "First", ` +
+		`"widgets": [{"type": "clock", "position": {"x": 0, "y": 0, "w": 128, "h": 40}}], ` +
+		`"config_name": "Effective"}`
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	pm := NewProfileManager(tmpDir)
+	if err := pm.LoadProfiles(); err != nil {
+		t.Fatalf("LoadProfiles() error = %v", err)
+	}
+	if _, err := pm.RenameProfile(path, "Renamed"); err != nil {
+		t.Fatalf("RenameProfile() error = %v", err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.ConfigName != "Renamed" {
+		t.Errorf("loaded name = %q, want Renamed", cfg.ConfigName)
+	}
+}
+
+func TestRenameProfile_Errors(t *testing.T) {
+	tmpDir := t.TempDir()
+	profilesDir := createProfilesDir(t, tmpDir)
+	path := writeConfig(t, profilesDir, "clock.json", "Clock")
+
+	pm := NewProfileManager(tmpDir)
+	if err := pm.LoadProfiles(); err != nil {
+		t.Fatalf("LoadProfiles() error = %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		path    string
+		newName string
+	}{
+		{"empty name", path, ""},
+		{"unknown profile", filepath.Join(profilesDir, "missing.json"), "Name"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := pm.RenameProfile(tt.path, tt.newName); err == nil {
+				t.Error("RenameProfile() error = nil, want error")
+			}
+		})
 	}
 }
