@@ -12,9 +12,10 @@ func TestApexProtocol_Variants(t *testing.T) {
 		wantCommand []byte
 		wantFamily  string
 		wantPadding bool
+		wantFeature bool // strict feature-report transport
 	}{
-		{"legacy (zero value)", &ApexProtocol{}, []byte{0x61}, "Apex Keyboard", false},
-		{"framebuffer", NewApexFramebufferProtocol(), []byte{0x1F, 0x81}, "Apex Keyboard (framebuffer command)", true},
+		{"legacy (zero value)", &ApexProtocol{}, []byte{0x61}, "Apex Keyboard", false, false},
+		{"framebuffer", NewApexFramebufferProtocol(), []byte{0x1F, 0x81}, "Apex Keyboard (framebuffer command)", true, true},
 	}
 
 	for _, tt := range tests {
@@ -30,6 +31,9 @@ func TestApexProtocol_Variants(t *testing.T) {
 			}
 			if got := protocolWantsReportLengthPadding(tt.protocol); got != tt.wantPadding {
 				t.Errorf("protocolWantsReportLengthPadding() = %v, want %v", got, tt.wantPadding)
+			}
+			if got := protocolRequiresFeatureReport(tt.protocol); got != tt.wantFeature {
+				t.Errorf("protocolRequiresFeatureReport() = %v, want %v", got, tt.wantFeature)
 			}
 			if protocolDetectsScreenInterface(tt.protocol) {
 				t.Error("Apex protocols must not detect the screen interface by capability")
@@ -59,5 +63,11 @@ func TestResolveProtocol_ApexVariants(t *testing.T) {
 				t.Errorf("resolveProtocol(0x%04X).framebuffer = %v, want %v", tt.pid, p.framebuffer, tt.wantFramebuffer)
 			}
 		})
+	}
+}
+
+func TestProtocolRequiresFeatureReport_NovaProDefaultsFalse(t *testing.T) {
+	if protocolRequiresFeatureReport(&NovaProProtocol{}) {
+		t.Error("NovaProProtocol should keep the default transport")
 	}
 }

@@ -16,8 +16,9 @@ var (
 // returns the variant for newer firmware.
 type ApexProtocol struct {
 	// framebuffer selects the newer firmware's 0x1F 0x81 live-framebuffer
-	// command. Its device declares a feature report longer than the frame, so
-	// this variant also opts into report-length padding.
+	// command. Its frames are feature reports that the device declares longer
+	// than the frame, so this variant also opts into report-length padding and
+	// the strict feature-report transport.
 	framebuffer bool
 }
 
@@ -58,6 +59,14 @@ func (p *ApexProtocol) DeviceFamily() string {
 // 643 bytes on Windows), so the driver zero-pads up to the discovered length.
 // The legacy variant keeps its exact packet size.
 func (p *ApexProtocol) PadToReportLength() bool {
+	return p.framebuffer
+}
+
+// RequiresFeatureReport makes the framebuffer variant skip the Linux write()
+// attempt: its frames are feature reports, while the interface's output report
+// is only 65 bytes. The legacy variant keeps the write()-first transport it has
+// always worked with.
+func (p *ApexProtocol) RequiresFeatureReport() bool {
 	return p.framebuffer
 }
 

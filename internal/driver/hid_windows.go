@@ -229,6 +229,12 @@ func sendFeatureReport(handle DeviceHandle, data []byte) error {
 	return nil
 }
 
+// setFeatureReport sends data strictly as a HID feature report. HidD_SetFeature
+// already does exactly that, so it is the same as sendFeatureReport on Windows.
+func setFeatureReport(handle DeviceHandle, data []byte) error {
+	return sendFeatureReport(handle, data)
+}
+
 // parseHidPath extracts the VID, PID and interface (mi_xx) from a Windows HID
 // device interface path such as
 // `\\?\hid#vid_1038&pid_12cd&mi_04#...`. Fields that are absent yield zero / "".

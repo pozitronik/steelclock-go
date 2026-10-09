@@ -209,6 +209,25 @@ func sendFeatureReport(handle DeviceHandle, data []byte) error {
 	}
 
 	// If write() fails, try HIDIOCSFEATURE for feature reports
+	if ferr := setFeatureReport(handle, data); ferr != nil {
+		return fmt.Errorf("%w (write also failed: %v)", ferr, err)
+	}
+
+	return nil
+}
+
+// setFeatureReport sends data strictly as a HID feature report (HIDIOCSFEATURE),
+// without the write() attempt sendFeatureReport makes first. The first byte is
+// the report ID (0x00 for unnumbered reports; the kernel strips it).
+func setFeatureReport(handle DeviceHandle, data []byte) error {
+	if handle == InvalidHandle {
+		return fmt.Errorf("invalid handle")
+	}
+
+	if len(data) == 0 {
+		return fmt.Errorf("empty data")
+	}
+
 	req := hidiocsfeature(len(data))
 
 	_, _, errno := syscall.Syscall(
@@ -219,7 +238,7 @@ func sendFeatureReport(handle DeviceHandle, data []byte) error {
 	)
 
 	if errno != 0 {
-		return fmt.Errorf("HIDIOCSFEATURE ioctl failed: %v (write also failed: %v)", errno, err)
+		return fmt.Errorf("HIDIOCSFEATURE ioctl failed: %v", errno)
 	}
 
 	return nil
