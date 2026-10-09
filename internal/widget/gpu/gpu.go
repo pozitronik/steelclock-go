@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image"
 	"log"
-	"strings"
 	"sync"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
@@ -246,14 +245,8 @@ func (w *Widget) Render() (image.Image, error) {
 	// In text mode, {used}/{total}/{percent} tokens render a GB breakdown for
 	// memory metrics (e.g. "V {used}GB {percent}%"); plain printf formats keep
 	// rendering just the percentage through the strategy below.
-	if w.displayMode == render.DisplayModeText && strings.Contains(textFmt, "{") {
-		usedGB := w.currentValue / 100 * w.totalMemoryGB
-		text := strings.NewReplacer(
-			"{used}", fmt.Sprintf("%.1f", usedGB),
-			"{total}", fmt.Sprintf("%.1f", w.totalMemoryGB),
-			"{percent}", fmt.Sprintf("%.0f", w.currentValue),
-		).Replace(textFmt)
-		w.Renderer.RenderText(img, text)
+	if w.displayMode == render.DisplayModeText && render.IsUsageTokenFormat(textFmt) {
+		w.Renderer.RenderText(img, w.usageText(textFmt))
 		return img, nil
 	}
 
@@ -267,6 +260,14 @@ func (w *Widget) Render() (image.Image, error) {
 	}, w.Renderer)
 
 	return img, nil
+}
+
+// usageText renders a token text format from the current values. Used memory
+// is derived from the usage percentage and the adapter's total memory.
+// Callers must hold w.mu.
+func (w *Widget) usageText(format string) string {
+	usedGB := w.currentValue / 100 * w.totalMemoryGB
+	return render.FormatUsageTokens(format, usedGB, w.totalMemoryGB, w.currentValue)
 }
 
 // Stop releases resources

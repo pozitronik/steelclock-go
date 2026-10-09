@@ -1,9 +1,7 @@
 package memory
 
 import (
-	"fmt"
 	"image"
-	"strings"
 	"sync"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -118,13 +116,8 @@ func (w *Widget) Render() (image.Image, error) {
 	// In text mode, {used}/{total}/{percent} tokens render a GB breakdown
 	// (e.g. "R {used}GB {percent}%"); plain printf formats keep rendering
 	// just the percentage through the strategy below.
-	if w.displayMode == render.DisplayModeText && strings.Contains(w.textFormat, "{") {
-		text := strings.NewReplacer(
-			"{used}", fmt.Sprintf("%.1f", w.usedGB),
-			"{total}", fmt.Sprintf("%.1f", w.totalGB),
-			"{percent}", fmt.Sprintf("%.0f", w.currentValue),
-		).Replace(w.textFormat)
-		w.Renderer.RenderText(img, text)
+	if w.displayMode == render.DisplayModeText && render.IsUsageTokenFormat(w.textFormat) {
+		w.Renderer.RenderText(img, w.usageText())
 		return img, nil
 	}
 
@@ -138,4 +131,10 @@ func (w *Widget) Render() (image.Image, error) {
 	}, w.Renderer)
 
 	return img, nil
+}
+
+// usageText renders the token text format from the current values.
+// Callers must hold w.mu.
+func (w *Widget) usageText() string {
+	return render.FormatUsageTokens(w.textFormat, w.usedGB, w.totalGB, w.currentValue)
 }
