@@ -1,12 +1,43 @@
 package driver
 
-// ApexProtocol implements the Protocol interface for SteelSeries Apex keyboards.
-// Apex keyboards use cmd 0x61, row-major MSB encoding, single packet per frame.
-type ApexProtocol struct{}
+// Apex OLED frame commands.
+var (
+	// apexLegacyCommand is the frame command of the original Apex 7/Pro/5 firmware.
+	apexLegacyCommand = []byte{0x61}
+	// apexFramebufferCommand is the live-framebuffer write of newer firmware
+	// (device command 0x1F, sub-command 0x81), e.g. the PID 0x1628 Apex Pro TKL
+	// 2023. The legacy command is silently accepted there but never shown.
+	apexFramebufferCommand = []byte{0x1F, 0x81}
+)
+
+// ApexProtocol implements the Protocol interface for SteelSeries Apex keyboards:
+// row-major MSB encoding, single packet per frame, mi_01 interface. The zero
+// value speaks the original 0x61 frame command; NewApexFramebufferProtocol
+// returns the variant for newer firmware.
+type ApexProtocol struct {
+	// framebuffer selects the newer firmware's 0x1F 0x81 live-framebuffer
+	// command. Its device declares a feature report longer than the frame, so
+	// this variant also opts into report-length padding.
+	framebuffer bool
+}
+
+// NewApexFramebufferProtocol returns the Apex protocol variant for newer
+// firmware that takes frames as 0x1F 0x81 live-framebuffer writes.
+func NewApexFramebufferProtocol() *ApexProtocol {
+	return &ApexProtocol{framebuffer: true}
+}
+
+// command returns the frame command prefix for this protocol variant.
+func (p *ApexProtocol) command() []byte {
+	if p.framebuffer {
+		return apexFramebufferCommand
+	}
+	return apexLegacyCommand
+}
 
 // BuildFramePackets builds a single HID packet for the Apex keyboard display.
 func (p *ApexProtocol) BuildFramePackets(pixelData []byte, width, height int) [][]byte {
-	return [][]byte{buildApexPacket(pixelData, width, height)}
+	return [][]byte{buildApexPacket(p, pixelData, width, height)}
 }
 
 // Interface returns the default USB interface for Apex keyboards.
@@ -16,7 +47,26 @@ func (p *ApexProtocol) Interface() string {
 
 // DeviceFamily returns the device family name.
 func (p *ApexProtocol) DeviceFamily() string {
+	if p.framebuffer {
+		return "Apex Keyboard (framebuffer command)"
+	}
 	return "Apex Keyboard"
+}
+
+// PadToReportLength opts the framebuffer variant into report-length padding:
+// its device declares a feature report longer than the frame packet (645 vs.
+// 643 bytes on Windows), so the driver zero-pads up to the discovered length.
+// The legacy variant keeps its exact packet size.
+func (p *ApexProtocol) PadToReportLength() bool {
+	return p.framebuffer
+}
+
+// copyApexPixels copies at most dataSize bytes of pixel data into dst.
+func copyApexPixels(dst, pixelData []byte, dataSize int) {
+	if len(pixelData) > dataSize {
+		pixelData = pixelData[:dataSize]
+	}
+	copy(dst, pixelData)
 }
 
 // resolveProtocol determines the appropriate protocol for a device based on VID/PID.

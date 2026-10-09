@@ -19,7 +19,7 @@ const (
 func TestBuildApexPacket_Size(t *testing.T) {
 	pixelData := make([]byte, 640) // 128x40/8 = 640 bytes
 
-	packet := buildApexPacket(pixelData, 128, 40)
+	packet := buildApexPacket(&ApexProtocol{}, pixelData, 128, 40)
 
 	// Expected: 642 bytes fixed (matching HID descriptor)
 	if len(packet) != testPacketSize {
@@ -28,7 +28,7 @@ func TestBuildApexPacket_Size(t *testing.T) {
 }
 
 func TestBuildApexPacket_Command(t *testing.T) {
-	packet := buildApexPacket(make([]byte, 640), 128, 40)
+	packet := buildApexPacket(&ApexProtocol{}, make([]byte, 640), 128, 40)
 
 	if packet[testCmdOffset] != 0x61 {
 		t.Errorf("packet[%d] (CMD) = 0x%02X, want 0x61", testCmdOffset, packet[testCmdOffset])
@@ -36,7 +36,7 @@ func TestBuildApexPacket_Command(t *testing.T) {
 }
 
 func TestBuildApexPacket_Padding(t *testing.T) {
-	packet := buildApexPacket(make([]byte, 640), 128, 40)
+	packet := buildApexPacket(&ApexProtocol{}, make([]byte, 640), 128, 40)
 
 	// On Linux: byte 641 should be zero padding (after data)
 	for i := testPaddingStart; i < testPaddingEnd; i++ {
@@ -52,7 +52,7 @@ func TestBuildApexPacket_DataCopy(t *testing.T) {
 		pixelData[i] = byte(i % 256)
 	}
 
-	packet := buildApexPacket(pixelData, 128, 40)
+	packet := buildApexPacket(&ApexProtocol{}, pixelData, 128, 40)
 
 	// Check that pixel data is copied correctly
 	for i := 0; i < len(pixelData); i++ {
@@ -70,7 +70,7 @@ func TestBuildApexPacket_ShortData(t *testing.T) {
 		pixelData[i] = 0xFF
 	}
 
-	packet := buildApexPacket(pixelData, 128, 40)
+	packet := buildApexPacket(&ApexProtocol{}, pixelData, 128, 40)
 
 	// First 100 bytes of data should be 0xFF
 	for i := 0; i < 100; i++ {
@@ -96,7 +96,7 @@ func TestBuildApexPacket_LongData(t *testing.T) {
 		pixelData[i] = 0xAA
 	}
 
-	packet := buildApexPacket(pixelData, 128, 40)
+	packet := buildApexPacket(&ApexProtocol{}, pixelData, 128, 40)
 
 	// Packet should still be correct size (642 fixed)
 	if len(packet) != testPacketSize {
@@ -124,7 +124,7 @@ func TestBuildApexPacket_DifferentResolution(t *testing.T) {
 	for i := range pixelData {
 		pixelData[i] = 0xBB
 	}
-	packet := buildApexPacket(pixelData, width, height)
+	packet := buildApexPacket(&ApexProtocol{}, pixelData, width, height)
 
 	// Packet size is fixed at 642 on Linux
 	if len(packet) != testPacketSize {
@@ -149,7 +149,7 @@ func BenchmarkBuildApexPacket(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buildApexPacket(pixelData, 128, 40)
+		buildApexPacket(&ApexProtocol{}, pixelData, 128, 40)
 	}
 }
 
@@ -158,6 +158,6 @@ func BenchmarkBuildApexPacket_LargeData(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		buildApexPacket(pixelData, 256, 64)
+		buildApexPacket(&ApexProtocol{}, pixelData, 256, 64)
 	}
 }

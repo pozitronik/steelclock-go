@@ -3,27 +3,25 @@
 package driver
 
 // buildApexPacket constructs the HID packet for sending pixel data on Windows.
-// Windows HidD_SetFeature expects report ID as first byte (stripped by HID driver).
-// After Report ID is stripped, device receives: [61 CMD] + [data] + [1 padding]
-// This matches the Linux implementation format.
-// Format: [00 ReportID] + [61 CMD] + [pixelData] + [1 padding]
-func buildApexPacket(pixelData []byte, width, height int) []byte {
+// HidD_SetFeature expects the report ID as the first byte (0x00, stripped by the
+// HID driver), followed by the frame command and the pixel data:
+//   - legacy:      [00 ReportID] + [61] + [pixelData] + [1 padding] = 643 bytes for 128x40;
+//     the device receives 642 bytes, matching its HID descriptor.
+//   - framebuffer: [00 ReportID] + [1F 81] + [pixelData] = 643 bytes for 128x40;
+//     no trailing byte here, because its device declares a 645-byte feature
+//     report and the driver zero-pads every packet up to that length.
+func buildApexPacket(p *ApexProtocol, pixelData []byte, width, height int) []byte {
+	cmd := p.command()
 	dataSize := width * height / 8
-	// ReportID(1) + CMD(1) + Data + Padding(1)
-	// After Windows strips ReportID, device gets: CMD(1) + Data + Padding(1)
-	packetSize := 1 + 1 + dataSize + 1
-
-	packet := make([]byte, packetSize)
-	packet[0] = 0x00 // Report ID (stripped by Windows HID driver)
-	packet[1] = 0x61 // Command byte
-
-	// Copy pixel data starting at byte 2
-	if len(pixelData) > dataSize {
-		copy(packet[2:], pixelData[:dataSize])
-	} else {
-		copy(packet[2:], pixelData)
+	trailing := 1
+	if p.framebuffer {
+		trailing = 0
 	}
 
-	// Last byte stays zero (trailing padding)
+	packet := make([]byte, 1+len(cmd)+dataSize+trailing)
+	packet[0] = 0x00 // Report ID (stripped by Windows HID driver)
+	copy(packet[1:], cmd)
+	copyApexPixels(packet[1+len(cmd):], pixelData, dataSize)
+
 	return packet
 }
