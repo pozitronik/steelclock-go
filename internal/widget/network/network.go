@@ -206,8 +206,8 @@ func (w *Widget) Update() error {
 		elapsed := now.Sub(w.lastTime).Seconds()
 		if elapsed > 0 {
 			// Calculate bytes per second
-			rxBps := float64(rx-w.lastRx) / elapsed
-			txBps := float64(tx-w.lastTx) / elapsed
+			rxBps := util.CounterRate(rx, w.lastRx, elapsed)
+			txBps := util.CounterRate(tx, w.lastTx, elapsed)
 
 			// Update base widget values
 			w.SetValuesAndHistory(rxBps, txBps, w.IsGraphMode())
