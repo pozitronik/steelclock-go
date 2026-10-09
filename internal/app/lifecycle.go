@@ -104,6 +104,18 @@ func (m *LifecycleManager) Start(cfg *config.Config) error {
 	return nil
 }
 
+// WakeDevices asks every device to check its display device now instead of at
+// its next poll, e.g. when the OS reports a device connected or disconnected.
+func (m *LifecycleManager) WakeDevices() {
+	m.mu.Lock()
+	devices := append([]*DeviceInstance(nil), m.devices...)
+	m.mu.Unlock()
+
+	for _, dev := range devices {
+		dev.Wake()
+	}
+}
+
 // Stop stops all device compositors but keeps clients for reuse
 func (m *LifecycleManager) Stop() {
 	m.mu.Lock()

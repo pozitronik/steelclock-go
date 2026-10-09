@@ -86,6 +86,8 @@ Supported IDEs: VS Code, JetBrains IDEs, Visual Studio, Sublime Text, and others
 **Device reconnection:** if the display device is unplugged, or not connected when SteelClock
 starts, SteelClock keeps looking for it every `reconnect_interval_ms` and resumes silently once it
 is back. It waits for the same backend it was using; it does not switch to another one.
+On Windows and Linux it also reacts at once when the OS reports a SteelSeries device being
+connected or disconnected, so a replugged device is usually back within a second.
 
 ### Backend Configuration
 
