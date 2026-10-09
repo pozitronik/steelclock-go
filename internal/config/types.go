@@ -134,6 +134,7 @@ type Config struct {
 	GameName             string              `json:"game_name"`
 	GameDisplayName      string              `json:"game_display_name"`
 	RefreshRateMs        int                 `json:"refresh_rate_ms"`
+	ReconnectIntervalMs  int                 `json:"reconnect_interval_ms,omitempty"` // How often a missing device is looked for (default: 3000)
 	UnregisterOnExit     bool                `json:"unregister_on_exit,omitempty"`
 	DeinitializeTimerMs  int                 `json:"deinitialize_timer_ms,omitempty"`
 	EventBatchingEnabled bool                `json:"event_batching_enabled,omitempty"`

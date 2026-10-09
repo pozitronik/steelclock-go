@@ -29,9 +29,16 @@ func saveAndClearRegistry() func() {
 	for k, v := range registry {
 		saved[k] = v
 	}
+	savedProbers := make(map[string]Prober, len(probers))
+	for k, v := range probers {
+		savedProbers[k] = v
+	}
 	// Clear registry
 	for k := range registry {
 		delete(registry, k)
+	}
+	for k := range probers {
+		delete(probers, k)
 	}
 	registryMu.Unlock()
 
@@ -42,6 +49,12 @@ func saveAndClearRegistry() func() {
 		}
 		for k, v := range saved {
 			registry[k] = v
+		}
+		for k := range probers {
+			delete(probers, k)
+		}
+		for k, v := range savedProbers {
+			probers[k] = v
 		}
 		registryMu.Unlock()
 	}
@@ -350,5 +363,114 @@ func TestRegisterExplicit_OnlyExplicitRegistered(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "no backends registered") {
 		t.Errorf("error = %q, should mention 'no backends registered'", err.Error())
+	}
+}
+
+func TestAvailableByName(t *testing.T) {
+	restore := saveAndClearRegistry()
+	defer restore()
+
+	factory := func(*config.Config) (display.Backend, error) { return &mockBackend{}, nil }
+	Register("no_probe", factory, 10)
+	Register("probe_up", factory, 20)
+	Register("probe_down", factory, 30)
+	RegisterProber("probe_up", func(*config.Config) bool { return true })
+	RegisterProber("probe_down", func(*config.Config) bool { return false })
+
+	tests := []struct {
+		name string
+		want bool
+	}{
+		{"unregistered", false},
+		{"no_probe", true},
+		{"probe_up", true},
+		{"probe_down", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := AvailableByName(tt.name, &config.Config{}); got != tt.want {
+				t.Errorf("AvailableByName(%q) = %v, want %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAvailableByName_PassesConfig(t *testing.T) {
+	restore := saveAndClearRegistry()
+	defer restore()
+
+	Register("cfg_probe", func(*config.Config) (display.Backend, error) { return &mockBackend{}, nil }, 10)
+	RegisterProber("cfg_probe", func(cfg *config.Config) bool { return cfg.GameName == "present" })
+
+	if !AvailableByName("cfg_probe", &config.Config{GameName: "present"}) {
+		t.Error("probe should see the given config")
+	}
+	if AvailableByName("cfg_probe", &config.Config{GameName: "absent"}) {
+		t.Error("probe should see the given config")
+	}
+}
+
+func TestAvailable(t *testing.T) {
+	factory := func(*config.Config) (display.Backend, error) { return &mockBackend{}, nil }
+
+	tests := []struct {
+		name    string
+		setup   func()
+		backend string
+		want    bool
+	}{
+		{
+			name: "explicit backend uses its own probe",
+			setup: func() {
+				Register("a", factory, 10)
+				Register("b", factory, 20)
+				RegisterProber("a", func(*config.Config) bool { return false })
+			},
+			backend: "a",
+			want:    false,
+		},
+		{
+			name: "auto: any available auto-selectable backend",
+			setup: func() {
+				Register("a", factory, 10)
+				Register("b", factory, 20)
+				RegisterProber("a", func(*config.Config) bool { return false })
+				RegisterProber("b", func(*config.Config) bool { return true })
+			},
+			want: true,
+		},
+		{
+			name: "auto: nothing available",
+			setup: func() {
+				Register("a", factory, 10)
+				RegisterProber("a", func(*config.Config) bool { return false })
+			},
+			want: false,
+		},
+		{
+			name: "auto: explicit-only backends are not considered",
+			setup: func() {
+				RegisterExplicit("explicit_only", factory)
+			},
+			want: false,
+		},
+		{
+			name:    "explicit backend that is not registered",
+			setup:   func() {},
+			backend: "missing",
+			want:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			restore := saveAndClearRegistry()
+			defer restore()
+			tt.setup()
+
+			if got := Available(&config.Config{Backend: tt.backend}); got != tt.want {
+				t.Errorf("Available() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

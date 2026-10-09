@@ -28,6 +28,7 @@ type registration struct {
 
 var (
 	registry   = make(map[string]registration)
+	probers    = make(map[string]Prober)
 	registryMu sync.RWMutex
 )
 
@@ -60,6 +61,61 @@ func register(name string, reg registration) {
 		log.Printf("WARNING: Backend '%s' is being re-registered", name)
 	}
 	registry[name] = reg
+}
+
+// Prober reports, cheaply and without logging, whether a backend could be
+// created right now. It lets callers wait for a missing device without running
+// (and logging) a full backend creation on every check.
+type Prober func(cfg *config.Config) bool
+
+// RegisterProber registers an availability probe for a backend. Backends
+// without a probe are always considered available.
+// This should be called from init() functions in backend implementation packages.
+func RegisterProber(name string, probe Prober) {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	probers[name] = probe
+}
+
+// Available reports whether Create(cfg) is worth trying now: the configured
+// backend, or in auto mode any auto-selectable backend, is registered and its
+// probe (if any) reports it available.
+func Available(cfg *config.Config) bool {
+	if cfg.Backend != "" {
+		return AvailableByName(cfg.Backend, cfg)
+	}
+
+	registryMu.RLock()
+	names := make([]string, 0, len(registry))
+	for name, reg := range registry {
+		if reg.autoSelect {
+			names = append(names, name)
+		}
+	}
+	registryMu.RUnlock()
+
+	for _, name := range names {
+		if AvailableByName(name, cfg) {
+			return true
+		}
+	}
+	return false
+}
+
+// AvailableByName reports whether CreateByName(name, cfg) is worth trying now.
+func AvailableByName(name string, cfg *config.Config) bool {
+	registryMu.RLock()
+	_, ok := registry[name]
+	probe := probers[name]
+	registryMu.RUnlock()
+
+	if !ok {
+		return false
+	}
+	if probe == nil {
+		return true
+	}
+	return probe(cfg)
 }
 
 // IsRegistered checks if a backend type is registered

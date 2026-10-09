@@ -78,9 +78,16 @@ Supported IDEs: VS Code, JetBrains IDEs, Visual Studio, Sublime Text, and others
 | `game_name`             | string  | "STEELCLOCK" | Internal game name for GameSense                 |
 | `game_display_name`     | string  | "SteelClock" | Display name in SteelSeries GG                   |
 | `refresh_rate_ms`       | integer | 100          | Display refresh rate (see notes)                 |
+| `reconnect_interval_ms` | integer | 3000         | Missing-device check interval (1000-60000ms)     |
 | `backend`               | string  | (auto)       | Backend: "gamesense", "direct", or omit for auto |
 | `unregister_on_exit`    | boolean | false        | Unregister on exit (may timeout)                 |
 | `deinitialize_timer_ms` | integer | 15000        | Game deactivation timeout (1000-60000ms)         |
+
+**Device reconnection:** if the display device is unplugged, or not connected when SteelClock
+starts, SteelClock keeps looking for it every `reconnect_interval_ms` and resumes silently once it
+is back. It waits for the same backend it was using; it does not switch to another one.
+On Windows and Linux it also reacts at once when the OS reports a SteelSeries device being
+connected or disconnected, so a replugged device is usually back within a second.
 
 ### Backend Configuration
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/backend/webclient"
 	"github.com/pozitronik/steelclock-go/internal/compositor"
@@ -14,6 +15,12 @@ import (
 
 // DeviceInstance manages the lifecycle of a single display device.
 // Each device has its own compositor, backend client, and widget set.
+//
+// A device that is missing (unplugged, or not connected at startup) is never
+// given up on: the instance waits for it and resumes once it is back. A
+// supervisor goroutine checks every reconnect interval, or immediately when
+// woken (Wake), and reconnects the existing client when the backend supports
+// it (display.Reconnectable), otherwise recreates the backend it was using.
 type DeviceInstance struct {
 	id             string
 	comp           *compositor.Compositor
@@ -24,6 +31,15 @@ type DeviceInstance struct {
 	widgetMgr      *WidgetManager
 	retryCancel    chan struct{}
 	mu             sync.Mutex
+
+	// Device recovery state, guarded by mu.
+	cfg           *config.Config // configuration of the last Start
+	waiting       bool           // the device is missing; the supervisor is acquiring it
+	wantBackend   string         // backend to recreate while waiting; "" = select per cfg
+	waitingLogged bool           // a failed recreate attempt has been logged this episode
+	supStop       chan struct{}  // closes to stop the supervisor; nil when not running
+	supDone       chan struct{}  // closed when the supervisor has exited
+	wake          chan struct{}  // requests an immediate check (buffered, 1)
 }
 
 // NewDeviceInstance creates a new device instance with the given ID.
@@ -33,23 +49,61 @@ func NewDeviceInstance(id string, retryCancel chan struct{}) *DeviceInstance {
 		id:          id,
 		widgetMgr:   NewWidgetManager(),
 		retryCancel: retryCancel,
+		wake:        make(chan struct{}, 1),
 	}
 }
 
 // Start initializes and starts the device with the given per-device configuration.
+// A missing device is not an error: the instance waits for it and starts
+// rendering once it is connected.
 func (d *DeviceInstance) Start(cfg *config.Config, showSplash bool) error {
+	d.stopSupervisor() // a previous run's supervisor must not race this start
+
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	log.Printf("[%s] Starting device (%dx%d)", d.id, cfg.Display.Width, cfg.Display.Height)
 
-	if err := d.ensureClient(cfg); err != nil {
-		return err
-	}
-
+	d.cfg = cfg
+	d.waiting = false
+	d.wantBackend = ""
+	d.waitingLogged = false
 	d.displayWidth = cfg.Display.Width
 	d.displayHeight = cfg.Display.Height
 
+	if err := d.ensureClient(cfg); err != nil {
+		var backendErr *BackendUnavailableError
+		if !errors.As(err, &backendErr) {
+			return err
+		}
+		log.Printf("[%s] Display device not available (%v); waiting for it", d.id, err)
+		d.waiting = true
+		d.waitingLogged = true
+		d.startSupervisor(cfg)
+		return nil
+	}
+
+	// A reused client may have lost its device while the device was stopped.
+	if r, ok := d.client.(display.Reconnectable); ok && !r.IsConnected() && r.Reconnect() != nil {
+		log.Printf("[%s] Display device is not connected; waiting for it", d.id)
+		d.wantBackend = d.currentBackend
+		d.waiting = true
+		d.startSupervisor(cfg)
+		return nil
+	}
+
+	if err := d.startRendering(cfg, showSplash); err != nil {
+		return err
+	}
+
+	d.startSupervisor(cfg)
+	log.Printf("[%s] Device started successfully", d.id)
+	return nil
+}
+
+// startRendering applies device settings, creates the widgets and starts the
+// compositor on the current client. Callers must hold d.mu.
+func (d *DeviceInstance) startRendering(cfg *config.Config, showSplash bool) error {
 	// Apply brightness if configured and supported
 	if cfg.DirectDriver != nil && cfg.DirectDriver.Brightness != nil {
 		if bc, ok := d.client.(display.BrightnessControl); ok {
@@ -82,28 +136,26 @@ func (d *DeviceInstance) Start(cfg *config.Config, showSplash bool) error {
 		}
 	}
 
-	d.comp = setup.Compositor
-
-	// Set up backend failover callback for auto-select mode
-	if cfg.Backend == "" {
-		d.comp.OnBackendFailure = func() {
-			d.handleBackendFailure(cfg)
-		}
+	comp := setup.Compositor
+	comp.OnBackendFailure = func() {
+		d.handleDeviceLost(comp)
 	}
+	d.comp = comp
 
-	if err := d.comp.Start(); err != nil {
+	if err := comp.Start(); err != nil {
 		return fmt.Errorf("[%s] failed to start compositor: %w", d.id, err)
 	}
-
-	log.Printf("[%s] Device started successfully", d.id)
 	return nil
 }
 
 // Stop stops the compositor but keeps the client for reuse
 func (d *DeviceInstance) Stop() {
+	d.stopSupervisor()
+
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
+	d.waiting = false
 	if d.comp != nil {
 		d.comp.Stop()
 		d.comp = nil
@@ -113,8 +165,12 @@ func (d *DeviceInstance) Stop() {
 
 // Shutdown performs a full shutdown of the device
 func (d *DeviceInstance) Shutdown(unregisterOnExit bool) {
+	d.stopSupervisor()
+
 	d.mu.Lock()
 	defer d.mu.Unlock()
+
+	d.waiting = false
 
 	if d.comp != nil {
 		d.comp.Stop()
@@ -254,52 +310,155 @@ func (d *DeviceInstance) bindEventWithRetry(maxAttempts int, deviceType string) 
 	})
 }
 
-// handleBackendFailure attempts to switch to alternative backend
-func (d *DeviceInstance) handleBackendFailure(cfg *config.Config) {
+// handleDeviceLost is called by the compositor after repeated heartbeat
+// failures. It stops rendering and waits for the device: a Reconnectable client
+// is kept and reconnected later; any other client is closed and the same
+// backend is recreated once it is available again. It never switches to a
+// different backend.
+func (d *DeviceInstance) handleDeviceLost(failed *compositor.Compositor) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	log.Println("========================================")
-	log.Printf("[%s] Backend failure detected (current: %s)", d.id, d.currentBackend)
-	log.Printf("[%s] Attempting to switch to alternative backend...", d.id)
-
-	if d.comp != nil {
-		d.comp.Stop()
-		d.comp = nil
+	if d.comp != failed {
+		return // a stale callback from a compositor that was already replaced
 	}
 
-	newClient, newBackend, err := CreateBackendExcluding(cfg, d.currentBackend)
+	log.Printf("[%s] Display device lost (backend: %s); waiting for it to come back", d.id, d.currentBackend)
+
+	d.comp.Stop()
+	d.comp = nil
+
+	if _, ok := d.client.(display.Reconnectable); !ok && d.client != nil {
+		_ = d.client.RemoveGame()
+		d.client = nil
+	}
+	d.wantBackend = d.currentBackend
+	d.waiting = true
+	d.waitingLogged = false
+}
+
+// Wake asks the supervisor to check the device now instead of at its next
+// interval, e.g. when the OS reports a device arrival. It never blocks.
+func (d *DeviceInstance) Wake() {
+	select {
+	case d.wake <- struct{}{}:
+	default: // a check is already pending
+	}
+}
+
+// startSupervisor starts the device supervisor if it is not running.
+// Callers must hold d.mu.
+func (d *DeviceInstance) startSupervisor(cfg *config.Config) {
+	if d.supStop != nil {
+		return
+	}
+
+	interval := time.Duration(cfg.ReconnectIntervalMs) * time.Millisecond
+	if interval <= 0 {
+		interval = time.Duration(config.DefaultReconnectIntervalMs) * time.Millisecond
+	}
+
+	stop := make(chan struct{})
+	done := make(chan struct{})
+	d.supStop, d.supDone = stop, done
+
+	go func() {
+		defer close(done)
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-d.retryCancel:
+				return
+			case <-ticker.C:
+			case <-d.wake:
+			}
+			d.supervise(stop)
+		}
+	}()
+}
+
+// stopSupervisor stops the device supervisor and waits for it to exit.
+// Callers must not hold d.mu: the supervisor takes it while checking.
+func (d *DeviceInstance) stopSupervisor() {
+	d.mu.Lock()
+	stop, done := d.supStop, d.supDone
+	d.supStop, d.supDone = nil, nil
+	d.mu.Unlock()
+
+	if stop == nil {
+		return
+	}
+	close(stop)
+	<-done
+}
+
+// supervise runs one device check: it acquires a missing device, or reconnects
+// a running device whose client reports it disconnected (so a quick replug
+// recovers within one interval, before the compositor gives up on it).
+func (d *DeviceInstance) supervise(stop chan struct{}) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if d.supStop != stop {
+		return // stopping; Stop/Start/Shutdown own the state now
+	}
+
+	if !d.waiting {
+		if r, ok := d.client.(display.Reconnectable); ok && !r.IsConnected() {
+			_ = r.Reconnect()
+		}
+		return
+	}
+
+	if !d.acquireClient() {
+		return
+	}
+	if err := d.startRendering(d.cfg, false); err != nil {
+		log.Printf("[%s] ERROR: Failed to resume device: %v", d.id, err)
+		return
+	}
+	d.waiting = false
+	log.Printf("[%s] Display device is back; resumed on %s backend", d.id, d.currentBackend)
+}
+
+// acquireClient tries to get a connected client for a waiting device, quietly
+// while the device is still missing. Callers must hold d.mu.
+func (d *DeviceInstance) acquireClient() bool {
+	if r, ok := d.client.(display.Reconnectable); ok {
+		return r.Reconnect() == nil
+	}
+
+	// Only run (and log) a full backend creation once it is likely to succeed.
+	if !BackendAvailable(d.cfg, d.wantBackend) {
+		return false
+	}
+
+	var client display.Backend
+	var name string
+	var err error
+	if d.wantBackend != "" {
+		name = d.wantBackend
+		client, err = CreateBackendByName(name, d.cfg)
+	} else {
+		client, name, err = CreateBackendClient(d.cfg)
+	}
+	if err == nil {
+		if err = client.BindScreenEvent(EventName, GameSenseScreenDeviceType); err != nil {
+			_ = client.RemoveGame()
+		}
+	}
 	if err != nil {
-		log.Printf("[%s] ERROR: Failed to switch to alternative backend: %v", d.id, err)
-		log.Printf("[%s] Will retry on next heartbeat cycle...", d.id)
-		return
+		if !d.waitingLogged {
+			log.Printf("[%s] Display device not ready yet: %v", d.id, err)
+			d.waitingLogged = true
+		}
+		return false
 	}
 
-	d.client = newClient
-	d.currentBackend = newBackend
-	log.Printf("[%s] Successfully switched to %s backend", d.id, d.currentBackend)
-
-	if err := d.client.BindScreenEvent(EventName, GameSenseScreenDeviceType); err != nil {
-		log.Printf("[%s] ERROR: Failed to bind screen event: %v", d.id, err)
-		return
-	}
-
-	setup, err := d.widgetMgr.CreateFromConfig(d.client, cfg)
-	if err != nil {
-		log.Printf("[%s] ERROR: Failed to recreate widgets: %v", d.id, err)
-		return
-	}
-
-	d.comp = setup.Compositor
-	d.comp.OnBackendFailure = func() {
-		d.handleBackendFailure(cfg)
-	}
-
-	if err := d.comp.Start(); err != nil {
-		log.Printf("[%s] ERROR: Failed to start compositor with new backend: %v", d.id, err)
-		return
-	}
-
-	log.Printf("[%s] Successfully recovered with alternative backend", d.id)
-	log.Println("========================================")
+	d.client = client
+	d.currentBackend = name
+	return true
 }

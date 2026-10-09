@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"time"
 
@@ -22,6 +23,26 @@ const DeveloperName = "Pozitronik"
 
 func init() {
 	backend.Register("gamesense", newBackend, Priority)
+	backend.RegisterProber("gamesense", probe)
+}
+
+// probeTimeout bounds the connection check to the local GameSense server.
+const probeTimeout = 250 * time.Millisecond
+
+// probe reports whether a GameSense server is accepting connections: its
+// address is read from coreProps.json, which outlives a closed SteelSeries GG,
+// so the port is checked too.
+func probe(_ *config.Config) bool {
+	addr, err := DiscoverServer()
+	if err != nil {
+		return false
+	}
+	conn, err := net.DialTimeout("tcp", addr, probeTimeout)
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
 }
 
 // newBackend creates a GameSense backend from configuration

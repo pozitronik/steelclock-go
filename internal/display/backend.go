@@ -48,6 +48,16 @@ type BrightnessControl interface {
 	SetBrightness(level int) error // level: 0-10
 }
 
+// Reconnectable is an optional interface for backends whose device can drop and
+// come back without recreating the backend (e.g. the direct USB HID driver after
+// the device is unplugged and plugged back in).
+type Reconnectable interface {
+	IsConnected() bool
+	// Reconnect reopens the device if it is disconnected. It is a no-op when
+	// the device is connected, and does not log failed attempts.
+	Reconnect() error
+}
+
 // UIControl is an optional interface for backends that support returning to the device's native UI.
 // Called during shutdown to restore the device's default screen.
 type UIControl interface {

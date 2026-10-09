@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/driver"
+	"github.com/pozitronik/steelclock-go/internal/hotplug"
 	"github.com/pozitronik/steelclock-go/internal/tray"
 	"github.com/pozitronik/steelclock-go/internal/webeditor"
 )
@@ -126,12 +128,24 @@ func (a *App) Run() {
 		}
 	})
 
+	// Pick up display devices as soon as they are connected or disconnected.
+	// Devices still poll for a missing device, so without notifications
+	// they are only found later.
+	watcher, err := hotplug.Start(driver.SteelSeriesVID, a.lifecycle.WakeDevices)
+	if err != nil {
+		log.Printf("Device hotplug notifications unavailable (%v); relying on polling", err)
+	}
+
 	log.Println("System tray initializing. Use tray icon to control the application.")
 
 	// Run system tray (blocks until Quit)
 	a.trayMgr.Run()
 
 	log.Println("SteelClock shutting down...")
+
+	if watcher != nil {
+		watcher.Stop()
+	}
 
 	// Stop web editor if running
 	if a.webEditor != nil {
