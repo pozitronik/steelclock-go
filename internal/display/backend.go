@@ -58,6 +58,15 @@ type Reconnectable interface {
 	Reconnect() error
 }
 
+// Closer is an optional interface for backends that hold local resources
+// (e.g. the direct USB HID driver's device handle). Close releases them; it is
+// called whenever a backend client is given up, independently of
+// GameRegistrar.RemoveGame, which unregisters from a server. It must be safe to
+// call more than once.
+type Closer interface {
+	Close() error
+}
+
 // UIControl is an optional interface for backends that support returning to the device's native UI.
 // Called during shutdown to restore the device's default screen.
 type UIControl interface {

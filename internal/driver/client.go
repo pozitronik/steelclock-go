@@ -145,6 +145,12 @@ func (c *Client) RemoveGame() error {
 	return c.driver.Close()
 }
 
+// Close releases the HID device handle (display.Closer). Safe to call more
+// than once.
+func (c *Client) Close() error {
+	return c.driver.Close()
+}
+
 // IsConnected returns true if the device is connected
 func (c *Client) IsConnected() bool {
 	return c.driver.IsConnected()
