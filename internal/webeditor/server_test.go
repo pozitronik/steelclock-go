@@ -1650,3 +1650,58 @@ func TestHandlePreviewFrame_DeviceParam(t *testing.T) {
 		t.Errorf("frame_number = %v, want 2", result["frame_number"])
 	}
 }
+
+// TestPreviewProviderReplacementConcurrentWithRequests swaps preview providers
+// while the preview endpoints are being called, as profile switches and the
+// preview override do. Run with -race to detect unsynchronized access.
+func TestPreviewProviderReplacementConcurrentWithRequests(t *testing.T) {
+	s, _, _ := createTestServer(t)
+	a := &mockPreviewProvider{config: PreviewDisplayConfig{Width: 128, Height: 40}}
+	b := &mockPreviewProvider{config: PreviewDisplayConfig{Width: 128, Height: 64}}
+	s.SetPreviewProvider(a)
+
+	const iterations = 500
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < iterations; i++ {
+			switch i % 3 {
+			case 0:
+				s.SetPreviewProvider(b)
+			case 1:
+				s.SetPreviewProviders(map[string]PreviewProvider{"a": a, "b": b})
+			default:
+				s.SetPreviewProvider(nil)
+			}
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for i := 0; i < iterations; i++ {
+			s.handlePreviewInfo(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/api/preview", nil))
+			s.handlePreviewDevices(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/api/preview/devices", nil))
+			s.handlePreviewFrame(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/api/preview/frame?device=b", nil))
+		}
+	}()
+	wg.Wait()
+}
+
+// TestSetPreviewProviders_CopiesMap checks that changing the caller's map
+// after the call does not change the server's providers.
+func TestSetPreviewProviders_CopiesMap(t *testing.T) {
+	s, _, _ := createTestServer(t)
+	a := &mockPreviewProvider{}
+	providers := map[string]PreviewProvider{"a": a}
+	s.SetPreviewProviders(providers)
+
+	delete(providers, "a")
+	providers["b"] = &mockPreviewProvider{}
+
+	if got := s.getPreviewProvider("a"); got != a {
+		t.Errorf("getPreviewProvider(\"a\") = %v, want the provider passed in", got)
+	}
+	if got := s.getPreviewProvider("b"); got != nil {
+		t.Errorf("getPreviewProvider(\"b\") = %v, want nil", got)
+	}
+}

@@ -457,9 +457,7 @@ func (s *Server) handlePreviewDevices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.mu.Lock()
-	providers := s.previewProviders
-	s.mu.Unlock()
+	providers := s.previewProvidersSnapshot()
 
 	var devices []DevicePreviewInfo
 	for id, p := range providers {
