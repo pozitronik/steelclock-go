@@ -387,6 +387,6 @@ func (d *HIDDriver) Reconnect() error {
 }
 
 // buildApexPacket is defined in platform-specific files:
-// - protocol_apex_windows.go: Format [00 ReportID] + [61 CMD] + [pixelData] + [1 Padding] = 643 bytes (Report ID stripped by OS)
-// - protocol_apex_linux.go: Format [61 CMD] + [pixelData] + [1 Padding] = 642 bytes
-// Both send the same data to device: [61 CMD] + [pixelData] + [1 Padding] = 642 bytes (for 128x40)
+// - protocol_apex_windows.go: [00 ReportID] + command + [pixelData] (+ trailing padding for the legacy command)
+// - protocol_apex_linux.go: fixed-size packets matching the HID descriptor
+// For the legacy command both send the same data to the device: [61 CMD] + [pixelData] + [1 Padding] = 642 bytes (for 128x40)

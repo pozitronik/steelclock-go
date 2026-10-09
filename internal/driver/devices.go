@@ -54,11 +54,10 @@ var KnownDevices = []KnownDevice{
 			Height int
 		}{128, 40},
 	},
-	// PID 0x1628 — USB product string "SteelSeries Apex Pro TKL 2023" (confirmed
-	// via Windows device enumeration), a distinct hardware revision from the
-	// PID 0x1632 "Apex Pro TKL (2023)" entry below: its OLED firmware uses cmd
-	// 0x1F 0x81 instead of the legacy 0x61 (confirmed via community protocol
-	// docs + USB capture reverse engineering, verified on real Windows hardware).
+	// PID 0x1628 — USB product string "SteelSeries Apex Pro TKL 2023", a distinct
+	// hardware revision from the PID 0x1632 "Apex Pro TKL (2023)" entry below:
+	// its OLED firmware takes frames as 0x1F 0x81 live-framebuffer writes instead
+	// of the legacy 0x61 (verified on real Windows hardware).
 	{
 		VID:  SteelSeriesVID,
 		PID:  0x1628,
@@ -67,7 +66,7 @@ var KnownDevices = []KnownDevice{
 			Width  int
 			Height int
 		}{128, 40},
-		NewProtocol: func() Protocol { return &ApexGen3Protocol{} },
+		NewProtocol: func() Protocol { return NewApexFramebufferProtocol() },
 	},
 	{
 		VID:  SteelSeriesVID,
