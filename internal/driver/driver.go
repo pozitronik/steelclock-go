@@ -243,6 +243,24 @@ func (d *HIDDriver) Open() error {
 	d.handle = handle
 	d.connected = true
 
+	// Some devices (e.g. later Apex Pro TKL revisions) declare a feature report
+	// length that differs from the protocol's fixed packet size. When it isn't
+	// already known from the capability-based interface selection above, look it
+	// up now so sendPacket's existing zero-padding can absorb the difference.
+	// Opt-in per protocol (ReportLengthPadding) so devices that already work
+	// today with an exact-size packet are never silently padded.
+	if d.reportLen == 0 && protocolWantsReportLengthPadding(d.protocol) {
+		if devices, derr := EnumerateDevices(); derr == nil {
+			for _, info := range devices {
+				if info.Path == devicePath && info.HasCaps && info.FeatureReportLen > 0 {
+					d.reportLen = info.FeatureReportLen
+					log.Printf("Direct driver: device feature report is %d bytes, padding frames to match", info.FeatureReportLen)
+					break
+				}
+			}
+		}
+	}
+
 	// For capability-detected screens, discover the feature report ID the device
 	// actually accepts (older Nova units use 0x06, the Omni uses 0x01) and override
 	// whatever the protocol builds. Without this the device rejects frames with

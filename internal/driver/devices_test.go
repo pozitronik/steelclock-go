@@ -83,6 +83,9 @@ func TestKnownDevices_NovaProDisplaySize(t *testing.T) {
 		if device.NewProtocol == nil {
 			continue // Skip Apex devices
 		}
+		if _, ok := device.NewProtocol().(*NovaProProtocol); !ok {
+			continue // Skip non-Nova-Pro devices with a custom protocol (e.g. ApexGen3Protocol)
+		}
 		if device.DisplaySize.Height != 64 {
 			t.Errorf("Nova Pro device %s has display height %d, expected 64",
 				device.Name, device.DisplaySize.Height)

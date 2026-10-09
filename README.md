@@ -246,8 +246,15 @@ See [CONFIG_GUIDE.md](profiles/CONFIG_GUIDE.md) for detailed widget properties a
 | Device Family                           | Display | Backend           | Notes                                       |
 |-----------------------------------------|---------|-------------------|---------------------------------------------|
 | Apex keyboards (7, Pro, 5, etc.)        | 128x40  | direct, gamesense | Default `mi_01` interface                   |
+| Apex Pro TKL 2023 (PID `1628`)\*\*      | 128x40  | direct            | OLED cmd `0x1F 0x81`; auto-detected         |
 | GameDAC Gen 2 / Arctis Nova Pro (+Omni) | 128x64  | direct            | Use `direct`; GameSense does not drive it\* |
 | Arctis Nova 5P                          | 128x64  | direct            | Same protocol as Nova Pro                   |
+
+\*\* USB product string "SteelSeries Apex Pro TKL 2023" (confirmed via Windows device enumeration). This is
+a distinct hardware revision from PID `1632` (also marketed as "Apex Pro TKL (2023)"), which uses the
+original Apex OLED command and is unaffected by this entry. The `direct` backend is verified on real
+Windows hardware; the Linux packet layout is derived from a community reference for the same command and
+has not been confirmed on real Linux hardware yet.
 
 \* The Nova Pro / GameDAC base-station OLED must be driven via the **`direct`** backend. The GameSense
 backend does **not** drive it — confirmed on the Arctis Nova Pro Omni: SteelSeries GG's own apps use that

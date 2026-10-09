@@ -41,3 +41,21 @@ func protocolDetectsScreenInterface(p Protocol) bool {
 	}
 	return false
 }
+
+// ReportLengthPadding is an optional interface for protocols whose fixed-size
+// packets may be shorter than the device's declared HID feature-report length
+// and should be zero-padded up to it. Opt-in, because padding every protocol's
+// packets risks changing behavior on devices that already work correctly today
+// (e.g. the classic Apex family, whose packet size already matches).
+type ReportLengthPadding interface {
+	PadToReportLength() bool
+}
+
+// protocolWantsReportLengthPadding reports whether a protocol's packets should
+// be padded to the device's discovered feature-report length.
+func protocolWantsReportLengthPadding(p Protocol) bool {
+	if r, ok := p.(ReportLengthPadding); ok {
+		return r.PadToReportLength()
+	}
+	return false
+}
