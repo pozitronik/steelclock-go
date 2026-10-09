@@ -1,7 +1,12 @@
 package bitmap
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"path/filepath"
+	"sync/atomic"
 	"testing"
 )
 
@@ -141,6 +146,46 @@ func TestDownloadBundledFont(t *testing.T) {
 	if fontPath != "" {
 		// If we got a path, verify it exists or will be created
 		t.Logf("Font path: %s", fontPath)
+	}
+}
+
+// TestDownloadBundledFont_Interrupted checks that an interrupted download
+// leaves no file behind, so the next call downloads again instead of using a
+// broken font.
+func TestDownloadBundledFont_Interrupted(t *testing.T) {
+	var truncate atomic.Bool
+	truncate.Store(true)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if truncate.Load() {
+			w.Header().Set("Content-Length", "100")
+			_, _ = fmt.Fprint(w, "partial")
+			return
+		}
+		_, _ = fmt.Fprint(w, "complete font")
+	}))
+	defer server.Close()
+
+	oldURL := bundledFontURL
+	bundledFontURL = server.URL
+	defer func() { bundledFontURL = oldURL }()
+	t.Chdir(t.TempDir())
+	fontPath := filepath.Join("fonts", "FSEX302.ttf")
+
+	if _, err := downloadBundledFont(); err == nil {
+		t.Fatal("downloadBundledFont() error = nil for a truncated body")
+	}
+	if _, err := os.Stat(fontPath); err == nil {
+		t.Fatal("truncated download left the font file behind")
+	}
+
+	truncate.Store(false)
+	path, err := downloadBundledFont()
+	if err != nil {
+		t.Fatalf("downloadBundledFont() retry error = %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil || string(data) != "complete font" {
+		t.Errorf("font file = %q (%v), want the complete body", data, err)
 	}
 }
 
