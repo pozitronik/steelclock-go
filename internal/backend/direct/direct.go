@@ -18,43 +18,58 @@ const Priority = 20
 
 func init() {
 	backend.Register("direct", newBackend, Priority)
+	backend.RegisterProber("direct", probe)
 }
 
-// newBackend creates a direct USB HID driver backend from configuration
-func newBackend(cfg *config.Config) (display.Backend, error) {
+// probe reports whether the configured (or any known) device is connected,
+// without opening it.
+func probe(cfg *config.Config) bool {
+	driverCfg, err := driverConfig(cfg)
+	if err != nil {
+		return false
+	}
+	return driver.DevicePresent(driverCfg)
+}
+
+// driverConfig builds the HID driver configuration from the app configuration.
+func driverConfig(cfg *config.Config) (driver.Config, error) {
 	var vid, pid uint16
 	if cfg.DirectDriver != nil {
 		if cfg.DirectDriver.VID != "" {
 			v, err := strconv.ParseUint(cfg.DirectDriver.VID, 16, 16)
 			if err != nil {
-				return nil, fmt.Errorf("invalid VID '%s': %w", cfg.DirectDriver.VID, err)
+				return driver.Config{}, fmt.Errorf("invalid VID '%s': %w", cfg.DirectDriver.VID, err)
 			}
 			vid = uint16(v)
 		}
 		if cfg.DirectDriver.PID != "" {
 			p, err := strconv.ParseUint(cfg.DirectDriver.PID, 16, 16)
 			if err != nil {
-				return nil, fmt.Errorf("invalid PID '%s': %w", cfg.DirectDriver.PID, err)
+				return driver.Config{}, fmt.Errorf("invalid PID '%s': %w", cfg.DirectDriver.PID, err)
 			}
 			pid = uint16(p)
 		}
 	}
 
-	// Leave the interface empty unless explicitly configured, so the driver can
-	// derive it from the resolved device protocol (mi_01 for Apex keyboards,
-	// mi_04 for the Nova Pro family). Hardcoding "mi_01" here previously made it
-	// impossible to reach any Nova Pro device, whose OLED lives on mi_04.
 	iface := ""
 	if cfg.DirectDriver != nil && cfg.DirectDriver.Interface != "" {
 		iface = cfg.DirectDriver.Interface
 	}
 
-	driverCfg := driver.Config{
+	return driver.Config{
 		VID:       vid,
 		PID:       pid,
 		Interface: iface,
 		Width:     cfg.Display.Width,
 		Height:    cfg.Display.Height,
+	}, nil
+}
+
+// newBackend creates a direct USB HID driver backend from configuration
+func newBackend(cfg *config.Config) (display.Backend, error) {
+	driverCfg, err := driverConfig(cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	client, err := driver.NewClient(driverCfg)

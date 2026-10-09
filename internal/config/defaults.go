@@ -17,6 +17,9 @@ const (
 	// DefaultRefreshRateMs is the default frame rate (10 FPS)
 	DefaultRefreshRateMs = 100
 
+	// DefaultReconnectIntervalMs is how often a missing display device is looked for
+	DefaultReconnectIntervalMs = 3000
+
 	// BorderDisabled represents disabled border value
 	BorderDisabled = -1
 
@@ -147,6 +150,10 @@ func applyDirectDriverDefaults(cfg *Config) {
 func applyDisplayDefaults(cfg *Config) {
 	if cfg.RefreshRateMs == 0 {
 		cfg.RefreshRateMs = DefaultRefreshRateMs
+	}
+
+	if cfg.ReconnectIntervalMs == 0 {
+		cfg.ReconnectIntervalMs = DefaultReconnectIntervalMs
 	}
 
 	if cfg.Display.Width == 0 {

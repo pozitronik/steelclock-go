@@ -31,13 +31,12 @@ func CreateBackendByName(name string, cfg *config.Config) (display.Backend, erro
 	return result.Backend, nil
 }
 
-// CreateBackendExcluding creates a backend using auto-selection, excluding specified backends.
-// Used for failover when current backend fails.
-// Returns BackendUnavailableError if no backend can be created.
-func CreateBackendExcluding(cfg *config.Config, exclude ...string) (display.Backend, string, error) {
-	result, err := backend.CreateExcluding(cfg, exclude...)
-	if err != nil {
-		return nil, "", &BackendUnavailableError{Err: err}
+// BackendAvailable reports whether creating a backend is worth trying now:
+// the named backend, or with an empty name whichever backend cfg selects.
+// It is cheap and does not log, so it can be polled while a device is missing.
+func BackendAvailable(cfg *config.Config, name string) bool {
+	if name != "" {
+		return backend.AvailableByName(name, cfg)
 	}
-	return result.Backend, result.Name, nil
+	return backend.Available(cfg)
 }

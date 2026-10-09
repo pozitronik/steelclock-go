@@ -10,6 +10,8 @@ const (
 	MaxDeinitializeTimerMs = 60000
 	MinEventBatchSize      = 1
 	MaxEventBatchSize      = 100
+	MinReconnectIntervalMs = 1000
+	MaxReconnectIntervalMs = 60000
 )
 
 // BackendTypeChecker is a callback function that checks if a backend type is registered.
@@ -151,6 +153,13 @@ func validateGlobalConfig(cfg *Config) error {
 		if cfg.DeinitializeTimerMs < MinDeinitializeTimerMs || cfg.DeinitializeTimerMs > MaxDeinitializeTimerMs {
 			return fmt.Errorf("deinitialize_timer_ms must be between %d and %d (got %d)",
 				MinDeinitializeTimerMs, MaxDeinitializeTimerMs, cfg.DeinitializeTimerMs)
+		}
+	}
+
+	if cfg.ReconnectIntervalMs != 0 {
+		if cfg.ReconnectIntervalMs < MinReconnectIntervalMs || cfg.ReconnectIntervalMs > MaxReconnectIntervalMs {
+			return fmt.Errorf("reconnect_interval_ms must be between %d and %d (got %d)",
+				MinReconnectIntervalMs, MaxReconnectIntervalMs, cfg.ReconnectIntervalMs)
 		}
 	}
 

@@ -34,6 +34,13 @@
       "minimum": 30,
       "default": 100
     },
+    "reconnect_interval_ms": {
+      "type": "integer",
+      "description": "How often to look for a display device that is missing (unplugged, or not connected at startup), in milliseconds. SteelClock reconnects and resumes on its own once the device is back.",
+      "minimum": 1000,
+      "maximum": 60000,
+      "default": 3000
+    },
     "unregister_on_exit": {
       "type": "boolean",
       "description": "Unregister from GameSense API on exit (may cause timeout)",

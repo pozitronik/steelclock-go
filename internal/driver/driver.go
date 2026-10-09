@@ -161,6 +161,19 @@ func autoDetectKnownDevice() (*KnownDevice, string, error) {
 	return nil, "", fmt.Errorf("no known SteelSeries device found")
 }
 
+// DevicePresent reports whether the device described by cfg is connected,
+// without opening it. It looks the device up the same way Open does: by VID,
+// PID and interface when they are configured, otherwise among KnownDevices.
+func DevicePresent(cfg Config) bool {
+	d := NewDriver(cfg)
+	if d.config.VID != 0 && d.config.PID != 0 {
+		_, err := findDevicePath(d.config.VID, d.config.PID, d.config.Interface)
+		return err == nil
+	}
+	_, _, err := autoDetectKnownDevice()
+	return err == nil
+}
+
 // findScreenInterfaceByCaps locates the OLED interface of a VID/PID by HID
 // capability rather than a fixed interface string. Among that device's
 // SteelSeries collections it picks the one with the largest FEATURE report that

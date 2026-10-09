@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/pozitronik/steelclock-go/internal/display"
 )
@@ -17,10 +18,15 @@ var (
 // Client wraps HIDDriver and implements display.Backend interface
 // This allows the direct driver to be used interchangeably with the GameSense client
 type Client struct {
-	driver           *HIDDriver
-	width            int
-	height           int
+	driver *HIDDriver
+	width  int
+	height int
+
+	mu               sync.Mutex
 	disconnectLogged bool // prevents log spam on disconnect
+	brightness       *int // last requested brightness, re-applied after a reconnect
+
+	reconnectMu sync.Mutex // serializes reconnect attempts from different goroutines
 }
 
 // Ensure Client implements display.Backend
@@ -31,6 +37,7 @@ var _ display.Backend = (*Client)(nil)
 var (
 	_ display.BrightnessControl = (*Client)(nil)
 	_ display.UIControl         = (*Client)(nil)
+	_ display.Reconnectable     = (*Client)(nil)
 )
 
 // NewClient creates a new direct driver client
@@ -68,36 +75,66 @@ func (c *Client) BindScreenEvent(_, _ string) error {
 // bitmapData is an array of 640 bytes, each representing packed pixels
 func (c *Client) SendScreenData(_ string, bitmapData []byte) error {
 	if !c.driver.IsConnected() {
-		// Log disconnection only once to avoid spam
-		if !c.disconnectLogged {
-			log.Printf("Direct driver: device disconnected, skipping frames until reconnected")
-			c.disconnectLogged = true
-		}
+		c.logDisconnectOnce("device disconnected, skipping frames until reconnected")
 		return ErrDeviceNotConnected
 	}
 
 	if err := c.driver.SendFrame(bitmapData); err != nil {
-		// Log disconnection only once to avoid spam
-		if !c.disconnectLogged {
-			log.Printf("Direct driver: device disconnected: %v", err)
-			c.disconnectLogged = true
-		}
+		c.logDisconnectOnce(fmt.Sprintf("device disconnected: %v", err))
 		return err
 	}
 
 	return nil
 }
 
+// logDisconnectOnce logs a disconnection only once until the next reconnect,
+// to avoid log spam while frames keep failing.
+func (c *Client) logDisconnectOnce(msg string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.disconnectLogged {
+		log.Printf("Direct driver: %s", msg)
+		c.disconnectLogged = true
+	}
+}
+
 // SendHeartbeat checks connection and attempts to reconnect if needed
 func (c *Client) SendHeartbeat() error {
 	if !c.driver.IsConnected() {
 		log.Printf("Direct driver: attempting reconnect...")
-		if err := c.driver.Reconnect(); err != nil {
+		if err := c.Reconnect(); err != nil {
 			log.Printf("Direct driver: reconnect failed: %v", err)
 			return err
 		}
-		log.Printf("Direct driver: reconnected successfully")
-		c.disconnectLogged = false // reset flag so next disconnect gets logged
+	}
+	return nil
+}
+
+// Reconnect reopens the device if it is disconnected. Failed attempts are not
+// logged, so it can be retried frequently while the device is unplugged. After a
+// successful reconnect the last requested brightness is re-applied, since a
+// device that was unplugged has reset it.
+func (c *Client) Reconnect() error {
+	c.reconnectMu.Lock()
+	defer c.reconnectMu.Unlock()
+
+	if c.driver.IsConnected() {
+		return nil
+	}
+	if err := c.driver.Reconnect(); err != nil {
+		return err
+	}
+	log.Printf("Direct driver: reconnected successfully")
+
+	c.mu.Lock()
+	c.disconnectLogged = false // so the next disconnect gets logged
+	brightness := c.brightness
+	c.mu.Unlock()
+
+	if brightness != nil {
+		if err := c.sendBrightness(*brightness); err != nil {
+			log.Printf("Direct driver: failed to re-apply brightness after reconnect: %v", err)
+		}
 	}
 	return nil
 }
@@ -126,6 +163,14 @@ func (c *Client) Driver() *HIDDriver {
 // SetBrightness sets the display brightness if the device protocol supports it.
 // Level ranges from 0 (off) to 10 (maximum). No-op for protocols without brightness support.
 func (c *Client) SetBrightness(level int) error {
+	c.mu.Lock()
+	c.brightness = &level
+	c.mu.Unlock()
+	return c.sendBrightness(level)
+}
+
+// sendBrightness sends a brightness command if the device protocol supports it.
+func (c *Client) sendBrightness(level int) error {
 	if bs, ok := c.driver.protocol.(BrightnessSupport); ok {
 		packet := bs.BuildBrightnessPacket(level)
 		if err := c.driver.SendRawPacket(packet); err != nil {

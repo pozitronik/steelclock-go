@@ -54,6 +54,11 @@ type Compositor struct {
 	// Frame deduplication - skip sending unchanged frames
 	deduplicator *FrameDeduplicator
 
+	// Render error log throttling (render loop only): identical consecutive
+	// errors are logged once, with a count when they stop.
+	lastRenderErr     string
+	repeatedRenderErr int
+
 	// Backend failure handling
 	OnBackendFailure     func()     // Callback when backend fails (called once per failure)
 	heartbeatFailures    int        // Consecutive heartbeat failure count
@@ -196,11 +201,33 @@ func (c *Compositor) renderLoop() {
 		case <-c.stopChan:
 			return
 		case <-ticker.C:
-			if err := c.renderFrame(); err != nil {
-				log.Printf("Render error: %v", err)
-			}
+			c.logRenderResult(c.renderFrame())
 		}
 	}
+}
+
+// logRenderResult logs render errors without flooding the log: while frames
+// keep failing with the same error (e.g. an unplugged device at 10 frames per
+// second) only the first one is logged, and the repeat count once it changes.
+func (c *Compositor) logRenderResult(err error) {
+	msg := ""
+	if err != nil {
+		msg = err.Error()
+	}
+	if msg == c.lastRenderErr {
+		if err != nil {
+			c.repeatedRenderErr++
+		}
+		return
+	}
+	if c.repeatedRenderErr > 0 {
+		log.Printf("Render error repeated %d more time(s): %s", c.repeatedRenderErr, c.lastRenderErr)
+	}
+	if err != nil {
+		log.Printf("Render error: %v", err)
+	}
+	c.lastRenderErr = msg
+	c.repeatedRenderErr = 0
 }
 
 // renderFrame renders and sends a single frame

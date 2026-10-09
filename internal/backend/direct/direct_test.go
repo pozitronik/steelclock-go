@@ -73,3 +73,39 @@ func TestNewBackend_NoDirectDriverConfig(t *testing.T) {
 		t.Errorf("unexpected parsing error: %v", err)
 	}
 }
+
+func TestDriverConfig(t *testing.T) {
+	cfg := &config.Config{
+		DirectDriver: &config.DirectDriverConfig{VID: "1038", PID: "1612", Interface: "mi_01"},
+		Display:      config.DisplayConfig{Width: 128, Height: 40},
+	}
+
+	got, err := driverConfig(cfg)
+	if err != nil {
+		t.Fatalf("driverConfig() error = %v", err)
+	}
+	if got.VID != 0x1038 || got.PID != 0x1612 || got.Interface != "mi_01" || got.Width != 128 || got.Height != 40 {
+		t.Errorf("driverConfig() = %+v", got)
+	}
+}
+
+func TestProbe(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *config.Config
+	}{
+		{"invalid VID is never available", &config.Config{
+			DirectDriver: &config.DirectDriverConfig{VID: "ZZZZ"},
+		}},
+		{"device that is not connected", &config.Config{
+			DirectDriver: &config.DirectDriverConfig{VID: "1038", PID: "FFFF", Interface: "mi_01"},
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if probe(tt.cfg) {
+				t.Error("probe() = true, want false")
+			}
+		})
+	}
+}

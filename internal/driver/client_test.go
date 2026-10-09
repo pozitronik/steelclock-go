@@ -521,3 +521,51 @@ func TestConfig_WithValues(t *testing.T) {
 		t.Errorf("Interface = %q, want mi_01", cfg.Interface)
 	}
 }
+
+func TestClient_Reconnect_ConnectedIsNoOp(t *testing.T) {
+	c := &Client{driver: &HIDDriver{connected: true, handle: InvalidHandle}}
+	if err := c.Reconnect(); err != nil {
+		t.Errorf("Reconnect() on a connected device error = %v, want nil", err)
+	}
+	if !c.IsConnected() {
+		t.Error("Reconnect() must not drop a connected device")
+	}
+}
+
+func TestClient_Reconnect_MissingDevice(t *testing.T) {
+	// VID/PID of a device that is not connected.
+	c := &Client{driver: NewDriver(Config{VID: SteelSeriesVID, PID: 0xFFFF, Interface: "mi_01"})}
+	if err := c.Reconnect(); err == nil {
+		t.Error("Reconnect() with no device error = nil, want error")
+	}
+	if c.IsConnected() {
+		t.Error("IsConnected() = true after a failed reconnect")
+	}
+}
+
+func TestClient_SetBrightness_RemembersLevel(t *testing.T) {
+	// Disconnected Nova Pro: the send fails, but the level is kept so it can be
+	// re-applied after a reconnect.
+	c := &Client{driver: &HIDDriver{protocol: &NovaProProtocol{}, handle: InvalidHandle}}
+	if err := c.SetBrightness(7); err == nil {
+		t.Fatal("SetBrightness() on a disconnected device error = nil, want error")
+	}
+	if c.brightness == nil || *c.brightness != 7 {
+		t.Errorf("brightness = %v, want 7 remembered", c.brightness)
+	}
+}
+
+func TestClient_LogDisconnectOnce(t *testing.T) {
+	c := &Client{driver: &HIDDriver{handle: InvalidHandle}}
+	c.logDisconnectOnce("first")
+	c.logDisconnectOnce("second")
+	if !c.disconnectLogged {
+		t.Error("disconnectLogged = false after logging a disconnect")
+	}
+}
+
+func TestDevicePresent_NotConnected(t *testing.T) {
+	if DevicePresent(Config{VID: SteelSeriesVID, PID: 0xFFFF, Interface: "mi_01"}) {
+		t.Error("DevicePresent() = true for a device that is not connected")
+	}
+}
