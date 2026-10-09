@@ -53,7 +53,7 @@
         "border": false
       },
       "text": {
-        "format": "%d%%",
+        "format": "%.0f%%",
         "font": null,
         "size": 10,
         "align": {

@@ -994,6 +994,18 @@ Examples:
 
 Same structure as CPU widget, without `per_core`.
 
+**GB display:** in `text` mode, `text.format` can use these tokens instead of a plain
+printf format to show a used/total GB breakdown alongside the percentage:
+
+| Token       | Description                     |
+|-------------|----------------------------------|
+| `{used}`    | Used RAM in GB (one decimal)     |
+| `{total}`   | Total RAM in GB (one decimal)    |
+| `{percent}` | Used RAM percentage (no decimal) |
+
+Example: `"format": "R {used}GB {percent}%"` renders e.g. `R 10.4GB 65%`. A format
+without `{` (e.g. `"%.0f%%"`) renders just the percentage as before, unchanged.
+
 ### GPU Widget
 
 **Modes:** `text`, `bar`, `graph`, `gauge`
@@ -1052,6 +1064,12 @@ naming differences (AMD uses spaces like "video decode 1", NVIDIA uses
 
 Memory metrics use PDH `GPU Adapter Memory` counters for usage and DXGI for total
 capacity. If DXGI is unavailable (PDH-only fallback), memory metrics report 0%.
+
+**GB display:** for `memory_dedicated`/`memory_shared` metrics in `text` mode,
+`text.format` can use the same `{used}`/`{total}`/`{percent}` tokens as the Memory
+widget (see above) to show a used/total VRAM breakdown, e.g.
+`"format": "V {used}GB {percent}%"`. On non-memory metrics `{used}`/`{total}` render
+as `0.0`. A format without `{` renders just the percentage as before, unchanged.
 
 **Multi-GPU Setup:**
 

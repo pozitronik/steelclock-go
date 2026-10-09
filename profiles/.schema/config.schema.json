@@ -1284,7 +1284,18 @@
           "then": {
             "properties": {
               "text": {
-                "$ref": "#/definitions/textObject"
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/textObject"
+                  },
+                  {
+                    "properties": {
+                      "format": {
+                        "description": "Format string. A plain printf format (e.g. \"%.0f%%\") renders the percentage. For memory_dedicated/memory_shared metrics, {used}/{total}/{percent} tokens render a used/total VRAM breakdown, e.g. \"V {used}GB {percent}%\"."
+                      }
+                    }
+                  }
+                ]
               },
               "mode": {
                 "type": "string",
@@ -1450,7 +1461,18 @@
           "then": {
             "properties": {
               "text": {
-                "$ref": "#/definitions/textObject"
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/textObject"
+                  },
+                  {
+                    "properties": {
+                      "format": {
+                        "description": "Format string. A plain printf format (e.g. \"%.0f%%\") renders the percentage. {used}/{total}/{percent} tokens render a used/total RAM breakdown, e.g. \"R {used}GB {percent}%\"."
+                      }
+                    }
+                  }
+                ]
               },
               "mode": {
                 "type": "string",

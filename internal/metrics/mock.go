@@ -30,6 +30,7 @@ func (m *MockCPU) Percent(interval time.Duration, perCore bool) ([]float64, erro
 // MockMemory is a mock implementation of MemoryProvider for testing
 type MockMemory struct {
 	UsedPercentFunc func() (float64, error)
+	UsedGBFunc      func() (float64, float64, error)
 }
 
 // UsedPercent calls the mock function if set, otherwise returns default
@@ -38,6 +39,14 @@ func (m *MockMemory) UsedPercent() (float64, error) {
 		return m.UsedPercentFunc()
 	}
 	return 65.0, nil // Default: 65% used
+}
+
+// UsedGB calls the mock function if set, otherwise returns default
+func (m *MockMemory) UsedGB() (float64, float64, error) {
+	if m.UsedGBFunc != nil {
+		return m.UsedGBFunc()
+	}
+	return 10.4, 16.0, nil // Default: 10.4/16.0 GB used
 }
 
 // MockNetwork is a mock implementation of NetworkProvider for testing

@@ -208,3 +208,53 @@ type testError struct {
 func (e *testError) Error() string {
 	return e.msg
 }
+
+// TestNew_ReadsTextFormatFromConfig is a regression test: New() used to
+// hardcode the strategy's TextFormat to "%.0f" at render time regardless of
+// the configured text.format, silently ignoring custom text-mode formats.
+func TestNew_ReadsTextFormatFromConfig(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "cpu",
+		ID:      "test_cpu_format",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Mode: "text",
+		Text: &config.TextConfig{
+			Format: "CPU: %.1f%%",
+		},
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	if widget.textFormat != "CPU: %.1f%%" {
+		t.Errorf("textFormat = %q, want %q", widget.textFormat, "CPU: %.1f%%")
+	}
+}
+
+// TestNew_DefaultTextFormat verifies the "%.0f" default still applies when
+// no text.format is configured.
+func TestNew_DefaultTextFormat(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "cpu",
+		ID:      "test_cpu_default_format",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 40,
+		},
+		Mode: "text",
+	}
+
+	widget, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	if widget.textFormat != "%.0f" {
+		t.Errorf("textFormat = %q, want %q", widget.textFormat, "%.0f")
+	}
+}

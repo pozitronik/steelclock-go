@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"log"
+	"strings"
 	"sync"
 
 	"github.com/pozitronik/steelclock-go/internal/bitmap"
@@ -90,6 +91,12 @@ type Widget struct {
 	history      *util.RingBuffer[float64]
 	hasData      bool
 	mu           sync.RWMutex
+
+	// totalMemoryGB is the adapter's total memory for the configured metric
+	// (dedicated or shared), in gibibytes. Zero for non-memory metrics, where
+	// a used/total GB breakdown doesn't apply. Set once at New() since adapter
+	// memory capacity doesn't change at runtime.
+	totalMemoryGB float64
 }
 
 // New creates a new GPU widget
@@ -127,6 +134,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	// Initialize reader (platform-specific)
 	reader, readerErr := newReader()
 	readerFailed := false
+	var totalMemoryGB float64
 	if readerErr != nil {
 		log.Printf("[GPU] Failed to initialize reader: %v", readerErr)
 		readerFailed = true
@@ -140,23 +148,39 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 			for _, a := range adapters {
 				log.Printf("[GPU]   %d: %s", a.Index, a.Name)
 			}
+			for _, a := range adapters {
+				if a.Index != adapter {
+					continue
+				}
+				switch metric {
+				case MetricMemoryDedicated:
+					totalMemoryGB = float64(a.DedicatedVideoMemory) / gibibyte
+				case MetricMemoryShared:
+					totalMemoryGB = float64(a.SharedSystemMemory) / gibibyte
+				}
+			}
 		}
 	}
 
 	return &Widget{
-		BaseWidget:   base,
-		displayMode:  mr.DisplayMode,
-		historyLen:   mr.HistoryLen,
-		strategy:     mr.Strategy,
-		Renderer:     mr.Renderer,
-		adapter:      adapter,
-		metric:       metric,
-		textFormat:   textFormat,
-		reader:       reader,
-		readerFailed: readerFailed,
-		history:      util.NewRingBuffer[float64](mr.HistoryLen),
+		BaseWidget:    base,
+		displayMode:   mr.DisplayMode,
+		historyLen:    mr.HistoryLen,
+		strategy:      mr.Strategy,
+		Renderer:      mr.Renderer,
+		adapter:       adapter,
+		metric:        metric,
+		textFormat:    textFormat,
+		reader:        reader,
+		readerFailed:  readerFailed,
+		history:       util.NewRingBuffer[float64](mr.HistoryLen),
+		totalMemoryGB: totalMemoryGB,
 	}, nil
 }
+
+// gibibyte is the byte count of one gibibyte (1024^3), matching the unit
+// Windows Task Manager and most OS memory displays label "GB".
+const gibibyte = 1024 * 1024 * 1024
 
 // Update updates the GPU metrics
 func (w *Widget) Update() error {
@@ -217,6 +241,20 @@ func (w *Widget) Render() (image.Image, error) {
 	textFmt := "%.0f"
 	if w.textFormat != "" {
 		textFmt = w.textFormat
+	}
+
+	// In text mode, {used}/{total}/{percent} tokens render a GB breakdown for
+	// memory metrics (e.g. "V {used}GB {percent}%"); plain printf formats keep
+	// rendering just the percentage through the strategy below.
+	if w.displayMode == render.DisplayModeText && strings.Contains(textFmt, "{") {
+		usedGB := w.currentValue / 100 * w.totalMemoryGB
+		text := strings.NewReplacer(
+			"{used}", fmt.Sprintf("%.1f", usedGB),
+			"{total}", fmt.Sprintf("%.1f", w.totalMemoryGB),
+			"{percent}", fmt.Sprintf("%.0f", w.currentValue),
+		).Replace(textFmt)
+		w.Renderer.RenderText(img, text)
+		return img, nil
 	}
 
 	// Use strategy pattern for rendering

@@ -44,6 +44,19 @@ func (g *GopsutilMemory) UsedPercent() (float64, error) {
 	return vmem.UsedPercent, nil
 }
 
+// gibibyte is the byte count of one gibibyte (1024^3), matching the unit
+// Windows Task Manager and most OS memory displays label "GB".
+const gibibyte = 1024 * 1024 * 1024
+
+// UsedGB returns memory usage in gibibytes (used, total).
+func (g *GopsutilMemory) UsedGB() (float64, float64, error) {
+	vmem, err := mem.VirtualMemory()
+	if err != nil {
+		return 0, 0, err
+	}
+	return float64(vmem.Used) / gibibyte, float64(vmem.Total) / gibibyte, nil
+}
+
 // GopsutilNetwork implements NetworkProvider using gopsutil
 type GopsutilNetwork struct{}
 

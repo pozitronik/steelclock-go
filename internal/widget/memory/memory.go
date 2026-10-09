@@ -1,7 +1,9 @@
 package memory
 
 import (
+	"fmt"
 	"image"
+	"strings"
 	"sync"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -26,6 +28,8 @@ type Widget struct {
 	Renderer       *render.MetricRenderer
 	displayMode    render.DisplayMode
 	currentValue   float64
+	usedGB         float64
+	totalGB        float64
 	history        *util.RingBuffer[float64]
 	textFormat     string
 	memoryProvider metrics.MemoryProvider
@@ -42,13 +46,18 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		return nil, err
 	}
 
+	textFormat := "%.0f"
+	if cfg.Text != nil && cfg.Text.Format != "" {
+		textFormat = cfg.Text.Format
+	}
+
 	return &Widget{
 		BaseWidget:     base,
 		strategy:       mr.Strategy,
 		Renderer:       mr.Renderer,
 		displayMode:    mr.DisplayMode,
 		history:        util.NewRingBuffer[float64](mr.HistoryLen),
-		textFormat:     "%.0f",
+		textFormat:     textFormat,
 		memoryProvider: metrics.DefaultMemory,
 	}, nil
 }
@@ -68,10 +77,17 @@ func (w *Widget) Update() error {
 		percent = 100
 	}
 
+	// Best-effort: GB figures are a display nicety, not worth failing Update() over.
+	usedGB, totalGB, gbErr := w.memoryProvider.UsedGB()
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	w.currentValue = percent
+	if gbErr == nil {
+		w.usedGB = usedGB
+		w.totalGB = totalGB
+	}
 	if w.displayMode == render.DisplayModeGraph {
 		w.history.Push(percent)
 	}
@@ -98,6 +114,19 @@ func (w *Widget) Render() (image.Image, error) {
 
 	w.mu.RLock()
 	defer w.mu.RUnlock()
+
+	// In text mode, {used}/{total}/{percent} tokens render a GB breakdown
+	// (e.g. "R {used}GB {percent}%"); plain printf formats keep rendering
+	// just the percentage through the strategy below.
+	if w.displayMode == render.DisplayModeText && strings.Contains(w.textFormat, "{") {
+		text := strings.NewReplacer(
+			"{used}", fmt.Sprintf("%.1f", w.usedGB),
+			"{total}", fmt.Sprintf("%.1f", w.totalGB),
+			"{percent}", fmt.Sprintf("%.0f", w.currentValue),
+		).Replace(w.textFormat)
+		w.Renderer.RenderText(img, text)
+		return img, nil
+	}
 
 	// Delegate rendering to strategy
 	w.strategy.Render(img, render.MetricData{

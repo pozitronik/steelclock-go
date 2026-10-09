@@ -446,3 +446,37 @@ func TestNew_TextFormat(t *testing.T) {
 		})
 	}
 }
+
+// TestWidget_Render_DualMemoryFormat verifies a {used}/{total}/{percent}
+// token format on a memory metric renders successfully using used-GB and
+// percent together.
+func TestWidget_Render_DualMemoryFormat(t *testing.T) {
+	cfg := config.WidgetConfig{
+		Type:    "gpu",
+		ID:      "test_gpu_dual",
+		Enabled: config.BoolPtr(true),
+		Position: config.PositionConfig{
+			X: 0, Y: 0, W: 128, H: 20,
+		},
+		Mode: "text",
+		GPU:  &config.GPUConfig{Adapter: 0, Metric: MetricMemoryDedicated},
+		Text: &config.TextConfig{Format: "V {used}GB {percent}%"},
+	}
+
+	w, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	w.totalMemoryGB = 16.0 // simulate a known adapter capacity
+
+	w.reader = &mockReader{metricValue: 50.0}
+	w.readerFailed = false
+
+	if err := w.Update(); err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+
+	if _, err := w.Render(); err != nil {
+		t.Errorf("Render() error = %v", err)
+	}
+}

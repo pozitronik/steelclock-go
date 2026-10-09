@@ -42,6 +42,9 @@ type CPUProvider interface {
 type MemoryProvider interface {
 	// UsedPercent returns the percentage of memory currently in use.
 	UsedPercent() (float64, error)
+
+	// UsedGB returns memory usage in gibibytes (used, total).
+	UsedGB() (used float64, total float64, err error)
 }
 
 // NetworkProvider abstracts network I/O metrics collection

@@ -30,6 +30,7 @@ type Widget struct {
 	coreMargin  int
 	fillColor   int // -1 = no fill, 0-255 = fill color (used for per-core border color)
 	historyLen  int
+	textFormat  string
 
 	// Strategy pattern for single-value mode rendering
 	strategy render.MetricDisplayStrategy
@@ -74,6 +75,11 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		cores = 1
 	}
 
+	textFormat := "%.0f"
+	if cfg.Text != nil && cfg.Text.Format != "" {
+		textFormat = cfg.Text.Format
+	}
+
 	return &Widget{
 		BaseWidget:     base,
 		displayMode:    mr.DisplayMode,
@@ -83,6 +89,7 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 		coreMargin:     coreMargin,
 		fillColor:      mr.FillColor,
 		historyLen:     mr.HistoryLen,
+		textFormat:     textFormat,
 		strategy:       mr.Strategy,
 		gridStrategy:   render.GetGridMetricStrategy(mr.DisplayMode),
 		Renderer:       mr.Renderer,
@@ -209,7 +216,7 @@ func (w *Widget) Render() (image.Image, error) {
 	w.strategy.Render(img, render.MetricData{
 		Value:       w.currentUsageSingle,
 		History:     w.historySingle.ToSlice(),
-		TextFormat:  "%.0f",
+		TextFormat:  w.textFormat,
 		ContentArea: image.Rect(content.X, content.Y, content.X+content.Width, content.Y+content.Height),
 		GaugeArea:   image.Rect(0, 0, pos.W, pos.H),
 	}, w.Renderer)
