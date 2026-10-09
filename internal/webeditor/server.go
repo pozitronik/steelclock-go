@@ -89,7 +89,9 @@ func (s *Server) SetPreviewOverrideCallback(callback func(enable bool) error) {
 	s.onPreviewOverride = callback
 }
 
-// Start starts the HTTP server on the default port (localhost only)
+// Start starts the HTTP server on the default port. It listens on all
+// interfaces so the Claude Code hook can post status from WSL; every other
+// route is limited to loopback clients (see withAccessPolicy).
 func (s *Server) Start() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -98,8 +100,8 @@ func (s *Server) Start() error {
 		return nil // Already running
 	}
 
-	// Bind to all interfaces to allow WSL connections
-	// Security: The server still validates Origin header on POST requests
+	// Bind to all interfaces to allow WSL connections to /api/claude-status.
+	// withAccessPolicy rejects other routes from non-loopback clients.
 	addr := fmt.Sprintf("0.0.0.0:%d", DefaultPort)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -113,7 +115,7 @@ func (s *Server) Start() error {
 	s.registerHandlers(mux)
 
 	s.httpServer = &http.Server{
-		Handler:      mux,
+		Handler:      withAccessPolicy(mux),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,

@@ -176,10 +176,22 @@ func createTestServer(t *testing.T) (*Server, *mockConfigProvider, *mockProfileP
 	return server, configProvider, profileProvider
 }
 
-func createTestMux(s *Server) *http.ServeMux {
+// createTestMux returns the editor's routes behind the access policy, as
+// Start serves them. Requests that keep httptest's default remote address and
+// host are rewritten to come from a local browser at 127.0.0.1:8384.
+func createTestMux(s *Server) http.Handler {
 	mux := http.NewServeMux()
 	s.registerHandlers(mux)
-	return mux
+	handler := withAccessPolicy(mux)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.RemoteAddr == "192.0.2.1:1234" {
+			r.RemoteAddr = "127.0.0.1:50000"
+		}
+		if r.Host == "example.com" {
+			r.Host = "127.0.0.1:8384"
+		}
+		handler.ServeHTTP(w, r)
+	})
 }
 
 // Server lifecycle tests
@@ -488,12 +500,13 @@ func TestHandleConfig_Post_NoOrigin(t *testing.T) {
 }
 
 func TestHandleConfig_Post_WrappedFormat(t *testing.T) {
-	server, _, _ := createTestServer(t)
+	server, _, profileProvider := createTestServer(t)
 	mux := createTestMux(server)
 
-	// Create temp file for saving
+	// Create temp file for saving; only listed profiles can be saved by path
 	tmpDir := t.TempDir()
 	savePath := filepath.Join(tmpDir, "save.json")
+	profileProvider.profiles = append(profileProvider.profiles, ProfileInfo{Path: savePath, Name: "Save"})
 
 	// Use filepath.ToSlash for cross-platform JSON compatibility
 	savePathJSON := filepath.ToSlash(savePath)
@@ -541,12 +554,13 @@ func TestHandleConfig_MethodNotAllowed(t *testing.T) {
 // Handler tests - Load Config By Path
 
 func TestHandleLoadConfigByPath_Success(t *testing.T) {
-	server, _, _ := createTestServer(t)
+	server, _, profileProvider := createTestServer(t)
 	mux := createTestMux(server)
 
-	// Create temp config file
+	// Create temp config file; only listed profiles can be loaded by path
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "test.json")
+	profileProvider.profiles = append(profileProvider.profiles, ProfileInfo{Path: configPath, Name: "Test"})
 	if err := os.WriteFile(configPath, []byte(`{"loaded": true}`), 0644); err != nil {
 		t.Fatalf("Failed to create config file: %v", err)
 	}
@@ -590,8 +604,9 @@ func TestHandleLoadConfigByPath_MissingPath(t *testing.T) {
 }
 
 func TestHandleLoadConfigByPath_FileNotFound(t *testing.T) {
-	server, _, _ := createTestServer(t)
+	server, _, profileProvider := createTestServer(t)
 	mux := createTestMux(server)
+	profileProvider.profiles = append(profileProvider.profiles, ProfileInfo{Path: "/nonexistent/file.json", Name: "Missing"})
 
 	body := `{"path": "/nonexistent/file.json"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/config/load", strings.NewReader(body))

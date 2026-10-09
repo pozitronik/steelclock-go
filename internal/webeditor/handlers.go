@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
 )
@@ -78,16 +77,6 @@ func (s *Server) handleGetSchema(w http.ResponseWriter, r *http.Request) {
 
 // handleConfig handles GET (load) and POST (save) for config
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
-	// Simple origin check for POST requests
-	if r.Method == http.MethodPost {
-		origin := r.Header.Get("Origin")
-		if origin != "" && !strings.HasPrefix(origin, "http://127.0.0.1") &&
-			!strings.HasPrefix(origin, "http://localhost") {
-			http.Error(w, "Forbidden", http.StatusForbidden)
-			return
-		}
-	}
-
 	switch r.Method {
 	case http.MethodGet:
 		s.getConfig(w)
@@ -149,7 +138,11 @@ func (s *Server) saveConfig(w http.ResponseWriter, r *http.Request) {
 
 	// Save to file
 	if savePath != "" {
-		// Save to specific path
+		// Save to a specific profile; never to an arbitrary path
+		if !s.isKnownProfile(savePath) {
+			respondError(w, "Unknown profile: "+savePath, http.StatusForbidden)
+			return
+		}
 		if err := os.WriteFile(savePath, configData, 0644); err != nil {
 			respondError(w, "Failed to save: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -188,6 +181,12 @@ func (s *Server) handleLoadConfigByPath(w http.ResponseWriter, r *http.Request) 
 
 	if req.Path == "" {
 		respondError(w, "Path is required", http.StatusBadRequest)
+		return
+	}
+
+	// Only profiles can be read; never an arbitrary path
+	if !s.isKnownProfile(req.Path) {
+		respondError(w, "Unknown profile: "+req.Path, http.StatusForbidden)
 		return
 	}
 
@@ -268,14 +267,6 @@ func (s *Server) listProfiles(w http.ResponseWriter) {
 
 // createProfile creates a new profile with the given name
 func (s *Server) createProfile(w http.ResponseWriter, r *http.Request) {
-	// Origin check for POST
-	origin := r.Header.Get("Origin")
-	if origin != "" && !strings.HasPrefix(origin, "http://127.0.0.1") &&
-		!strings.HasPrefix(origin, "http://localhost") {
-		http.Error(w, "Forbidden", http.StatusForbidden)
-		return
-	}
-
 	if s.profileProvider == nil {
 		respondError(w, "Profile management not available", http.StatusNotImplemented)
 		return
@@ -315,14 +306,6 @@ func (s *Server) handleActiveProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Origin check
-	origin := r.Header.Get("Origin")
-	if origin != "" && !strings.HasPrefix(origin, "http://127.0.0.1") &&
-		!strings.HasPrefix(origin, "http://localhost") {
-		http.Error(w, "Forbidden", http.StatusForbidden)
-		return
-	}
-
 	if s.profileProvider == nil || s.onProfileSwitch == nil {
 		respondError(w, "Profile management not available", http.StatusNotImplemented)
 		return
@@ -357,14 +340,6 @@ func (s *Server) handleActiveProfile(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleRenameProfile(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Origin check
-	origin := r.Header.Get("Origin")
-	if origin != "" && !strings.HasPrefix(origin, "http://127.0.0.1") &&
-		!strings.HasPrefix(origin, "http://localhost") {
-		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
@@ -530,14 +505,6 @@ func (s *Server) handlePreviewWebSocket(w http.ResponseWriter, r *http.Request) 
 func (s *Server) handlePreviewOverride(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Origin check
-	origin := r.Header.Get("Origin")
-	if origin != "" && !strings.HasPrefix(origin, "http://127.0.0.1") &&
-		!strings.HasPrefix(origin, "http://localhost") {
-		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
