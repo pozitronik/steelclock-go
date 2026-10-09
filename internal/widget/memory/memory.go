@@ -1,9 +1,7 @@
 package memory
 
 import (
-	"fmt"
 	"image"
-	"strings"
 	"sync"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
@@ -64,12 +62,13 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 
 // Update updates the memory usage
 func (w *Widget) Update() error {
-	percent, err := w.memoryProvider.UsedPercent()
+	usage, err := w.memoryProvider.Usage()
 	if err != nil {
 		return err
 	}
 
 	// Clamp to 0-100
+	percent := usage.UsedPercent
 	if percent < 0 {
 		percent = 0
 	}
@@ -77,17 +76,12 @@ func (w *Widget) Update() error {
 		percent = 100
 	}
 
-	// Best-effort: GB figures are a display nicety, not worth failing Update() over.
-	usedGB, totalGB, gbErr := w.memoryProvider.UsedGB()
-
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	w.currentValue = percent
-	if gbErr == nil {
-		w.usedGB = usedGB
-		w.totalGB = totalGB
-	}
+	w.usedGB = usage.UsedGB()
+	w.totalGB = usage.TotalGB()
 	if w.displayMode == render.DisplayModeGraph {
 		w.history.Push(percent)
 	}
@@ -118,13 +112,8 @@ func (w *Widget) Render() (image.Image, error) {
 	// In text mode, {used}/{total}/{percent} tokens render a GB breakdown
 	// (e.g. "R {used}GB {percent}%"); plain printf formats keep rendering
 	// just the percentage through the strategy below.
-	if w.displayMode == render.DisplayModeText && strings.Contains(w.textFormat, "{") {
-		text := strings.NewReplacer(
-			"{used}", fmt.Sprintf("%.1f", w.usedGB),
-			"{total}", fmt.Sprintf("%.1f", w.totalGB),
-			"{percent}", fmt.Sprintf("%.0f", w.currentValue),
-		).Replace(w.textFormat)
-		w.Renderer.RenderText(img, text)
+	if w.displayMode == render.DisplayModeText && render.IsUsageTokenFormat(w.textFormat) {
+		w.Renderer.RenderText(img, w.usageText())
 		return img, nil
 	}
 
@@ -138,4 +127,10 @@ func (w *Widget) Render() (image.Image, error) {
 	}, w.Renderer)
 
 	return img, nil
+}
+
+// usageText renders the token text format from the current values.
+// Callers must hold w.mu.
+func (w *Widget) usageText() string {
+	return render.FormatUsageTokens(w.textFormat, w.usedGB, w.totalGB, w.currentValue)
 }
