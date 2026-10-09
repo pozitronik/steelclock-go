@@ -64,12 +64,13 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 
 // Update updates the memory usage
 func (w *Widget) Update() error {
-	percent, err := w.memoryProvider.UsedPercent()
+	usage, err := w.memoryProvider.Usage()
 	if err != nil {
 		return err
 	}
 
 	// Clamp to 0-100
+	percent := usage.UsedPercent
 	if percent < 0 {
 		percent = 0
 	}
@@ -77,17 +78,12 @@ func (w *Widget) Update() error {
 		percent = 100
 	}
 
-	// Best-effort: GB figures are a display nicety, not worth failing Update() over.
-	usedGB, totalGB, gbErr := w.memoryProvider.UsedGB()
-
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	w.currentValue = percent
-	if gbErr == nil {
-		w.usedGB = usedGB
-		w.totalGB = totalGB
-	}
+	w.usedGB = usage.UsedGB()
+	w.totalGB = usage.TotalGB()
 	if w.displayMode == render.DisplayModeGraph {
 		w.history.Push(percent)
 	}
