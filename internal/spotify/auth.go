@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"net"
@@ -69,6 +70,12 @@ func (p *PKCEAuth) StartAuth(ctx context.Context) (*TokenInfo, error) {
 
 	// Generate state for CSRF protection
 	p.state = generateRandomString(32)
+
+	// Drop a result left over from an earlier attempt
+	select {
+	case <-p.result:
+	default:
+	}
 
 	// Start callback server
 	if err := p.startCallbackServer(ctx); err != nil {
@@ -145,14 +152,17 @@ func (p *PKCEAuth) startCallbackServer(ctx context.Context) error {
 		return fmt.Errorf("failed to listen on %s: %w", addr, err)
 	}
 
-	p.server = &http.Server{
+	// The goroutines below use their own reference: stopServer sets p.server
+	// to nil while they may still be running.
+	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 	}
+	p.server = server
 
 	go func() {
-		if err := p.server.Serve(listener); !errors.Is(err, http.ErrServerClosed) {
+		if err := server.Serve(listener); !errors.Is(err, http.ErrServerClosed) {
 			log.Printf("spotify: callback server error: %v", err)
 		}
 	}()
@@ -161,7 +171,7 @@ func (p *PKCEAuth) startCallbackServer(ctx context.Context) error {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if err := p.server.Shutdown(shutdownCtx); err != nil {
+		if err := server.Shutdown(shutdownCtx); err != nil {
 			log.Printf("spotify: callback server shutdown error: %v", err)
 		}
 	}()
@@ -180,45 +190,52 @@ func (p *PKCEAuth) stopServer() {
 }
 
 // handleCallback handles the OAuth callback request.
+// Requests without the state of the pending attempt are rejected without
+// ending that attempt, since anything (e.g. a web page) can send requests to
+// this local server. Only the first valid callback is used.
 func (p *PKCEAuth) handleCallback(w http.ResponseWriter, r *http.Request) {
-	// Check for error
-	if errParam := r.URL.Query().Get("error"); errParam != "" {
-		errDesc := r.URL.Query().Get("error_description")
-		p.result <- authResult{err: fmt.Errorf("authorization error: %s - %s", errParam, errDesc)}
-		p.writeCallbackResponse(w, false, "Authorization failed: "+errDesc)
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Verify state
-	state := r.URL.Query().Get("state")
-	if state != p.state {
-		p.result <- authResult{err: fmt.Errorf("state mismatch: possible CSRF attack")}
-		p.writeCallbackResponse(w, false, "Security error: state mismatch")
+	query := r.URL.Query()
+	if state := query.Get("state"); state == "" || state != p.state {
+		p.writeCallbackResponse(w, http.StatusBadRequest, false, "Invalid or expired authorization request.")
 		return
 	}
 
-	// Get authorization code
-	code := r.URL.Query().Get("code")
+	if errParam := query.Get("error"); errParam != "" {
+		errDesc := query.Get("error_description")
+		p.publishResult(authResult{err: fmt.Errorf("authorization error: %s - %s", errParam, errDesc)})
+		p.writeCallbackResponse(w, http.StatusOK, false, "Authorization failed: "+errDesc)
+		return
+	}
+
+	code := query.Get("code")
 	if code == "" {
-		p.result <- authResult{err: fmt.Errorf("no authorization code received")}
-		p.writeCallbackResponse(w, false, "No authorization code received")
+		p.publishResult(authResult{err: fmt.Errorf("no authorization code received")})
+		p.writeCallbackResponse(w, http.StatusOK, false, "No authorization code received")
 		return
 	}
 
-	p.result <- authResult{code: code}
-	p.writeCallbackResponse(w, true, "Authorization successful! You can close this window.")
+	p.publishResult(authResult{code: code})
+	p.writeCallbackResponse(w, http.StatusOK, true, "Authorization successful! You can close this window.")
 }
 
-// writeCallbackResponse writes the callback HTML response.
-func (p *PKCEAuth) writeCallbackResponse(w http.ResponseWriter, success bool, message string) {
-	w.Header().Set("Content-Type", "text/html")
-
-	color := "#e74c3c" // red for error
-	if success {
-		color = "#2ecc71" // green for success
+// publishResult hands the callback result to StartAuth. Only the first result
+// is kept; later ones (e.g. a reloaded callback page) are dropped instead of
+// blocking the request.
+func (p *PKCEAuth) publishResult(result authResult) {
+	select {
+	case p.result <- result:
+	default:
 	}
+}
 
-	html := fmt.Sprintf(`<!DOCTYPE html>
+// callbackPage renders the callback response. html/template escapes the
+// message, which may contain text from the request URL.
+var callbackPage = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
 <html>
 <head>
     <title>Spotify Authorization</title>
@@ -243,19 +260,34 @@ func (p *PKCEAuth) writeCallbackResponse(w http.ResponseWriter, success bool, me
         }
         .message {
             font-size: 18px;
-            color: %s;
         }
+        .success { color: #2ecc71; }
+        .error { color: #e74c3c; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="icon">%s</div>
-        <div class="message">%s</div>
+        {{if .Success}}<div class="icon success">&#10004;</div>{{else}}<div class="icon error">&#10006;</div>{{end}}
+        <div class="message {{if .Success}}success{{else}}error{{end}}">{{.Message}}</div>
     </div>
 </body>
-</html>`, color, map[bool]string{true: "&#10004;", false: "&#10006;"}[success], message)
+</html>`))
 
-	_, _ = w.Write([]byte(html))
+// writeCallbackResponse writes the callback HTML response.
+func (p *PKCEAuth) writeCallbackResponse(w http.ResponseWriter, status int, success bool, message string) {
+	h := w.Header()
+	h.Set("Content-Type", "text/html; charset=utf-8")
+	h.Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'")
+	h.Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(status)
+
+	data := struct {
+		Success bool
+		Message string
+	}{success, message}
+	if err := callbackPage.Execute(w, data); err != nil {
+		log.Printf("spotify: failed to write callback response: %v", err)
+	}
 }
 
 // exchangeCode exchanges the authorization code for tokens.
