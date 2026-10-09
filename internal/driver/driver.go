@@ -340,6 +340,9 @@ func (d *HIDDriver) sendPacket(packet []byte) error {
 	if d.reportIDKnown && len(packet) > 0 {
 		packet[0] = d.reportID
 	}
+	if protocolRequiresFeatureReport(d.protocol) {
+		return setFeatureReport(d.handle, packet)
+	}
 	return sendFeatureReport(d.handle, packet)
 }
 

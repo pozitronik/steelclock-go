@@ -51,6 +51,22 @@ type ReportLengthPadding interface {
 	PadToReportLength() bool
 }
 
+// FeatureReportTransport marks protocols whose packets must be sent strictly as
+// HID feature reports. The default Linux transport tries hidraw write() (an
+// output report) first, which a device can accept without ever acting on it.
+type FeatureReportTransport interface {
+	RequiresFeatureReport() bool
+}
+
+// protocolRequiresFeatureReport reports whether a protocol's packets must be
+// sent strictly as HID feature reports.
+func protocolRequiresFeatureReport(p Protocol) bool {
+	if f, ok := p.(FeatureReportTransport); ok {
+		return f.RequiresFeatureReport()
+	}
+	return false
+}
+
 // protocolWantsReportLengthPadding reports whether a protocol's packets should
 // be padded to the device's discovered feature-report length.
 func protocolWantsReportLengthPadding(p Protocol) bool {
