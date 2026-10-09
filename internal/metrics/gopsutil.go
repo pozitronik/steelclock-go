@@ -35,26 +35,17 @@ func NewGopsutilMemory() *GopsutilMemory {
 	return &GopsutilMemory{}
 }
 
-// UsedPercent returns the percentage of memory in use
-func (g *GopsutilMemory) UsedPercent() (float64, error) {
+// Usage returns memory usage from a single VirtualMemory sample
+func (g *GopsutilMemory) Usage() (MemoryUsage, error) {
 	vmem, err := mem.VirtualMemory()
 	if err != nil {
-		return 0, err
+		return MemoryUsage{}, err
 	}
-	return vmem.UsedPercent, nil
-}
-
-// gibibyte is the byte count of one gibibyte (1024^3), matching the unit
-// Windows Task Manager and most OS memory displays label "GB".
-const gibibyte = 1024 * 1024 * 1024
-
-// UsedGB returns memory usage in gibibytes (used, total).
-func (g *GopsutilMemory) UsedGB() (float64, float64, error) {
-	vmem, err := mem.VirtualMemory()
-	if err != nil {
-		return 0, 0, err
-	}
-	return float64(vmem.Used) / gibibyte, float64(vmem.Total) / gibibyte, nil
+	return MemoryUsage{
+		UsedPercent: vmem.UsedPercent,
+		UsedBytes:   vmem.Used,
+		TotalBytes:  vmem.Total,
+	}, nil
 }
 
 // GopsutilNetwork implements NetworkProvider using gopsutil
