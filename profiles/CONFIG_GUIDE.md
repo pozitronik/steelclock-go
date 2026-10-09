@@ -61,9 +61,6 @@ Supported IDEs: VS Code, JetBrains IDEs, Visual Studio, Sublime Text, and others
   "display": {
     ...
   },
-  "defaults": {
-    ...
-  },
   "widgets": [
     ...
   ]
@@ -124,28 +121,6 @@ If omitted, auto-detects from known devices (Apex 7, Apex Pro, etc.).
 | `width`      | integer | -     | 128     | Display width in pixels    |
 | `height`     | integer | -     | 40      | Display height in pixels   |
 | `background` | integer | 0-255 | 0       | Background color (0=black) |
-
-### Defaults Configuration
-
-Global defaults inherited by all widgets:
-
-```json
-"defaults": {
-  "colors": {
-    "primary": 255,
-    "secondary": 200,
-    "dim": 100
-  },
-  "text": {
-    "font": "Consolas",
-    "size": 10,
-    "align": {"h": "center", "v": "center"}
-  },
-  "update_interval": 1.0
-}
-```
-
-Widgets can reference default colors with `@name` syntax: `"fill": "@primary"`.
 
 ## Widget Types
 

@@ -147,7 +147,6 @@ type Config struct {
 	WebClient            *WebClientConfig    `json:"webclient,omitempty"`
 	Devices              []DeviceConfig      `json:"devices,omitempty"`
 	Display              DisplayConfig       `json:"display"`
-	Defaults             *DefaultsConfig     `json:"defaults,omitempty"`
 	Layout               *LayoutConfig       `json:"layout,omitempty"`
 	Widgets              []WidgetConfig      `json:"widgets"`
 }
@@ -225,13 +224,6 @@ type DisplayConfig struct {
 	Width      int `json:"width"`
 	Height     int `json:"height"`
 	Background int `json:"background"`
-}
-
-// DefaultsConfig represents global defaults inherited by widgets
-type DefaultsConfig struct {
-	Colors         map[string]int `json:"colors,omitempty"`
-	Text           *TextConfig    `json:"text,omitempty"`
-	UpdateInterval float64        `json:"update_interval,omitempty"`
 }
 
 // LayoutConfig represents virtual canvas layout settings
