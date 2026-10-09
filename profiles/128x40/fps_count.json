@@ -1,0 +1,39 @@
+{
+  "$schema": "../.schema/config.schema.json",
+  "config_name": "FPS Count",
+  "refresh_rate_ms": 500,
+  "display": {
+    "width": 128,
+    "height": 40,
+    "background": 0
+  },
+  "widgets": [
+    {
+      "type": "fps",
+      "enabled": true,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 40,
+        "z": 0
+      },
+      "style": {
+        "background": 0,
+        "border": -1,
+        "padding": 0
+      },
+      "mode": "text",
+      "text": {
+        "format": "%.0f FPS",
+        "font": null,
+        "size": 20,
+        "align": {
+          "h": "center",
+          "v": "center"
+        }
+      },
+      "update_interval": 0.5
+    }
+  ]
+}

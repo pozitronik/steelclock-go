@@ -596,7 +596,8 @@
             "hacker_code",
             "claude_code",
             "bluetooth",
-            "hwmon"
+            "hwmon",
+            "fps"
           ]
         },
         "enabled": {
@@ -4659,6 +4660,44 @@
                     "default": 100
                   }
                 }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "fps"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "text": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/textObject"
+                  },
+                  {
+                    "properties": {
+                      "format": {
+                        "description": "Format string for the current framerate, e.g. \"%.0f FPS\"."
+                      }
+                    }
+                  }
+                ]
+              },
+              "mode": {
+                "type": "string",
+                "description": "Display mode for FPS. Only text mode is supported: bar/graph/gauge scale values as a 0-100 percentage, which FPS is not.",
+                "enum": [
+                  "text"
+                ],
+                "default": "text"
               }
             }
           }

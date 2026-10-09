@@ -19,6 +19,7 @@ import (
 	_ "github.com/pozitronik/steelclock-go/internal/widget/cpu"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/disk"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/doom"
+	_ "github.com/pozitronik/steelclock-go/internal/widget/fps"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/gameoflife"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/gpu"
 	_ "github.com/pozitronik/steelclock-go/internal/widget/hackercode"

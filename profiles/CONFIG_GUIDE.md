@@ -1105,6 +1105,31 @@ Four metrics in a 2x2 grid with text overlay (see `profiles/128x40/gpu.json`):
 }
 ```
 
+### FPS Widget
+
+**Modes:** `text` only (bar/graph/gauge scale values as a 0-100 percentage, which FPS is not, and
+are rejected at widget creation).
+
+**Platform:** Windows only. Requires [RTSS](https://www.guru3d.com/download/rtss-rivatuner-statistics-server-download/)
+(RivaTuner Statistics Server, the framerate-capture engine behind MSI Afterburner) to be running.
+Shows "FPS N/A" when RTSS isn't detected, and retries every few seconds in case it starts later
+(e.g. when a game launches). Reads the framerate of the actual OS foreground window when possible,
+falling back to RTSS's own foreground tracking, then to whichever hooked app rendered most recently.
+
+```json
+{
+  "type": "fps",
+  "position": {"x": 0, "y": 0, "w": 128, "h": 40},
+  "mode": "text",
+  "text": {
+    "format": "%.0f FPS",
+    "size": 20,
+    "align": {"h": "center", "v": "center"}
+  },
+  "update_interval": 0.5
+}
+```
+
 ### Network Widget
 
 **Modes:** `text`, `bar`, `graph`, `gauge`

@@ -28,7 +28,7 @@ https://github.com/user-attachments/assets/58f607cb-be31-4af4-bb3d-6e0628f0748c
 - **System Tray Integration**: Runs in background with system tray icon
 - **Configuration Profiles**: Switch between multiple configurations via tray menu
 - **Live Configuration Reload**: Edit and reload config without restarting
-- **Multiple Widgets**: Clock, CPU, Memory, Battery, Network, Disk, Keyboard indicators, Keyboard layout, Volume control, Audio visualizer, Bluetooth device status, Winamp integration, Telegram notifications, Claude Code status, Matrix digital rain, Weather, Game of Life, Hyperspace, Star Wars intro
+- **Multiple Widgets**: Clock, CPU, Memory, GPU, FPS (via RTSS), Battery, Network, Disk, Keyboard indicators, Keyboard layout, Volume control, Audio visualizer, Bluetooth device status, Winamp integration, Telegram notifications, Claude Code status, Matrix digital rain, Weather, Game of Life, Hyperspace, Star Wars intro
 - **Display Modes**: Text, horizontal/vertical bars, graphs, analog gauges, etc
 - **Per-Core CPU Monitoring**: Grid layouts showing individual core usage for all display modes
 - **Widget Transparency**: Overlay widgets using `background_color: -1` for layered displays
