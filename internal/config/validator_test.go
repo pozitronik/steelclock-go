@@ -306,6 +306,24 @@ func TestValidateDisplayConfig(t *testing.T) {
 			wantErr: true,
 			errMsg:  "refresh_rate_ms must be positive",
 		},
+		{
+			name: "refresh rate above maximum",
+			cfg: Config{
+				Display:       DisplayConfig{Width: 128, Height: 40},
+				RefreshRateMs: MaxRefreshRateMs + 1,
+			},
+			wantErr: true,
+			errMsg:  "refresh_rate_ms must be at most",
+		},
+		{
+			name: "refresh rate overflowing time.Duration",
+			cfg: Config{
+				Display:       DisplayConfig{Width: 128, Height: 40},
+				RefreshRateMs: 9223372036855,
+			},
+			wantErr: true,
+			errMsg:  "refresh_rate_ms must be at most",
+		},
 	}
 
 	for _, tt := range tests {
@@ -514,6 +532,78 @@ func TestValidateWidgetProperties(t *testing.T) {
 			name:    "disk - valid disk",
 			widget:  WidgetConfig{Type: "disk", ID: "disk_0", Disk: &disk},
 			wantErr: false,
+		},
+		{
+			name:    "positive size",
+			widget:  WidgetConfig{Type: "clock", Position: PositionConfig{W: 128, H: 40}},
+			wantErr: false,
+		},
+		{
+			name:    "negative width",
+			widget:  WidgetConfig{Type: "clock", Position: PositionConfig{W: -1, H: 40}},
+			wantErr: true,
+			errMsg:  "position.w must not be negative",
+		},
+		{
+			name:    "negative height",
+			widget:  WidgetConfig{Type: "clock", Position: PositionConfig{W: 128, H: -1}},
+			wantErr: true,
+			errMsg:  "position.h must not be negative",
+		},
+		{
+			name:    "default update interval",
+			widget:  WidgetConfig{Type: "clock", UpdateInterval: 0},
+			wantErr: false,
+		},
+		{
+			name:    "minimum update interval",
+			widget:  WidgetConfig{Type: "clock", UpdateInterval: MinUpdateInterval},
+			wantErr: false,
+		},
+		{
+			name:    "fractional update interval",
+			widget:  WidgetConfig{Type: "clock", UpdateInterval: 0.05},
+			wantErr: false,
+		},
+		{
+			name:    "negative update interval",
+			widget:  WidgetConfig{Type: "clock", UpdateInterval: -1},
+			wantErr: true,
+			errMsg:  "update_interval must be at least",
+		},
+		{
+			name:    "maximum update interval",
+			widget:  WidgetConfig{Type: "clock", UpdateInterval: MaxUpdateInterval},
+			wantErr: false,
+		},
+		{
+			name:    "update interval above maximum",
+			widget:  WidgetConfig{Type: "clock", UpdateInterval: MaxUpdateInterval + 1},
+			wantErr: true,
+			errMsg:  "update_interval must be at most",
+		},
+		{
+			name:    "update interval overflowing time.Duration",
+			widget:  WidgetConfig{Type: "clock", UpdateInterval: 1e10},
+			wantErr: true,
+			errMsg:  "update_interval must be at most",
+		},
+		{
+			name:    "update interval below minimum",
+			widget:  WidgetConfig{Type: "clock", UpdateInterval: 1e-12},
+			wantErr: true,
+			errMsg:  "update_interval must be at least",
+		},
+		{
+			name:    "default graph history",
+			widget:  WidgetConfig{Type: "cpu", Graph: &GraphConfig{History: 0}},
+			wantErr: false,
+		},
+		{
+			name:    "negative graph history",
+			widget:  WidgetConfig{Type: "cpu", Graph: &GraphConfig{History: -1}},
+			wantErr: true,
+			errMsg:  "graph.history must not be negative",
 		},
 	}
 
@@ -829,6 +919,59 @@ func TestValidateDevices_ValidMultiDevice(t *testing.T) {
 	err := Validate(&cfg)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateDevices_RenderSettings(t *testing.T) {
+	tests := []struct {
+		name    string
+		change  func(*Config)
+		wantErr string
+	}{
+		{"valid", func(*Config) {}, ""},
+		{"zero refresh rate", func(c *Config) { c.RefreshRateMs = 0 }, "refresh_rate_ms must be positive"},
+		{"negative refresh rate", func(c *Config) { c.RefreshRateMs = -1 }, "refresh_rate_ms must be positive"},
+		{"maximum refresh rate", func(c *Config) { c.RefreshRateMs = MaxRefreshRateMs }, ""},
+		{"refresh rate above maximum", func(c *Config) { c.RefreshRateMs = MaxRefreshRateMs + 1 }, "refresh_rate_ms must be at most"},
+		{"refresh rate overflowing time.Duration", func(c *Config) { c.RefreshRateMs = 9223372036855 }, "refresh_rate_ms must be at most"},
+		{"invalid supported resolution", func(c *Config) {
+			c.SupportedResolutions = []ResolutionConfig{{Width: 128, Height: 0}}
+		}, "supported_resolutions[0]: height must be positive"},
+		{"invalid widget in device", func(c *Config) {
+			c.Devices[1].Widgets[0].UpdateInterval = -1
+		}, "devices[1]: widget[0]: update_interval must be at least"},
+		{"invalid widget in device but disabled", func(c *Config) {
+			c.Devices[1].Widgets[0].UpdateInterval = -1
+			c.Devices[1].Widgets[0].Enabled = BoolPtr(false)
+		}, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := Config{
+				GameName:      "TEST",
+				RefreshRateMs: 100,
+				Devices: []DeviceConfig{
+					{ID: "a", Display: DisplayConfig{Width: 128, Height: 40}, Widgets: []WidgetConfig{{Type: "clock"}}},
+					{ID: "b", Display: DisplayConfig{Width: 128, Height: 64}, Widgets: []WidgetConfig{{Type: "cpu"}}},
+				},
+			}
+			tt.change(&cfg)
+
+			err := Validate(&cfg)
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("expected error containing %q, got nil", tt.wantErr)
+			}
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Errorf("error %q should contain %q", err.Error(), tt.wantErr)
+			}
+		})
 	}
 }
 
