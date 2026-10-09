@@ -15,13 +15,13 @@ https://github.com/user-attachments/assets/58f607cb-be31-4af4-bb3d-6e0628f0748c
 ### Windows
 - **Windows 10/11**
 - **SteelSeries Engine** or **SteelSeries GG** (optional with direct driver)
-- **Go 1.21+** (for building from source)
+- **Go 1.26.9+** (for building from source)
 
 ### Linux
 - **Linux** with hidraw support
 - **PipeWire** or **PulseAudio** (for audio widgets)
 - **GTK 3** and **libayatana-appindicator3** (for system tray)
-- **Go 1.21+** (for building from source)
+- **Go 1.26.9+** (for building from source)
 
 ## Features
 
