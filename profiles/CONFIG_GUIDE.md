@@ -987,6 +987,12 @@ Examples:
 | `graph.colors.fill`   | Graph fill color         |
 | `gauge.colors.arc`    | Gauge arc color          |
 | `gauge.colors.needle` | Gauge needle color       |
+| `text.format`         | Text mode format string  |
+
+**Text format:** in `text` mode, `text.format` is a printf format applied to the usage
+percentage, which is a floating-point value, so use a float verb such as `"%.0f%%"`
+(default `"%.0f"`) or `"CPU %.1f%%"`. An integer verb like `"%d%%"` renders as
+`%!d(float64=…)`. Per-core mode ignores `text.format`.
 
 ### Memory Widget
 
