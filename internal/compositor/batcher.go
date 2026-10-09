@@ -43,7 +43,8 @@ func (b *FrameBatcher) IsEnabled() bool {
 	return b.enabled
 }
 
-// Add adds a frame to the buffer.
+// Add adds a copy of the frame to the buffer, so the caller may reuse the
+// frame's memory for the next render.
 // Returns (shouldSendDirectly, error).
 // If batching is disabled, returns (true, nil) indicating caller should send directly.
 // If batch is full after adding, flushes and returns (false, flushError).
@@ -54,7 +55,7 @@ func (b *FrameBatcher) Add(frame []byte) (shouldSendDirectly bool, err error) {
 	}
 
 	b.mu.Lock()
-	b.buffer = append(b.buffer, frame)
+	b.buffer = append(b.buffer, append([]byte(nil), frame...))
 	shouldFlush := len(b.buffer) >= b.batchSize
 	b.mu.Unlock()
 
