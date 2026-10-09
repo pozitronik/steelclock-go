@@ -6,8 +6,10 @@ package webclient
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 
@@ -116,13 +118,25 @@ func (c *Client) SendScreenData(_ string, bitmapData []byte) error {
 	return nil
 }
 
-// SendScreenDataMultiRes implements display.FrameSender
+// SendScreenDataMultiRes implements display.FrameSender.
+// Only the configured resolution is shown; frames rendered for additional
+// supported resolutions are ignored. If the configured resolution is missing,
+// the entry with the smallest key is used, so the choice stays deterministic.
 func (c *Client) SendScreenDataMultiRes(_ string, resolutionData map[string][]byte) error {
-	// Use the first (main) resolution data
-	for _, data := range resolutionData {
+	key := fmt.Sprintf("image-data-%dx%d", c.config.Width, c.config.Height)
+	if data, ok := resolutionData[key]; ok {
 		c.storeAndBroadcast(data)
 		return nil
 	}
+	if len(resolutionData) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(resolutionData))
+	for k := range resolutionData {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	c.storeAndBroadcast(resolutionData[keys[0]])
 	return nil
 }
 

@@ -1,6 +1,7 @@
 package webclient
 
 import (
+	"bytes"
 	"testing"
 	"time"
 )
@@ -167,6 +168,62 @@ func TestSendScreenDataMultiRes(t *testing.T) {
 	frame, _, _ := c.GetCurrentFrame()
 	if frame == nil {
 		t.Fatal("frame is nil after SendScreenDataMultiRes")
+	}
+}
+
+// TestSendScreenDataMultiRes_SelectsConfiguredResolution checks that the
+// frame for the configured resolution is shown when frames for other supported
+// resolutions are sent too. Map iteration order is random, so every case runs
+// several times.
+func TestSendScreenDataMultiRes_SelectsConfiguredResolution(t *testing.T) {
+	tests := []struct {
+		name string
+		data map[string][]byte
+		want []byte
+	}{
+		{
+			name: "configured resolution present",
+			data: map[string][]byte{
+				"image-data-128x36": {0x01},
+				"image-data-128x40": {0x02},
+				"image-data-128x48": {0x03},
+				"image-data-128x52": {0x04},
+			},
+			want: []byte{0x02},
+		},
+		{
+			name: "configured resolution missing",
+			data: map[string][]byte{
+				"image-data-128x64": {0x05},
+				"image-data-128x48": {0x06},
+			},
+			want: []byte{0x06},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for i := 0; i < 20; i++ {
+				c := NewClient(Config{TargetFPS: 0, Width: 128, Height: 40})
+				if err := c.SendScreenDataMultiRes("SCREEN", tt.data); err != nil {
+					t.Fatalf("SendScreenDataMultiRes() error = %v", err)
+				}
+				frame, _, _ := c.GetCurrentFrame()
+				if !bytes.Equal(frame, tt.want) {
+					t.Fatalf("frame = %v, want %v", frame, tt.want)
+				}
+			}
+		})
+	}
+}
+
+func TestSendScreenDataMultiRes_Empty(t *testing.T) {
+	c := NewClient(Config{TargetFPS: 0, Width: 128, Height: 40})
+	if err := c.SendScreenDataMultiRes("SCREEN", map[string][]byte{}); err != nil {
+		t.Fatalf("SendScreenDataMultiRes() error = %v", err)
+	}
+	if frame, _, _ := c.GetCurrentFrame(); frame != nil {
+		t.Errorf("frame = %v, want nil", frame)
 	}
 }
 
