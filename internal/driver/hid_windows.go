@@ -27,6 +27,7 @@ var (
 	procSetupDiDestroyDeviceInfoList     = modSetupApi.NewProc("SetupDiDestroyDeviceInfoList")
 
 	procHidDSetFeature        = modHid.NewProc("HidD_SetFeature")
+	procHidDSetOutputReport   = modHid.NewProc("HidD_SetOutputReport")
 	procHidDGetPreparsedData  = modHid.NewProc("HidD_GetPreparsedData")
 	procHidDFreePreparsedData = modHid.NewProc("HidD_FreePreparsedData")
 	procHidPGetCaps           = modHid.NewProc("HidP_GetCaps")
@@ -233,6 +234,32 @@ func sendFeatureReport(handle DeviceHandle, data []byte) error {
 // already does exactly that, so it is the same as sendFeatureReport on Windows.
 func setFeatureReport(handle DeviceHandle, data []byte) error {
 	return sendFeatureReport(handle, data)
+}
+
+// sendOutputReport sends an output report to the HID device; the first byte is
+// the report ID. HidD_SetOutputReport goes over the control pipe and takes the
+// same zero-access handle as HidD_SetFeature, whereas WriteFile would need a
+// handle opened with write access. Not yet confirmed on real hardware.
+func sendOutputReport(handle DeviceHandle, data []byte) error {
+	if handle == InvalidHandle {
+		return fmt.Errorf("invalid handle")
+	}
+
+	if len(data) == 0 {
+		return fmt.Errorf("empty data")
+	}
+
+	r, _, err := procHidDSetOutputReport.Call(
+		uintptr(handle),
+		uintptr(unsafe.Pointer(&data[0])),
+		uintptr(len(data)),
+	)
+
+	if r == 0 {
+		return fmt.Errorf("HidD_SetOutputReport failed: %w", err)
+	}
+
+	return nil
 }
 
 // parseHidPath extracts the VID, PID and interface (mi_xx) from a Windows HID

@@ -71,3 +71,31 @@ func TestProtocolRequiresFeatureReport_NovaProDefaultsFalse(t *testing.T) {
 		t.Error("NovaProProtocol should keep the default transport")
 	}
 }
+
+func TestApexProtocol_BuildReturnToUIPacket(t *testing.T) {
+	t.Run("legacy has no return-to-UI command", func(t *testing.T) {
+		p := &ApexProtocol{}
+		if packet := p.BuildReturnToUIPacket(); packet != nil {
+			t.Errorf("BuildReturnToUIPacket() = % X, want nil", packet)
+		}
+		if protocolReturnsToUIWithOutputReport(p) {
+			t.Error("legacy variant should not use an output report")
+		}
+	})
+
+	t.Run("framebuffer sends 1F 82 as a 65-byte output report", func(t *testing.T) {
+		p := NewApexFramebufferProtocol()
+		packet := p.BuildReturnToUIPacket()
+		if len(packet) != 65 {
+			t.Fatalf("len = %d, want 65", len(packet))
+		}
+		want := make([]byte, 65)
+		want[1], want[2] = 0x1F, 0x82
+		if !bytes.Equal(packet, want) {
+			t.Errorf("packet = % X, want % X", packet, want)
+		}
+		if !protocolReturnsToUIWithOutputReport(p) {
+			t.Error("framebuffer variant should return to UI with an output report")
+		}
+	})
+}

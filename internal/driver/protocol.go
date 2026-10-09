@@ -21,8 +21,24 @@ type BrightnessSupport interface {
 }
 
 // UIReturnSupport is an optional interface for protocols that support returning to device UI.
+// A nil packet means the protocol variant has no return-to-UI command.
 type UIReturnSupport interface {
 	BuildReturnToUIPacket() []byte
+}
+
+// UIReturnOutputReport marks protocols whose return-to-UI packet is a HID
+// output report rather than the usual feature report.
+type UIReturnOutputReport interface {
+	ReturnToUIIsOutputReport() bool
+}
+
+// protocolReturnsToUIWithOutputReport reports whether a protocol's
+// return-to-UI packet must be sent as a HID output report.
+func protocolReturnsToUIWithOutputReport(p Protocol) bool {
+	if o, ok := p.(UIReturnOutputReport); ok {
+		return o.ReturnToUIIsOutputReport()
+	}
+	return false
 }
 
 // ScreenByCapability marks protocols whose OLED interface must be located at

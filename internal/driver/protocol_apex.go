@@ -8,7 +8,14 @@ var (
 	// (device command 0x1F, sub-command 0x81), e.g. the PID 0x1628 Apex Pro TKL
 	// 2023. The legacy command is silently accepted there but never shown.
 	apexFramebufferCommand = []byte{0x1F, 0x81}
+	// apexReturnToUICommand makes the framebuffer variant's OLED show the
+	// default SteelSeries screen again (device command 0x1F, sub-command 0x82).
+	apexReturnToUICommand = []byte{0x1F, 0x82}
 )
+
+// apexOutputReportLen is the framebuffer variant's HID output report length:
+// report ID plus 64 bytes.
+const apexOutputReportLen = 65
 
 // ApexProtocol implements the Protocol interface for SteelSeries Apex keyboards:
 // row-major MSB encoding, single packet per frame, mi_01 interface. The zero
@@ -67,6 +74,24 @@ func (p *ApexProtocol) PadToReportLength() bool {
 // is only 65 bytes. The legacy variant keeps the write()-first transport it has
 // always worked with.
 func (p *ApexProtocol) RequiresFeatureReport() bool {
+	return p.framebuffer
+}
+
+// BuildReturnToUIPacket builds the framebuffer variant's return-to-UI command, a
+// HID output report: [00 ReportID] + [1F 82] + zero padding = 65 bytes. The
+// legacy command set has no such command, so it returns nil.
+func (p *ApexProtocol) BuildReturnToUIPacket() []byte {
+	if !p.framebuffer {
+		return nil
+	}
+	packet := make([]byte, apexOutputReportLen)
+	copy(packet[1:], apexReturnToUICommand)
+	return packet
+}
+
+// ReturnToUIIsOutputReport reports that the framebuffer variant's return-to-UI
+// command is an output report, unlike its frames, which are feature reports.
+func (p *ApexProtocol) ReturnToUIIsOutputReport() bool {
 	return p.framebuffer
 }
 

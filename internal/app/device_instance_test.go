@@ -125,3 +125,45 @@ func TestDeviceInstance_ConcurrentAccessors(t *testing.T) {
 		<-done
 	}
 }
+
+// uiReturnRecordingClient records how many frames had been sent when
+// ReturnToUI was called.
+type uiReturnRecordingClient struct {
+	mockSplashClient
+	uiReturnCalls      int
+	framesAtUIReturn   int
+	framesAfterReturns int
+}
+
+func (c *uiReturnRecordingClient) SendScreenData(eventName string, bitmapData []byte) error {
+	if c.uiReturnCalls > 0 {
+		c.framesAfterReturns++
+	}
+	return c.mockSplashClient.SendScreenData(eventName, bitmapData)
+}
+
+func (c *uiReturnRecordingClient) ReturnToUI() error {
+	c.uiReturnCalls++
+	c.framesAtUIReturn = c.framesSent
+	return nil
+}
+
+func TestDeviceInstance_Shutdown_ReturnsToUIAfterExitMessage(t *testing.T) {
+	d := NewDeviceInstance("test", make(chan struct{}))
+	client := &uiReturnRecordingClient{}
+	d.client = client
+	d.displayWidth, d.displayHeight = 128, 40
+
+	d.Shutdown(false)
+
+	if client.uiReturnCalls != 1 {
+		t.Fatalf("ReturnToUI called %d times, want 1", client.uiReturnCalls)
+	}
+	if client.framesSent == 0 {
+		t.Fatal("exit message sent no frames")
+	}
+	if client.framesAfterReturns != 0 || client.framesAtUIReturn != client.framesSent {
+		t.Errorf("%d frame(s) sent after ReturnToUI; the exit message must finish first",
+			client.framesAfterReturns)
+	}
+}

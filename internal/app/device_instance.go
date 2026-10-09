@@ -122,13 +122,6 @@ func (d *DeviceInstance) Shutdown(unregisterOnExit bool) {
 	}
 
 	if d.client != nil {
-		// Return to device's native UI if supported
-		if uc, ok := d.client.(display.UIControl); ok {
-			if err := uc.ReturnToUI(); err != nil {
-				log.Printf("[%s] Warning: Failed to return to UI: %v", d.id, err)
-			}
-		}
-
 		// Show exit message
 		w, h := d.displayWidth, d.displayHeight
 		if w == 0 {
@@ -140,6 +133,14 @@ func (d *DeviceInstance) Shutdown(unregisterOnExit bool) {
 		splash := NewSplashRenderer(d.client, w, h)
 		if err := splash.ShowExitMessage(); err != nil {
 			log.Printf("[%s] Warning: Exit message failed: %v", d.id, err)
+		}
+
+		// Return to device's native UI if supported. This must come after the
+		// exit message: any frame sent afterwards takes the screen over again.
+		if uc, ok := d.client.(display.UIControl); ok {
+			if err := uc.ReturnToUI(); err != nil {
+				log.Printf("[%s] Warning: Failed to return to UI: %v", d.id, err)
+			}
 		}
 
 		if unregisterOnExit {
