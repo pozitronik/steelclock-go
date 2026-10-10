@@ -2,8 +2,10 @@ package network
 
 import (
 	"testing"
+	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/metrics"
 	"github.com/pozitronik/steelclock-go/internal/shared/render"
 )
 
@@ -466,4 +468,52 @@ func TestWidget_ConcurrentAccess(t *testing.T) {
 	<-done
 	<-done
 	// Should not panic or race
+}
+
+// TestUpdate_CounterRates checks the rates computed from two counter samples,
+// including counters that went down (interface reset or removed), which must
+// not wrap into huge values.
+func TestUpdate_CounterRates(t *testing.T) {
+	tests := []struct {
+		name   string
+		lastRx uint64
+		lastTx uint64
+		rx     uint64
+		tx     uint64
+		wantRx float64
+		wantTx float64
+	}{
+		{"counters grow", 1000, 2000, 3000, 2500, 2000, 500},
+		{"counters reset", 100, 100, 50, 25, 0, 0},
+		{"interface gone", 5000, 5000, 0, 0, 0, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w, err := New(config.WidgetConfig{Type: "network", Position: config.PositionConfig{W: 128, H: 40}, Mode: "bar"})
+			if err != nil {
+				t.Fatalf("New() error = %v", err)
+			}
+			w.networkProvider = &metrics.MockNetwork{IOCountersFunc: func() ([]metrics.NetworkStat, error) {
+				return []metrics.NetworkStat{{Name: "eth0", BytesRecv: tt.rx, BytesSent: tt.tx}}, nil
+			}}
+			w.lastRx, w.lastTx = tt.lastRx, tt.lastTx
+			w.lastTime = time.Now().Add(-time.Second)
+
+			if err := w.Update(); err != nil {
+				t.Fatalf("Update() error = %v", err)
+			}
+
+			// Elapsed time is slightly over one second, so allow a small margin.
+			if w.PrimaryValue > tt.wantRx || w.PrimaryValue < tt.wantRx*0.9 {
+				t.Errorf("rx rate = %g, want about %g", w.PrimaryValue, tt.wantRx)
+			}
+			if w.SecondaryValue > tt.wantTx || w.SecondaryValue < tt.wantTx*0.9 {
+				t.Errorf("tx rate = %g, want about %g", w.SecondaryValue, tt.wantTx)
+			}
+			if w.lastRx != tt.rx || w.lastTx != tt.tx {
+				t.Errorf("baseline = %d/%d, want %d/%d", w.lastRx, w.lastTx, tt.rx, tt.tx)
+			}
+		})
+	}
 }
