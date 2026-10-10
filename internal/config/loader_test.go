@@ -96,6 +96,37 @@ func TestLoad(t *testing.T) {
 	}
 }
 
+// TestLoad_IgnoresRemovedDefaultsBlock checks that configs written for the
+// removed top-level "defaults" block still load, and that the block does not
+// change widget settings.
+func TestLoad_IgnoresRemovedDefaultsBlock(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.json")
+	configJSON := `{
+		"display": {"width": 128, "height": 40},
+		"widgets": [{"type": "clock", "position": {"x": 0, "y": 0, "w": 128, "h": 40}}],
+		"defaults": {
+			"colors": {"primary": 255},
+			"text": {"font": null, "size": 16, "format": "{unread} unread"},
+			"update_interval": 5
+		}
+	}`
+	if err := os.WriteFile(configPath, []byte(configJSON), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	w := cfg.Widgets[0]
+	if w.UpdateInterval != DefaultUpdateInterval {
+		t.Errorf("update_interval = %g, want the built-in default %g", w.UpdateInterval, DefaultUpdateInterval)
+	}
+	if w.Text.Size != DefaultFontSize || w.Text.Format != "%H:%M:%S" {
+		t.Errorf("text = size %d format %q, want the built-in clock defaults", w.Text.Size, w.Text.Format)
+	}
+}
+
 func TestLoadNonexistentFile(t *testing.T) {
 	// When config file doesn't exist, should return default config
 	cfg, err := Load("/nonexistent/config.json")

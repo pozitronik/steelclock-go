@@ -85,17 +85,5 @@
   "preview": {
     "target_fps": 30
   },
-  "bundled_font_url": null,
-  "defaults": {
-    "text": {
-      "font": null,
-      "size": 16,
-      "align": {
-        "h": "center",
-        "v": "center"
-      },
-      "format": "{unread} unread"
-    },
-    "update_interval": 1
-  }
+  "bundled_font_url": null
 }

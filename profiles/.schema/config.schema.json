@@ -166,30 +166,6 @@
         }
       }
     },
-    "defaults": {
-      "type": "object",
-      "description": "Default values inherited by all widgets",
-      "properties": {
-        "colors": {
-          "type": "object",
-          "description": "Named colors that widgets can reference with @name syntax",
-          "additionalProperties": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 255
-          }
-        },
-        "text": {
-          "$ref": "#/definitions/textObject"
-        },
-        "update_interval": {
-          "type": "number",
-          "description": "Default update interval in seconds",
-          "minimum": 0.01,
-          "default": 1.0
-        }
-      }
-    },
     "widgets": {
       "type": "array",
       "description": "Array of widget configurations",
