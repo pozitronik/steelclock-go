@@ -1,14 +1,15 @@
 package bitmap
 
 import (
+	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/pozitronik/steelclock-go/internal/config"
+	"github.com/pozitronik/steelclock-go/internal/download"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/font/opentype"
@@ -17,6 +18,12 @@ import (
 const (
 	// DefaultBundledFontURL is the default URL for downloading the bundled font
 	DefaultBundledFontURL = "https://github.com/kika/fixedsys/releases/download/v3.02.9/FSEX302.ttf"
+
+	// fontDownloadTimeout bounds the bundled font download, which blocks widget creation
+	fontDownloadTimeout = 60 * time.Second
+	// fontDownloadMaxBytes rejects implausibly large font downloads (the default
+	// font is under 1 MB; a custom URL may point to a large CJK font)
+	fontDownloadMaxBytes = 64 << 20
 )
 
 var (
@@ -175,30 +182,11 @@ func downloadBundledFont() (string, error) {
 		return "", err
 	}
 
-	// Download font from configured URL
-	resp, err := http.Get(bundledFontURL)
-	if err != nil {
-		return "", err
-	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to download font: HTTP %d", resp.StatusCode)
-	}
-
-	// Save to file
-	out, err := os.Create(fontPath)
-	if err != nil {
-		return "", err
-	}
-	defer func() {
-		_ = out.Close()
-	}()
-
-	if _, err := io.Copy(out, resp.Body); err != nil {
-		return "", err
+	// Download font from configured URL. The file appears under its final
+	// name only when complete, so an interrupted download is retried later.
+	opts := download.Options{Timeout: fontDownloadTimeout, MaxBytes: fontDownloadMaxBytes}
+	if _, err := download.ToFile(context.Background(), bundledFontURL, fontPath, opts); err != nil {
+		return "", fmt.Errorf("failed to download font: %w", err)
 	}
 
 	return fontPath, nil

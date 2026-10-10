@@ -1,6 +1,7 @@
 package doom
 
 import (
+	"context"
 	"fmt"
 	"image"
 	"image/color"
@@ -49,6 +50,7 @@ type Widget struct {
 	currentImg    *image.Gray
 	mu            sync.RWMutex
 	stopChan      chan struct{}
+	cancel        context.CancelFunc // aborts a running WAD download on Stop
 	wg            sync.WaitGroup
 	started       bool
 
@@ -175,14 +177,16 @@ func New(cfg config.WidgetConfig) (*Widget, error) {
 	}
 
 	// Initialize DOOM in background (handles WAD download if needed)
+	ctx, cancel := context.WithCancel(context.Background())
+	w.cancel = cancel
 	w.wg.Add(1)
-	go w.runDoom()
+	go w.runDoom(ctx)
 
 	return w, nil
 }
 
 // runDoom runs the DOOM engine in a background goroutine
-func (w *Widget) runDoom() {
+func (w *Widget) runDoom(ctx context.Context) {
 	defer w.wg.Done()
 
 	// Check if DOOM has already been run in this process.
@@ -217,7 +221,7 @@ func (w *Widget) runDoom() {
 	}
 
 	// Get WAD file (may download with progress updates)
-	wadFile, err := GetWadFileWithProgress(w.wadFile, w.bundledWadURL, progressCallback, &w.isDownloading, &w.mu)
+	wadFile, err := GetWadFileWithProgress(ctx, w.wadFile, w.bundledWadURL, progressCallback, &w.isDownloading, &w.mu)
 	if err != nil {
 		log.Printf("[DOOM] Failed to get WAD file: %v", err)
 		w.mu.Lock()
@@ -452,8 +456,9 @@ func (w *Widget) Update() error {
 
 // Stop stops the DOOM engine
 func (w *Widget) Stop() {
-	// Close stop channel to signal runDoom to exit
-	// runDoom() will call gore.Stop() and wait for cleanup
+	// Abort a WAD download in progress, then close stop channel to signal
+	// runDoom to exit; runDoom() will call gore.Stop() and wait for cleanup
+	w.cancel()
 	close(w.stopChan)
 
 	// Wait for runDoom goroutine to complete
