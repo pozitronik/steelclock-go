@@ -2,6 +2,8 @@ package app
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -272,5 +274,57 @@ func TestAppLifecycleManagerAccess(t *testing.T) {
 	w, h := app.lifecycle.GetDisplayDimensions()
 	if w != 128 || h != 40 {
 		t.Errorf("default dimensions = %dx%d, want 128x40", w, h)
+	}
+}
+
+func TestFindSchemaPath(t *testing.T) {
+	base := t.TempDir()
+	schema := filepath.Join(base, "profiles", ".schema", "config.schema.json")
+	if err := os.MkdirAll(filepath.Dir(schema), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(schema, []byte(`{}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	noSchema := t.TempDir()
+
+	tests := []struct {
+		name       string
+		configPath string
+		want       string
+	}{
+		{"root config", filepath.Join(base, "config.json"), schema},
+		{"profile in profiles", filepath.Join(base, "profiles", "clock.json"), schema},
+		{"profile in a resolution group", filepath.Join(base, "profiles", "128x40", "clock.json"), schema},
+		{"profile nested deeper", filepath.Join(base, "profiles", "128x40", "extra", "clock.json"), schema},
+		{"no schema anywhere", filepath.Join(noSchema, "config.json"), filepath.Join(noSchema, "profiles", ".schema", "config.schema.json")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := findSchemaPath(tt.configPath); got != tt.want {
+				t.Errorf("findSchemaPath(%q) = %q, want %q", tt.configPath, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFindSchemaPath_RelativeConfig(t *testing.T) {
+	base := t.TempDir()
+	schema := filepath.Join(base, "profiles", ".schema", "config.schema.json")
+	if err := os.MkdirAll(filepath.Join(base, "profiles", "128x40"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(schema), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(schema, []byte(`{}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(base)
+
+	got := findSchemaPath(filepath.Join("profiles", "128x40", "clock.json"))
+	if got != schema {
+		t.Errorf("findSchemaPath(relative) = %q, want %q", got, schema)
 	}
 }

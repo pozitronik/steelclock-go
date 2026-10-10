@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -167,14 +168,7 @@ func (a *App) createWebEditor() {
 		return
 	}
 
-	// Schema is in profiles/.schema/ relative to config file's directory
-	configDir := filepath.Dir(configPath)
-	schemaPath := filepath.Join(configDir, "profiles", ".schema", "config.schema.json")
-
-	// If config is in profiles/ directory, adjust path
-	if filepath.Base(configDir) == "profiles" {
-		schemaPath = filepath.Join(configDir, ".schema", "config.schema.json")
-	}
+	schemaPath := findSchemaPath(configPath)
 
 	// Create providers
 	configProvider := NewConfigProviderAdapter(a.configMgr)
@@ -195,6 +189,36 @@ func (a *App) createWebEditor() {
 	a.trayMgr.SetWebEditor(a.webEditor)
 
 	log.Println("Web editor: Configured")
+}
+
+// schemaRelPath is the location of the config JSON schema relative to the
+// directory that holds the profiles directory.
+var schemaRelPath = filepath.Join("profiles", ".schema", "config.schema.json")
+
+// findSchemaPath locates the config JSON schema for a config file. The schema
+// lives in profiles/.schema/ next to the profiles directory, while the config
+// may be the root config, a profile directly in profiles/, or a profile in a
+// resolution group such as profiles/128x40/. The search walks up from the
+// config's directory; if nothing is found, the path next to the config is
+// returned, so the editor reports a meaningful missing file.
+func findSchemaPath(configPath string) string {
+	dir := filepath.Dir(configPath)
+	if abs, err := filepath.Abs(dir); err == nil {
+		dir = abs
+	}
+	fallback := filepath.Join(dir, schemaRelPath)
+
+	for {
+		candidate := filepath.Join(dir, schemaRelPath)
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return fallback
+		}
+		dir = parent
+	}
 }
 
 // Start initializes and starts all components
