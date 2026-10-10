@@ -382,9 +382,13 @@ func (c *httpClient) refreshTokenInternal(ctx context.Context) error {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		// Clear invalid token
-		c.token = nil
-		_ = c.tokenStore.Clear()
+		// Only a rejected request (e.g. invalid_grant for a revoked refresh
+		// token) means the credentials are unusable. Server errors and rate
+		// limiting are temporary; keep the credentials and retry later.
+		if resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusUnauthorized {
+			c.token = nil
+			_ = c.tokenStore.Clear()
+		}
 		return fmt.Errorf("refresh failed (%d): %s", resp.StatusCode, string(body))
 	}
 
