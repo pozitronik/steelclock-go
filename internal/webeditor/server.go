@@ -57,26 +57,44 @@ func (s *Server) SetPreviewProvider(provider PreviewProvider) {
 }
 
 // SetPreviewProviders sets multiple preview providers keyed by device ID.
+// The map is copied, so the caller may keep using it.
 func (s *Server) SetPreviewProviders(providers map[string]PreviewProvider) {
+	var stored map[string]PreviewProvider
+	if len(providers) > 0 {
+		stored = make(map[string]PreviewProvider, len(providers))
+		for id, p := range providers {
+			stored[id] = p
+		}
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.previewProviders = providers
+	s.previewProviders = stored
+}
+
+// previewProvidersSnapshot returns the current providers map. The map is
+// never modified after it is stored, so it can be read without the lock.
+func (s *Server) previewProvidersSnapshot() map[string]PreviewProvider {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.previewProviders
 }
 
 // getPreviewProvider returns the provider for the given device ID,
 // or the first available provider if deviceID is empty.
 func (s *Server) getPreviewProvider(deviceID string) PreviewProvider {
-	if len(s.previewProviders) == 0 {
+	providers := s.previewProvidersSnapshot()
+	if len(providers) == 0 {
 		return nil
 	}
 	if deviceID != "" {
-		return s.previewProviders[deviceID]
+		return providers[deviceID]
 	}
 	// Return first provider (deterministic: try "default" first)
-	if p, ok := s.previewProviders["default"]; ok {
+	if p, ok := providers["default"]; ok {
 		return p
 	}
-	for _, p := range s.previewProviders {
+	for _, p := range providers {
 		return p
 	}
 	return nil
