@@ -206,7 +206,25 @@ func (d *DeviceInstance) Shutdown(unregisterOnExit bool) {
 				log.Printf("[%s] Successfully unregistered", d.id)
 			}
 		}
+		d.closeClient(d.client)
 		d.client = nil
+	}
+}
+
+// releaseClient gives up a backend client: it unregisters it (RemoveGame)
+// and releases its local resources.
+func (d *DeviceInstance) releaseClient(client display.Backend) {
+	_ = client.RemoveGame()
+	d.closeClient(client)
+}
+
+// closeClient releases a client's local resources (e.g. the direct driver's
+// HID handle), whether or not it was unregistered.
+func (d *DeviceInstance) closeClient(client display.Backend) {
+	if c, ok := client.(display.Closer); ok {
+		if err := c.Close(); err != nil {
+			log.Printf("[%s] Warning: Failed to close backend: %v", d.id, err)
+		}
 	}
 }
 
@@ -274,7 +292,7 @@ func (d *DeviceInstance) ensureClient(cfg *config.Config) error {
 
 	// Clean up old client
 	if d.client != nil {
-		_ = d.client.RemoveGame()
+		d.releaseClient(d.client)
 		d.client = nil
 	}
 
@@ -290,6 +308,7 @@ func (d *DeviceInstance) ensureClient(cfg *config.Config) error {
 	// Bind screen event (no-op for direct driver)
 	if err := d.bindEventWithRetry(10, GameSenseScreenDeviceType); err != nil {
 		log.Printf("[%s] ERROR: Failed to bind screen event after retries: %v", d.id, err)
+		d.closeClient(d.client)
 		d.client = nil
 		return err
 	}
@@ -329,7 +348,7 @@ func (d *DeviceInstance) handleDeviceLost(failed *compositor.Compositor) {
 	d.comp = nil
 
 	if _, ok := d.client.(display.Reconnectable); !ok && d.client != nil {
-		_ = d.client.RemoveGame()
+		d.releaseClient(d.client)
 		d.client = nil
 	}
 	d.wantBackend = d.currentBackend
@@ -447,7 +466,7 @@ func (d *DeviceInstance) acquireClient() bool {
 	}
 	if err == nil {
 		if err = client.BindScreenEvent(EventName, GameSenseScreenDeviceType); err != nil {
-			_ = client.RemoveGame()
+			d.releaseClient(client)
 		}
 	}
 	if err != nil {

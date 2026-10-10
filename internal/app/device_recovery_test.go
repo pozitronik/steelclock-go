@@ -22,6 +22,7 @@ type fakeDevice struct {
 // fakeClient is a plain backend client (not Reconnectable).
 type fakeClient struct {
 	removed atomic.Bool
+	closed  atomic.Bool
 }
 
 func (c *fakeClient) SendScreenData(string, []byte) error                    { return nil }
@@ -32,6 +33,7 @@ func (c *fakeClient) SupportsMultipleEvents() bool                           { r
 func (c *fakeClient) RegisterGame(string, int) error                         { return nil }
 func (c *fakeClient) BindScreenEvent(string, string) error                   { return nil }
 func (c *fakeClient) RemoveGame() error                                      { c.removed.Store(true); return nil }
+func (c *fakeClient) Close() error                                           { c.closed.Store(true); return nil }
 
 // fakeReconnectableClient can lose its device and reconnect to it.
 type fakeReconnectableClient struct {
@@ -197,8 +199,8 @@ func TestDeviceInstance_DeviceLost_RecreatesSameBackend(t *testing.T) {
 	if running || !waiting || client != nil {
 		t.Fatalf("running=%v waiting=%v client=%v, want waiting without a client", running, waiting, client)
 	}
-	if !oldClient.removed.Load() {
-		t.Error("the lost client was not closed")
+	if !oldClient.removed.Load() || !oldClient.closed.Load() {
+		t.Error("the lost client was not unregistered and closed")
 	}
 	d.mu.Lock()
 	got := d.wantBackend
@@ -364,5 +366,58 @@ func TestDeviceInstance_Wake_NeverBlocks(t *testing.T) {
 	d := NewDeviceInstance("test", make(chan struct{}))
 	for i := 0; i < 10; i++ {
 		d.Wake() // no supervisor is draining the channel
+	}
+}
+
+// TestDeviceInstance_ShutdownReleasesClient checks that a device giving up its
+// client (app exit, or the device removed from the config on reload) always
+// releases the client's local resources, and unregisters only when asked.
+func TestDeviceInstance_ShutdownReleasesClient(t *testing.T) {
+	tests := []struct {
+		name           string
+		unregister     bool
+		wantUnregister bool
+	}{
+		{"keep registration", false, false},
+		{"unregister", true, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := NewDeviceInstance("test", make(chan struct{}))
+			c := &fakeClient{}
+			d.client = c
+
+			d.Shutdown(tt.unregister)
+
+			if !c.closed.Load() {
+				t.Error("client was not closed")
+			}
+			if got := c.removed.Load(); got != tt.wantUnregister {
+				t.Errorf("unregistered = %v, want %v", got, tt.wantUnregister)
+			}
+			if _, _, client := state(d); client != nil {
+				t.Errorf("client = %v after shutdown, want nil", client)
+			}
+		})
+	}
+}
+
+// TestLifecycleManager_RemovedDeviceReleasesClient checks that a device
+// dropped from the config on reload releases its client.
+func TestLifecycleManager_RemovedDeviceReleasesClient(t *testing.T) {
+	m := NewLifecycleManager()
+	removed := NewDeviceInstance("removed", m.retryCancel)
+	c := &fakeClient{}
+	removed.client = c
+	m.devices = []*DeviceInstance{removed}
+
+	m.shutdownOldDevices(nil)
+
+	if !c.closed.Load() {
+		t.Error("removed device's client was not closed")
+	}
+	if c.removed.Load() {
+		t.Error("removed device was unregistered on reload")
 	}
 }
