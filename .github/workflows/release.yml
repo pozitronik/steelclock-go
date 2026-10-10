@@ -67,16 +67,17 @@ jobs:
       run: |
         VERSION="${{ steps.version.outputs.version }}"
 
-        # Convert version to 4-component format required by Windows resources
-        # If version is 1.2.3, convert to 1.2.3.0
-        # If version is 1.2.3.4, use as-is
-        DOT_COUNT=$(echo "$VERSION" | tr -cd '.' | wc -c)
-        if [ "$DOT_COUNT" -eq 2 ]; then
-          VERSION_FULL="${VERSION}.0"
-        elif [ "$DOT_COUNT" -eq 3 ]; then
-          VERSION_FULL="${VERSION}"
+        # Convert version to 4-component format required by Windows resources.
+        # The numeric fields take digits only, so a prerelease suffix is dropped:
+        # 1.2.3 -> 1.2.3.0, 1.2.3.4 -> 1.2.3.4, 1.2.3-test -> 1.2.3.0
+        # The text FileVersion/ProductVersion fields keep the full version.
+        NUMERIC_VERSION="${VERSION%%-*}"
+        if [[ "$NUMERIC_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          VERSION_FULL="${NUMERIC_VERSION}.0"
+        elif [[ "$NUMERIC_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          VERSION_FULL="${NUMERIC_VERSION}"
         else
-          echo "Error: Invalid version format '$VERSION'. Expected format: X.Y.Z or X.Y.Z.W"
+          echo "Error: Invalid version format '$VERSION'. Expected format: X.Y.Z or X.Y.Z.W, optionally with a -suffix"
           exit 1
         fi
 
