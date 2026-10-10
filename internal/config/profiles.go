@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -544,21 +545,23 @@ func (pm *ProfileManager) RenameProfile(path, newName string) (string, error) {
 		return "", fmt.Errorf("profile not found: %s", path)
 	}
 
-	// Load and update the config file
-	cfg, err := Load(path)
+	// Change only config_name in the file, keeping every other field
+	// ($schema, unknown fields, key order, formatting) as it is.
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("failed to load profile: %w", err)
 	}
 
-	cfg.ConfigName = newName
-
-	// Marshal to JSON
-	data, err := json.MarshalIndent(cfg, "", "  ")
+	nameJSON, err := json.Marshal(newName)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal config: %w", err)
+		return "", fmt.Errorf("failed to encode profile name: %w", err)
 	}
 
-	// Save updated config
+	data, err = setTopLevelJSONField(data, "config_name", nameJSON)
+	if err != nil {
+		return "", fmt.Errorf("failed to update profile: %w", err)
+	}
+
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		return "", fmt.Errorf("failed to save profile: %w", err)
 	}
@@ -570,6 +573,85 @@ func (pm *ProfileManager) RenameProfile(path, newName string) (string, error) {
 	pm.sortProfiles()
 
 	return path, nil
+}
+
+// setTopLevelJSONField sets a top-level field of a JSON object document to the
+// given encoded value. Only the bytes of that value change; the rest of the
+// document is kept byte for byte. A missing field is inserted as the first
+// member of the object. Every member that encoding/json would decode into the
+// field is updated: duplicates (the last one wins when loading) and names that
+// differ only in case.
+func setTopLevelJSONField(data []byte, key string, value []byte) ([]byte, error) {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	tok, err := dec.Token()
+	if err != nil {
+		return nil, fmt.Errorf("invalid JSON: %w", err)
+	}
+	if delim, ok := tok.(json.Delim); !ok || delim != '{' {
+		return nil, fmt.Errorf("JSON document is not an object")
+	}
+	objectStart := dec.InputOffset() // just after '{'
+
+	type span struct{ start, end int64 }
+	var matches []span
+	firstKeyStart := int64(-1)
+	for dec.More() {
+		keyStart := dec.InputOffset()
+		tok, err := dec.Token()
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON: %w", err)
+		}
+		name, _ := tok.(string)
+		if firstKeyStart < 0 {
+			// InputOffset before a key includes the whitespace (and comma)
+			// before it; skip to the key's opening quote.
+			firstKeyStart = keyStart + int64(bytes.IndexByte(data[keyStart:], '"'))
+		}
+
+		var raw json.RawMessage
+		if err := dec.Decode(&raw); err != nil {
+			return nil, fmt.Errorf("invalid JSON: %w", err)
+		}
+		if strings.EqualFold(name, key) {
+			end := dec.InputOffset()
+			matches = append(matches, span{end - int64(len(raw)), end})
+		}
+	}
+	if _, err := dec.Token(); err != nil { // closing '}'
+		return nil, fmt.Errorf("invalid JSON: %w", err)
+	}
+
+	if len(matches) > 0 {
+		var result []byte
+		prev := int64(0)
+		for _, m := range matches {
+			result = append(result, data[prev:m.start]...)
+			result = append(result, value...)
+			prev = m.end
+		}
+		return append(result, data[prev:]...), nil
+	}
+
+	keyJSON, err := json.Marshal(key)
+	if err != nil {
+		return nil, err
+	}
+	member := append(append(keyJSON, ": "...), value...)
+	var result []byte
+	if firstKeyStart < 0 {
+		// Empty object: {"key": value}
+		result = append(result, data[:objectStart]...)
+		result = append(result, member...)
+		return append(result, data[objectStart:]...), nil
+	}
+	// Insert before the first member, repeating its leading whitespace so
+	// the new line is indented like the others.
+	indent := data[objectStart:firstKeyStart]
+	result = append(result, data[:firstKeyStart]...)
+	result = append(result, member...)
+	result = append(result, ',')
+	result = append(result, indent...)
+	return append(result, data[firstKeyStart:]...), nil
 }
 
 // sanitizeFilename converts a profile name to a safe filename
