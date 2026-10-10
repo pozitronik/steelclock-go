@@ -26,7 +26,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.25.4'
+        go-version-file: go.mod
 
     - name: Extract version from tag
       id: version
@@ -110,7 +110,7 @@ jobs:
     - name: Install go-winres
       shell: bash
       run: |
-        go install github.com/tc-hib/go-winres@latest
+        go install github.com/tc-hib/go-winres@v0.3.3
         echo "$HOME/go/bin" >> $GITHUB_PATH
 
     - name: Generate Windows resources
@@ -189,7 +189,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.25.4'
+        go-version-file: go.mod
 
     - name: Install system dependencies
       run: |
