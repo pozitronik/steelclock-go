@@ -36,6 +36,7 @@ func (s *Server) registerHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/api/config", s.handleConfig)
 	mux.HandleFunc("/api/config/load", s.handleLoadConfigByPath)
 	mux.HandleFunc("/api/validate", s.handleValidate)
+	mux.HandleFunc("/api/reload", s.handleReload)
 	mux.HandleFunc("/api/profiles", s.handleProfiles)
 	mux.HandleFunc("/api/profiles/active", s.handleActiveProfile)
 	mux.HandleFunc("/api/profiles/rename", s.handleRenameProfile)

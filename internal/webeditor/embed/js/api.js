@@ -159,6 +159,27 @@ const API = {
     },
 
     /**
+     * Reload the active configuration file (used without profiles, e.g. -config mode)
+     * @returns {Promise<Object>} The reload result
+     */
+    async reload() {
+        const response = await fetch('/api/reload', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        const result = await response.json();
+
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        return result;
+    },
+
+    /**
      * Get preview availability and configuration
      * @param {string} [deviceId] - Optional device ID for multi-device preview
      * @returns {Promise<Object>} Preview info with available, width, height, target_fps

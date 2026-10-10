@@ -510,10 +510,22 @@ class ConfigEditor {
     }
 
     /**
+     * Whether the app runs with profiles. Without them (explicit -config file)
+     * the editor edits the active config directly and Apply reloads it.
+     */
+    hasProfiles() {
+        return this.profiles.length > 0;
+    }
+
+    /**
      * Apply the current profile (save if dirty, then switch/reload)
      */
     async apply() {
-        if (!this.editingProfilePath) return;
+        const profileMode = this.hasProfiles();
+        if (profileMode && !this.editingProfilePath) {
+            this.showNotification('No profile selected to apply', 'error');
+            return;
+        }
 
         try {
             this.setStatus('Applying...');
@@ -531,6 +543,7 @@ class ConfigEditor {
                 } else {
                     configToSave = this.configForSave();
                 }
+                // Without profiles the path is null: the active config is saved
                 await API.saveConfig(configToSave, this.editingProfilePath);
 
                 this.originalConfig = JSON.stringify(configToSave, null, 2);
@@ -539,13 +552,17 @@ class ConfigEditor {
                 this.saveBtn.classList.remove('has-changes');
             }
 
-            // Switch profile (which triggers reload) or just trigger reload
-            await API.switchProfile(this.editingProfilePath);
+            if (profileMode) {
+                // Switch profile (which triggers reload)
+                await API.switchProfile(this.editingProfilePath);
 
-            // Update profile selection state
-            this.profiles.forEach(p => {
-                p.is_active = (p.path === this.editingProfilePath);
-            });
+                // Update profile selection state
+                this.profiles.forEach(p => {
+                    p.is_active = (p.path === this.editingProfilePath);
+                });
+            } else {
+                await API.reload();
+            }
 
             this.updateApplyButtonState();
 
@@ -565,7 +582,8 @@ class ConfigEditor {
      */
     updateApplyButtonState() {
         const activeProfile = this.profiles.find(p => p.is_active);
-        const needsApply = !activeProfile || activeProfile.path !== this.editingProfilePath;
+        const needsApply = this.hasProfiles() &&
+            (!activeProfile || activeProfile.path !== this.editingProfilePath);
 
         if (needsApply) {
             this.applyBtn.classList.add('contrast');
