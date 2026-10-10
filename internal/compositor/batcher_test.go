@@ -132,6 +132,32 @@ func TestFrameBatcher_Add_Enabled(t *testing.T) {
 	}
 }
 
+// TestFrameBatcher_Add_ReusedBuffer reproduces how the compositor calls Add:
+// every frame is rendered into the same buffer. Each buffered frame must keep
+// its own content instead of showing the last render.
+func TestFrameBatcher_Add_ReusedBuffer(t *testing.T) {
+	sender := newMockFrameSender()
+	b := NewFrameBatcher(true, 3, sender, "EVENT")
+
+	buffer := make([]byte, 2)
+	for _, value := range []byte{1, 2, 3} {
+		buffer[0], buffer[1] = value, value
+		if _, err := b.Add(buffer); err != nil {
+			t.Fatalf("Add() error = %v", err)
+		}
+	}
+
+	if sender.getFrameCount() != 3 {
+		t.Fatalf("FrameCount = %d, want 3", sender.getFrameCount())
+	}
+	for i, frame := range sender.sendCalls {
+		want := byte(i + 1)
+		if frame[0] != want || frame[1] != want {
+			t.Errorf("frame[%d] = %v, want [%d %d]", i, frame, want, want)
+		}
+	}
+}
+
 func TestFrameBatcher_Flush(t *testing.T) {
 	sender := newMockFrameSender()
 	b := NewFrameBatcher(true, 10, sender, "EVENT")
