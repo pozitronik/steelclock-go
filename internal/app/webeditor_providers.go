@@ -31,10 +31,11 @@ func (a *ConfigProviderAdapter) Load() ([]byte, error) {
 	return os.ReadFile(path)
 }
 
-// Save writes the configuration JSON to the file
+// Save writes the configuration JSON to the file. The file is replaced
+// atomically, so a failed write keeps the previous content.
 func (a *ConfigProviderAdapter) Save(data []byte) error {
 	path := a.configMgr.GetConfigPath()
-	return os.WriteFile(path, data, 0644)
+	return config.WriteFileAtomic(path, data)
 }
 
 // ProfileProviderAdapter adapts ProfileManager to webeditor.ProfileProvider interface
