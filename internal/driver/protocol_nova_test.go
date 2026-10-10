@@ -541,10 +541,18 @@ func TestApexProtocol_NoBrightnessSupport(t *testing.T) {
 	}
 }
 
-func TestApexProtocol_NoUIReturnSupport(t *testing.T) {
+func TestApexProtocol_LegacyHasNoUIReturn(t *testing.T) {
+	// ApexProtocol implements UIReturnSupport for its framebuffer variant only;
+	// the legacy command set has no return-to-UI command and builds no packet.
 	p := &ApexProtocol{}
-	if _, ok := interface{}(p).(UIReturnSupport); ok {
-		t.Error("ApexProtocol should not implement UIReturnSupport")
+	if packet := p.BuildReturnToUIPacket(); packet != nil {
+		t.Errorf("legacy ApexProtocol BuildReturnToUIPacket() = % X, want nil", packet)
+	}
+}
+
+func TestNovaProProtocol_ReturnsToUIWithFeatureReport(t *testing.T) {
+	if protocolReturnsToUIWithOutputReport(&NovaProProtocol{}) {
+		t.Error("NovaProProtocol return-to-UI should stay a feature report")
 	}
 }
 

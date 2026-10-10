@@ -182,15 +182,25 @@ func (c *Client) sendBrightness(level int) error {
 }
 
 // ReturnToUI sends a command to return to the device's native UI.
-// No-op for protocols without UI return support.
+// No-op for protocols (or protocol variants) without UI return support.
 func (c *Client) ReturnToUI() error {
-	if uis, ok := c.driver.protocol.(UIReturnSupport); ok {
-		packet := uis.BuildReturnToUIPacket()
-		if err := c.driver.SendRawPacket(packet); err != nil {
-			return fmt.Errorf("failed to return to UI: %w", err)
-		}
-		log.Printf("Direct driver: returned to device UI")
+	uis, ok := c.driver.protocol.(UIReturnSupport)
+	if !ok {
+		return nil
 	}
+	packet := uis.BuildReturnToUIPacket()
+	if packet == nil {
+		return nil
+	}
+
+	send := c.driver.SendRawPacket
+	if protocolReturnsToUIWithOutputReport(c.driver.protocol) {
+		send = c.driver.SendRawOutputPacket
+	}
+	if err := send(packet); err != nil {
+		return fmt.Errorf("failed to return to UI: %w", err)
+	}
+	log.Printf("Direct driver: returned to device UI")
 	return nil
 }
 

@@ -3,6 +3,7 @@
 package driver
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -75,7 +76,13 @@ type HIDDriver struct {
 	// ID byte the protocol builds (older Nova units use 0x06, the Omni uses 0x01).
 	reportID      byte
 	reportIDKnown bool
-	mu            sync.RWMutex
+	// outputReportLen is the device's HID output-report length (including the
+	// report ID), read from capabilities at Open for protocols that send output
+	// reports. Valid only when outputReportLenKnown; 0 then means the device
+	// declares no output report.
+	outputReportLen      int
+	outputReportLenKnown bool
+	mu                   sync.RWMutex
 }
 
 // screenReportIDCandidates are tried first when discovering a screen's feature
@@ -261,15 +268,21 @@ func (d *HIDDriver) Open() error {
 	// already known from the capability-based interface selection above, look it
 	// up now so sendPacket's existing zero-padding can absorb the difference.
 	// Opt-in per protocol (ReportLengthPadding) so devices that already work
-	// today with an exact-size packet are never silently padded.
-	if d.reportLen == 0 && protocolWantsReportLengthPadding(d.protocol) {
-		if devices, derr := EnumerateDevices(); derr == nil {
-			for _, info := range devices {
-				if info.Path == devicePath && info.HasCaps && info.FeatureReportLen > 0 {
-					d.reportLen = info.FeatureReportLen
-					log.Printf("Direct driver: device feature report is %d bytes, padding frames to match", info.FeatureReportLen)
-					break
-				}
+	// today with an exact-size packet are never silently padded. Protocols that
+	// send output reports (UIReturnOutputReport) need the output-report length
+	// too, since Windows rejects output buffers of any other size.
+	needFeatureLen := d.reportLen == 0 && protocolWantsReportLengthPadding(d.protocol)
+	needOutputLen := !d.outputReportLenKnown && protocolReturnsToUIWithOutputReport(d.protocol)
+	if needFeatureLen || needOutputLen {
+		if info, ok := deviceCaps(devicePath); ok {
+			if needFeatureLen && info.FeatureReportLen > 0 {
+				d.reportLen = info.FeatureReportLen
+				log.Printf("Direct driver: device feature report is %d bytes, padding frames to match", info.FeatureReportLen)
+			}
+			if needOutputLen {
+				d.outputReportLen = info.OutputReportLen
+				d.outputReportLenKnown = true
+				log.Printf("Direct driver: device output report is %d bytes", info.OutputReportLen)
 			}
 		}
 	}
@@ -371,6 +384,75 @@ func (d *HIDDriver) SendRawPacket(packet []byte) error {
 	}
 
 	if err := d.sendPacket(packet); err != nil {
+		d.connected = false
+		_ = closeDevice(d.handle)
+		d.handle = InvalidHandle
+		return fmt.Errorf("send failed: %w", err)
+	}
+
+	return nil
+}
+
+// errNoOutputReport reports that the device declares no HID output report.
+var errNoOutputReport = errors.New("device declares no output report")
+
+// fitOutputReport sizes an output packet to the device's declared output-report
+// length, because Windows rejects buffers of any other size: zero padding is
+// added or dropped as needed, and trimming non-zero bytes is refused. When the
+// length is unknown (no HID capabilities, e.g. on Linux) the packet is sent as
+// built.
+func fitOutputReport(packet []byte, length int, known bool) ([]byte, error) {
+	if !known {
+		return packet, nil
+	}
+	if length <= 0 {
+		return nil, errNoOutputReport
+	}
+	if len(packet) > length {
+		for _, b := range packet[length:] {
+			if b != 0 {
+				return nil, fmt.Errorf("%d-byte packet does not fit the device's %d-byte output report", len(packet), length)
+			}
+		}
+		return packet[:length], nil
+	}
+	buf := make([]byte, length)
+	copy(buf, packet)
+	return buf, nil
+}
+
+// deviceCaps returns the HID capabilities of the interface at path, when they
+// can be read (Windows; capabilities are not available on Linux).
+func deviceCaps(path string) (DeviceInfo, bool) {
+	devices, err := EnumerateDevices()
+	if err != nil {
+		return DeviceInfo{}, false
+	}
+	for _, info := range devices {
+		if info.Path == path && info.HasCaps {
+			return info, true
+		}
+	}
+	return DeviceInfo{}, false
+}
+
+// SendRawOutputPacket sends a pre-built packet to the device as a HID output
+// report, sized to the device's output-report length when known. Used for
+// control packets the device expects as output rather than feature reports.
+func (d *HIDDriver) SendRawOutputPacket(packet []byte) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if !d.connected {
+		return fmt.Errorf("device not connected")
+	}
+
+	packet, err := fitOutputReport(packet, d.outputReportLen, d.outputReportLenKnown)
+	if err != nil {
+		return err // nothing was sent; the device stays connected
+	}
+
+	if err := sendOutputReport(d.handle, packet); err != nil {
 		d.connected = false
 		_ = closeDevice(d.handle)
 		d.handle = InvalidHandle

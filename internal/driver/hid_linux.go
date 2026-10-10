@@ -244,6 +244,29 @@ func setFeatureReport(handle DeviceHandle, data []byte) error {
 	return nil
 }
 
+// sendOutputReport sends an output report to the HID device: a hidraw write()
+// carries an output report, with the report ID as the first byte (0x00 for
+// unnumbered reports; the kernel strips it).
+func sendOutputReport(handle DeviceHandle, data []byte) error {
+	if handle == InvalidHandle {
+		return fmt.Errorf("invalid handle")
+	}
+
+	if len(data) == 0 {
+		return fmt.Errorf("empty data")
+	}
+
+	n, err := syscall.Write(int(handle), data)
+	if err != nil {
+		return fmt.Errorf("write failed: %w", err)
+	}
+	if n != len(data) {
+		return fmt.Errorf("short write: %d of %d bytes", n, len(data))
+	}
+
+	return nil
+}
+
 // EnumerateDevices returns a list of all connected HID devices
 func EnumerateDevices() ([]DeviceInfo, error) {
 	devices, err := enumerateHidrawDevices()
