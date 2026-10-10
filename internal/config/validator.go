@@ -12,6 +12,15 @@ const (
 	MaxEventBatchSize      = 100
 	MinReconnectIntervalMs = 1000
 	MaxReconnectIntervalMs = 60000
+	// MinUpdateInterval is the smallest widget update_interval in seconds;
+	// smaller values convert to a zero duration, which tickers reject
+	MinUpdateInterval = 0.001
+	// MaxUpdateInterval is the largest widget update_interval in seconds (one
+	// day); it also keeps the value far from overflowing time.Duration
+	MaxUpdateInterval = 86400.0
+	// MaxRefreshRateMs is the largest refresh_rate_ms (one frame per minute);
+	// it also keeps the value far from overflowing time.Duration
+	MaxRefreshRateMs = 60000
 )
 
 // BackendTypeChecker is a callback function that checks if a backend type is registered.
@@ -86,6 +95,10 @@ func Validate(cfg *Config) error {
 
 	// Multi-device mode
 	if len(cfg.Devices) > 0 {
+		// Global render settings apply to every device's compositor
+		if err := validateRenderSettings(cfg); err != nil {
+			return err
+		}
 		return validateDevices(cfg)
 	}
 
@@ -134,8 +147,14 @@ func validateDevices(cfg *Config) error {
 
 		generateWidgetIDs(dev.Widgets)
 		for j := range dev.Widgets {
-			if err := validateWidgetType(j, &dev.Widgets[j]); err != nil {
+			w := &dev.Widgets[j]
+			if err := validateWidgetType(j, w); err != nil {
 				return fmt.Errorf("devices[%d]: %w", i, err)
+			}
+			if w.IsEnabled() {
+				if err := validateWidgetProperties(j, w); err != nil {
+					return fmt.Errorf("devices[%d]: %w", i, err)
+				}
 			}
 		}
 	}
@@ -183,8 +202,17 @@ func validateDisplayConfig(cfg *Config) error {
 		return fmt.Errorf("display height must be positive (got %d)", cfg.Display.Height)
 	}
 
+	return validateRenderSettings(cfg)
+}
+
+// validateRenderSettings validates global settings used by every device's
+// compositor, in single-device and multi-device mode
+func validateRenderSettings(cfg *Config) error {
 	if cfg.RefreshRateMs <= 0 {
 		return fmt.Errorf("refresh_rate_ms must be positive (got %d)", cfg.RefreshRateMs)
+	}
+	if cfg.RefreshRateMs > MaxRefreshRateMs {
+		return fmt.Errorf("refresh_rate_ms must be at most %d (got %d)", MaxRefreshRateMs, cfg.RefreshRateMs)
 	}
 
 	for i, res := range cfg.SupportedResolutions {
@@ -238,9 +266,30 @@ func validateWidgetType(index int, w *WidgetConfig) error {
 	return nil
 }
 
-// validateWidgetProperties validates type-specific widget properties
-func validateWidgetProperties(_ int, _ *WidgetConfig) error {
-	// Network and disk widgets support auto-detection when interface/disk is omitted
-	// (sums all interfaces/disks), so no validation required
+// validateWidgetProperties validates widget properties that would otherwise
+// crash or silently stop the widget (e.g. a ticker with a non-positive period)
+func validateWidgetProperties(index int, w *WidgetConfig) error {
+	if w.Position.W < 0 {
+		return fmt.Errorf("widget[%d]: position.w must not be negative (got %d)", index, w.Position.W)
+	}
+	if w.Position.H < 0 {
+		return fmt.Errorf("widget[%d]: position.h must not be negative (got %d)", index, w.Position.H)
+	}
+
+	// 0 means the default interval
+	if w.UpdateInterval < 0 || (w.UpdateInterval > 0 && w.UpdateInterval < MinUpdateInterval) {
+		return fmt.Errorf("widget[%d]: update_interval must be at least %g seconds (got %g)",
+			index, MinUpdateInterval, w.UpdateInterval)
+	}
+	if w.UpdateInterval > MaxUpdateInterval {
+		return fmt.Errorf("widget[%d]: update_interval must be at most %g seconds (got %g)",
+			index, MaxUpdateInterval, w.UpdateInterval)
+	}
+
+	// 0 means the default history length
+	if w.Graph != nil && w.Graph.History < 0 {
+		return fmt.Errorf("widget[%d]: graph.history must not be negative (got %d)", index, w.Graph.History)
+	}
+
 	return nil
 }
