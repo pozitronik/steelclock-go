@@ -54,6 +54,9 @@ Hooks are shell commands that execute at specific points during Claude's operati
    ```powershell
    New-NetFirewallRule -DisplayName "SteelClock WSL" -Direction Inbound -LocalPort 8384 -Protocol TCP -Action Allow
    ```
+   Only `/api/claude-status` answers clients on other hosts (such as WSL). The configuration editor and all its other endpoints are available only from the Windows machine itself.
+
+   `/api/claude-status` itself has no authentication: any host that can reach port 8384 can read the current status (state, tool name and preview text) and change it. To keep it to WSL, limit the rule to the WSL virtual network, e.g. add `-RemoteAddress 172.16.0.0/12` (check the actual range with `ip route` in WSL).
 2. Copy the hook script to `~/.claude/steelclock-hook.sh`
 3. Make it executable: `chmod +x ~/.claude/steelclock-hook.sh`
 4. Add hooks to `~/.claude/settings.json`

@@ -270,9 +270,9 @@ func (c *Client) SubscriberCount() int {
 
 // HandleWebSocket handles a WebSocket connection for live display
 func (c *Client) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
-	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		OriginPatterns: []string{"*"}, // Allow all origins for local use
-	})
+	// No OriginPatterns: the library accepts only pages served from the
+	// request's own host, so other web pages cannot subscribe to the preview.
+	conn, err := websocket.Accept(w, r, nil)
 	if err != nil {
 		log.Printf("WebClient: failed to accept WebSocket: %v", err)
 		return
