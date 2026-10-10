@@ -26,6 +26,7 @@ type DeviceInstance struct {
 	comp           *compositor.Compositor
 	client         display.Backend
 	currentBackend string
+	clientSettings backendSettings // settings the current client was created with
 	displayWidth   int
 	displayHeight  int
 	widgetMgr      *WidgetManager
@@ -274,15 +275,46 @@ func (d *DeviceInstance) GetCurrentBackend() string {
 	return d.currentBackend
 }
 
+// backendSettings is the part of a device configuration that backend clients
+// are created from. A client is reused only while these stay the same;
+// settings applied on every start (brightness, widgets) are not included.
+type backendSettings struct {
+	backend         string // requested backend; "" = auto-selection
+	width, height   int
+	gameName        string
+	gameDisplayName string
+	deinitTimerMs   int
+	vid, pid, iface string
+	targetFPS       int
+}
+
+// backendSettingsOf extracts the backend-relevant settings from cfg.
+func backendSettingsOf(cfg *config.Config) backendSettings {
+	s := backendSettings{
+		backend:         cfg.Backend,
+		width:           cfg.Display.Width,
+		height:          cfg.Display.Height,
+		gameName:        cfg.GameName,
+		gameDisplayName: cfg.GameDisplayName,
+		deinitTimerMs:   cfg.DeinitializeTimerMs,
+	}
+	if cfg.DirectDriver != nil {
+		s.vid, s.pid, s.iface = cfg.DirectDriver.VID, cfg.DirectDriver.PID, cfg.DirectDriver.Interface
+	}
+	if cfg.WebClient != nil {
+		s.targetFPS = cfg.WebClient.TargetFPS
+	}
+	return s
+}
+
 // ensureClient ensures a valid backend client exists for this device
 func (d *DeviceInstance) ensureClient(cfg *config.Config) error {
 	needNewClient := d.client == nil
+	settings := backendSettingsOf(cfg)
 
-	if d.client != nil {
-		if d.currentBackend != cfg.Backend {
-			log.Printf("[%s] Backend changed from %s to %s, recreating client...", d.id, d.currentBackend, cfg.Backend)
-			needNewClient = true
-		}
+	if d.client != nil && d.clientSettings != settings {
+		log.Printf("[%s] Backend settings changed (backend %q -> %q), recreating client...", d.id, d.clientSettings.backend, cfg.Backend)
+		needNewClient = true
 	}
 
 	if !needNewClient {
@@ -304,6 +336,7 @@ func (d *DeviceInstance) ensureClient(cfg *config.Config) error {
 		return err
 	}
 	d.currentBackend = backendName
+	d.clientSettings = settings
 
 	// Bind screen event (no-op for direct driver)
 	if err := d.bindEventWithRetry(10, GameSenseScreenDeviceType); err != nil {
@@ -479,5 +512,6 @@ func (d *DeviceInstance) acquireClient() bool {
 
 	d.client = client
 	d.currentBackend = name
+	d.clientSettings = backendSettingsOf(d.cfg)
 	return true
 }
