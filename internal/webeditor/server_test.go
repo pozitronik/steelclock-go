@@ -1702,6 +1702,23 @@ func TestPreviewProviderReplacementConcurrentWithRequests(t *testing.T) {
 	wg.Wait()
 }
 
+func TestPreviewDeviceIDs(t *testing.T) {
+	s, _, _ := createTestServer(t)
+	if ids := s.PreviewDeviceIDs(); len(ids) != 0 {
+		t.Errorf("PreviewDeviceIDs() = %v without providers, want none", ids)
+	}
+
+	s.SetPreviewProvider(&mockPreviewProvider{})
+	if ids := s.PreviewDeviceIDs(); strings.Join(ids, ",") != "default" {
+		t.Errorf("PreviewDeviceIDs() = %v, want [default]", ids)
+	}
+
+	s.SetPreviewProviders(map[string]PreviewProvider{"b": &mockPreviewProvider{}, "a": &mockPreviewProvider{}})
+	if ids := s.PreviewDeviceIDs(); strings.Join(ids, ",") != "a,b" {
+		t.Errorf("PreviewDeviceIDs() = %v, want [a b]", ids)
+	}
+}
+
 // TestSetPreviewProviders_CopiesMap checks that changing the caller's map
 // after the call does not change the server's providers.
 func TestSetPreviewProviders_CopiesMap(t *testing.T) {

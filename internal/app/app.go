@@ -72,7 +72,8 @@ type App struct {
 
 	// WebClient override state - for temporary webclient backend when using config editor
 	webclientOverrideActive   bool
-	webclientOverrideOriginal string // Original backend name to restore
+	webclientOverrideOriginal string         // Original backend name (for logging)
+	webclientOverrideConfig   *config.Config // Config running before the override, restored when it ends
 }
 
 // NewApp creates a new application instance (legacy single-config mode)
@@ -338,9 +339,6 @@ func (a *App) enableWebClientOverride() error {
 	log.Println("========================================")
 	log.Printf("Enabling webclient override (current backend: %s)", currentBackend)
 
-	// Store original backend name
-	a.webclientOverrideOriginal = currentBackend
-
 	// Get current config
 	cfg := a.lifecycle.GetLastGoodConfig()
 	if cfg == nil {
@@ -380,7 +378,11 @@ func (a *App) enableWebClientOverride() error {
 		return fmt.Errorf("failed to enable webclient override: %w", err)
 	}
 
+	// Keep the original config: starting the override replaced the last good
+	// config with the webclient one, which has lost the per-device backends.
 	a.webclientOverrideActive = true
+	a.webclientOverrideOriginal = currentBackend
+	a.webclientOverrideConfig = cfg
 
 	// Update webclient provider
 	a.updateWebClientProviderUnlocked()
@@ -400,15 +402,12 @@ func (a *App) disableWebClientOverride() error {
 	log.Println("========================================")
 	log.Printf("Disabling webclient override (restoring backend: %s)", a.webclientOverrideOriginal)
 
-	// Get current config (with webclient backend)
-	cfg := a.lifecycle.GetLastGoodConfig()
-	if cfg == nil {
-		return fmt.Errorf("no configuration loaded")
+	// Restore the config that was running before the override, including
+	// every device's own backend
+	originalCfg := a.webclientOverrideConfig
+	if originalCfg == nil {
+		return fmt.Errorf("no configuration to restore")
 	}
-
-	// Create config with original backend
-	originalCfg := *cfg
-	originalCfg.Backend = a.webclientOverrideOriginal
 
 	// Stop webclient compositor
 	log.Println("Stopping webclient compositor...")
@@ -416,22 +415,27 @@ func (a *App) disableWebClientOverride() error {
 
 	// Start with original backend
 	log.Printf("Starting with original backend: %s", a.webclientOverrideOriginal)
-	if err := a.lifecycle.Start(&originalCfg); err != nil {
+	if err := a.lifecycle.Start(originalCfg); err != nil {
 		log.Printf("ERROR: Failed to restore original backend: %v", err)
 		return fmt.Errorf("failed to disable webclient override: %w", err)
 	}
 
-	a.webclientOverrideActive = false
-	a.webclientOverrideOriginal = ""
+	a.resetWebClientOverride()
 
-	// Clear webclient provider since we're no longer using webclient backend
-	if a.webEditor != nil {
-		a.webEditor.SetPreviewProvider(nil)
-	}
+	// Rebuild the preview providers from the restored devices: the original
+	// config may itself use the webclient backend for some of them
+	a.updateWebClientProviderUnlocked()
 
 	log.Println("WebClient override disabled, original backend restored")
 	log.Println("========================================")
 	return nil
+}
+
+// resetWebClientOverride clears the webclient override state
+func (a *App) resetWebClientOverride() {
+	a.webclientOverrideActive = false
+	a.webclientOverrideOriginal = ""
+	a.webclientOverrideConfig = nil
 }
 
 // updateWebClientProviderUnlocked updates webclient provider without acquiring configMu
@@ -494,8 +498,7 @@ func (a *App) ReloadConfig() error {
 	// Reset webclient override state — the reloaded config defines its own backends
 	if a.webclientOverrideActive {
 		log.Println("Resetting webclient override state for config reload")
-		a.webclientOverrideActive = false
-		a.webclientOverrideOriginal = ""
+		a.resetWebClientOverride()
 	}
 
 	log.Println("Stopping current instance...")
@@ -553,8 +556,7 @@ func (a *App) SwitchProfile(path string) error {
 	// Reset webclient override state — the new profile defines its own backends
 	if a.webclientOverrideActive {
 		log.Println("Resetting webclient override state for profile switch")
-		a.webclientOverrideActive = false
-		a.webclientOverrideOriginal = ""
+		a.resetWebClientOverride()
 	}
 
 	// Stop compositor first to free the display

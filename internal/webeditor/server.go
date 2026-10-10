@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 )
@@ -78,6 +79,18 @@ func (s *Server) previewProvidersSnapshot() map[string]PreviewProvider {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.previewProviders
+}
+
+// PreviewDeviceIDs returns the sorted IDs of the devices that can be
+// previewed.
+func (s *Server) PreviewDeviceIDs() []string {
+	providers := s.previewProvidersSnapshot()
+	ids := make([]string, 0, len(providers))
+	for id := range providers {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids
 }
 
 // getPreviewProvider returns the provider for the given device ID,
